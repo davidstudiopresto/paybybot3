@@ -42,6 +42,39 @@ def connect(config):
     return bot
 
 
+def mask_plate(plate):
+    return plate[:2] + "*" * (len(plate) - 2)
+
+
+def parse_locations(location):
+    if location is None:
+        return [None]
+    locations = []
+    for part in str(location).split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            start, end = (x.strip() for x in part.split("-", 1))
+            if start.isdigit() and end.isdigit():
+                width = len(start)
+                locations.extend(
+                    str(n).zfill(width) for n in range(int(start), int(end) + 1)
+                )
+                continue
+        locations.append(part)
+    return locations or [None]
+
+
+def for_each_location(config, locations, run_one):
+    def _connect_and_run():
+        bot = connect(config)
+        for location in locations:
+            catch_exceptions(config)(run_one)(bot, location)
+
+    catch_exceptions(config)(_connect_and_run)()
+
+
 @click.group()
 def cli():
     pass
@@ -69,8 +102,7 @@ def check(config_name, location, config):
     """
     config = get_config(config_name, config)
 
-    def _check(config, location):
-        bot = connect(config)
+    def _check(bot, location):
         sessions = bot.get_parking_sessions(
             licensePlate=config["plate"], locationId=location
         )
@@ -84,7 +116,7 @@ def check(config_name, location, config):
         else:
             logging.info(f"No session in {location}")
 
-    catch_exceptions(config)(_check)(config, location)
+    for_each_location(config, parse_locations(location), _check)
 
 
 @cli.command()
@@ -100,8 +132,7 @@ def alert(config_name, location, config):
 
     config = get_config(config_name, config)
 
-    def _alert(config, location):
-        bot = connect(config)
+    def _alert(bot, location):
         licensePlate=config["plate"]
         sessions = bot.get_parking_sessions(
             licensePlate=licensePlate, locationId=location
@@ -118,11 +149,11 @@ def alert(config_name, location, config):
                 notify(
                     services=config.get('apprise').get('services'),
                     title="PayByPhone Parking Alert",
-                    body=f"[{licensePlate}] Currently no parking is active in {location} — please check : https://m2.paybyphone.fr/parking",
+                    body=f"[{mask_plate(licensePlate)}] Currently no parking is active in {location} — please check : https://m.paybyphone.com/",
                     tag="broadcast-info",
                 )
 
-    catch_exceptions(config)(_alert)(config, location)
+    for_each_location(config, parse_locations(location), _alert)
 
 
 @cli.command()
@@ -145,8 +176,7 @@ def pay(config_name, location, rate, duration, unit, buffer, config):
     """
     config = get_config(config_name, config)
 
-    def _pay(config, location, duration, unit):
-        bot = connect(config)
+    def _pay(bot, location):
         logging.info("launching payment")
         licensePlate = config["plate"]
         sessions = bot.get_parking_sessions(
@@ -161,14 +191,14 @@ def pay(config_name, location, rate, duration, unit, buffer, config):
                 remainingTime = expireTime - datetime.now(timezone.utc)
                 logging.info(f"Waiting for the current session to expire in: {remainingTime}")
                 sleep(max(0, remainingTime.total_seconds() + 1))
-                _pay(config, location, duration, unit)
+                _pay(bot, location)
             return
         bot.pay(
             durationQuantity=duration,
             durationTimeUnit=unit,
             licensePlate=licensePlate,
             locationId=location,
-            rateOptionId=rate,
+            ratePolicyId=rate,
             paymentAccountId=config["paymentAccountId"],
         )
         sleep(20)  # wait for the payment to be executed
@@ -181,7 +211,7 @@ def pay(config_name, location, rate, duration, unit, buffer, config):
                 notify(
                     services=config.get('apprise').get('services'),
                     title="PayByPhone Parking Payment",
-                    body=f"[{licensePlate}] Payment failed in {location} for {duration} {unit} at rate {rate}",
+                    body=f"[{mask_plate(licensePlate)}] Payment failed in {location} for {duration} {unit} at rate {rate}",
                     tag="broadcast-warning",
                 )
         else:
@@ -191,11 +221,11 @@ def pay(config_name, location, rate, duration, unit, buffer, config):
                 notify(
                     services=config.get('apprise').get('services'),
                     title="PayByPhone Parking Payment",
-                    body=f"[{licensePlate}] Payment succeeded in {location} for {duration} {unit} at rate {rate}",
+                    body=f"[{mask_plate(licensePlate)}] Payment succeeded in {location} for {duration} {unit} at rate {rate}",
                     tag="broadcast-success",
                 )
 
-    catch_exceptions(config)(_pay)(config, location, duration, unit)
+    for_each_location(config, parse_locations(location), _pay)
 
 
 @cli.command()
@@ -212,6 +242,27 @@ def vehicles(config_name, config):
         pprint(bot.get_vehicles())
 
     catch_exceptions(config)(_vehicles)(config)
+
+
+@cli.command()
+@click.argument("config_name")
+@click.option("--location", required=True, type=str)
+@click.option("--config", required=False, type=str)
+def rate_options(config_name, location, config):
+    """
+    Show the available rate options for a location (use ratePolicyId as --rate)
+    """
+    config = get_config(config_name, config)
+
+    def _rate_options(config, location):
+        bot = connect(config)
+        options = bot.get_rate_options(
+            locationId=location, licensePlate=config["plate"]
+        )
+        logging.info(f"retrieved {len(options)} rate options for location {location}")
+        pprint(options)
+
+    catch_exceptions(config)(_rate_options)(config, location)
 
 
 if __name__ == "__main__":

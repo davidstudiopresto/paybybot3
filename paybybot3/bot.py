@@ -1,62 +1,122 @@
+import json
+import uuid
 from datetime import datetime
-import re
+from time import sleep
 
 import requests
 
 
+def _parse_dt(value):
+    if value is None:
+        return None
+    text = value.replace("Z", "")
+    for fmt in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+
+
 class Bot:
+    TOKEN_URL = "https://auth.paybyphoneapis.com/consumer/token"
+    GRAPHQL_URL = "https://consumer.paybyphoneapis.com/uapi/graphql"
+
     base_headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Referer": "https://m2.paybyphone.fr/",
-        "Origin": "https://m2.paybyphone.fr",
-        "DNT": "1",
-        "Connection": "keep-alive",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "*/*",
+        "Accept-Language": "en",
+        "Origin": "https://m.paybyphone.com",
+        "Referer": "https://m.paybyphone.com/",
+        "X-Pbp-ClientType": "WebApp",
     }
 
     def __init__(self, username, password):
-        url = "https://m2.paybyphone.fr/static/js/main.0aec44c0.chunk.js"
-        try:
-            resp = requests.get(url)
-            resp.raise_for_status()
-            pattern = r'paymentService:{[^}]*apiKey:\"(.*?)\"'
-            result = re.search(pattern, resp.text, flags=re.MULTILINE)
-            self.apiKey = result.group(1) if result else None
-        except (requests.exceptions.HTTPError, KeyError):
-            self.apiKey = None
-
         r = requests.post(
-            "https://auth.paybyphoneapis.com/token",
+            self.TOKEN_URL,
             headers={
                 **self.base_headers,
-                "Accept": "application/json, text/plain, */*",
-                "X-Pbp-ClientType": "WebApp",
+                "Content-Type": "application/x-www-form-urlencoded",
             },
             data={
                 "grant_type": "password",
                 "username": username,
                 "password": password,
-                "client_id": "paybyphone_webapp",
+                "client_id": "paybyphone_web",
             },
         )
+        r.raise_for_status()
         j = r.json()
         self.authorization = j["token_type"] + " " + j["access_token"]
 
-        r = self._get("https://consumer.paybyphoneapis.com/parking/accounts")
+    def _graphql(self, query, variables=None):
+        r = requests.post(
+            self.GRAPHQL_URL,
+            headers={
+                **self.base_headers,
+                "Accept": "application/json, text/plain, */*",
+                "Content-Type": "application/json",
+                # The web app signs requests (x-signature), but the API still accepts a plain Bearer token.
+                "Authorization": self.authorization,
+            },
+            json={"operationName": None, "variables": variables or {}, "query": query},
+        )
+        r.raise_for_status()
         j = r.json()
-        self.parkingAccountId = j[0]["id"]
+        if j.get("errors"):
+            raise RuntimeError("GraphQL error: %s" % json.dumps(j["errors"]))
+        return j["data"]
+
+    def get_vehicles(self):
+        query = """query GetVehiclesV3($input: GetVehiclesInput!) {
+  getVehiclesV3(input: $input) {
+    vehicleId
+    legacyVehicleId
+    licensePlate
+    country
+    jurisdiction
+    type
+    archived
+  }
+}"""
+        return self._graphql(query, {"input": {"profileName": "PayByPhone"}})[
+            "getVehiclesV3"
+        ]
 
     def _get_parking_sessions(self):
-        ans = self._get(
-            "https://consumer.paybyphoneapis.com/parking/accounts/%s/sessions"
-            % self.parkingAccountId,
-            params={"periodType": "Current"},
-        ).json()
-        for s in ans:
-            s["startTime"] = datetime.strptime(s["startTime"], "%Y-%m-%dT%H:%M:%SZ")
-            s["expireTime"] = datetime.strptime(s["expireTime"], "%Y-%m-%dT%H:%M:%SZ")
-        return ans
+        query = """query GetParkingSessionsV1($input: GetParkingSessionsInput!) {
+  getParkingSessionsV1(input: $input) {
+    parkingSessionId
+    status
+    type
+    locationId
+    startTime
+    expireTime
+    stall
+    isRenewable
+    vehicle {
+      legacyVehicleId
+      licensePlate
+      countryCode
+      type
+    }
+    ratePolicy {
+      ratePolicyId
+      type
+    }
+    totalCost {
+      amount
+      currency
+    }
+  }
+}"""
+        sessions = self._graphql(
+            query, {"input": {"periodType": "CURRENT", "offset": 0, "limit": 50}}
+        )["getParkingSessionsV1"]
+        for s in sessions:
+            s["startTime"] = _parse_dt(s.get("startTime"))
+            s["expireTime"] = _parse_dt(s.get("expireTime"))
+        return sessions
 
     def get_parking_sessions(self, licensePlate=None, locationId=None):
         def pred(p):
@@ -80,111 +140,261 @@ class Bot:
         )
 
     def get_payment_accounts(self):
-        return self._get("https://payments.paybyphoneapis.com/v1/accounts").json()
+        query = """query GetPaymentAccountsV1($input: GetPaymentAccountsInput!) {
+  getPaymentAccountsV1(input: $input) {
+    paymentCards {
+      cardType
+      maskedCardNumber
+      accountType
+      paymentAccountId
+      paymentScope
+      expiryMonth
+      expiryYear
+    }
+    mno {
+      status
+      operator
+      phoneNumber
+      paymentAccountId
+      paymentScope
+    }
+    paypalAccounts {
+      accountType
+      paymentAccountId
+      paymentScope
+    }
+  }
+}"""
+        return self._graphql(query, {"input": {"mandateCountryCode": "FR"}})[
+            "getPaymentAccountsV1"
+        ]
 
-    def _get_rate_options(self, location, licensePlate):
-        return self._get(
-            "https://consumer.paybyphoneapis.com/parking/locations/%s/rateOptions" % location,
-            params={
-                "parkingAccountId": self.parkingAccountId,
-                "licensePlate": licensePlate,
-            },
-        ).json()
+    def _resolve_payment(self, paymentAccountId):
+        if not paymentAccountId:
+            return "", ""
+        accounts = self.get_payment_accounts()
+        for card in accounts.get("paymentCards") or []:
+            if card.get("paymentAccountId") == paymentAccountId:
+                return card.get("cardType") or "", card.get("paymentScope") or ""
+        for key in ("mno", "paypalAccounts", "twintAccounts"):
+            for acc in accounts.get(key) or []:
+                if acc.get("paymentAccountId") == paymentAccountId:
+                    return "", acc.get("paymentScope") or ""
+        return "", ""
 
-    def _get_rate_options_renew(self, location, parkingSessionId):
-        return self._get(
-            "https://consumer.paybyphoneapis.com/parking/locations/%s/rateOptions" % location,
-            params={
-                "parkingAccountId": self.parkingAccountId,
-                "parkingSessionId": parkingSessionId,
-            },
-        ).json()
+    def get_rate_options(self, locationId, licensePlate):
+        query = """query GetRateOptionsV1($input: GetRateOptionsInput!) {
+  getRateOptionsV1(input: $input) {
+    name
+    type
+    ratePolicyId
+    maxStayStatus
+    acceptedTimeUnits
+    parkingNotAllowedReason
+  }
+}"""
+        return self._graphql(
+            query, {"input": {"locationId": str(locationId), "licensePlate": licensePlate}}
+        )["getRateOptionsV1"]
 
-    def _get_quote(
-        self, durationQuantity, durationTimeUnit, licensePlate, locationId, rateOptionId
-    ):
-        return self._get(
-            "https://consumer.paybyphoneapis.com/parking/accounts/%s/quote"
-            % self.parkingAccountId,
-            params={
-                "durationQuantity": durationQuantity,
-                "durationTimeUnit": durationTimeUnit,
-                "licensePlate": licensePlate,
-                "locationId": locationId,
-                "rateOptionId": rateOptionId,
-            },
-        ).json()
+    def _get_vendor_id(self, locationId):
+        query = """query GetLocationsV1($input: GetLocationInput!) {
+  getLocationsV1(input: $input) {
+    locationId
+    legacyVendorId
+    countryCode
+    isStallBased
+  }
+}"""
+        locations = self._graphql(
+            query, {"input": {"advertisedLocationNumber": str(locationId)}}
+        )["getLocationsV1"]
+        # Several locations can share an advertised number (e.g. a stall-based
+        # location elsewhere); prefer the one whose id matches the number.
+        for loc in locations:
+            if loc.get("locationId") == str(locationId):
+                return loc.get("legacyVendorId")
+        return locations[0].get("legacyVendorId") if locations else None
 
-    def _get_renew_quote(self, durationQuantity, durationTimeUnit, parkingSessionId):
-        return self._get(
-            "https://consumer.paybyphoneapis.com/parking/accounts/%s/quote"
-            % self.parkingAccountId,
-            params={
-                "durationQuantity": durationQuantity,
-                "durationTimeUnit": durationTimeUnit,
-                "parkingSessionId": parkingSessionId,
-            },
-        )
-
-    def _post_quote(
+    def _create_quote(
         self,
-        quoteId,
-        paymentAccountId,
-        licensePlate,
-        rateOptionId,
         locationId,
+        ratePolicyId,
         durationQuantity,
         durationTimeUnit,
-        startTime,
+        licensePlate,
+        paymentAccountId="",
     ):
-        return self._post(
-            "https://consumer.paybyphoneapis.com/parking/accounts/%s/sessions/"
-            % self.parkingAccountId,
-            json={
-                "licensePlate": licensePlate,
-                "locationId": locationId,
-                "stall": None,
-                "rateOptionId": rateOptionId,
-                "startTime": startTime,  # found in parkingStartTime of quote
-                "quoteId": quoteId,
-                "duration": {
-                    "timeUnit": durationTimeUnit,
-                    "quantity": durationQuantity,
-                },
-                "paymentMethod": {
-                    "paymentMethodType": "PaymentAccount",
-                    "payload": {"paymentAccountId": paymentAccountId, "cvv": None},
-                },
-            },
-        )
+        cardType, paymentScope = self._resolve_payment(paymentAccountId)
+        query = """mutation CreateQuotesV1($requests: [QuoteRequestInput!]!) {
+  createQuotesV1(input: {requests: $requests}) {
+    createQuotesResponse {
+      totalCost {
+        amount
+        currency
+      }
+      quotes {
+        quoteId
+        cost {
+          amount
+          currency
+        }
+        details {
+          quoteId
+          locationId
+          parkingStartTime
+          parkingExpiryTime
+          licensePlate
+        }
+      }
+      quoteErrors {
+        quoteRequestId
+        product
+        status
+        reason
+      }
+    }
+  }
+}"""
+        variables = {
+            "requests": [
+                {
+                    "quoteRequestId": str(uuid.uuid4()),
+                    "product": "PARKING",
+                    "details": {
+                        "locationId": str(locationId),
+                        "advertisedLocationId": str(locationId),
+                        "ratePolicyId": str(ratePolicyId),
+                        "parkingQuoteOperation": "Start",
+                        "durationTimeUnit": durationTimeUnit,
+                        "durationQuantity": str(durationQuantity),
+                        "licensePlate": licensePlate,
+                        "stall": "",
+                        "parkingSessionId": "",
+                        "paymentAccountId": paymentAccountId or "",
+                        "paymentCardType": cardType,
+                        "paymentScope": paymentScope,
+                    },
+                }
+            ]
+        }
+        resp = self._graphql(query, variables)["createQuotesV1"]["createQuotesResponse"]
+        errors = resp.get("quoteErrors") or []
+        if errors:
+            raise RuntimeError("Quote error: %s" % json.dumps(errors))
+        quotes = resp.get("quotes") or []
+        if not quotes:
+            raise RuntimeError("No quote returned: %s" % json.dumps(resp))
+        return quotes[0]
 
-    def _put_renew_quote(
-        self,
-        parkingSessionId,
-        quoteId,
-        paymentAccountId,
-        durationQuantity,
-        durationTimeUnit,
-    ):
-        r = self._put(
-            "https://consumer.paybyphoneapis.com/parking/accounts/%s/sessions/%s"
-            % (self.parkingAccountId, parkingSessionId),
-            data={
-                "duration": {
-                    "timeUnit": durationTimeUnit,
-                    "quantity": durationQuantity,
-                },
-                "quoteId": quoteId,
-                "paymentMethod": {
-                    "paymentMethodType": "PaymentAccount",
-                    "payload": {"paymentAccountId": paymentAccountId, "cvv": None},
-                },
-            },
-        )
-        assert r.status_code == requests.codes["accepted"]
+    def _start_session(self, quoteId):
+        query = """mutation StartParkingSessionV1($input: StartParkingSessionV1Input!) {
+  startParkingSessionV1(input: $input) {
+    parkingSessionResponse {
+      parkingSessionId
+      expireTime
+      isEarlyCapture
+      segmentTotalCost {
+        amount
+        currency
+      }
+      metadata
+    }
+  }
+}"""
+        return self._graphql(query, {"input": {"request": {"quoteId": quoteId}}})[
+            "startParkingSessionV1"
+        ]["parkingSessionResponse"]
 
-    def _get_workflow(self, quoteId):
-        return self._get("https://consumer.paybyphoneapis.com/events/workflow/%s" % quoteId)
+    def _create_job(self, parkingSessionId, vendorId, endingTime, isEarlyCapture, metadata):
+        query = """mutation CreateJobV1($input: CreateJobV1Input!) {
+  createJobV1(input: $input) {
+    createJobResponse {
+      jobId
+    }
+  }
+}"""
+        if isinstance(metadata, (dict, list)):
+            metadata = json.dumps(metadata)
+        variables = {
+            "input": {
+                "request": {
+                    "lineItems": [
+                        {
+                            "productType": "parking",
+                            "productReferenceId": parkingSessionId,
+                            "vendorId": str(vendorId),
+                            "endingTime": endingTime,
+                            "isEarlyCapture": bool(isEarlyCapture),
+                            "required": True,
+                            "metadata": metadata or "{}",
+                        }
+                    ]
+                }
+            }
+        }
+        return self._graphql(query, variables)["createJobV1"]["createJobResponse"][
+            "jobId"
+        ]
+
+    def _get_job(self, jobId):
+        query = """query GetJobV1($jobId: UUID!) {
+  getJobV1(jobId: $jobId) {
+    jobId
+    status
+    captureGroups {
+      stage
+      status
+      lineItems {
+        status
+        executionDetails {
+          isFailure
+          code
+          message
+        }
+      }
+      executionDetails {
+        isFailure
+        code
+        message
+      }
+    }
+    executionDetails {
+      isFailure
+      code
+      message
+    }
+  }
+}"""
+        return self._graphql(query, {"jobId": jobId})["getJobV1"]
+
+    _TERMINAL_CAPTURE_STATUSES = {
+        "captureNotRequired",
+        "captured",
+        "settled",
+        "closed",
+        "completed",
+    }
+
+    @staticmethod
+    def _job_failures(job):
+        def failures(details):
+            return [d for d in (details or []) if d.get("isFailure")]
+
+        found = failures(job.get("executionDetails"))
+        for cg in job.get("captureGroups") or []:
+            found += failures(cg.get("executionDetails"))
+            for li in cg.get("lineItems") or []:
+                found += failures(li.get("executionDetails"))
+        return found
+
+    def _job_is_terminal(self, job):
+        if job.get("status") in ("closed", "completed", "settled"):
+            return True
+        groups = job.get("captureGroups") or []
+        return bool(groups) and all(
+            cg.get("status") in self._TERMINAL_CAPTURE_STATUSES for cg in groups
+        )
 
     def pay(
         self,
@@ -192,53 +402,46 @@ class Bot:
         durationTimeUnit,
         licensePlate,
         locationId,
-        rateOptionId,
+        ratePolicyId,
         paymentAccountId,
     ):
-        quote = self._get_quote(
+        quote = self._create_quote(
+            locationId=locationId,
+            ratePolicyId=ratePolicyId,
             durationQuantity=durationQuantity,
             durationTimeUnit=durationTimeUnit,
             licensePlate=licensePlate,
-            locationId=locationId,
-            rateOptionId=rateOptionId,
+            paymentAccountId=paymentAccountId,
         )
         quoteId = quote["quoteId"]
-        startTime = quote["parkingStartTime"]
 
-        post = self._post_quote(
-            quoteId=quoteId,
-            paymentAccountId=paymentAccountId,
-            licensePlate=licensePlate,
-            rateOptionId=rateOptionId,
-            locationId=locationId,
-            durationQuantity=durationQuantity,
-            durationTimeUnit=durationTimeUnit,
-            startTime=startTime,
-        )
-        return post.text
+        session = self._start_session(quoteId)
+        parkingSessionId = session["parkingSessionId"]
 
-    def get_vehicles(self):
-        return self._get("https://consumer.paybyphoneapis.com/identity/profileservice/v1/members/vehicles/paybyphone").json()
-
-    def _request(self, method, url, **kwargs):
-        return requests.request(
-            method,
-            url,
-            headers={
-                **self.base_headers,
-                "Accept": "application/json, text/plain, */*",
-                "x-pbp-version": "2",
-                "x-api-key": self.apiKey,
-                "Authorization": self.authorization,
-            },
-            **kwargs
+        vendorId = self._get_vendor_id(locationId)
+        jobId = self._create_job(
+            parkingSessionId=parkingSessionId,
+            vendorId=vendorId,
+            endingTime=session["expireTime"],
+            isEarlyCapture=session.get("isEarlyCapture", False),
+            metadata=session.get("metadata"),
         )
 
-    def _get(self, url, **kwargs):
-        return self._request("GET", url, **kwargs)
+        job = None
+        for _ in range(6):
+            job = self._get_job(jobId)
+            failures = self._job_failures(job)
+            if failures:
+                raise RuntimeError("Payment job failed: %s" % json.dumps(failures))
+            if self._job_is_terminal(job):
+                break
+            sleep(2)
 
-    def _post(self, url, **kwargs):
-        return self._request("POST", url, **kwargs)
-
-    def _put(self, url, **kwargs):
-        return self._request("PUT", url, **kwargs)
+        return {
+            "quoteId": quoteId,
+            "cost": quote.get("cost"),
+            "parkingSessionId": parkingSessionId,
+            "expireTime": session.get("expireTime"),
+            "jobId": jobId,
+            "jobStatus": job.get("status") if job else None,
+        }

@@ -12,7 +12,9 @@ Originally forked from [paybybot2](https://github.com/louisabraham/paybybot2/), 
 
 `--location` is often the district (eg `75001`). There are some special values that you can find out in the output of `check` as `locationId`.
 
-Similarly, you can find `--rate` as `rateOptionId` in the output of `check`.
+For `check`, `alert` and `pay`, `--location` also accepts several locations at once, as a comma-separated list or a range: `--location 75001,75005` or `--location 75001-75020`. They are all handled with a single login, and one failing location does not abort the others.
+
+`--rate` is a `ratePolicyId`. List the available rate options for a location with the `rate-options` command, or read it from an ongoing session in the output of `check` (as `ratePolicy.ratePolicyId`).
 
 ### alert
 
@@ -89,6 +91,19 @@ Options:
   --help         Show this message and exit.
 ```
 
+### rate-options
+
+```
+Usage: paybybot3 rate-options [OPTIONS] CONFIG_NAME
+
+  Show the available rate options for a location (use ratePolicyId as --rate)
+
+Options:
+  --location TEXT  [required]
+  --config TEXT
+  --help           Show this message and exit.
+```
+
 ## Configuration
 
 paybybot3 allows you to store your configuration in a YAML file `~/.config/paybybot3.yml`.
@@ -122,4 +137,4 @@ example_account:
 Notifications are delivered through the [Apprise](https://github.com/caronc/apprise) library.    
 If `apprise` is configured, at least one service must be configured. Service URLs can be found in the Apprise [notification services documentation](https://github.com/caronc/apprise/wiki#notification-services) - refer to their documentation for required and additional parameters. Tags are mandatory and must at least be one of `broadcast-info`, `broadcast-success`, `broadcast-warning` or `broadcast-failure`, they are used to filter the notifications you want to receive.
 
-The `paymentAccountId` can be found in the output of the `payment-accounts` command.
+The `paymentAccountId` can be found in the output of the `payment-accounts` command (under `paymentCards`, or whichever payment method you use).

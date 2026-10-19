@@ -1012,6 +1012,8 @@ def login(body: Login, request: Request, response: Response):
         if not body.signup and not exists:  # online, logging in needs a sign-up first
             log.info("login refused: no account yet for %s", masked)
             raise HTTPException(404, "Aucun compte PaybyBot pour ce compte PayByPhone.")
+    if body.signup and not demo:  # the account is created once the e-mail is confirmed with a code
+        return start_verification(response, session, body.email.strip(), body.zone.strip())
     if HOSTED:
         token = seal(session)
         refresh = getattr(session.bot, "refresh_token", None)
@@ -1036,6 +1038,132 @@ def login(body: Login, request: Request, response: Response):
     if not demo:
         log_profile_queries(session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
+
+
+# --------------------------------------------------------------------------
+# Sign-up: the e-mail is confirmed with a 6-digit code before the account exists
+# --------------------------------------------------------------------------
+
+PENDING_COOKIE = "pbb_pending"
+CODE_TTL = 600  # seconds
+CODE_TRIES = 5  # wrong codes before a new one is needed
+PENDING = {}  # local app: token -> sign-up waiting for its code (hosted: sealed in the cookie)
+
+
+def code_hash(code, email):
+    key = _subkey(_secrets()[0], "code") if HOSTED else PENDING_KEY
+    return hmac.new(key, ("%s:%s" % (code, email.lower())).encode(), hashlib.sha256).hexdigest()
+
+
+PENDING_KEY = secrets.token_bytes(32)
+
+
+def mask_email(email):
+    name, _, domain = email.partition("@")
+    return "%s•••@%s" % (name[:2], domain)
+
+
+def send_code(email, code):
+    sent = send_email(email, "Votre code PaybyBot : %s" % code, "Votre code de vérification",
+                      ["Saisissez ce code sur PaybyBot pour finir votre inscription :",
+                       "%s %s" % (code[:3], code[3:]),
+                       "Il est valable 10 minutes. Ne le communiquez à personne."],
+                      footer="Vous recevez cet e-mail parce que cette adresse a été indiquée pour créer un compte "
+                             "PaybyBot. Si ce n'est pas vous, ignorez-le : aucun compte ne sera créé.")
+    if not sent:
+        if HOSTED:
+            raise HTTPException(502, "L'e-mail n'a pas pu être envoyé. Vérifiez l'adresse et réessayez.")
+        log.warning("local app without e-mail sending: verification code %s", code)  # local only, never online
+
+
+def start_verification(response, session, email, zone, pending=None):
+    code = "%06d" % secrets.randbelow(10 ** 6)
+    if pending is None:
+        pending = {"email": email, "zone": zone}
+        if HOSTED:
+            pending["s"] = seal(session)
+        else:
+            pending["t"] = secrets.token_urlsafe(32)
+    pending.update(h=code_hash(code, pending["email"]), exp=int(time.time()) + CODE_TTL, sent=int(time.time()))
+    if HOSTED:
+        value = _fernet("pending").encrypt(json.dumps(pending).encode()).decode()
+    else:
+        PENDING[pending["t"]] = {**pending, "session": session, "tries": 0}
+        value = pending["t"]
+    send_code(pending["email"], code)
+    response.set_cookie(PENDING_COOKIE, value, httponly=True, samesite="strict", secure=HOSTED, path="/api/signup",
+                        max_age=CODE_TTL)
+    log.info("sign-up code sent")
+    return {"pending": True, "email": mask_email(pending["email"])}
+
+
+def read_pending(value):
+    """The sign-up waiting for its code, and its PayByPhone session."""
+    try:
+        if HOSTED:
+            pending = json.loads(_fernet("pending").decrypt((value or "").encode(), ttl=CODE_TTL + 60))
+            session = UserSession.from_state(json.loads(_fernet().decrypt(pending["s"].encode())))
+        else:
+            pending = PENDING[value or ""]
+            session = pending["session"]
+    except Exception:
+        raise HTTPException(410, "Ce code a expiré. Recommencez l'inscription.")
+    if time.time() > pending["exp"]:
+        raise HTTPException(410, "Ce code a expiré. Demandez-en un nouveau.")
+    return pending, session
+
+
+def count_try(pending, session, kind, limit, window):
+    """At most `limit` code checks (or new codes) per window, for this PayByPhone account."""
+    if HOSTED:
+        if not store("rate_hit", p_key="%s:%s" % (kind, owner_id(session.username)), p_window_seconds=window,
+                     p_max=limit):
+            raise HTTPException(429, "Trop d'essais. Réessayez dans quelques minutes.")
+    else:
+        pending[kind] = pending.get(kind, 0) + 1
+        if pending[kind] > limit:
+            raise HTTPException(429, "Trop d'essais. Réessayez dans quelques minutes.")
+
+
+class CodeCheck(BaseModel):
+    code: str = Field(pattern=r"^\s*\d{3}\s?\d{3}\s*$")
+
+
+@app.post("/api/signup/verify")
+def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie(None)):
+    pending, session = read_pending(pbb_pending)
+    count_try(pending, session, "code", CODE_TRIES, 900)
+    code = re.sub(r"\D", "", body.code)
+    if not hmac.compare_digest(code_hash(code, pending["email"]), pending["h"]):
+        raise HTTPException(400, "Code incorrect. Vérifiez l'e-mail reçu.")
+    save_account(session, {"email": pending["email"], "zone": pending["zone"]})
+    if HOSTED:
+        token = seal(session)
+        refresh = getattr(session.bot, "refresh_token", None)
+        if refresh:
+            try:
+                store("renewal_set_credential", p_owner=owner_id(session.username),
+                      p_credential=encrypt_credential(refresh))
+            except Exception as e:
+                log.warning("could not refresh stored renewals: %s", e)
+    else:
+        token = secrets.token_urlsafe(32)
+        SESSIONS[token] = session
+        PENDING.pop(pbb_pending or "", None)
+    set_session_cookie(response, token)
+    response.delete_cookie(PENDING_COOKIE, path="/api/signup")
+    log.info("sign-up confirmed")
+    return {"username": session.username, "demo": False, "hosted": HOSTED, "firstName": first_name(session)}
+
+
+@app.post("/api/signup/resend")
+def resend_signup_code(response: Response, pbb_pending: str = Cookie(None)):
+    pending, session = read_pending(pbb_pending)
+    if time.time() - pending.get("sent", 0) < 30:
+        raise HTTPException(429, "Patientez quelques secondes avant de demander un nouveau code.")
+    count_try(pending, session, "resend", 3, 3600)
+    pending = {k: v for k, v in pending.items() if k in ("email", "zone", "s", "t")}
+    return start_verification(response, session, pending["email"], pending["zone"], pending)
 
 
 @app.post("/api/logout")

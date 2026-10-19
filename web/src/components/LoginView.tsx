@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowRight, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { ZoneField } from '@/components/Riverain'
-import { api, ApiError, type Me } from '@/lib/api'
+import { api, ApiError, isPending, type Me } from '@/lib/api'
 
 /** Countries where PayByPhone is used, with their calling code and flag stripes. */
 const COUNTRIES = [
@@ -70,6 +70,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
   const [accountExists, setAccountExists] = useState(false)
   const [noAccount, setNoAccount] = useState(false)
   const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
   const selected = COUNTRIES.find((c) => c.id === country) ?? COUNTRIES[0]
   const link = 'text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink'
 
@@ -81,9 +82,14 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
     try {
       const username = demo ? 'demo' : mode === 'phone' ? phoneUsername(phone, selected.code) : email.trim()
       // Clicking "Se connecter" is the acceptance of the terms and privacy policy, stated right above it.
-      onLogin(
-        await api.login(username, demo ? 'demo' : password, !demo, signup && !demo ? { email: signupEmail.trim(), zone: signupZone } : undefined),
+      const result = await api.login(
+        username,
+        demo ? 'demo' : password,
+        !demo,
+        signup && !demo ? { email: signupEmail.trim(), zone: signupZone } : undefined,
       )
+      if (isPending(result)) setCodeSentTo(result.email)
+      else onLogin(result)
     } catch (e) {
       setError((e as Error).message)
       setAccountExists(e instanceof ApiError && e.status === 409)
@@ -91,6 +97,10 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
     } finally {
       setLoading(null)
     }
+  }
+
+  if (codeSentTo) {
+    return <CodeStep email={codeSentTo} hosted={hosted} onLogin={onLogin} onBack={() => setCodeSentTo(null)} />
   }
 
   return (
@@ -313,3 +323,112 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
   )
 }
 
+
+/** Sign-up, last step: the 6-digit code sent to the e-mail. */
+function CodeStep({
+  email,
+  hosted,
+  onLogin,
+  onBack,
+}: {
+  email: string
+  hosted: boolean
+  onLogin: (me: Me) => void
+  onBack: () => void
+}) {
+  const [code, setCode] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [wait, setWait] = useState(30)
+  const [sentTo, setSentTo] = useState(email)
+  const link = 'text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink disabled:no-underline disabled:opacity-50'
+
+  useEffect(() => {
+    if (wait <= 0) return
+    const id = setTimeout(() => setWait((w) => w - 1), 1000)
+    return () => clearTimeout(id)
+  }, [wait])
+
+  async function check(value = code) {
+    setChecking(true)
+    setError(null)
+    try {
+      onLogin(await api.verifySignup(value))
+    } catch (e) {
+      setError((e as Error).message)
+      setChecking(false)
+    }
+  }
+
+  async function resend() {
+    setError(null)
+    try {
+      const r = await api.resendSignupCode()
+      setSentTo(r.email)
+      setWait(30)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-white">
+      <PublicTopBar />
+      <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center sm:pt-0">
+        <form
+          className="rise w-full max-w-[26rem]"
+          onSubmit={(e) => {
+            e.preventDefault()
+            check()
+          }}
+        >
+          <h1 className="font-heading text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink">
+            Vérifiez votre e-mail
+          </h1>
+          <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
+            Nous avons envoyé un code à 6 chiffres à <strong className="font-semibold text-ink">{sentTo}</strong>.
+            Saisissez-le pour finir votre inscription.
+          </p>
+          <input
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            aria-label="Code à 6 chiffres"
+            placeholder="123 456"
+            value={code}
+            maxLength={7}
+            autoFocus
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, '').slice(0, 6)
+              setCode(digits)
+              if (digits.length === 6 && !checking) check(digits)
+            }}
+            className="mt-8 h-16 w-full rounded-xl border border-ink/20 bg-white text-center font-heading text-3xl font-semibold tracking-[0.4em] text-ink tabular-nums outline-none placeholder:text-ink/20 focus:border-eu focus:ring-3 focus:ring-eu/15"
+          />
+          {error && (
+            <p role="alert" className="mt-4 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={code.length !== 6 || checking}
+            className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+          >
+            {checking ? <Loader2 className="size-5 animate-spin" /> : 'Valider'}
+          </button>
+          <p className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-ink/50">
+            <button type="button" onClick={resend} disabled={wait > 0} className={link}>
+              {wait > 0 ? `Renvoyer le code (${wait} s)` : 'Renvoyer le code'}
+            </button>
+            <span aria-hidden>·</span>
+            <button type="button" onClick={onBack} className={link}>
+              Modifier l’e-mail
+            </button>
+          </p>
+          <p className="mt-4 text-center text-sm text-ink/45">Pensez à regarder dans vos courriers indésirables.</p>
+        </form>
+      </main>
+      <HostedFooter className="px-6 pb-8" hosted={hosted} />
+    </div>
+  )
+}

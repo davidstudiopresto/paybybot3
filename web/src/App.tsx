@@ -43,7 +43,7 @@ export default function App() {
     if (route !== 'demo' || me === undefined) return
     history.replaceState(null, '', window.location.pathname)
     setRoute(null)
-    if (me === null) api.login('demo', 'demo').then(setMe, (e) => toast.error((e as Error).message))
+    if (me === null) api.login('demo', 'demo').then((m) => setMe(m as Me), (e) => toast.error((e as Error).message))
   }, [route, me])
 
   useEffect(() => {

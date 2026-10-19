@@ -42,13 +42,35 @@ class Account(unittest.TestCase):
                       None, Response())
         self.assertEqual(e.exception.status_code, 409)
 
-    def test_sign_up_saves_email_and_zone(self):
+    def sign_up(self):
         fresh = web.UserSession("demo", "", demo=True)
         fresh.demo = False
-        with patch.object(web, "UserSession", return_value=fresh):
-            web.login(web.Login(username="+33612345678", password="x", signup=True, email="c@d.fr", zone="75017"),
-                      None, Response())
+        codes, response = [], Response()
+        with patch.object(web, "UserSession", return_value=fresh), \
+                patch.object(web, "send_code", side_effect=lambda email, code: codes.append(code)):
+            result = web.login(web.Login(username="+33612345678", password="x", signup=True, email="c@d.fr",
+                                         zone="75017"), None, response)
+        token = response.headers["set-cookie"].split("pbb_pending=")[1].split(";")[0]
+        return fresh, result, codes[0], token
+
+    def test_sign_up_waits_for_the_code(self):
+        fresh, result, code, token = self.sign_up()
+        self.assertTrue(result["pending"])
+        self.assertEqual(result["email"], "c•••@d.fr")
+        self.assertEqual(fresh.account, {})  # nothing created before the code
+        web.verify_signup(web.CodeCheck(code=code[:3] + " " + code[3:]), Response(), token)
         self.assertEqual(fresh.account, {"email": "c@d.fr", "zone": "75017"})
+
+    def test_wrong_code_then_too_many_tries(self):
+        _, _, code, token = self.sign_up()
+        wrong = "%06d" % ((int(code) + 1) % 10 ** 6)
+        for _ in range(web.CODE_TRIES):
+            with self.assertRaises(HTTPException) as e:
+                web.verify_signup(web.CodeCheck(code=wrong), Response(), token)
+            self.assertEqual(e.exception.status_code, 400)
+        with self.assertRaises(HTTPException) as e:  # even the right code is refused now
+            web.verify_signup(web.CodeCheck(code=code), Response(), token)
+        self.assertEqual(e.exception.status_code, 429)
 
 
 class HostedLogin(unittest.TestCase):

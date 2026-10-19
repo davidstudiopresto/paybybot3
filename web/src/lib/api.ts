@@ -46,6 +46,10 @@ export type Overview = {
   autopilots: Autopilot[]
   history: HistoryItem[]
 }
+/** Sign-up waiting for the 6-digit code sent to the e-mail. */
+export type SignupPending = { pending: true; email: string }
+export const isPending = (x: Me | SignupPending): x is SignupPending => 'pending' in x
+
 /** The PaybyBot account: e-mail given at sign-up, home zone added by hand. */
 export type Account = { email: string; zone: string | null }
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
@@ -89,11 +93,13 @@ export const api = {
   config: () => request<{ hosted: boolean }>('/api/config'),
   me: () => request<Me>('/api/me'),
   login: (username: string, password: string, accepted = false, signup?: { email: string; zone: string }) =>
-    post<Me>('/api/login', { username, password, accepted, ...(signup ? { signup: true, ...signup } : {}) }),
+    post<Me | SignupPending>('/api/login', { username, password, accepted, ...(signup ? { signup: true, ...signup } : {}) }),
   account: () => request<Account>('/api/account'),
   updateAccount: (patch: Partial<Account>) =>
     request<Account>('/api/account', { method: 'PUT', body: JSON.stringify(patch) }),
   logout: () => post('/api/logout'),
+  verifySignup: (code: string) => post<Me>('/api/signup/verify', { code }),
+  resendSignupCode: () => post<SignupPending>('/api/signup/resend'),
   deleteData: () => request('/api/me/data', { method: 'DELETE' }),
   overview: () => request<Overview>('/api/overview'),
   /** Home zone guessed from the PayByPhone history (null if none). */

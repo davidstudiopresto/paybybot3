@@ -70,7 +70,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-[10vh] pb-24 sm:px-8 lg:pt-[14vh]">
         <section className="rise grid items-center gap-12 lg:grid-cols-[1.45fr_1fr] lg:gap-16">
           <div className="max-w-[40rem]">
-            <h1 className={cn(ui.title, 'lg:text-[3.3rem] lg:leading-[1.05]')}>paybybot renouvelle votre ticket de stationnement automatiquement.</h1>
+            <h1 className={cn(ui.title, 'lg:text-[3.3rem] lg:leading-[1.05]')}>Renouvellement automatique de votre ticket de stationnement.</h1>
             <p className={cn(ui.subtitle, 'lg:mt-5 lg:text-xl')}>
               Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.
             </p>

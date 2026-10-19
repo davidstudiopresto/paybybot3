@@ -117,14 +117,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
 const QUESTIONS: [string, ReactNode][] = [
   [
-    "Quelle différence entre s'inscrire et se connecter ?",
-    <>
-      Aucune pour vos identifiants : paybybot n'a pas de compte à lui, vous entrez ceux de PayByPhone dans les deux cas.
-      « S'inscrire » vous guide ensuite pour activer le renouvellement (voiture, zone, e-mail). « Se connecter » ouvre
-      directement votre tableau de bord.
-    </>,
-  ],
-  [
     'Quelles informations me demandez-vous ?',
     <>
       Rien de ce que PayByPhone sait déjà : votre numéro, vos voitures et votre carte viennent de votre compte, et votre

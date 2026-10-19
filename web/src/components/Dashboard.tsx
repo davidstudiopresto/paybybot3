@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, LogOut } from 'lucide-react'
+import { ArrowRight, LogOut, Repeat } from 'lucide-react'
 import { Plate, Wordmark, ZonePlate } from '@/components/signs'
 import { ExtendDialog } from '@/components/Extend'
 import { HostedFooter } from '@/components/Footer'
-import { RiverainCard } from '@/components/Riverain'
-import { clock, money, remaining, type Me, type Overview, type Session } from '@/lib/api'
+import { ManageRenewal, RenewalNote, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
+import { money, remaining, until, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -17,8 +17,21 @@ function useNow(interval = 1000) {
 
 const quietLink = 'text-sm font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink'
 
-function Ticket({ session, now, data, onRefresh }: { session: Session; now: number; data: Overview; onRefresh: () => Promise<void> }) {
+function Ticket({
+  session,
+  now,
+  data,
+  onRefresh,
+  demo,
+}: {
+  session: Session
+  now: number
+  data: Overview
+  onRefresh: () => Promise<void>
+  demo: boolean
+}) {
   const [extending, setExtending] = useState(false)
+  const renewal = renewalOf(data, session)
   const start = new Date(session.start).getTime()
   const end = new Date(session.expire).getTime()
   const left = end - now
@@ -37,16 +50,28 @@ function Ticket({ session, now, data, onRefresh }: { session: Session; now: numb
       <p className={`mt-5 font-heading text-[2.6rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
         {remaining(left)}
       </p>
-      <p className="mt-2 text-muted-foreground">jusqu'à {clock(session.expire)}</p>
+      <p className="mt-2 text-muted-foreground">{until(session.expire)}</p>
       <div className="mt-5 h-1 overflow-hidden rounded-full bg-muted" aria-hidden>
         <div
           className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-eu'}`}
           style={{ width: `${(1 - progress) * 100}%` }}
         />
       </div>
-      <button onClick={() => setExtending(true)} className={`mt-4 ${quietLink}`}>
-        Prolonger
-      </button>
+      {renewal ? (
+        <div className="mt-4 flex items-start justify-between gap-4">
+          <p className="flex gap-2 text-sm text-ink/70">
+            <Repeat className="mt-0.5 size-4 shrink-0 text-eu" />
+            <span>
+              <RenewalNote ap={renewal} />
+            </span>
+          </p>
+          <ManageRenewal ap={renewal} onChanged={onRefresh} demo={demo} />
+        </div>
+      ) : (
+        <button onClick={() => setExtending(true)} className={`mt-4 ${quietLink}`}>
+          Prolonger
+        </button>
+      )}
       <ExtendDialog session={session} data={data} open={extending} onOpenChange={setExtending} onDone={onRefresh} />
     </article>
   )
@@ -67,6 +92,7 @@ export function Dashboard({
 }) {
   const now = useNow()
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
+  const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
 
   // Fresh data when coming back to the tab (it also refreshes every minute).
   useEffect(() => {
@@ -109,22 +135,34 @@ export function Dashboard({
         {data && sessions.length > 0 && (
           <div className="mt-6 space-y-3">
             {sessions.map((s) => (
-              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} />
+              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} demo={me.demo} />
             ))}
           </div>
         )}
 
-        <button
-          onClick={onPay}
-          disabled={!data}
-          className="mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-eu text-lg font-bold text-white transition hover:bg-eu/90 active:scale-[0.99] disabled:opacity-50"
-        >
-          Payer un stationnement <ArrowRight className="size-5" />
-        </button>
+        {renewing ? (
+          // The renewal is the point of the app: once it runs, a one-off payment is a quiet secondary action.
+          <div className="mt-6 flex flex-col items-start gap-3">
+            <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
+            <button onClick={onPay} className={quietLink}>
+              Payer un stationnement ponctuel
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={onPay}
+              disabled={!data}
+              className="mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-eu text-lg font-bold text-white transition hover:bg-eu/90 active:scale-[0.99] disabled:opacity-50"
+            >
+              Payer un stationnement <ArrowRight className="size-5" />
+            </button>
 
-        <div className="mt-12 border-t border-border pt-8">
-          <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
-        </div>
+            <div className="mt-12 border-t border-border pt-8">
+              <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
+            </div>
+          </>
+        )}
       </main>
 
       <HostedFooter className="px-6 pb-8" hosted={!!me.hosted} />

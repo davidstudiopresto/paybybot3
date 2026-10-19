@@ -116,15 +116,33 @@ export function money(m?: Money | null) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: m.currency || 'EUR' }).format(m.amount)
 }
 
-export function clock(iso: string) {
+function dayAndTime(iso: string) {
   const d = new Date(iso)
   const today = new Date()
-  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-  if (d.toDateString() === today.toDateString()) return `aujourd'hui à ${time}`
+  const time = `${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`
   const tomorrow = new Date(today)
   tomorrow.setDate(today.getDate() + 1)
-  if (d.toDateString() === tomorrow.toDateString()) return `demain à ${time}`
-  return `le ${d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${time}`
+  const day =
+    d.toDateString() === today.toDateString()
+      ? null
+      : d.toDateString() === tomorrow.toDateString()
+        ? 'demain'
+        : d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  return { day, time }
+}
+
+/** "aujourd'hui à 21h56", "demain à 21h56", "le lundi 26 octobre à 21h56". */
+export function clock(iso: string) {
+  const { day, time } = dayAndTime(iso)
+  if (!day) return `aujourd'hui à ${time}`
+  return day === 'demain' ? `demain à ${time}` : `le ${day} à ${time}`
+}
+
+/** "jusqu'à 21h56", "jusqu'à demain 21h56", "jusqu'au lundi 26 octobre, 21h56". */
+export function until(iso: string) {
+  const { day, time } = dayAndTime(iso)
+  if (!day) return `jusqu'à ${time}`
+  return day === 'demain' ? `jusqu'à demain ${time}` : `jusqu'au ${day}, ${time}`
 }
 
 export function remaining(ms: number) {

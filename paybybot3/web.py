@@ -35,7 +35,9 @@ from fastapi import Cookie, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from typing import Annotated
 
+from . import schedule
 from .bot import Bot
 
 log = logging.getLogger("paybybot3.web")
@@ -584,7 +586,17 @@ def notify(details, event, **info):
         return
     car = "%s, zone %s" % (plate_text(details.get("plate")), details.get("location"))
     open_app = ("Ouvrir paybybot", APP_URL)
-    if event == "activated":
+    rule = rule_of(details)
+    if event == "activated" and rule:
+        lines = ["Les tickets automatiques sont activés pour %s, %s." % (car, rule_text(rule))]
+        if info.get("expire"):
+            lines.append("Un ticket couvre déjà votre voiture jusqu'au %s." % paris_text(info["expire"]))
+        if info.get("next"):
+            lines.append("Prochain ticket : %s." % paris_text(info["next"]))
+        lines.append("Rien n'est payé les dimanches et jours fériés, gratuits à Paris.")
+        send_email(to, "Tickets automatiques activés · %s" % plate_text(details.get("plate")),
+                   "Tickets automatiques activés", lines, open_app)
+    elif event == "activated":
         lines = ["Le renouvellement automatique de votre forfait résident est activé pour %s." % car]
         if info.get("expire"):
             lines.append("Votre voiture est couverte jusqu'au %s. Le forfait suivant sera payé automatiquement à "
@@ -593,11 +605,12 @@ def notify(details, event, **info):
                    lines, open_app)
     elif event == "paid":
         send_email(to, "Forfait renouvelé · %s" % plate_text(details.get("plate")), "Forfait renouvelé",
-                   ["Un nouveau forfait de %s %s a été payé automatiquement pour %s%s." % (
-                       fmt_qty(details.get("duration")), "jours" if details.get("unit") == "Days" else details.get("unit"),
+                   ["Un nouveau forfait de %s a été payé automatiquement pour %s%s." % (
+                       duration_text(details.get("duration"), details.get("unit")),
                        car, (" (%s)" % money_text(info.get("cost"))) if money_text(info.get("cost")) else ""),
                     "Valable jusqu'au %s." % paris_text(info.get("expire")),
-                    "Le ticket apparaît aussi dans votre application PayByPhone."], open_app)
+                    "Le ticket apparaît aussi dans votre application PayByPhone."]
+                   + (["Prochain ticket : %s." % paris_text(info["next"])] if info.get("next") else []), open_app)
     elif event == "paused":
         until = ("jusqu'au %s inclus" % info["until_day"]) if info.get("until_day") else "sans date de fin"
         send_email(to, "Renouvellement en pause · %s" % plate_text(details.get("plate")), "Renouvellement en pause",
@@ -611,19 +624,68 @@ def notify(details, event, **info):
                    open_app)
 
 
-def run_autopilot(session, ap):
-    """Pay for the configured parking if no session is active right now."""
-    if paused_now(ap.get("pausedFrom"), ap.get("pausedUntil")):
-        ap["lastCheck"] = datetime.now(timezone.utc).isoformat()
+DAY_NAMES = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+
+
+def rule_of(details):
+    """The "precise days" rule of a renewal, or None for the continuous weekly renewal."""
+    days = (details or {}).get("days")
+    if not days:
+        return None
+    return {"days": sorted({int(d) for d in days}), "start": details.get("start") or schedule.DEFAULT_START,
+            "unit": details.get("unit"), "duration": details.get("duration")}
+
+
+def duration_text(duration, unit):
+    n = fmt_qty(float(duration or 0))
+    word = {"Days": "jour", "Hours": "heure", "Minutes": "minute"}.get(unit, unit)
+    return "%s %s%s" % (str(n).replace(".", ","), word, "s" if float(n) > 1 else "")
+
+
+def rule_text(rule):
+    """'chaque samedi', 'du mardi au vendredi'... with the time the ticket is taken."""
+    days = rule["days"]
+    if len(days) > 2 and days == list(range(days[0], days[-1] + 1)):
+        when = "du %s au %s" % (DAY_NAMES[days[0]], DAY_NAMES[days[-1]])
+    else:
+        names = [DAY_NAMES[d] for d in days]
+        when = "chaque " + (names[0] if len(names) == 1 else ", ".join(names[:-1]) + " et " + names[-1])
+    h, m = rule["start"].split(":")
+    start = "%dh%s" % (int(h), "" if m == "00" else m)
+    if rule.get("unit") == "Days":
+        return "%s, ticket d'une journée pris à %s" % (when, start)
+    return "%s, ticket de %s pris à %s" % (when, duration_text(rule.get("duration"), rule.get("unit")), start)
+
+
+def covered_until(active):
+    return max((x["expireTime"] for x in active), default=None)
+
+
+def run_autopilot(session, ap, now=None):
+    """Pay for the configured parking if no session is active right now (and, for precise days, if it is time)."""
+    now = now or datetime.now(timezone.utc)
+    rule = rule_of(ap)
+    if rule:
+        due, _ = schedule.decide(rule, now, ap.get("pausedFrom"), ap.get("pausedUntil"), ap.get("lastPayment"))
+        ap["lastCheck"] = now.isoformat()
+        if not due:
+            return
+    elif paused_now(ap.get("pausedFrom"), ap.get("pausedUntil")):
+        ap["lastCheck"] = now.isoformat()
         return
     active = session.call("get_parking_sessions", licensePlate=ap["plate"], locationId=ap["location"])
     ap["lastCheck"] = datetime.now(timezone.utc).isoformat()
+    if rule and active:
+        due, _ = schedule.decide(rule, now, ap.get("pausedFrom"), ap.get("pausedUntil"), ap.get("lastPayment"),
+                                 covered_until(active))
+        if not due:
+            return
     if active:
         return
     try:
         pay_and_confirm(session, ap["location"], ap["rate"], ap["duration"], ap["unit"], ap["plate"],
                         ap["paymentAccountId"])
-        ap["lastPayment"] = datetime.now(timezone.utc).isoformat()
+        ap["lastPayment"] = now.isoformat()
         ap["lastError"] = None
         session.log("success", "Renouvellement automatique : zone %s, %s" % (ap["location"], ap["plate"]))
     except Unconfirmed:
@@ -672,7 +734,8 @@ def decrypt_credential(value):
     return _fernet("credential").decrypt(value.encode()).decode()
 
 
-RENEWAL_FIELDS = ("label", "plate", "location", "rate", "duration", "unit", "payment_account_id", "email")
+RENEWAL_FIELDS = ("label", "plate", "location", "rate", "duration", "unit", "payment_account_id", "email", "days",
+                  "start")
 
 
 def encrypt_details(details):
@@ -730,7 +793,15 @@ def stored_to_autopilot(row):
         "paymentAccountId": row["payment_account_id"], "enabled": row["enabled"],
         "lastCheck": row.get("last_check"), "lastPayment": row.get("last_payment"), "lastError": row.get("last_error"),
         "email": row.get("email") or "", "pausedFrom": row.get("paused_from"), "pausedUntil": row.get("paused_until"),
+        "days": row.get("days") or None, "start": row.get("start") or None,
     }
+
+
+def with_next_ticket(ap):
+    """Adds when the next ticket of a "precise days" renewal will be taken (for display)."""
+    rule = rule_of(ap)
+    nxt = rule and schedule.next_ticket(rule, datetime.now(timezone.utc), ap.get("pausedFrom"), ap.get("pausedUntil"))
+    return {**ap, "nextTicket": nxt.astimezone(timezone.utc).isoformat() if nxt else None}
 
 
 def utc_iso(dt):
@@ -748,7 +819,16 @@ def process_renewal(row, refresh_token=None):
         store("renewal_update", p_id=row["id"], p_patch={"enabled": False, "last_error": RELOGIN})
         return "unreadable"
     previous_error = row.get("last_error")
-    if paused_now(row.get("paused_from"), row.get("paused_until"), now):
+    rule = rule_of(row)
+    if rule:
+        # Precise days: no PayByPhone login at all outside the ticket windows.
+        due, next_check = schedule.decide(rule, now, row.get("paused_from"), row.get("paused_until"),
+                                          row.get("last_payment"))
+        if not due:
+            store("renewal_update", p_id=row["id"],
+                  p_patch={"next_check": utc_iso(next_check or now + timedelta(days=30))})
+            return "paused" if paused_now(row.get("paused_from"), row.get("paused_until"), now) else "waiting"
+    elif paused_now(row.get("paused_from"), row.get("paused_until"), now):
         # Check again when the pause ends, without even logging in to PayByPhone meanwhile.
         resume = parse_dt(row.get("paused_until")) or now + timedelta(hours=12)
         store("renewal_update", p_id=row["id"], p_patch={"next_check": utc_iso(resume)})
@@ -771,14 +851,18 @@ def process_renewal(row, refresh_token=None):
     try:
         active = session.call("get_parking_sessions", licensePlate=row["plate"], locationId=row["location"])
         if active:
-            expire = max(x["expireTime"] for x in active)
-            patch.update(next_check=utc_iso(expire + timedelta(seconds=30)), last_error=None)
+            expire = covered_until(active)
+            next_check = expire + timedelta(seconds=30)
+            if rule:  # covered already: never pay twice, look again when it ends or at the next window
+                next_check = schedule.decide(rule, now, None, None, row.get("last_payment"), expire)[1]
+            patch.update(next_check=utc_iso(next_check or now + timedelta(days=30)), last_error=None)
             outcome = "active"
         else:
             result, found = pay_and_confirm(session, row["location"], row["rate"], fmt_qty(row["duration"]),
                                             row["unit"], row["plate"], row["payment_account_id"])
-            expire = max(x["expireTime"] for x in found)
-            patch.update(last_payment=utc_iso(now), next_check=utc_iso(expire + timedelta(seconds=30)),
+            expire = covered_until(found)
+            next_check = schedule.next_slot(rule, now) if rule else expire + timedelta(seconds=30)
+            patch.update(last_payment=utc_iso(now), next_check=utc_iso(next_check or now + timedelta(days=30)),
                          last_error=None)
             outcome = "paid"
     except Unconfirmed:
@@ -790,7 +874,8 @@ def process_renewal(row, refresh_token=None):
     log.info("renewal %s zone=%s plate=%s: %s", row["id"], row["location"], row["plate"][:2] + "***", outcome)
     store("renewal_update", p_id=row["id"], p_patch=patch)
     if outcome == "paid":
-        notify(row, "paid", cost=(result or {}).get("cost"), expire=expire)
+        notify(row, "paid", cost=(result or {}).get("cost"), expire=expire,
+               next=schedule.next_ticket(rule, now, row.get("paused_from"), row.get("paused_until")) if rule else None)
     elif patch.get("last_error") and patch["last_error"] != previous_error:
         notify(row, "problem", message=patch["last_error"])
     return outcome
@@ -837,6 +922,10 @@ EMAIL_PATTERN = r"^$|^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$"
 class Autopilot(Parking):
     label: str = Field(default="", max_length=60)
     email: str = Field(default="", max_length=254, pattern=EMAIL_PATTERN)
+    # Precise days (0 = Monday ... 5 = Saturday; Sundays are free) and the Paris time the ticket is taken.
+    # No days: the continuous weekly renewal.
+    days: list[Annotated[int, Field(ge=0, le=5)]] | None = Field(default=None, min_length=1, max_length=6)
+    start: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
 class Pause(BaseModel):
@@ -911,6 +1000,10 @@ def overview(pbb_session: str = Cookie(None)):
     s = current(pbb_session)
 
     def load():
+        if HOSTED and s.demo:  # no background loop on a serverless host: a demo renewal runs when the page loads
+            for ap in list(s.autopilots.values()):
+                if ap.get("enabled"):
+                    run_autopilot(s, ap)
         vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]
         accounts = s.call("get_payment_accounts") or {}
         payments = normalize_accounts(accounts)
@@ -924,7 +1017,7 @@ def overview(pbb_session: str = Cookie(None)):
             "payments": payments,
             "sessions": [serialize_session(x) for x in s.call("get_parking_sessions")],
             "autopilots": ([stored_to_autopilot(r) for r in store("renewal_list", p_owner=owner_id(s.username))]
-                           if HOSTED and not s.demo else list(s.autopilots.values())),
+                           if HOSTED and not s.demo else [with_next_ticket(a) for a in s.autopilots.values()]),
             "history": s.history[:10],
         }
 
@@ -1074,6 +1167,8 @@ def debug(pbb_session: str = Cookie(None)):
 @app.post("/api/autopilots")
 def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
+    days = sorted(set(body.days)) if body.days else None
+    start = (body.start or schedule.DEFAULT_START) if days else None
     if HOSTED and not s.demo:
         refresh = getattr(s.bot, "refresh_token", None)
         if not refresh:
@@ -1085,19 +1180,20 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                 "data": encrypt_details({"label": body.label, "plate": body.plate, "location": body.location,
                                          "rate": body.rate, "duration": fmt_qty(body.duration), "unit": body.unit,
                                          "payment_account_id": body.paymentAccountId,
-                                         "email": body.email.strip()})})
+                                         "email": body.email.strip(), "days": days, "start": start})})
             details = {**with_details(row)}
-            outcome = process_renewal(row, refresh_token=refresh)  # pay the first week now if nothing is active
+            outcome = process_renewal(row, refresh_token=refresh)  # pay now if it is due and nothing is active
             stored = next((r for r in store("renewal_list", p_owner=owner_id(s.username)) if r["id"] == row["id"]), row)
-            if outcome in ("paid", "active"):
+            if outcome in ("paid", "active", "waiting"):
                 active = s.call("get_parking_sessions", licensePlate=body.plate, locationId=body.location)
-                notify(details, "activated",
-                       expire=max((x["expireTime"] for x in active), default=None) if active else None)
-            return stored_to_autopilot(stored)
+                rule = rule_of(details)
+                notify(details, "activated", expire=covered_until(active) if active else None,
+                       next=schedule.next_ticket(rule, datetime.now(timezone.utc)) if rule else None)
+            return with_next_ticket(stored_to_autopilot(stored))
 
         return guarded(save)
     ap = {**body.model_dump(), "duration": fmt_qty(body.duration), "id": uuid.uuid4().hex[:8], "enabled": True,
-          "lastCheck": None, "lastPayment": None, "lastError": None}
+          "lastCheck": None, "lastPayment": None, "lastError": None, "days": days, "start": start}
     s.autopilots[ap["id"]] = ap
     if HOSTED:  # demo on a serverless host: no background thread, run it now
         run_autopilot(s, ap)

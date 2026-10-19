@@ -7,12 +7,109 @@ import { Plate, ZonePlate } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, clock, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
 const WEEK_DAYS = 7
 
 export const isWeekly = (ap: Autopilot) => ap.label === WEEKLY_LABEL
+
+/** The weekly renewal of the car and zone of a ticket, if there is one. */
+export const renewalOf = (data: Overview, s: { plate: string; location: string }) =>
+  data.autopilots.find((ap) => isWeekly(ap) && ap.plate === s.plate && ap.location === s.location)
+
+function pauseState(ap: Autopilot, now = Date.now()) {
+  const start = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
+  const end = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
+  return {
+    start,
+    end,
+    paused: start !== null && start <= now && (end === null || now < end),
+    later: start !== null && start > now,
+  }
+}
+
+/** One line on what the renewal of a running ticket will do. */
+export function RenewalNote({ ap }: { ap: Autopilot }) {
+  const { start, end, paused, later } = pauseState(ap)
+  if (ap.lastError) return <span className="text-destructive">{ap.lastError}</span>
+  if (paused) return <>Renouvellement en pause {end ? `jusqu'au ${dayText(end - 1)} inclus` : 'sans date de fin'}</>
+  return (
+    <>
+      Renouvelé automatiquement à la fin
+      {later && <span className="block">Pause prévue du {dayText(start!)} {end ? `au ${dayText(end - 1)}` : 'sans date de fin'}</span>}
+    </>
+  )
+}
+
+/** The "Gérer" link of a renewal and everything behind it: vacation pause, e-mail, stop. */
+export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; onChanged: () => void; demo?: boolean }) {
+  const [managing, setManaging] = useState(false)
+  const [pausing, setPausing] = useState(false)
+
+  async function resume() {
+    try {
+      await api.resumeAutopilot(ap.id)
+      toast.success('Renouvellement repris.')
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+    onChanged()
+  }
+
+  async function editEmail() {
+    const value = window.prompt(
+      (demo ? "Mode démo : aucun e-mail n'est envoyé.\n\n" : '') +
+        "Adresse e-mail pour recevoir une confirmation à chaque paiement et une alerte en cas de problème (laisser vide pour ne plus rien recevoir) :",
+      ap.email ?? '',
+    )
+    if (value === null) return
+    try {
+      await api.setAutopilotEmail(ap.id, value.trim())
+      toast.success(value.trim() ? 'Les confirmations seront envoyées à cette adresse.' : 'Vous ne recevrez plus d’e-mails.')
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+    onChanged()
+  }
+
+  async function stop() {
+    await api.deleteAutopilot(ap.id)
+    toast.success('Renouvellement hebdomadaire arrêté.', { description: 'Le ticket en cours reste valable.' })
+    onChanged()
+  }
+
+  return (
+    <>
+      <button onClick={() => setManaging(true)} className={cn('shrink-0 text-sm', ui.link)}>
+        Gérer
+      </button>
+      {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
+      {managing && (
+        <ManageDialog
+          ap={ap}
+          onClose={() => setManaging(false)}
+          onPause={() => {
+            setManaging(false)
+            setPausing(true)
+          }}
+          onResume={() => {
+            setManaging(false)
+            resume()
+          }}
+          onEmail={() => {
+            setManaging(false)
+            editEmail()
+          }}
+          onStop={() => {
+            setManaging(false)
+            stop()
+          }}
+        />
+      )}
+    </>
+  )
+}
 
 const isResident = (r: Rate) => /r[ée]sid|riverain/i.test(`${r.name} ${r.type}`) && !r.parkingNotAllowedReason
 
@@ -31,113 +128,36 @@ export function RiverainCard({
   const [open, setOpen] = useState(false)
   const weekly = data?.autopilots.filter(isWeekly) ?? []
 
-  const [pausing, setPausing] = useState<Autopilot | null>(null)
-  const [managing, setManaging] = useState<Autopilot | null>(null)
-
-  async function resume(id: string) {
-    try {
-      await api.resumeAutopilot(id)
-      toast.success('Renouvellement repris.')
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
-    onChanged()
-  }
-
-  async function editEmail(ap: Autopilot) {
-    const value = window.prompt(
-      (demo ? "Mode démo : aucun e-mail n'est envoyé.\n\n" : '') +
-        "Adresse e-mail pour recevoir une confirmation à chaque paiement et une alerte en cas de problème (laisser vide pour ne plus rien recevoir) :",
-      ap.email ?? '',
-    )
-    if (value === null) return
-    try {
-      await api.setAutopilotEmail(ap.id, value.trim())
-      toast.success(value.trim() ? 'Les confirmations seront envoyées à cette adresse.' : 'Vous ne recevrez plus d’e-mails.')
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
-    onChanged()
-  }
-
-  async function stop(id: string) {
-    await api.deleteAutopilot(id)
-    toast.success('Renouvellement hebdomadaire arrêté.', { description: 'Le ticket en cours reste valable.' })
-    onChanged()
-  }
-
-  if (weekly.length) {
+  if (weekly.length && data) {
+    // Renewals of a running ticket are shown on the ticket itself; only the others are listed here.
+    const others = weekly.filter((ap) => !data.sessions.some((s) => s.plate === ap.plate && s.location === ap.location))
     return (
       <section className="rise">
-        <h2 className="font-heading text-xl font-bold">Renouvellement riverain</h2>
-        <p className="mt-1 text-ink/60">Votre forfait de 7 jours, repayé tout seul à chaque expiration.</p>
-        <ul className="mt-5 divide-y divide-border border-y border-border">
-          {weekly.map((ap) => {
-            const current = data?.sessions.find((s) => s.plate === ap.plate && s.location === ap.location)
-            const now = Date.now()
-            const pauseStart = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
-            const pauseEnd = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
-            const paused = pauseStart !== null && pauseStart <= now && (pauseEnd === null || now < pauseEnd)
-            const pauseLater = pauseStart !== null && pauseStart > now
-            return (
-              <li key={ap.id} className="flex items-start justify-between gap-4 py-4">
-                <div className="min-w-0">
-                  <span className="flex items-center gap-3">
-                    <Plate plate={ap.plate} size="sm" />
-                    <ZonePlate zone={ap.location} />
-                  </span>
-                  <p className="mt-2 text-sm text-ink/60">
-                    {ap.lastError ? (
-                      <span className="text-destructive">{ap.lastError}</span>
-                    ) : paused ? (
-                      <>En pause {pauseEnd ? `jusqu'au ${dayText(pauseEnd - 1)} inclus` : 'sans date de fin'}</>
-                    ) : current ? (
-                      <>Prochain renouvellement {clock(current.expire)}</>
-                    ) : (
-                      <>Paiement en cours…</>
-                    )}
-                    {pauseLater && (
-                      <span className="block">
-                        Pause prévue du {dayText(pauseStart!)} {pauseEnd ? `au ${dayText(pauseEnd - 1)}` : 'sans date de fin'}
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <button onClick={() => setManaging(ap)} className={cn('shrink-0 text-sm', ui.link)}>
-                  Gérer
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-        <button onClick={() => setOpen(true)} className={cn('mt-4 text-sm', ui.link)}>
-          Ajouter une voiture
-        </button>
-        {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
-        {pausing && <PauseDialog ap={pausing} onClose={() => setPausing(null)} onDone={onChanged} />}
-        {managing && (
-          <ManageDialog
-            ap={managing}
-            onClose={() => setManaging(null)}
-            onPause={() => {
-              setPausing(managing)
-              setManaging(null)
-            }}
-            onResume={() => {
-              resume(managing.id)
-              setManaging(null)
-            }}
-            onEmail={() => {
-              const ap = managing
-              setManaging(null)
-              editEmail(ap)
-            }}
-            onStop={() => {
-              stop(managing.id)
-              setManaging(null)
-            }}
-          />
+        {others.length > 0 && (
+          <ul className="mb-4 divide-y divide-border border-y border-border">
+            {others.map((ap) => {
+              const { paused } = pauseState(ap)
+              return (
+                <li key={ap.id} className="flex items-start justify-between gap-4 py-4">
+                  <div className="min-w-0">
+                    <span className="flex items-center gap-3">
+                      <Plate plate={ap.plate} size="sm" />
+                      <ZonePlate zone={ap.location} />
+                    </span>
+                    <p className="mt-2 text-sm text-ink/60">
+                      {ap.lastError || paused ? <RenewalNote ap={ap} /> : <>Paiement en cours…</>}
+                    </p>
+                  </div>
+                  <ManageRenewal ap={ap} onChanged={onChanged} demo={demo} />
+                </li>
+              )
+            })}
+          </ul>
         )}
+        <button onClick={() => setOpen(true)} className={cn('text-sm', ui.link)}>
+          Renouveler une autre voiture
+        </button>
+        <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />
       </section>
     )
   }

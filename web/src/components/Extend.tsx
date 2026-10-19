@@ -7,7 +7,7 @@ import { loadLast, PRESETS } from '@/components/PayWizard'
 import { Plate, ZonePlate } from '@/components/signs'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, ApiError, clock, money, unitLabel, type Money, type Overview, type Session, type Unit } from '@/lib/api'
+import { api, ApiError, clock, money, until, unitLabel, type Money, type Overview, type Session, type Unit } from '@/lib/api'
 
 const SHORT: Record<Unit, string> = { Days: 'j', Hours: 'h', Minutes: 'min' }
 
@@ -84,7 +84,7 @@ export function ExtendDialog({
     setError(null)
     try {
       const res = await api.extend({ location: session.location, rate: session.rate, duration, unit, plate: session.plate, paymentAccountId: payment, sessionId: session.id })
-      toast.success('Ticket prolongé.', { description: `Valable jusqu'à ${clock(res.expire)}.` })
+      toast.success('Ticket prolongé.', { description: `Valable ${until(res.expire)}.` })
       onOpenChange(false)
       await onDone()
     } catch (e) {

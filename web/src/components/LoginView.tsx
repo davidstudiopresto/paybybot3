@@ -57,7 +57,7 @@ const fieldBox =
   'flex h-14 items-center rounded-xl border border-ink/20 bg-white transition focus-within:border-eu focus-within:ring-3 focus-within:ring-eu/15'
 
 export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: Me) => void; hosted: boolean; signup?: boolean }) {
-  const [mode, setMode] = useState<'phone' | 'email'>('phone')
+  const mode = 'phone' as 'phone' | 'email' // login by phone number only
   const [country, setCountry] = useState<(typeof COUNTRIES)[number]['id']>('FR')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -290,10 +290,6 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
           </p>
 
           <p className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-ink/50">
-            <button type="button" onClick={() => setMode((m) => (m === 'phone' ? 'email' : 'phone'))} className={link}>
-              {mode === 'phone' ? 'Utiliser un e-mail' : 'Utiliser un numéro'}
-            </button>
-            <span aria-hidden>·</span>
             <button type="button" onClick={() => submit(true)} disabled={loading !== null} className={link}>
               {loading === 'demo' ? 'Ouverture…' : 'Essayer la démo, sans compte'}
             </button>

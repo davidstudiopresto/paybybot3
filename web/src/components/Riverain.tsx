@@ -18,7 +18,17 @@ export const isWeekly = (ap: Autopilot) => ap.label === WEEKLY_LABEL
 const isResident = (r: Rate) => /r[ée]sid|riverain/i.test(`${r.name} ${r.type}`) && !r.parkingNotAllowedReason
 
 /** Prominent dashboard card: weekly resident renewal, set up in two clicks. */
-export function RiverainCard({ data, onChanged, hosted = false }: { data: Overview | null; onChanged: () => void; hosted?: boolean }) {
+export function RiverainCard({
+  data,
+  onChanged,
+  hosted = false,
+  demo = false,
+}: {
+  data: Overview | null
+  onChanged: () => void
+  hosted?: boolean
+  demo?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const weekly = data?.autopilots.filter(isWeekly) ?? []
 
@@ -36,7 +46,8 @@ export function RiverainCard({ data, onChanged, hosted = false }: { data: Overvi
 
   async function editEmail(ap: Autopilot) {
     const value = window.prompt(
-      "Adresse e-mail pour recevoir une confirmation à chaque paiement et une alerte en cas de problème (laisser vide pour ne plus rien recevoir) :",
+      (demo ? "Mode démo : aucun e-mail n'est envoyé.\n\n" : '') +
+        "Adresse e-mail pour recevoir une confirmation à chaque paiement et une alerte en cas de problème (laisser vide pour ne plus rien recevoir) :",
       ap.email ?? '',
     )
     if (value === null) return
@@ -117,7 +128,7 @@ export function RiverainCard({ data, onChanged, hosted = false }: { data: Overvi
         <Button variant="outline" onClick={() => setOpen(true)} className="mt-auto h-12 rounded-xl bg-enamel px-5">
           Ajouter une voiture
         </Button>
-        {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />}
+        {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
         {pausing && <PauseDialog ap={pausing} onClose={() => setPausing(null)} onDone={onChanged} />}
       </section>
     )
@@ -138,7 +149,7 @@ export function RiverainCard({ data, onChanged, hosted = false }: { data: Overvi
         disabled={!data}
         delay={80}
       />
-      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />}
+      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
     </>
   )
 }
@@ -149,12 +160,14 @@ function RiverainDialog({
   data,
   onDone,
   hosted,
+  demo,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   data: Overview
   onDone: () => void
   hosted: boolean
+  demo: boolean
 }) {
   const [plate, setPlate] = useState('')
   const [zone, setZone] = useState('')
@@ -316,6 +329,11 @@ function RiverainDialog({
               Une confirmation à chaque paiement et une alerte en cas de problème. Gardée chiffrée, effacée dès que vous
               arrêtez.
             </p>
+            {demo && (
+              <p className="mt-2 rounded-lg bg-amber/25 px-3 py-2 text-sm font-bold text-ink">
+                Mode démo : aucun e-mail n'est envoyé. Connectez-vous avec votre compte PayByPhone pour les recevoir.
+              </p>
+            )}
           </div>
 
           {data.payments.length > 1 && (

@@ -142,7 +142,7 @@ export function Dashboard({
             onClick={onPay}
             disabled={!data}
           />
-          <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} />
+          <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
         </section>
 
         <div className="kerb my-8" aria-hidden />

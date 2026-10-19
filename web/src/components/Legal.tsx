@@ -7,10 +7,12 @@ import { Wordmark } from '@/components/signs'
 export const PUBLISHER = {
   name: 'Studio Presto',
   form: 'SAS',
-  capital: '', // e.g. "1 000 €": shown only once filled in
+  capital: '1 000 €',
   address: '47 rue Vivienne, 75002 Paris, France',
   siren: '103 811 097',
-  rcs: 'RCS Paris',
+  siret: '103 811 097 00015',
+  rcs: '103 811 097 R.C.S. Paris',
+  vat: 'FR59103811097',
   director: 'David Guenoun, Président',
   email: 'contact@studiopresto.fr',
 }
@@ -196,13 +198,26 @@ function Privacy() {
   return (
     <>
       <p className="text-lg text-muted-foreground">
-        Cette politique explique quelles données personnelles paybybot traite, pourquoi, et quels sont vos droits, au sens
-        du Règlement général sur la protection des données (RGPD).
+        Cette politique est propre à paybybot. Elle explique quelles données le service traite, pourquoi, combien de temps,
+        et quels sont vos droits, au sens du Règlement général sur la protection des données (RGPD).
       </p>
 
-      <Section title="1. Responsable du traitement">
+      <div className="mt-8 rounded-2xl bg-go p-6 text-white">
+        <p className="font-heading text-2xl leading-tight font-black">En une phrase</p>
+        <p className="mt-2 text-white/90">
+          paybybot ne conserve aucune de vos données : ni mot de passe, ni identifiant, ni véhicule, ni carte. La seule
+          exception est le renouvellement riverain, si vous l’activez, qui garde chiffré ce qu’il faut pour payer à votre
+          place, et l’efface dès que vous l’arrêtez.
+        </p>
+      </div>
+
+      <Section title="1. Qui est responsable">
         <p>
-          {PUBLISHER.name}, {PUBLISHER.form}, {PUBLISHER.address}, SIREN {PUBLISHER.siren}. Contact : <Mailto />.
+          paybybot appartient à {PUBLISHER.name}, responsable du traitement au sens du RGPD (coordonnées dans les{' '}
+          <a href="#/mentions-legales" className="font-bold text-signal underline-offset-4 hover:underline">
+            mentions légales
+          </a>
+          ). Pour toute question sur vos données : <Mailto />.
         </p>
       </Section>
 
@@ -246,7 +261,7 @@ function Privacy() {
           </li>
           <li>
             <strong>Sécuriser le service</strong> (limite de tentatives, journaux, prévention des paiements en double) :
-            intérêt légitime de {PUBLISHER.name} à protéger ses utilisateurs (article 6.1.f).
+            intérêt légitime de paybybot à protéger ses utilisateurs (article 6.1.f).
           </li>
         </ul>
         <p>
@@ -344,7 +359,7 @@ function Terms() {
 
       <Section title="1. Le service">
         <p>
-          paybybot, édité par {PUBLISHER.name}, est une interface qui permet de piloter son propre compte PayByPhone :
+          paybybot, service appartenant à {PUBLISHER.name}, est une interface qui permet de piloter son propre compte PayByPhone :
           payer un stationnement, prolonger un ticket en cours et, si vous l’activez, renouveler automatiquement un forfait
           résident chaque semaine. Le service est gratuit.
         </p>
@@ -366,8 +381,8 @@ function Terms() {
           avez choisis, jusqu’à ce que vous l’arrêtiez.
         </p>
         <p>
-          Les tickets sont achetés par vous, depuis votre compte PayByPhone, au tarif de PayByPhone. {PUBLISHER.name}{' '}
-          n’encaisse aucune somme et ne facture rien.
+          Les tickets sont achetés par vous, depuis votre compte PayByPhone, au tarif de PayByPhone. paybybot n’encaisse aucune
+          somme et ne facture rien.
         </p>
       </Section>
 
@@ -410,7 +425,7 @@ function Terms() {
           fonctionnement de PayByPhone, qui peut évoluer à tout moment, et peut être interrompu ou arrêté.
         </p>
         <p>
-          Dans les limites permises par la loi, {PUBLISHER.name} n’est pas responsable des amendes ou forfaits
+          Dans les limites permises par la loi, paybybot et son propriétaire ne sont pas responsables des amendes ou forfaits
           post-stationnement, des paiements refusés ou non réalisés, ni des indisponibilités de PayByPhone ou de paybybot.
           Cette limitation ne s’applique pas en cas de faute lourde ou intentionnelle.
         </p>
@@ -450,14 +465,17 @@ function Terms() {
 function Notice() {
   return (
     <>
-      <Section title="Éditeur">
+      <Section title="Propriétaire et éditeur">
+        <p>paybybot est un service appartenant à :</p>
         <p>
           {PUBLISHER.name}, {PUBLISHER.form}
           {PUBLISHER.capital ? ` au capital de ${PUBLISHER.capital}` : ''}
           <br />
           Siège : {PUBLISHER.address}
           <br />
-          SIREN {PUBLISHER.siren}, {PUBLISHER.rcs}
+          {PUBLISHER.rcs} — SIRET {PUBLISHER.siret}
+          <br />
+          TVA intracommunautaire : {PUBLISHER.vat}
           <br />
           Contact : <Mailto />
         </p>

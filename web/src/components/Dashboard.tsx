@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, LogOut, RefreshCw, Repeat, SquareParking, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { CreditCard, LogOut, RefreshCw, SquareParking } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ActionTile, Plate, Wordmark, ZonePlate } from '@/components/signs'
-import { isWeekly, RiverainCard } from '@/components/Riverain'
-import { api, clock, money, remaining, unitLabel, type Autopilot, type Me, type Overview, type Session } from '@/lib/api'
+import { RiverainCard } from '@/components/Riverain'
+import { clock, money, remaining, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -60,37 +59,6 @@ function Ticket({ session, now, index }: { session: Session; now: number; index:
   )
 }
 
-function AutopilotRow({ ap, onDelete }: { ap: Autopilot; onDelete: () => void }) {
-  return (
-    <li className="flex flex-wrap items-center gap-4 rounded-xl border-2 border-border bg-enamel p-4">
-      <Plate plate={ap.plate} size="sm" />
-      <ZonePlate zone={ap.location} className="scale-90" />
-      <div className="min-w-0 flex-1">
-        <p className="font-bold">
-          {ap.label || 'Renouvellement'} · {ap.duration} {unitLabel(ap.unit, ap.duration)}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {ap.lastError ? (
-            <span className="text-destructive">{ap.lastError}</span>
-          ) : ap.lastPayment ? (
-            <>Dernier paiement {clock(ap.lastPayment)}</>
-          ) : (
-            <>Surveille la zone et repaie dès que le ticket expire.</>
-          )}
-        </p>
-      </div>
-      {ap.enabled ? (
-        <Badge className="bg-go/15 text-go">Actif</Badge>
-      ) : (
-        <Badge className="bg-destructive/10 text-destructive">Suspendu</Badge>
-      )}
-      <Button variant="ghost" size="icon-lg" onClick={onDelete} aria-label="Arrêter ce renouvellement">
-        <Trash2 className="size-5" />
-      </Button>
-    </li>
-  )
-}
-
 export function Dashboard({
   me,
   data,
@@ -112,12 +80,6 @@ export function Dashboard({
     setRefreshing(true)
     await onRefresh()
     setRefreshing(false)
-  }
-
-  async function removeAutopilot(id: string) {
-    await api.deleteAutopilot(id)
-    toast.success('Renouvellement automatique arrêté.')
-    onRefresh()
   }
 
   return (
@@ -180,32 +142,6 @@ export function Dashboard({
             Aucune voiture n'est couverte en ce moment.
           </p>
         )}
-
-        {/* Autopilot */}
-        <section className="mt-14">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-lg bg-go text-white">
-              <Repeat className="size-5" />
-            </span>
-            <div>
-              <h2 className="text-2xl font-extrabold">Renouvellement automatique</h2>
-              <p className="text-muted-foreground">
-                L'application repaie votre ticket dès qu'il expire, tant qu'elle reste ouverte sur cet ordinateur.
-              </p>
-            </div>
-          </div>
-          {data?.autopilots.some((ap) => !isWeekly(ap)) ? (
-            <ul className="mt-5 grid gap-3">
-              {data.autopilots.filter((ap) => !isWeekly(ap)).map((ap) => (
-                <AutopilotRow key={ap.id} ap={ap} onDelete={() => removeAutopilot(ap.id)} />
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-5 rounded-xl bg-muted/70 px-5 py-4 text-muted-foreground">
-              Aucun renouvellement programmé. Vous pourrez l'activer à la dernière étape du paiement.
-            </p>
-          )}
-        </section>
 
         {/* Account details */}
         <section className="mt-14">

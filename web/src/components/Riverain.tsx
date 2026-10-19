@@ -22,6 +22,12 @@ export function RiverainCard({ data, onChanged }: { data: Overview | null; onCha
   const [open, setOpen] = useState(false)
   const weekly = data?.autopilots.filter(isWeekly) ?? []
 
+  async function stop(id: string) {
+    await api.deleteAutopilot(id)
+    toast.success('Renouvellement hebdomadaire arrêté.', { description: 'Le ticket en cours reste valable.' })
+    onChanged()
+  }
+
   if (weekly.length) {
     return (
       <section className="rise flex h-full flex-col items-start gap-4 rounded-2xl border-[3px] border-go bg-go/[0.07] p-6 sm:p-7">
@@ -42,6 +48,9 @@ export function RiverainCard({ data, onChanged }: { data: Overview | null; onCha
                 ) : (
                   <>paiement en cours…</>
                 )}
+                <button onClick={() => stop(ap.id)} className="font-bold text-destructive underline-offset-4 hover:underline">
+                  Arrêter
+                </button>
               </p>
             )
           })}

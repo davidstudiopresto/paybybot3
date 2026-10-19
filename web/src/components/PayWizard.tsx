@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, CreditCard, Loader2, Minus, Plus, Repeat, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, CreditCard, Loader2, Minus, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { NoPayment } from '@/components/NoPayment'
@@ -77,7 +77,6 @@ export function PayWizard({
     data.payments.find((p) => p.id === last.paymentAccountId)?.id ?? data.payments[0]?.id ?? '',
   )
   const [quote, setQuote] = useState<{ cost: Money; expire: string } | null>(null)
-  const [autopilot, setAutopilot] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<{ expire: string; cost: Money } | null>(null)
@@ -138,7 +137,6 @@ export function PayWizard({
     try {
       const res = await api.pay(parking)
       saveLast(parking)
-      if (autopilot) await api.addAutopilot({ ...parking, label: rate?.name ?? '' })
       setDone(res)
     } catch (e) {
       setError((e as Error).message)
@@ -173,11 +171,6 @@ export function PayWizard({
             Votre voiture <Plate plate={plate} size="sm" className="mx-1 align-middle" /> est en règle jusqu'à{' '}
             <strong className="text-ink">{clock(done.expire)}</strong>.
           </p>
-          {autopilot && (
-            <p className="mt-4 flex items-center gap-2 rounded-xl bg-go/10 px-4 py-3 text-go">
-              <Repeat className="size-5" /> Le ticket sera renouvelé automatiquement.
-            </p>
-          )}
           <Button onClick={onPaid} className="mt-10 h-14 w-full rounded-xl text-lg font-bold">
             Retour à l'accueil
           </Button>
@@ -367,17 +360,6 @@ export function PayWizard({
               </div>
             </div>
 
-            <label className="mt-6 flex cursor-pointer items-start gap-4 rounded-2xl border-[3px] border-border bg-enamel p-5 has-[:checked]:border-go">
-              <input type="checkbox" checked={autopilot} onChange={(e) => setAutopilot(e.target.checked)} className="mt-1 size-6 accent-[var(--go)]" />
-              <span>
-                <span className="flex items-center gap-2 text-lg font-bold">
-                  <Repeat className="size-5 text-go" /> Renouveler automatiquement
-                </span>
-                <span className="text-muted-foreground">
-                  Quand ce ticket expire, l'application en repaie un identique. Laissez-la ouverte sur cet ordinateur.
-                </span>
-              </span>
-            </label>
           </>
         )}
 

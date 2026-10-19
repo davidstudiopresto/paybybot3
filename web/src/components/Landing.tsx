@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, Repeat } from 'lucide-react'
+import { ArrowRight, Plus, Repeat } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { Plate, Wordmark, ZonePlate } from '@/components/signs'
@@ -104,19 +104,9 @@ export function Landing({ hosted }: { hosted: boolean }) {
           </ol>
         </section>
 
-        <section className="mt-20 grid gap-6 lg:mt-32 lg:grid-cols-[1fr_2fr] lg:gap-20">
-          <div>
-            <h2 className="font-heading text-xl font-bold lg:text-2xl">Questions fréquentes</h2>
-            <a href="#/faq" className={cn('mt-3 hidden text-sm lg:inline-block', ui.link)}>
-              Toutes les questions
-            </a>
-          </div>
-          <div>
-            <Faq limit={4} />
-            <a href="#/faq" className={cn('mt-4 inline-block text-sm lg:hidden', ui.link)}>
-              Toutes les questions
-            </a>
-          </div>
+        <section id="faq" className="mt-24 lg:mt-36">
+          <FaqTitle as="h2" />
+          <Faq className="mt-10 lg:mt-14" />
         </section>
       </main>
 
@@ -174,13 +164,33 @@ const QUESTIONS: [string, ReactNode][] = [
   ],
 ]
 
-function Faq({ className, limit }: { className?: string; limit?: number }) {
+const FAQ_TITLE = 'Questions fréquentes.'
+
+function FaqTitle({ as: Tag = 'h1' }: { as?: 'h1' | 'h2' }) {
   return (
-    <Accordion className={cn('border-y border-border', className)}>
-      {QUESTIONS.slice(0, limit).map(([q, a]) => (
-        <AccordionItem key={q} value={q} className="border-border">
-          <AccordionTrigger className="py-4 text-base font-bold text-ink hover:no-underline">{q}</AccordionTrigger>
-          <AccordionContent className="pb-4 text-[0.98rem] leading-relaxed text-ink/70">{a}</AccordionContent>
+    <Tag className="text-center font-heading text-[2.2rem] leading-[1.05] font-bold tracking-[-0.03em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+      {FAQ_TITLE}
+    </Tag>
+  )
+}
+
+/** One question per line, a hairline between them, "+" turning into "×" when open. */
+function Faq({ className }: { className?: string }) {
+  return (
+    <Accordion className={cn('border-t border-ink/12', className)}>
+      {QUESTIONS.map(([q, a]) => (
+        <AccordionItem key={q} value={q} className="border-b border-ink/12 not-last:border-b">
+          <AccordionTrigger className="group/q items-center gap-6 rounded-none py-6 text-[1.05rem] font-normal text-ink hover:no-underline focus-visible:ring-0 sm:text-[1.15rem] **:data-[slot=accordion-trigger-icon]:hidden">
+            <span className="underline-offset-[6px] decoration-ink/60 group-hover/q:underline group-aria-expanded/accordion-trigger:underline">
+              {q}
+            </span>
+            <Plus
+              aria-hidden
+              strokeWidth={1.5}
+              className="size-5 shrink-0 text-ink transition-transform duration-300 group-aria-expanded/accordion-trigger:rotate-45"
+            />
+          </AccordionTrigger>
+          <AccordionContent className="max-w-[46rem] pb-8 text-[1.02rem] leading-[1.7] text-ink/75 sm:text-[1.08rem]">{a}</AccordionContent>
         </AccordionItem>
       ))}
     </Accordion>
@@ -191,10 +201,12 @@ export function FaqView({ hosted }: { hosted: boolean }) {
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-14 pb-20">
-        <h1 className={cn('rise', ui.title)}>Questions fréquentes</h1>
-        <Faq className="mt-8" />
-        <a href="#/inscription" className={cn('mt-10', ui.primary)}>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-16 pb-24 sm:px-8 lg:pt-24">
+        <div className="rise">
+          <FaqTitle />
+        </div>
+        <Faq className="mt-10 lg:mt-14" />
+        <a href="#/inscription" className={cn('mx-auto mt-14 max-w-sm', ui.primary)}>
           S'inscrire <ArrowRight className="size-5" />
         </a>
       </main>

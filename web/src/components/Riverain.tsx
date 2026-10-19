@@ -180,8 +180,8 @@ export function RiverainCard({
         <h2 className="font-heading text-xl font-bold">Vous êtes riverain ?</h2>
         <p className="mt-1 text-ink/60">
           {hosted
-            ? 'Votre forfait résident de 7 jours, repayé tout seul à chaque expiration, même appareil éteint.'
-            : 'Votre forfait résident de 7 jours, repayé tout seul à chaque expiration.'}
+            ? 'Votre forfait résident, repayé tout seul à chaque échéance, même appareil éteint.'
+            : 'Votre forfait résident, repayé tout seul à chaque échéance.'}
         </p>
         <button onClick={() => setOpen(true)} disabled={!data} className={cn('mt-5', ui.primary)}>
           Activer le renouvellement

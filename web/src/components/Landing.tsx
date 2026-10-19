@@ -9,8 +9,8 @@ import { ui } from '@/lib/styles'
 
 
 const STEPS = [
-  ['Connectez PayByPhone', 'Avec vos identifiants habituels. Pas de nouveau compte, pas de nouveau mot de passe.'],
-  ['Vérifiez', 'Véhicule, zone et carte sont retrouvées dans votre compte PayByPhone. Ajoutez un e-mail si vous voulez.'],
+  ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
+  ['Vérifiez', 'Véhicule et carte sont retrouvés dans votre compte PayByPhone. Vous indiquez votre adresse et confirmez votre e-mail.'],
   ["C'est tout", 'Le forfait résident est repayé à chaque échéance, même téléphone éteint.'],
 ]
 
@@ -108,8 +108,10 @@ export function Landing({ hosted }: { hosted: boolean }) {
         </section>
 
         <section className="mt-24 lg:mt-36">
-          <h2 className="font-heading text-xl font-bold lg:text-2xl">Comment ça marche</h2>
-          <ol className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-10">
+          <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+            Comment ça marche.
+          </h2>
+          <ol className="mt-12 grid gap-6 lg:grid-cols-3 lg:gap-10">
             {STEPS.map(([title, text], i) => (
               <li key={title} className="flex gap-4 lg:flex-col lg:gap-4 lg:border-t lg:border-border lg:pt-6">
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-eu/[0.08] font-heading font-bold text-eu">

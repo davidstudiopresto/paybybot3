@@ -65,7 +65,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       credentials: 'same-origin',
     })
   } catch {
-    throw new ApiError(0, "L'application paybybot ne répond plus. Est-elle toujours lancée ?")
+    throw new ApiError(0, "L'application PaybyBot ne répond plus. Est-elle toujours lancée ?")
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -93,7 +93,7 @@ export const api = {
   overview: () => request<Overview>('/api/overview'),
   /** Home zone guessed from the PayByPhone history (null if none). */
   residentZone: () => (zoneLookup ??= request<{ zone: string | null }>('/api/resident-zone').catch(() => ({ zone: null }))),
-  /** Address autocomplete, only to find the zone (relayed by paybybot, not stored). */
+  /** Address autocomplete, only to find the zone (relayed by PaybyBot, not stored). */
   searchAddress: (q: string) => post<{ label: string; postcode: string }[]>('/api/address', { q }),
   rates: (location: string, plate: string) =>
     request<Rate[]>(`/api/rates?${new URLSearchParams({ location, plate })}`),

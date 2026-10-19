@@ -49,10 +49,10 @@ SESSION_IDLE = 12 * 3600  # an unused login cookie expires after 12 hours...
 SESSION_MAX = 24 * 3600  # ...and any login after 24 hours
 LOGIN_LIMITS = (("ip", 10), ("user", 5))  # attempts per 15 minutes, per device and per account
 PARIS = ZoneInfo("Europe/Paris")
-MAIL_FROM = os.environ.get("PAYBYBOT_MAIL_FROM", "paybybot <paybybot@studiopresto.fr>")
+MAIL_FROM = os.environ.get("PAYBYBOT_MAIL_FROM", "PaybyBot <paybybot@studiopresto.fr>")
 MAIL_REPLY_TO = os.environ.get("PAYBYBOT_MAIL_REPLY_TO", "contact@studiopresto.fr")
 APP_URL = os.environ.get("PAYBYBOT_URL", "https://paybybot.vercel.app")
-RELOGIN = ("Votre connexion PayByPhone a expiré : reconnectez-vous sur paybybot pour relancer "
+RELOGIN = ("Votre connexion PayByPhone a expiré : reconnectez-vous sur PaybyBot pour relancer "
            "le renouvellement automatique.")
 
 app = FastAPI(title="paybybot3", docs_url=None, redoc_url=None)
@@ -350,7 +350,7 @@ SECURITY_HEADERS = {
 
 
 def same_origin(request):
-    """State-changing calls must come from paybybot's own pages."""
+    """State-changing calls must come from PaybyBot's own pages."""
     origin = request.headers.get("origin")
     if origin:
         return origin.split("://", 1)[-1] == request.headers.get("host")
@@ -558,12 +558,11 @@ def send_email(to, subject, title, lines, button=None):
     html = (
         '<div style="background:#f1ede3;padding:24px;font-family:Arial,Helvetica,sans-serif">'
         '<div style="max-width:520px;margin:0 auto;background:#fdfcf8;border-radius:16px;padding:28px">'
-        '<p style="margin:0 0 18px"><span style="display:inline-block;background:#1d4ea3;color:#fff;font-weight:900;'
-        'border-radius:8px;padding:2px 9px;font-size:18px">P</span> <b style="font-size:18px;color:#0d1830">paybybot</b></p>'
+        '<p style="margin:0 0 18px"><b style="font-size:20px;letter-spacing:-0.3px;color:#0d1830">PaybyBot</b></p>'
         '<h1 style="margin:0 0 14px;font-size:22px;color:#0d1830">%s</h1>%s%s'
         '<p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#4f5a70">Vous recevez cet e-mail parce que vous '
         "avez activé le renouvellement automatique sur paybybot. Pour ne plus en recevoir, retirez votre adresse ou "
-        "arrêtez le renouvellement depuis l'application. paybybot est un service indépendant de PayByPhone.</p>"
+        "arrêtez le renouvellement depuis l'application. PaybyBot est un service indépendant de PayByPhone.</p>"
         "</div></div>" % (escape(title), paragraphs, cta)
     )
     text = "\n\n".join([title] + list(lines) + ([button[0] + " : " + button[1]] if button else []))
@@ -585,7 +584,7 @@ def notify(details, event, **info):
     if not to:
         return
     car = "%s, zone %s" % (plate_text(details.get("plate")), details.get("location"))
-    open_app = ("Ouvrir paybybot", APP_URL)
+    open_app = ("Ouvrir PaybyBot", APP_URL)
     rule = rule_of(details)
     if event == "activated" and rule:
         lines = ["Les tickets automatiques sont activés pour %s, %s." % (car, rule_text(rule))]
@@ -620,7 +619,7 @@ def notify(details, event, **info):
         send_email(to, "Action requise · renouvellement %s" % plate_text(details.get("plate")),
                    "Le renouvellement a besoin de vous",
                    ["Le renouvellement automatique pour %s n'a pas pu payer :" % car, info.get("message", ""),
-                    "Ouvrez paybybot pour le relancer, et vérifiez votre stationnement dans l'application PayByPhone."],
+                    "Ouvrez PaybyBot pour le relancer, et vérifiez votre stationnement dans l'application PayByPhone."],
                    open_app)
 
 
@@ -749,7 +748,7 @@ def with_details(row):
 
 
 def check_login_rate(request, username):
-    """Hosted: refuse bursts of login attempts (password guessing through paybybot)."""
+    """Hosted: refuse bursts of login attempts (password guessing through PaybyBot)."""
     ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
     keys = {"ip": hmac.new(_subkey(_secrets()[0], "rate"), ip.encode(), hashlib.sha256).hexdigest(),
             "user": owner_id(username.strip().lower())}
@@ -1224,7 +1223,7 @@ class AddressQuery(BaseModel):
 @app.post("/api/address")
 def address_search(body: AddressQuery, pbb_session: str = Cookie(None)):
     """Address autocomplete through the French State's address service (Géoplateforme), relayed so the
-    browser talks to paybybot only. Sent in a POST body so it never shows in URL logs; only used to find the
+    browser talks to PaybyBot only. Sent in a POST body so it never shows in URL logs; only used to find the
     zone, neither logged nor stored."""
     current(pbb_session)
     q = body.q.strip()[:120]

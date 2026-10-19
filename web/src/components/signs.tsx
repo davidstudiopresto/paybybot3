@@ -55,12 +55,7 @@ export function ParkingSign({ className }: { className?: string }) {
 }
 
 export function Wordmark() {
-  return (
-    <span className="inline-flex items-center gap-2.5">
-      <ParkingSign className="size-9 rounded-[8px] text-[22px]" />
-      <span className="font-heading text-xl font-black tracking-tight">paybybot</span>
-    </span>
-  )
+  return <span className="font-heading text-[1.4rem] leading-none font-semibold tracking-[-0.025em] text-ink">PaybyBot</span>
 }
 
 /** Large dashboard action, used side by side so the main actions share one size. */

@@ -29,7 +29,7 @@ export const ui = {
   note: 'rounded-xl bg-muted px-4 py-3 text-ink/70',
 }
 
-/** A selectable option (card, chip): hairline border, paybybot blue when selected. */
+/** A selectable option (card, chip): hairline border, PaybyBot blue when selected. */
 export function choice(selected: boolean, extra?: string) {
   return cn(
     'rounded-xl border bg-white text-left transition',

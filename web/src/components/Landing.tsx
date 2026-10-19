@@ -63,7 +63,7 @@ const GUARANTEES = [
   [Power, 'Vous gardez la main', 'Vos tickets restent dans l’application PayByPhone. Un clic pour tout arrêter et tout effacer.'],
 ] as const
 
-/** What makes paybybot safe to hand a PayByPhone login to: only claims the security page backs up. */
+/** What makes PaybyBot safe to hand a PayByPhone login to: only claims the security page backs up. */
 function Security() {
   return (
     <section className="mt-24 lg:mt-36">
@@ -71,7 +71,7 @@ function Security() {
         Vos données, protégées.
       </h2>
       <p className="mx-auto mt-4 max-w-[36rem] text-center text-[1.05rem] text-ink/60 lg:text-lg">
-        paybybot agit sur votre compte PayByPhone sans jamais garder votre mot de passe ni votre carte.
+        PaybyBot agit sur votre compte PayByPhone sans jamais garder votre mot de passe ni votre carte.
       </p>
       <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-ink/10 bg-ink/10 sm:grid-cols-2 lg:grid-cols-3">
         {GUARANTEES.map(([Icon, title, text]) => (
@@ -169,7 +169,7 @@ const QUESTIONS: [string, ReactNode][] = [
   [
     'Pourquoi mes identifiants PayByPhone ?',
     <>
-      Pour payer à votre place, paybybot passe par votre compte PayByPhone, comme l'application. Votre mot de passe
+      Pour payer à votre place, PaybyBot passe par votre compte PayByPhone, comme l'application. Votre mot de passe
       n'est jamais enregistré : seule une clé de reconnexion est gardée, chiffrée, et effacée dès que vous arrêtez.{' '}
       <a href="#/securite">Sécurité et données</a>
     </>,
@@ -188,13 +188,13 @@ const QUESTIONS: [string, ReactNode][] = [
   [
     'Et si un paiement échoue ?',
     <>
-      Vous recevez un e-mail (si vous en avez donné un) et le tableau de bord vous le signale. Dans le doute, paybybot ne
+      Vous recevez un e-mail (si vous en avez donné un) et le tableau de bord vous le signale. Dans le doute, PaybyBot ne
       repaie jamais à l'aveugle : vous ne payez pas deux fois.
     </>,
   ],
   [
     'Est-ce un service officiel de PayByPhone ?',
-    <>Non. paybybot est un service indépendant, édité par Studio Presto, qui utilise votre compte PayByPhone.</>,
+    <>Non. PaybyBot est un service indépendant, édité par Studio Presto, qui utilise votre compte PayByPhone.</>,
   ],
 ]
 

@@ -6,7 +6,7 @@ import { LoginView } from '@/components/LoginView'
 import { FaqView, Landing } from '@/components/Landing'
 import { PayWizard } from '@/components/PayWizard'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
-import { ParkingSign } from '@/components/signs'
+import { Wordmark } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
 type Route = 'faq' | 'connexion' | 'inscription' | null
@@ -72,7 +72,9 @@ export default function App() {
         <LegalView page={legal} hosted={hosted} />
       ) : me === undefined ? (
         <div className="grid min-h-dvh place-items-center">
-          <ParkingSign className="animate-pulse" />
+          <span className="animate-pulse">
+            <Wordmark />
+          </span>
         </div>
       ) : route === 'faq' ? (
         <FaqView hosted={hosted} />
@@ -99,7 +101,9 @@ export default function App() {
       ) : onboarding && (!data || !zoneReady) ? (
         <div className="grid min-h-dvh place-items-center bg-white px-6">
           <div className="rise flex flex-col items-center gap-6 text-center">
-            <ParkingSign className="animate-pulse" />
+            <span className="animate-pulse">
+            <Wordmark />
+          </span>
             <p className="max-w-64 text-lg text-ink/70">Récupération de vos paramètres PayByPhone…</p>
           </div>
         </div>

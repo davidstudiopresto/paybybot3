@@ -1006,7 +1006,7 @@ def login(body: Login, request: Request, response: Response):
     log.info("login ok for %s (%s)", masked, "demo" if demo else "PayByPhone account %s***" % session.username[:5])
     if body.signup and not demo and guarded(lambda: has_account(session)):
         log.info("sign-up refused: account already exists for %s", masked)
-        raise HTTPException(409, "Un compte PaybyBot existe déjà pour ce compte PayByPhone. Connectez-vous.")
+        raise HTTPException(409, "Un compte PaybyBot existe déjà pour ce compte PayByPhone.")
     if HOSTED:
         token = seal(session)
         refresh = getattr(session.bot, "refresh_token", None)

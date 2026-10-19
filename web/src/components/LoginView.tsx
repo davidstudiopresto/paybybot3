@@ -4,7 +4,7 @@ import { HostedFooter } from '@/components/Footer'
 import { TopBar } from '@/components/TopBar'
 import { ZoneField } from '@/components/Riverain'
 import { ui } from '@/lib/styles'
-import { api, type Me } from '@/lib/api'
+import { api, ApiError, type Me } from '@/lib/api'
 
 /** Countries where PayByPhone is used, with their calling code and flag stripes. */
 const COUNTRIES = [
@@ -68,12 +68,14 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
   const [showPassword, setShowPassword] = useState(false)
   const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [accountExists, setAccountExists] = useState(false)
   const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
   const selected = COUNTRIES.find((c) => c.id === country) ?? COUNTRIES[0]
   const link = 'text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink'
 
   async function submit(demo = false) {
     setError(null)
+    setAccountExists(false)
     setLoading(demo ? 'demo' : 'login')
     try {
       const username = demo ? 'demo' : mode === 'phone' ? phoneUsername(phone, selected.code) : email.trim()
@@ -83,6 +85,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
       )
     } catch (e) {
       setError((e as Error).message)
+      setAccountExists(e instanceof ApiError && e.status === 409)
     } finally {
       setLoading(null)
     }
@@ -260,6 +263,14 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
           {error && (
             <p role="alert" className="mt-5 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
               {error}
+              {accountExists && (
+                <>
+                  {' '}
+                  <a href="#/connexion" className="font-bold underline underline-offset-[3px]">
+                    Se connecter
+                  </a>
+                </>
+              )}
             </p>
           )}
 

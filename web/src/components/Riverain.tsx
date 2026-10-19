@@ -436,7 +436,7 @@ function RiverainDialog({
 }
 
 /** The home zone: shown when known (history, last payment), else found from the address. */
-function ZoneField({ zone, fromHistory, onZone }: { zone: string; fromHistory: boolean; onZone: (zone: string) => void }) {
+export function ZoneField({ zone, fromHistory, onZone }: { zone: string; fromHistory: boolean; onZone: (zone: string) => void }) {
   const [editing, setEditing] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<{ label: string; postcode: string }[]>([])

@@ -46,6 +46,8 @@ export type Overview = {
   autopilots: Autopilot[]
   history: HistoryItem[]
 }
+/** The PaybyBot account: e-mail given at sign-up, home zone added by hand. */
+export type Account = { email: string; zone: string | null }
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
 
 export class ApiError extends Error {
@@ -86,8 +88,11 @@ const post = <T>(path: string, body?: unknown) =>
 export const api = {
   config: () => request<{ hosted: boolean }>('/api/config'),
   me: () => request<Me>('/api/me'),
-  login: (username: string, password: string, accepted = false) =>
-    post<Me>('/api/login', { username, password, accepted }),
+  login: (username: string, password: string, accepted = false, signup?: { email: string }) =>
+    post<Me>('/api/login', { username, password, accepted, ...(signup ? { signup: true, email: signup.email } : {}) }),
+  account: () => request<Account>('/api/account'),
+  updateAccount: (patch: Partial<Account>) =>
+    request<Account>('/api/account', { method: 'PUT', body: JSON.stringify(patch) }),
   logout: () => post('/api/logout'),
   deleteData: () => request('/api/me/data', { method: 'DELETE' }),
   overview: () => request<Overview>('/api/overview'),

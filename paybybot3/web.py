@@ -217,6 +217,7 @@ class UserSession:
         else:
             self.bot, self.username = connect(username, password)
         self.autopilots = {}  # id -> dict
+        self.account = {}  # e-mail and home zone (hosted accounts live in the database instead)
         self.history = []  # most recent first
         self.attempts = []  # every real payment request, for diagnosis
         self.unconfirmed = {}  # (plate, location) -> time of an unconfirmed payment
@@ -229,6 +230,7 @@ class UserSession:
             state["s"] = [{**x, "startTime": x["startTime"].isoformat(), "expireTime": x["expireTime"].isoformat()}
                           for x in self.bot.sessions]
             state["ap"] = list(self.autopilots.values())
+            state["acc"] = self.account
         else:
             state["t"] = self.bot.authorization
             state["r"] = getattr(self.bot, "refresh_token", None)
@@ -248,6 +250,7 @@ class UserSession:
             self.bot.authorization = state["t"]
             self.bot.refresh_token = state.get("r")
         self.autopilots = {ap["id"]: ap for ap in state.get("ap", [])}
+        self.account = state.get("acc", {})
         self.history, self.attempts = [], []
         self.unconfirmed = {(plate, location): at for plate, location, at in state.get("uc", [])}
         return self
@@ -260,6 +263,7 @@ class UserSession:
         self.lock = threading.Lock()
         self.bot = bot
         self.autopilots, self.history, self.attempts, self.unconfirmed = {}, [], [], {}
+        self.account = {}
         return self
 
     def call(self, method, *args, **kwargs):
@@ -550,7 +554,11 @@ def money_text(cost):
     return ("%.2f €" % float(cost["amount"])).replace(".", ",")
 
 
-def send_email(to, subject, title, lines, button=None):
+RENEWAL_FOOTER = ("Vous recevez cet e-mail parce que vous avez activé le renouvellement automatique sur PaybyBot. Pour ne "
+                  "plus en recevoir, retirez votre adresse ou arrêtez le renouvellement depuis l'application.")
+
+
+def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER):
     """Transactional e-mail through Resend. Silently skipped without an address or an API key."""
     key = os.environ.get("RESEND_API_KEY")
     if not to or not key:
@@ -567,10 +575,9 @@ def send_email(to, subject, title, lines, button=None):
         '<div style="max-width:520px;margin:0 auto;background:#fdfcf8;border-radius:16px;padding:28px">'
         '<p style="margin:0 0 18px"><b style="font-size:20px;letter-spacing:-0.3px;color:#0d1830">PaybyBot</b></p>'
         '<h1 style="margin:0 0 14px;font-size:22px;color:#0d1830">%s</h1>%s%s'
-        '<p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#4f5a70">Vous recevez cet e-mail parce que vous '
-        "avez activé le renouvellement automatique sur PaybyBot. Pour ne plus en recevoir, retirez votre adresse ou "
-        "arrêtez le renouvellement depuis l'application. PaybyBot est un service indépendant de PayByPhone.</p>"
-        "</div></div>" % (escape(title), paragraphs, cta)
+        '<p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#4f5a70">%s PaybyBot est un service '
+        "indépendant de PayByPhone.</p>"
+        "</div></div>" % (escape(title), paragraphs, cta, escape(footer))
     )
     text = "\n\n".join([title] + list(lines) + ([button[0] + " : " + button[1]] if button else []))
     try:
@@ -754,6 +761,27 @@ def with_details(row):
     return {**row, **json.loads(_fernet("renewal").decrypt(row["data"].encode()))}
 
 
+ACCOUNT_FIELDS = ("email", "zone")
+
+
+def load_account(s):
+    """The PaybyBot account of a session: e-mail given at sign-up and home zone added by hand."""
+    if HOSTED and not s.demo:
+        data = store("account_get", p_owner=owner_id(s.username))
+        return json.loads(_fernet("account").decrypt(data.encode())) if data else {}
+    return dict(s.account)
+
+
+def save_account(s, patch):
+    account = {**load_account(s), **{k: v for k, v in patch.items() if k in ACCOUNT_FIELDS}}
+    if HOSTED and not s.demo:
+        store("account_save", p_owner=owner_id(s.username),
+              p_data=_fernet("account").encrypt(json.dumps(account).encode()).decode())
+    else:
+        s.account = account
+    return account
+
+
 def check_login_rate(request, username):
     """Hosted: refuse bursts of login attempts (password guessing through PaybyBot)."""
     ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
@@ -903,10 +931,20 @@ def cron_renew(request: Request):
 # --------------------------------------------------------------------------
 
 
+EMAIL_PATTERN = r"^$|^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$"
+
+
 class Login(BaseModel):
     username: str = Field(max_length=120)
     password: str = Field(max_length=200)
     accepted: bool = False  # terms of use and privacy policy
+    signup: bool = False
+    email: str = Field(default="", max_length=254, pattern=EMAIL_PATTERN)  # required at sign-up
+
+
+class AccountPatch(BaseModel):
+    email: str | None = Field(default=None, max_length=254, pattern=EMAIL_PATTERN)
+    zone: str | None = Field(default=None, pattern=r"^$|^\w{3,10}$")
 
 
 class Parking(BaseModel):
@@ -920,9 +958,6 @@ class Parking(BaseModel):
 
 class Extension(Parking):
     sessionId: str = Field(max_length=80)
-
-
-EMAIL_PATTERN = r"^$|^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$"
 
 
 class Autopilot(Parking):
@@ -947,6 +982,8 @@ class EmailChange(BaseModel):
 def login(body: Login, request: Request, response: Response):
     demo = body.username.strip().lower() == "demo"
     masked = body.username.strip()[:4] + "***"
+    if body.signup and not demo and not body.email.strip():
+        raise HTTPException(400, "Indiquez votre adresse e-mail.")
     if HOSTED and not demo:
         if not body.accepted:
             raise HTTPException(400, "Acceptez les conditions d'utilisation et la politique de confidentialité.")
@@ -969,6 +1006,13 @@ def login(body: Login, request: Request, response: Response):
     else:
         token = secrets.token_urlsafe(32)
         SESSIONS[token] = session
+    if body.email.strip():
+        try:
+            save_account(session, {"email": body.email.strip()})
+            if HOSTED and demo:
+                token = seal(session)  # the demo account lives in the cookie
+        except Exception as e:
+            log.warning("could not save the account e-mail: %s", e)
     set_session_cookie(response, token)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
@@ -1232,6 +1276,21 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     return ap
 
 
+@app.get("/api/account")
+def get_account(pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+    account = guarded(lambda: load_account(s))
+    return {"email": account.get("email") or "", "zone": account.get("zone") or None}
+
+
+@app.put("/api/account")
+def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+    patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None}
+    account = guarded(lambda: save_account(s, patch))
+    return {"email": account.get("email") or "", "zone": account.get("zone") or None}
+
+
 @app.get("/api/resident-zone")
 def resident_zone(pbb_session: str = Cookie(None)):
     """Guess the home zone from PayByPhone's history: a zone where the car is offered the resident rate.
@@ -1242,6 +1301,9 @@ def resident_zone(pbb_session: str = Cookie(None)):
     s = current(pbb_session)
 
     def find():
+        manual = load_account(s).get("zone")
+        if manual:  # added by the user in "Mon compte"
+            return {"zone": manual, "manual": True}
         history = s.call("get_past_sessions", limit=30) + s.call("get_parking_sessions")
 
         def long_ticket(x):
@@ -1356,8 +1418,26 @@ def change_autopilot_email(ap_id: str, body: EmailChange, pbb_session: str = Coo
 def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
     """Erase everything kept for this account (stored renewals), then log out."""
     s = current(pbb_session)
+    email = None
+    try:  # where to confirm the deletion: the account e-mail, else one given for a renewal
+        email = load_account(s).get("email")
+        if not email and HOSTED and not s.demo:
+            email = next((with_details(r).get("email") for r in store("renewal_list", p_owner=owner_id(s.username))
+                          if with_details(r).get("email")), None)
+    except Exception as e:
+        log.warning("account e-mail unreadable before deletion: %s", e)
     if HOSTED and not s.demo:
         guarded(lambda: store("renewal_delete_owner", p_owner=owner_id(s.username)))
+        guarded(lambda: store("account_delete", p_owner=owner_id(s.username)))
+    if email and not s.demo:
+        send_email(email, "Compte PaybyBot supprimé", "Votre compte est supprimé",
+                   ["Votre compte PaybyBot a été supprimé à votre demande. Les renouvellements automatiques sont "
+                    "arrêtés et tout ce que PaybyBot gardait pour vous est effacé.",
+                    "Les tickets déjà en cours restent valables jusqu'à leur fin. Votre compte PayByPhone n'est pas "
+                    "modifié.",
+                    "Vous n'avez rien demandé ? Écrivez-nous en répondant à cet e-mail."],
+                   footer="Vous recevez cet e-mail parce que votre compte PaybyBot vient d'être supprimé.")
+    s.account = {}
     s.autopilots.clear()
     s.logged_out = True  # the middleware must not write the cookie back
     SESSIONS.pop(pbb_session or "", None)

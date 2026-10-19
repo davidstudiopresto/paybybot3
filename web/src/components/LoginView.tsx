@@ -62,6 +62,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [signupEmail, setSignupEmail] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +76,9 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
     try {
       const username = demo ? 'demo' : mode === 'phone' ? phoneUsername(phone, selected.code) : email.trim()
       // Clicking "Se connecter" is the acceptance of the terms and privacy policy, stated right above it.
-      onLogin(await api.login(username, demo ? 'demo' : password, !demo))
+      onLogin(
+        await api.login(username, demo ? 'demo' : password, !demo, signup && !demo ? { email: signupEmail.trim() } : undefined),
+      )
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -189,7 +192,27 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
                 {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
               </button>
             </div>
+
+            {signup && (
+              <div className={fieldBox}>
+                <input
+                  id="signup-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="Votre e-mail"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  aria-label="E-mail"
+                  required
+                  className="h-full min-w-0 flex-1 bg-transparent px-4 text-lg text-ink outline-none placeholder:text-ink/30"
+                />
+              </div>
+            )}
           </div>
+          {signup && (
+            <p className="mt-2 text-sm text-ink/50">Pour les confirmations de paiement et les alertes. Gardé chiffré.</p>
+          )}
 
 
           {signup ? (

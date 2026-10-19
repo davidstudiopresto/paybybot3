@@ -79,7 +79,11 @@ function AutopilotRow({ ap, onDelete }: { ap: Autopilot; onDelete: () => void })
           )}
         </p>
       </div>
-      <Badge className="bg-go/15 text-go">Actif</Badge>
+      {ap.enabled ? (
+        <Badge className="bg-go/15 text-go">Actif</Badge>
+      ) : (
+        <Badge className="bg-destructive/10 text-destructive">Suspendu</Badge>
+      )}
       <Button variant="ghost" size="icon-lg" onClick={onDelete} aria-label="Arrêter ce renouvellement">
         <Trash2 className="size-5" />
       </Button>

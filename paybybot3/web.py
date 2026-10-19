@@ -5,6 +5,7 @@ and serves the single-page app built from ``web/`` (copied into ``static/``).
 PayByPhone credentials only live in this process' memory.
 """
 
+import logging
 import re
 import secrets
 import threading
@@ -20,6 +21,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .bot import Bot
+
+log = logging.getLogger("paybybot3.web")
 
 STATIC_DIR = Path(__file__).parent / "static"
 COOKIE = "pbb_session"
@@ -248,6 +251,34 @@ def normalize_accounts(accounts):
     return result
 
 
+class Unconfirmed(Exception):
+    """PayByPhone accepted the payment request but no parking session showed up."""
+
+
+UNCONFIRMED = ("PayByPhone n'a pas confirmé ce stationnement. Vérifiez dans l'application PayByPhone "
+               "avant de réessayer, pour ne pas payer deux fois.")
+
+
+def pay_and_confirm(session, location, rate, duration, unit, plate, paymentAccountId, attempts=10, delay=3):
+    """Pay, then poll the current sessions like the CLI does: success only once PayByPhone lists it."""
+    log.info("pay: zone=%s rate=%s %s %s plate=%s demo=%s", location, rate, duration, unit, plate[:2] + "***",
+             session.demo)
+    result = session.call("pay", durationQuantity=duration, durationTimeUnit=unit, licensePlate=plate,
+                          locationId=location, ratePolicyId=rate, paymentAccountId=paymentAccountId)
+    log.info("pay: PayByPhone answered parkingSessionId=%s jobStatus=%s cost=%s",
+             result.get("parkingSessionId"), result.get("jobStatus"), result.get("cost"))
+    for i in range(attempts):
+        found = session.call("get_parking_sessions", licensePlate=plate, locationId=location)
+        if found:
+            log.info("pay: confirmed after %s check(s)", i + 1)
+            return result, found
+        if not session.demo:
+            time.sleep(delay)
+    log.warning("pay: no session visible for zone=%s after %ss (jobStatus=%s)", location, attempts * delay,
+                result.get("jobStatus"))
+    raise Unconfirmed(UNCONFIRMED)
+
+
 def run_autopilot(session, ap):
     """Pay for the configured parking if no session is active right now."""
     active = session.call("get_parking_sessions", licensePlate=ap["plate"], locationId=ap["location"])
@@ -255,12 +286,16 @@ def run_autopilot(session, ap):
     if active:
         return
     try:
-        session.call("pay", durationQuantity=ap["duration"], durationTimeUnit=ap["unit"],
-                     licensePlate=ap["plate"], locationId=ap["location"], ratePolicyId=ap["rate"],
-                     paymentAccountId=ap["paymentAccountId"])
+        pay_and_confirm(session, ap["location"], ap["rate"], ap["duration"], ap["unit"], ap["plate"],
+                        ap["paymentAccountId"])
         ap["lastPayment"] = datetime.now(timezone.utc).isoformat()
         ap["lastError"] = None
         session.log("success", "Renouvellement automatique : zone %s, %s" % (ap["location"], ap["plate"]))
+    except Unconfirmed:
+        # Never retry blindly: the payment may have gone through, retrying could pay twice.
+        ap["enabled"] = False
+        ap["lastError"] = UNCONFIRMED + " Renouvellement suspendu."
+        session.log("error", ap["lastError"])
     except Exception as e:
         ap["lastError"] = friendly_error(e)
         session.log("error", "Renouvellement automatique échoué (zone %s) : %s" % (ap["location"], ap["lastError"]))
@@ -309,10 +344,13 @@ class Autopilot(Parking):
 @app.post("/api/login")
 def login(body: Login, response: Response):
     demo = body.username.strip().lower() == "demo"
+    masked = body.username.strip()[:4] + "***"
     try:
         session = UserSession(body.username.strip(), body.password, demo=demo)
     except Exception as e:
+        log.warning("login failed for %s: %s", masked, e)
         raise HTTPException(400, friendly_error(e))
+    log.info("login ok for %s (%s)", masked, "demo" if demo else "PayByPhone account %s***" % session.username[:5])
     token = secrets.token_urlsafe(32)
     SESSIONS[token] = session
     response.set_cookie(COOKIE, token, httponly=True, samesite="strict")
@@ -391,16 +429,20 @@ def pay(body: Parking, pbb_session: str = Cookie(None)):
     def run():
         if s.call("get_parking_sessions", licensePlate=body.plate, locationId=body.location):
             raise HTTPException(409, "Un stationnement est déjà en cours pour %s dans cette zone." % body.plate)
-        result = s.call("pay", durationQuantity=fmt_qty(body.duration), durationTimeUnit=body.unit,
-                        licensePlate=body.plate, locationId=body.location, ratePolicyId=body.rate,
-                        paymentAccountId=body.paymentAccountId)
+        try:
+            result, found = pay_and_confirm(s, body.location, body.rate, fmt_qty(body.duration), body.unit,
+                                            body.plate, body.paymentAccountId)
+        except Unconfirmed as e:
+            raise HTTPException(504, str(e))
         s.log("success", "Stationnement payé : zone %s, %s" % (body.location, body.plate))
-        return {"ok": True, "expire": iso(result.get("expireTime")), "cost": result.get("cost")}
+        expire = max(x["expireTime"] for x in found)
+        return {"ok": True, "expire": iso(expire), "cost": result.get("cost")}
 
     try:
         return guarded(run)
     except HTTPException as e:
-        if e.status_code == 502:
+        if e.status_code in (502, 504):
+            log.warning("pay failed: %s", e.detail)
             s.log("error", "Paiement échoué (zone %s) : %s" % (body.location, e.detail))
         raise
 

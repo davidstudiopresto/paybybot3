@@ -359,6 +359,13 @@ export function PayWizard({ data, demo, onClose, onPaid }: { data: Overview; dem
           </>
         )}
 
+        {busy && step === 5 && (
+          <p className="mt-6 rounded-lg bg-accent px-4 py-3 text-accent-foreground">
+            Paiement envoyé. On attend que PayByPhone confirme le stationnement, cela peut prendre jusqu'à une minute.
+            Ne fermez pas cette page.
+          </p>
+        )}
+
         {error && (
           <p role="alert" className="mt-6 rounded-lg border-l-4 border-destructive bg-destructive/10 px-4 py-3 text-destructive">
             {error}
@@ -383,7 +390,13 @@ export function PayWizard({ data, demo, onClose, onPaid }: { data: Overview; dem
               disabled={!canContinue || busy}
               className="h-14 flex-1 rounded-xl bg-go text-lg font-bold shadow-[0_4px_0_#145236] hover:bg-go/90 active:translate-y-1 active:shadow-none"
             >
-              {busy ? <Loader2 className="size-5 animate-spin" /> : <>Payer {quote ? money(quote.cost) : ''}</>}
+              {busy ? (
+                <>
+                  <Loader2 className="size-5 animate-spin" /> Confirmation par PayByPhone…
+                </>
+              ) : (
+                <>Payer {quote ? money(quote.cost) : ''}</>
+              )}
             </Button>
           )}
         </div>

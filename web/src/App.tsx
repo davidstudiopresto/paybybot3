@@ -11,9 +11,11 @@ export default function App() {
   const [me, setMe] = useState<Me | null | undefined>(undefined)
   const [data, setData] = useState<Overview | null>(null)
   const [paying, setPaying] = useState(false)
+  const [hosted, setHosted] = useState(false)
 
   useEffect(() => {
     api.me().then(setMe, () => setMe(null))
+    api.config().then((c) => setHosted(c.hosted), () => {})
   }, [])
 
   const refresh = useCallback(async () => {
@@ -46,7 +48,7 @@ export default function App() {
           <ParkingSign className="animate-pulse" />
         </div>
       ) : me === null ? (
-        <LoginView onLogin={setMe} />
+        <LoginView onLogin={setMe} hosted={hosted} />
       ) : (
         <>
           <Dashboard me={me} data={data} onRefresh={refresh} onPay={() => setPaying(true)} onLogout={logout} />

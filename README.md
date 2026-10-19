@@ -19,6 +19,12 @@ A demo mode lets you try it without an account. Credentials are kept in memory o
 Non-technical users can download the ZIP and double-click `Lancer paybybot.command` (macOS) or
 `Lancer paybybot.bat` (Windows): see the [French guide](GUIDE.md).
 
+### Hosted version
+
+The same interface can be deployed on Vercel (`main.py`, `requirements.txt`, `vercel.json`). In hosted mode the
+server keeps no state: the PayByPhone access token is stored in an encrypted cookie (set `PAYBYBOT_SECRET`), the
+password is never stored, and the weekly automatic renewal is only available in the local version.
+
 ### Developing the interface
 
 The front-end lives in `web/` (Vite, React, Tailwind, shadcn/ui) and is built into `paybybot3/static/`:

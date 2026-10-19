@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Plate, Wordmark } from '@/components/signs'
 import { api, type Me } from '@/lib/api'
 
-export function LoginView({ onLogin }: { onLogin: (me: Me) => void }) {
+export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; hosted: boolean }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,7 +50,7 @@ export function LoginView({ onLogin }: { onLogin: (me: Me) => void }) {
         <div className="rise relative flex flex-wrap items-center gap-3 text-sm text-white/80 sm:gap-4" style={{ animationDelay: '240ms' }}>
           <Plate plate="AB123CD" size="sm" className="hidden sm:inline-flex" />
           <span className="flex items-center gap-2">
-            <LockKeyhole className="size-4" /> Vos identifiants restent sur cet ordinateur.
+            <LockKeyhole className="size-4" /> {hosted ? "Votre mot de passe n'est jamais enregistré." : 'Vos identifiants restent sur cet ordinateur.'}
           </span>
         </div>
       </section>

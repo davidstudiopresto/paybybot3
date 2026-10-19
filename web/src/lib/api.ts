@@ -43,7 +43,7 @@ export type Overview = {
   autopilots: Autopilot[]
   history: HistoryItem[]
 }
-export type Me = { username: string; demo: boolean }
+export type Me = { username: string; demo: boolean; hosted?: boolean }
 
 export class ApiError extends Error {
   status: number
@@ -75,6 +75,7 @@ const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) })
 
 export const api = {
+  config: () => request<{ hosted: boolean }>('/api/config'),
   me: () => request<Me>('/api/me'),
   login: (username: string, password: string) => post<Me>('/api/login', { username, password }),
   logout: () => post('/api/logout'),

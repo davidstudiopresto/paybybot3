@@ -18,7 +18,9 @@ export const isWeekly = (ap: Autopilot) => ap.label === WEEKLY_LABEL
 const isResident = (r: Rate) => /r[ée]sid|riverain/i.test(`${r.name} ${r.type}`) && !r.parkingNotAllowedReason
 
 /** Prominent dashboard card: weekly resident renewal, set up in two clicks. */
-export function RiverainCard({ data, onChanged }: { data: Overview | null; onChanged: () => void }) {
+const GUIDE_URL = 'https://github.com/davidstudiopresto/paybybot3/blob/web-interface/GUIDE.md'
+
+export function RiverainCard({ data, onChanged, hosted = false }: { data: Overview | null; onChanged: () => void; hosted?: boolean }) {
   const [open, setOpen] = useState(false)
   const weekly = data?.autopilots.filter(isWeekly) ?? []
 
@@ -60,6 +62,22 @@ export function RiverainCard({ data, onChanged }: { data: Overview | null; onCha
         </Button>
         {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} />}
       </section>
+    )
+  }
+
+  if (hosted) {
+    // The online version keeps no password, so nothing can pay in the background.
+    return (
+      <ActionTile
+        tone="go"
+        icon={<Home />}
+        eyebrow="Vous êtes riverain ?"
+        title="Renouvellement automatique chaque semaine"
+        text="Disponible dans la version à installer sur votre ordinateur : elle repaie votre forfait résident de 7 jours à chaque expiration."
+        cta="Installer la version ordinateur"
+        onClick={() => window.open(GUIDE_URL, '_blank', 'noopener')}
+        delay={80}
+      />
     )
   }
 

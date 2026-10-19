@@ -1,0 +1,4 @@
+# Dependencies of the hosted web interface (main.py, deployed on Vercel).
+fastapi
+requests
+cryptography

@@ -1,12 +1,23 @@
-"""Local web interface for paybybot3.
+"""Web interface for paybybot3.
 
-Runs a small HTTP server on 127.0.0.1 that wraps :class:`paybybot3.bot.Bot`
-and serves the single-page app built from ``web/`` (copied into ``static/``).
-PayByPhone credentials only live in this process' memory.
+Runs a small HTTP server that wraps :class:`paybybot3.bot.Bot` and serves the
+single-page app built from ``web/`` (copied into ``static/``).
+
+Two modes:
+- local (``paybybot3 web``): sessions live in this process' memory, with the
+  password, so the weekly renewal can run in the background;
+- hosted (``PAYBYBOT_HOSTED=1``, e.g. on Vercel): no server state; the
+  PayByPhone access token is kept in an encrypted cookie (key from
+  ``PAYBYBOT_SECRET``), the password is never stored, and there is no
+  background renewal.
 """
 
+import base64
+import contextvars
+import hashlib
 import json
 import logging
+import os
 import re
 import secrets
 import threading
@@ -16,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
-from fastapi import Cookie, FastAPI, HTTPException, Response
+from fastapi import Cookie, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -27,6 +38,9 @@ log = logging.getLogger("paybybot3.web")
 
 STATIC_DIR = Path(__file__).parent / "static"
 COOKIE = "pbb_session"
+HOSTED = os.environ.get("PAYBYBOT_HOSTED") == "1"
+HOSTED_ONLY_LOCAL = ("Le renouvellement automatique hebdomadaire n'est disponible que dans la version installée "
+                     "sur ordinateur : la version en ligne ne garde pas votre mot de passe.")
 
 app = FastAPI(title="paybybot3", docs_url=None, redoc_url=None)
 
@@ -191,6 +205,33 @@ class UserSession:
         self.attempts = []  # every real payment request, for diagnosis
         self.unconfirmed = {}  # (plate, location) -> time of an unconfirmed payment
 
+    def to_state(self):
+        """What the hosted mode keeps in the encrypted cookie: never the password."""
+        state = {"u": self.username, "d": self.demo,
+                 "uc": [[plate, location, at] for (plate, location), at in self.unconfirmed.items()]}
+        if self.demo:
+            state["s"] = [{**x, "startTime": x["startTime"].isoformat(), "expireTime": x["expireTime"].isoformat()}
+                          for x in self.bot.sessions]
+        else:
+            state["t"] = self.bot.authorization
+        return state
+
+    @classmethod
+    def from_state(cls, state):
+        self = cls.__new__(cls)
+        self.username, self._password, self.demo = state["u"], None, state["d"]
+        self.lock = threading.Lock()
+        if self.demo:
+            self.bot = DemoBot()
+            self.bot.sessions = [{**x, "startTime": datetime.fromisoformat(x["startTime"]),
+                                  "expireTime": datetime.fromisoformat(x["expireTime"])} for x in state.get("s", [])]
+        else:
+            self.bot = Bot.__new__(Bot)
+            self.bot.authorization = state["t"]
+        self.autopilots, self.history, self.attempts = {}, [], []
+        self.unconfirmed = {(plate, location): at for plate, location, at in state.get("uc", [])}
+        return self
+
     def call(self, method, *args, **kwargs):
         """Call a bot method, logging in again once if the token expired."""
         with self.lock:
@@ -199,6 +240,8 @@ class UserSession:
             except requests.HTTPError as e:
                 if e.response is None or e.response.status_code != 401 or self.demo:
                     raise
+                if self._password is None:  # hosted mode: the password is not kept
+                    raise HTTPException(401, "Votre session PayByPhone a expiré, reconnectez-vous.")
                 self.bot = Bot(self.username, self._password)
                 return getattr(self.bot, method)(*args, **kwargs)
 
@@ -210,11 +253,52 @@ class UserSession:
 SESSIONS = {}
 
 
+# In hosted mode, the sessions loaded during a request, so the middleware can write them back.
+_loaded = contextvars.ContextVar("pbb_loaded", default=None)
+
+
+def _fernet():
+    from cryptography.fernet import Fernet
+
+    secret = os.environ.get("PAYBYBOT_SECRET")
+    if not secret:
+        raise RuntimeError("PAYBYBOT_SECRET is not set")
+    return Fernet(base64.urlsafe_b64encode(hashlib.sha256(secret.encode()).digest()))
+
+
+def seal(session):
+    return _fernet().encrypt(json.dumps(session.to_state()).encode()).decode()
+
+
 def current(token):
+    if HOSTED:
+        try:
+            session = UserSession.from_state(json.loads(_fernet().decrypt((token or "").encode())))
+        except Exception:
+            raise HTTPException(401, "Session expirée, reconnectez-vous.")
+        holder = _loaded.get()
+        if holder is not None:
+            holder.append(session)
+        return session
     session = SESSIONS.get(token or "")
     if session is None:
         raise HTTPException(401, "Session expirée, reconnectez-vous.")
     return session
+
+
+def set_session_cookie(response, value):
+    response.set_cookie(COOKIE, value, httponly=True, samesite="strict", secure=HOSTED, path="/")
+
+
+@app.middleware("http")
+async def persist_session(request: Request, call_next):
+    """Hosted mode: write back what a request changed (demo tickets, payment locks)."""
+    holder = []
+    _loaded.set(holder)
+    response = await call_next(request)
+    if HOSTED and holder and response.status_code != 401:
+        set_session_cookie(response, seal(holder[-1]))
+    return response
 
 
 def friendly_error(e):
@@ -373,7 +457,8 @@ def autopilot_loop():
 
 @app.on_event("startup")
 def start_autopilot():
-    threading.Thread(target=autopilot_loop, daemon=True).start()
+    if not HOSTED:  # a serverless deployment has no long-running process
+        threading.Thread(target=autopilot_loop, daemon=True).start()
 
 
 # --------------------------------------------------------------------------
@@ -413,23 +498,32 @@ def login(body: Login, response: Response):
         log.warning("login failed for %s: %s", masked, e)
         raise HTTPException(400, friendly_error(e))
     log.info("login ok for %s (%s)", masked, "demo" if demo else "PayByPhone account %s***" % session.username[:5])
-    token = secrets.token_urlsafe(32)
-    SESSIONS[token] = session
-    response.set_cookie(COOKIE, token, httponly=True, samesite="strict")
-    return {"username": session.username, "demo": demo}
+    if HOSTED:
+        token = seal(session)
+    else:
+        token = secrets.token_urlsafe(32)
+        SESSIONS[token] = session
+    set_session_cookie(response, token)
+    return {"username": session.username, "demo": demo, "hosted": HOSTED}
 
 
 @app.post("/api/logout")
 def logout(response: Response, pbb_session: str = Cookie(None)):
     SESSIONS.pop(pbb_session or "", None)
-    response.delete_cookie(COOKIE)
+    response.delete_cookie(COOKIE, path="/")
     return {"ok": True}
+
+
+@app.get("/api/config")
+def config():
+    """Public: lets the login page describe where credentials go."""
+    return {"hosted": HOSTED}
 
 
 @app.get("/api/me")
 def me(pbb_session: str = Cookie(None)):
     s = current(pbb_session)
-    return {"username": s.username, "demo": s.demo}
+    return {"username": s.username, "demo": s.demo, "hosted": HOSTED}
 
 
 def guarded(fn):
@@ -585,6 +679,8 @@ def debug(pbb_session: str = Cookie(None)):
 
 @app.post("/api/autopilots")
 def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
+    if HOSTED:
+        raise HTTPException(501, HOSTED_ONLY_LOCAL)
     s = current(pbb_session)
     ap = {**body.model_dump(), "duration": fmt_qty(body.duration), "id": uuid.uuid4().hex[:8], "enabled": True,
           "lastCheck": None, "lastPayment": None, "lastError": None}

@@ -1,0 +1,7 @@
+venv
+.claude
+web
+*.egg-info
+build
+dist
+Lancer paybybot.*

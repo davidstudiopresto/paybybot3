@@ -8,14 +8,14 @@ export function Plate({ plate, size = 'md', className }: { plate: string; size?:
   return (
     <span
       className={cn(
-        'inline-flex items-stretch overflow-hidden rounded-[6px] border-2 border-ink bg-white font-heading font-extrabold tracking-[0.06em] text-ink shadow-[0_2px_0_var(--ink)]',
+        'inline-flex items-stretch overflow-hidden rounded-[5px] border-[1.5px] border-ink bg-white font-heading font-bold tracking-[0.06em] text-ink',
         size === 'sm' && 'h-7 text-sm',
         size === 'md' && 'h-10 text-xl',
         size === 'lg' && 'h-14 text-3xl',
         className,
       )}
     >
-      <span className={cn('flex flex-col items-center justify-end bg-signal pb-0.5 text-white', size === 'sm' ? 'w-4' : 'w-6')}>
+      <span className={cn('flex flex-col items-center justify-end bg-eu pb-0.5 text-white', size === 'sm' ? 'w-4' : 'w-6')}>
         <svg viewBox="0 0 20 20" className={size === 'sm' ? 'size-2.5' : 'size-3.5'} aria-hidden>
           {Array.from({ length: 12 }, (_, i) => {
             const a = (i / 12) * Math.PI * 2
@@ -29,17 +29,12 @@ export function Plate({ plate, size = 'md', className }: { plate: string; size?:
   )
 }
 
-/** Enamel street-name plate (blue field, green frame) used to show a zone. */
+/** Parking zone, shown as a quiet label next to the plate. */
 export function ZonePlate({ zone, className }: { zone: string; className?: string }) {
   return (
-    <span
-      className={cn(
-        'inline-flex flex-col items-center rounded-md border-[3px] border-go bg-signal-deep px-3 py-1 text-white shadow-[inset_0_0_0_2px_#fff3]',
-        className,
-      )}
-    >
-      <span className="text-[9px] font-bold tracking-[0.25em] uppercase opacity-80">Zone</span>
-      <span className="font-heading text-lg leading-none font-extrabold tracking-wide">{zone}</span>
+    <span className={cn('inline-flex items-baseline gap-1.5 text-ink', className)}>
+      <span className="text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">Zone</span>
+      <span className="font-heading text-base font-bold tabular-nums">{zone}</span>
     </span>
   )
 }
@@ -49,7 +44,7 @@ export function ParkingSign({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        'grid size-11 place-items-center rounded-[10px] bg-signal font-heading text-[28px] leading-none font-black text-white shadow-[inset_0_0_0_3px_var(--signal),inset_0_0_0_5px_#fff]',
+        'grid size-11 place-items-center rounded-[10px] bg-eu font-heading text-[28px] leading-none font-black text-white shadow-[inset_0_0_0_3px_var(--eu),inset_0_0_0_5px_#fff]',
         className,
       )}
       aria-hidden
@@ -61,11 +56,9 @@ export function ParkingSign({ className }: { className?: string }) {
 
 export function Wordmark() {
   return (
-    <span className="flex items-center gap-3">
-      <ParkingSign />
-      <span className="font-heading text-2xl leading-none font-black tracking-tight">
-        paybybot
-      </span>
+    <span className="inline-flex items-center gap-2.5">
+      <ParkingSign className="size-9 rounded-[8px] text-[22px]" />
+      <span className="font-heading text-xl font-black tracking-tight">paybybot</span>
     </span>
   )
 }

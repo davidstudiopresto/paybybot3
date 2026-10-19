@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, Check, LockKeyhole, Mail, X } from 'lucide-react'
+import { ArrowLeft, Check, Mail, X } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { Wordmark } from '@/components/signs'
 
@@ -35,7 +35,7 @@ export function legalPageFromHash(hash: string): LegalPage | null {
 }
 
 const Mailto = () => (
-  <a href={`mailto:${PUBLISHER.email}`} className="font-bold text-signal underline-offset-4 hover:underline">
+  <a href={`mailto:${PUBLISHER.email}`} className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
     {PUBLISHER.email}
   </a>
 )
@@ -43,7 +43,7 @@ const Mailto = () => (
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-10">
-      <h2 className="text-2xl font-extrabold tracking-tight">{title}</h2>
+      <h2 className="font-heading text-xl font-bold tracking-tight">{title}</h2>
       <div className="mt-3 space-y-3 text-[1.05rem] leading-relaxed text-ink/85 [&_li]:ml-5 [&_li]:list-disc [&_li]:pl-1 [&_strong]:text-ink [&_ul]:space-y-1.5">
         {children}
       </div>
@@ -84,15 +84,15 @@ function DataTable({ rows }: { rows: [string, string, string, string][] }) {
 function Security() {
   return (
     <>
-      <div className="rounded-2xl bg-go p-6 text-white sm:p-8">
-        <p className="font-heading text-3xl leading-tight font-black sm:text-4xl">Aucune de vos données n’est conservée.</p>
-        <p className="mt-3 text-lg text-white/90">
+      <div className="rounded-2xl bg-muted p-6 sm:p-8">
+        <p className="font-heading text-3xl leading-tight font-bold tracking-tight sm:text-4xl">Aucune de vos données n’est conservée.</p>
+        <p className="mt-3 text-lg text-ink/70">
           paybybot ne garde ni votre mot de passe, ni votre identifiant, ni vos véhicules, ni vos tickets, ni votre carte.
           Tout est lu chez PayByPhone au moment où vous en avez besoin, puis oublié. Votre connexion ne vit que dans votre
           navigateur, chiffrée, et s’efface d’elle-même au bout de 24 heures au plus.
         </p>
-        <p className="mt-4 rounded-xl bg-white/10 p-4 text-white/90">
-          <strong className="text-white">Seule exception, si vous le choisissez :</strong> le renouvellement riverain doit
+        <p className="mt-4 rounded-xl bg-white p-4 text-ink/70">
+          <strong className="text-ink">Seule exception, si vous le choisissez :</strong> le renouvellement riverain doit
           pouvoir payer à votre place quand vous n’êtes pas là. Il garde donc, chiffré, de quoi se reconnecter à PayByPhone et
           le détail du forfait, et l’e-mail de confirmation si vous en donnez un. Tout est effacé dès que vous l’arrêtez.
         </p>
@@ -107,8 +107,8 @@ function Security() {
           [false, 'Aucune publicité, aucune revente de données'],
           [false, 'Aucun cookie de suivi ni outil de mesure d’audience'],
         ].map(([yes, text]) => (
-          <p key={text as string} className="flex items-start gap-3 rounded-xl bg-enamel p-4 font-bold">
-            <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-white ${yes ? 'bg-go' : 'bg-ink'}`}>
+          <p key={text as string} className="flex items-start gap-3 rounded-xl border border-border p-4 font-bold">
+            <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-ink text-white">
               {yes ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
             </span>
             {text as string}
@@ -191,7 +191,7 @@ function Security() {
         <p>
           Vous pensez avoir trouvé une faille ? Écrivez à <Mailto /> : nous répondons rapidement et corrigeons en priorité.
           Le code est public sur{' '}
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className="font-bold text-signal underline-offset-4 hover:underline">
+          <a href={REPO_URL} target="_blank" rel="noreferrer" className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
             GitHub
           </a>
           .
@@ -209,9 +209,9 @@ function Privacy() {
         et quels sont vos droits, au sens du Règlement général sur la protection des données (RGPD).
       </p>
 
-      <div className="mt-8 rounded-2xl bg-go p-6 text-white">
-        <p className="font-heading text-2xl leading-tight font-black">En une phrase</p>
-        <p className="mt-2 text-white/90">
+      <div className="mt-8 rounded-2xl bg-muted p-6">
+        <p className="font-heading text-xl leading-tight font-bold">En une phrase</p>
+        <p className="mt-2 text-ink/70">
           paybybot ne conserve aucune de vos données : ni mot de passe, ni identifiant, ni véhicule, ni carte. La seule
           exception est le renouvellement riverain, si vous l’activez, qui garde chiffré ce qu’il faut pour payer à votre
           place, et l’efface dès que vous l’arrêtez.
@@ -221,7 +221,7 @@ function Privacy() {
       <Section title="1. Qui est responsable">
         <p>
           paybybot appartient à {PUBLISHER.name}, responsable du traitement au sens du RGPD (coordonnées dans les{' '}
-          <a href="#/mentions-legales" className="font-bold text-signal underline-offset-4 hover:underline">
+          <a href="#/mentions-legales" className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
             mentions légales
           </a>
           ). Pour toute question sur vos données : <Mailto />.
@@ -334,7 +334,7 @@ function Privacy() {
       <Section title="7. Sécurité">
         <p>
           Les mesures techniques sont détaillées sur la page{' '}
-          <a href="#/securite" className="font-bold text-signal underline-offset-4 hover:underline">
+          <a href="#/securite" className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
             Sécurité et données
           </a>
           . En cas de violation de données présentant un risque pour vous, nous la notifions à la CNIL et, si nécessaire,
@@ -350,7 +350,7 @@ function Privacy() {
         </p>
         <p>
           Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL (
-          <a href="https://www.cnil.fr" target="_blank" rel="noreferrer" className="font-bold text-signal underline-offset-4 hover:underline">
+          <a href="https://www.cnil.fr" target="_blank" rel="noreferrer" className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
             cnil.fr
           </a>
           ).
@@ -458,7 +458,7 @@ function Terms() {
       <Section title="8. Données personnelles">
         <p>
           Leur traitement est décrit dans la{' '}
-          <a href="#/confidentialite" className="font-bold text-signal underline-offset-4 hover:underline">
+          <a href="#/confidentialite" className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
             politique de confidentialité
           </a>
           .
@@ -468,7 +468,7 @@ function Terms() {
       <Section title="9. Code source">
         <p>
           Le code de paybybot est libre, sous licence MIT, et public sur{' '}
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className="font-bold text-signal underline-offset-4 hover:underline">
+          <a href={REPO_URL} target="_blank" rel="noreferrer" className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
             GitHub
           </a>
           .
@@ -536,9 +536,9 @@ const CONTENT: Record<LegalPage, { title: string; body: () => ReactNode }> = {
 export function LegalView({ page, hosted }: { page: LegalPage; hosted: boolean }) {
   const { title, body: Body } = CONTENT[page]
   return (
-    <div className="grain min-h-dvh">
-      <header className="sticky top-0 z-20 border-b border-border/70 bg-paper/85 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-4">
+    <div className="min-h-dvh bg-white">
+      <header>
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 pt-6 sm:px-8 sm:pt-8">
           <a href="#/" aria-label="Accueil paybybot">
             <Wordmark />
           </a>
@@ -554,24 +554,21 @@ export function LegalView({ page, hosted }: { page: LegalPage; hosted: boolean }
               key={p.id}
               href={`#/${p.id}`}
               aria-current={p.id === page ? 'page' : undefined}
-              className={`rounded-full border-2 px-3 py-1 text-sm font-bold transition ${
-                p.id === page ? 'border-signal bg-accent text-signal' : 'border-border bg-enamel hover:border-input'
+              className={`rounded-full border px-3 py-1 text-sm font-bold transition ${
+                p.id === page ? 'border-ink bg-ink text-white' : 'border-ink/15 text-ink/70 hover:border-ink/40'
               }`}
             >
               {p.label}
             </a>
           ))}
         </nav>
-        <p className="mt-10 flex items-center gap-2 text-sm font-bold tracking-[0.2em] text-signal uppercase">
-          <LockKeyhole className="size-4" /> paybybot
-        </p>
-        <h1 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">{title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Mise à jour : {LEGAL_UPDATED}</p>
+        <h1 className="mt-10 font-heading text-[2.2rem] leading-[1.05] font-bold tracking-[-0.03em] sm:text-[2.6rem]">{title}</h1>
+        <p className="mt-2 text-sm text-ink/50">Mise à jour : {LEGAL_UPDATED}</p>
         <div className="mt-8">
           <Body />
         </div>
-        <p className="mt-14 flex items-center gap-2 rounded-xl bg-enamel p-4 text-muted-foreground">
-          <Mail className="size-5 shrink-0 text-signal" /> Une question ? <Mailto />
+        <p className="mt-14 flex items-center gap-2 border-t border-border pt-6 text-ink/60">
+          <Mail className="size-5 shrink-0" /> Une question ? <Mailto />
         </p>
         <HostedFooter className="mt-12" hosted={hosted} />
       </main>

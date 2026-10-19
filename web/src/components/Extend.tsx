@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Clock3, Loader2, Plus } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
 import { loadLast, PRESETS } from '@/components/PayWizard'
 import { Plate, ZonePlate } from '@/components/signs'
 import { cn } from '@/lib/utils'
+import { choice, ui } from '@/lib/styles'
 import { api, ApiError, clock, money, unitLabel, type Money, type Overview, type Session, type Unit } from '@/lib/api'
 
 const SHORT: Record<Unit, string> = { Days: 'j', Hours: 'h', Minutes: 'min' }
@@ -97,21 +97,19 @@ export function ExtendDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-1.5rem)] gap-0 overflow-y-auto rounded-2xl bg-enamel p-0 sm:max-w-lg">
-        <div className="bg-signal px-6 pt-6 pb-5 text-white">
-          <DialogTitle className="flex items-center gap-2 text-2xl font-black">
-            <Clock3 className="size-6" /> Prolonger le ticket
-          </DialogTitle>
-          <DialogDescription className="mt-1 text-base text-white/85">
+      <DialogContent className={ui.dialog}>
+        <div className="px-6 pt-7">
+          <DialogTitle className={ui.dialogTitle}>Prolonger le ticket</DialogTitle>
+          <DialogDescription className="mt-1 text-ink/60">
             Fin actuelle : {clock(session.expire)}
           </DialogDescription>
         </div>
 
         <div className="space-y-6 p-6">
           <div className="flex flex-wrap items-center gap-3">
-            <Plate plate={session.plate} />
+            <Plate plate={session.plate} size="sm" />
             <ZonePlate zone={session.location} />
-            {rateName && <span className="text-sm text-muted-foreground">{rateName}</span>}
+            {rateName && <span className="text-sm text-ink/50">{rateName}</span>}
           </div>
 
           {!data.payments.length ? (
@@ -127,7 +125,7 @@ export function ExtendDialog({
                         setUnit(u)
                         setDuration(PRESETS[u][0])
                       }}
-                      className={cn('rounded-lg px-4 py-2 font-bold capitalize transition', unit === u ? 'bg-enamel text-signal shadow' : 'text-muted-foreground')}
+                      className={cn('rounded-lg px-4 py-2 font-bold capitalize transition', unit === u ? 'bg-white text-ink shadow-sm' : 'text-ink/50')}
                     >
                       {unitLabel(u, 2)}
                     </button>
@@ -136,14 +134,14 @@ export function ExtendDialog({
               )}
 
               <div>
-                <p className="mb-2 text-sm font-bold text-muted-foreground">Ajouter</p>
+                <p className={ui.label}>Ajouter</p>
                 <div className="grid grid-cols-4 gap-2">
                   {(PRESETS[unit] ?? []).map((n) => (
                     <button
                       key={n}
                       onClick={() => setDuration(n)}
                       aria-pressed={duration === n}
-                      className={cn('rounded-xl border-2 py-3 font-bold transition', duration === n ? 'border-signal bg-accent text-signal' : 'border-border bg-white')}
+                      className={choice(duration === n, 'py-3 text-center font-bold')}
                     >
                       +{n} {SHORT[unit]}
                     </button>
@@ -157,7 +155,7 @@ export function ExtendDialog({
                     <button
                       key={p.id}
                       onClick={() => setPayment(p.id)}
-                      className={cn('rounded-lg border-2 px-3 py-2 text-sm font-bold', payment === p.id ? 'border-signal bg-accent text-signal' : 'border-border')}
+                      className={choice(payment === p.id, 'px-3 py-2 text-sm font-bold')}
                     >
                       {p.label}
                     </button>
@@ -165,7 +163,7 @@ export function ExtendDialog({
                 </div>
               )}
 
-              <div className="rounded-xl bg-muted/70 p-4" aria-live="polite">
+              <div className="rounded-xl bg-muted p-4" aria-live="polite">
                 {loading ? (
                   <p className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="size-4 animate-spin" /> Calcul du prix…
@@ -176,7 +174,7 @@ export function ExtendDialog({
                       <span className="block text-sm text-muted-foreground">Nouvelle fin</span>
                       <strong>{clock(quote.expire)}</strong>
                     </span>
-                    <span className="font-heading text-3xl font-black">{money(quote.cost)}</span>
+                    <span className="font-heading text-3xl font-bold">{money(quote.cost)}</span>
                   </div>
                 ) : (
                   <p className="text-muted-foreground">Choisissez une durée.</p>
@@ -186,21 +184,17 @@ export function ExtendDialog({
           )}
 
           {error && (
-            <p role="alert" className="rounded-lg border-l-4 border-destructive bg-destructive/10 px-4 py-3 text-destructive">
+            <p role="alert" className={ui.error}>
               {error}
             </p>
           )}
 
           {locked ? (
-            <Button onClick={() => onOpenChange(false)} className="h-14 w-full rounded-xl text-lg font-bold">
+            <button onClick={() => onOpenChange(false)} className={ui.primary}>
               Fermer
-            </Button>
+            </button>
           ) : (
-            <Button
-              onClick={extend}
-              disabled={!quote || saving || !payment}
-              className="h-14 w-full rounded-xl text-lg font-bold shadow-[0_4px_0_var(--signal-deep)] active:translate-y-1 active:shadow-none"
-            >
+            <button onClick={extend} disabled={!quote || saving || !payment} className={ui.primary}>
               {saving ? (
                 <>
                   <Loader2 className="size-5 animate-spin" /> Confirmation par PayByPhone…
@@ -210,7 +204,7 @@ export function ExtendDialog({
                   <Plus className="size-5" /> Prolonger {quote ? `· ${money(quote.cost)}` : ''}
                 </>
               )}
-            </Button>
+            </button>
           )}
         </div>
       </DialogContent>

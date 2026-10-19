@@ -9,6 +9,7 @@
 @theme inline {
     --font-heading: 'Overpass Variable', sans-serif;
     --font-sans: 'Atkinson Hyperlegible Next Variable', sans-serif;
+    --color-eu: var(--eu);
     --color-signal: var(--signal);
     --color-signal-deep: var(--signal-deep);
     --color-enamel: var(--enamel);
@@ -57,37 +58,38 @@
 }
 
 :root {
-    /* Parisian street signage: blue "P" panels, enamel plates, kerb paint */
-    --signal: #1d4ea3;
-    --signal-deep: #0f2f6b;
-    --enamel: #fdfcf8;
-    --paper: #f1ede3;
-    --ink: #0d1830;
-    --go: #1f7a4d;
+    /* Minimal: white, near-black ink, hairline borders; blue only for the "P" logo and the plate's EU band */
+    --eu: #1d4ea3;
+    --signal: #111111;
+    --signal-deep: #000000;
+    --enamel: #ffffff;
+    --paper: #ffffff;
+    --ink: #111111;
+    --go: #15803d;
     --amber: #f2b705;
-    --background: var(--paper);
+    --background: #ffffff;
     --foreground: var(--ink);
-    --card: var(--enamel);
+    --card: #ffffff;
     --card-foreground: var(--ink);
-    --popover: var(--enamel);
+    --popover: #ffffff;
     --popover-foreground: var(--ink);
-    --primary: var(--signal);
+    --primary: var(--ink);
     --primary-foreground: #ffffff;
-    --secondary: #e4dfd2;
+    --secondary: #f4f4f4;
     --secondary-foreground: var(--ink);
-    --muted: #e8e3d7;
-    --muted-foreground: #4f5a70;
-    --accent: #dfe8f7;
-    --accent-foreground: var(--signal-deep);
+    --muted: #f4f4f4;
+    --muted-foreground: #6b6b6b;
+    --accent: #f4f4f4;
+    --accent-foreground: var(--ink);
     --destructive: #c8102e;
-    --border: #d6cfbf;
-    --input: #c9c1ae;
-    --ring: var(--signal);
+    --border: #e8e8e8;
+    --input: #d9d9d9;
+    --ring: var(--ink);
     --radius: 0.875rem;
-    --chart-1: #1d4ea3; --chart-2: #1f7a4d; --chart-3: #f2b705; --chart-4: #c8102e; --chart-5: #4f5a70;
-    --sidebar: var(--enamel); --sidebar-foreground: var(--ink); --sidebar-primary: var(--signal);
+    --chart-1: #111111; --chart-2: #15803d; --chart-3: #f2b705; --chart-4: #c8102e; --chart-5: #6b6b6b;
+    --sidebar: #ffffff; --sidebar-foreground: var(--ink); --sidebar-primary: var(--ink);
     --sidebar-primary-foreground: #fff; --sidebar-accent: var(--accent); --sidebar-accent-foreground: var(--ink);
-    --sidebar-border: var(--border); --sidebar-ring: var(--signal);
+    --sidebar-border: var(--border); --sidebar-ring: var(--ink);
 }
 
 .dark {
@@ -137,34 +139,17 @@
     @apply font-sans;
     }
 }
-/* Faint asphalt grain so the paper background is not a flat fill */
-.grain {
-  background-image:
-    radial-gradient(circle at 20% 10%, rgb(29 78 163 / 0.07), transparent 45%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.09 0 0 0 0 0.19 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* Kerb paint stripes, used as a section divider */
-.kerb {
-  height: 10px;
-  background: repeating-linear-gradient(-45deg, var(--ink) 0 14px, var(--enamel) 14px 28px);
-  border-radius: 999px;
-  opacity: .9;
-}
-
-/* Perforated edge for parking tickets */
-.perforated {
-  mask: radial-gradient(circle 7px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
-        radial-gradient(circle 7px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
-}
+/* Kept as no-ops so older markup stays valid: the minimal theme has no texture or stripes */
+.grain { background: none; }
+.kerb { height: 1px; background: var(--border); }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
-.rise { animation: rise .55s cubic-bezier(.2,.7,.2,1) both; }
+.rise { animation: rise .35s ease-out both; }
 
-@keyframes blink { 50% { opacity: .25; } }
+@keyframes blink { 50% { opacity: .35; } }
 .blink { animation: blink 1.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {

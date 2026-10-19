@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import { LogOut, Plus, SquareParking } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { ActionTile, Plate, Wordmark, ZonePlate } from '@/components/signs'
+import { ArrowRight, LogOut } from 'lucide-react'
+import { Plate, Wordmark, ZonePlate } from '@/components/signs'
 import { ExtendDialog } from '@/components/Extend'
 import { HostedFooter } from '@/components/Footer'
 import { RiverainCard } from '@/components/Riverain'
@@ -17,19 +15,9 @@ function useNow(interval = 1000) {
   return now
 }
 
-function Ticket({
-  session,
-  now,
-  index,
-  data,
-  onRefresh,
-}: {
-  session: Session
-  now: number
-  index: number
-  data: Overview
-  onRefresh: () => Promise<void>
-}) {
+const quietLink = 'text-sm font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink'
+
+function Ticket({ session, now, data, onRefresh }: { session: Session; now: number; data: Overview; onRefresh: () => Promise<void> }) {
   const [extending, setExtending] = useState(false)
   const start = new Date(session.start).getTime()
   const end = new Date(session.expire).getTime()
@@ -38,41 +26,27 @@ function Ticket({
   const soon = left < 15 * 60000
 
   return (
-    <article
-      className="rise relative flex flex-col overflow-hidden rounded-2xl bg-enamel shadow-[0_1px_0_var(--border),0_18px_40px_-24px_rgb(13_24_48/0.45)] sm:flex-row"
-      style={{ animationDelay: `${index * 70}ms` }}
-    >
-      <div className="flex flex-1 flex-col gap-5 p-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <Plate plate={session.plate} />
+    <article className="rise rounded-2xl border border-border p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="flex items-center gap-3">
+          <Plate plate={session.plate} size="sm" />
           <ZonePlate zone={session.location} />
-        </div>
-        <div>
-          <p className="text-sm font-bold tracking-[0.15em] text-muted-foreground uppercase">Temps restant</p>
-          <p className={`font-heading text-5xl leading-none font-black tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
-            {remaining(left)}
-          </p>
-          <p className="mt-2 text-muted-foreground">
-            Valable jusqu'à <strong className="text-ink">{clock(session.expire)}</strong>
-          </p>
-        </div>
-        <div className="h-3 overflow-hidden rounded-full bg-muted" aria-hidden>
-          <div
-            className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-go'}`}
-            style={{ width: `${(1 - progress) * 100}%` }}
-          />
-        </div>
-      </div>
-      {/* Ticket stub */}
-      <div className="perforated relative flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t-2 border-dashed border-border bg-accent/60 px-6 py-4 sm:w-44 sm:flex-col sm:flex-nowrap sm:justify-center sm:border-t-0 sm:border-l-2">
-        <span className="flex items-center gap-2 text-sm font-bold text-go">
-          <span className="blink size-2.5 rounded-full bg-go" /> Payé
         </span>
-        <span className="font-heading text-2xl font-black">{money(session.cost)}</span>
-        <Button onClick={() => setExtending(true)} className="h-12 w-full rounded-xl px-4 font-bold sm:h-11 sm:w-auto">
-          <Plus className="size-4" /> Prolonger
-        </Button>
+        <span className="text-sm text-muted-foreground">{money(session.cost)}</span>
       </div>
+      <p className={`mt-5 font-heading text-[2.6rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
+        {remaining(left)}
+      </p>
+      <p className="mt-2 text-muted-foreground">jusqu'à {clock(session.expire)}</p>
+      <div className="mt-5 h-1 overflow-hidden rounded-full bg-muted" aria-hidden>
+        <div
+          className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-ink'}`}
+          style={{ width: `${(1 - progress) * 100}%` }}
+        />
+      </div>
+      <button onClick={() => setExtending(true)} className={`mt-4 ${quietLink}`}>
+        Prolonger
+      </button>
       <ExtendDialog session={session} data={data} open={extending} onOpenChange={setExtending} onDone={onRefresh} />
     </article>
   )
@@ -102,62 +76,58 @@ export function Dashboard({
   }, [onRefresh])
 
   return (
-    <div className="grain min-h-dvh">
-      <header className="sticky top-0 z-20 border-b border-border/70 bg-paper/85 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
-          <Wordmark />
-          <div className="flex items-center gap-2">
-            {me.demo && <Badge className="bg-amber text-ink">Mode démo</Badge>}
-            <Button variant="ghost" size="icon-lg" onClick={onLogout} aria-label="Déconnexion" title="Déconnexion">
-              <LogOut className="size-5" />
-            </Button>
-          </div>
-        </div>
+    <div className="flex min-h-dvh flex-col bg-white">
+      <header className="flex items-center justify-between px-6 pt-6 sm:px-8 sm:pt-8">
+        <Wordmark />
+        <span className="flex items-center gap-3">
+          {me.demo && <span className="rounded-full bg-amber/25 px-2.5 py-0.5 text-xs font-bold text-ink">Démo</span>}
+          <button
+            onClick={onLogout}
+            aria-label="Déconnexion"
+            title="Déconnexion"
+            className="grid size-10 place-items-center rounded-lg text-ink/50 transition hover:bg-muted hover:text-ink"
+          >
+            <LogOut className="size-5" />
+          </button>
+        </span>
       </header>
 
-      <main className="mx-auto max-w-5xl px-5 pt-10 pb-24">
-        {/* Hero action */}
-        <section className="rise">
-          <p className="text-sm font-bold tracking-[0.2em] text-signal uppercase">Mon stationnement</p>
-          <h1 className="mt-1 text-4xl font-black tracking-tight sm:text-5xl">
-            {sessions.length ? 'Vous êtes en règle.' : 'Aucun ticket en cours.'}
-          </h1>
-        </section>
+      <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-12 pb-16">
+        <h1 className="rise font-heading text-[2.6rem] leading-[1.05] font-bold tracking-[-0.03em]">
+          {!data ? '…' : sessions.length ? 'Vous êtes en règle.' : 'Aucun ticket en cours.'}
+        </h1>
+        <p className="mt-3 text-[1.05rem] text-ink/60">
+          {!data
+            ? 'Chargement de votre compte PayByPhone.'
+            : sessions.length
+              ? sessions.length > 1
+                ? `${sessions.length} tickets en cours.`
+                : 'Votre ticket en cours :'
+              : "Aucune voiture n'est couverte en ce moment."}
+        </p>
 
-        {/* The two main actions, same size side by side */}
-        <section className="mt-8 grid gap-5 md:grid-cols-2">
-          <ActionTile
-            tone="signal"
-            icon={<SquareParking />}
-            eyebrow="Ponctuel"
-            title="Payer un stationnement"
-            text="Choisissez la zone, le tarif et la durée. Le prix exact s'affiche avant de payer."
-            cta="Payer"
-            onClick={onPay}
-            disabled={!data}
-          />
-          <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
-        </section>
-
-        <div className="kerb my-8" aria-hidden />
-
-        {/* Active tickets */}
-        {!data ? (
-          <div className="h-48 animate-pulse rounded-2xl bg-enamel/70" />
-        ) : sessions.length ? (
-          <div className="grid gap-5">
-            {sessions.map((s, i) => (
-              <Ticket key={s.id} session={s} now={now} index={i} data={data} onRefresh={onRefresh} />
+        {data && sessions.length > 0 && (
+          <div className="mt-6 space-y-3">
+            {sessions.map((s) => (
+              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} />
             ))}
           </div>
-        ) : (
-          <p className="rise rounded-2xl bg-muted/70 px-6 py-5 text-lg text-muted-foreground">
-            Aucune voiture n'est couverte en ce moment.
-          </p>
         )}
 
-        <HostedFooter className="mt-14" hosted={!!me.hosted} />
+        <button
+          onClick={onPay}
+          disabled={!data}
+          className="mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-ink text-lg font-bold text-white transition hover:bg-ink/90 active:scale-[0.99] disabled:opacity-50"
+        >
+          Payer un stationnement <ArrowRight className="size-5" />
+        </button>
+
+        <div className="mt-12 border-t border-border pt-8">
+          <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
+        </div>
       </main>
+
+      <HostedFooter className="px-6 pb-8" hosted={!!me.hosted} />
     </div>
   )
 }

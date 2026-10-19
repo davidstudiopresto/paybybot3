@@ -13,14 +13,14 @@ export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Pro
   }
 
   return (
-    <div className={compact ? 'rounded-xl border-2 border-dashed border-amber bg-amber/10 p-4' : 'rounded-2xl border-[3px] border-dashed border-amber bg-amber/10 p-6'}>
+    <div className={compact ? 'rounded-xl border border-border p-4' : 'rounded-2xl border border-border p-6'}>
       <div className="flex items-start gap-4">
-        <span className="relative grid size-12 shrink-0 place-items-center rounded-xl bg-enamel text-ink">
+        <span className="relative grid size-12 shrink-0 place-items-center rounded-xl bg-muted text-ink">
           <CreditCard className="size-6" />
           <span className="absolute h-0.5 w-9 rotate-45 rounded bg-destructive" aria-hidden />
         </span>
         <div>
-          <p className={compact ? 'font-heading text-lg font-extrabold' : 'font-heading text-2xl font-extrabold'}>
+          <p className={compact ? 'font-heading text-lg font-bold' : 'font-heading text-xl font-bold'}>
             Aucune carte enregistrée sur PayByPhone
           </p>
           <p className="mt-1 text-muted-foreground">
@@ -35,12 +35,12 @@ export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Pro
         </div>
       </div>
       <div className="mt-5 flex flex-wrap gap-3">
-        <Button onClick={check} disabled={checking} className="h-12 rounded-xl px-5 font-bold">
+        <Button onClick={check} disabled={checking} className="h-12 rounded-xl bg-ink px-5 font-bold text-white hover:bg-ink/90">
           {checking ? <Loader2 className="size-5 animate-spin" /> : <RefreshCw className="size-5" />} J'ai ajouté une carte
         </Button>
         <Button
           variant="outline"
-          className="h-12 rounded-xl bg-enamel px-5"
+          className="h-12 rounded-xl border-ink/20 bg-white px-5"
           render={<a href="https://m.paybyphone.com" target="_blank" rel="noreferrer" />}
         >
           Ouvrir PayByPhone <ExternalLink className="size-4" />

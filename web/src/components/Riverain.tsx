@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
-import { CalendarSync, Check, Home, Loader2, Mail, Pause, Play, Repeat } from 'lucide-react'
+import { Check, Loader2, Mail, Pause, Play, Repeat } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { NoPayment } from '@/components/NoPayment'
-import { ActionTile, Plate, ZonePlate } from '@/components/signs'
+import { Plate, ZonePlate } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { cn } from '@/lib/utils'
+import { choice, ui } from '@/lib/styles'
 import { api, clock, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
@@ -69,55 +68,51 @@ export function RiverainCard({
 
   if (weekly.length) {
     return (
-      <section className="rise flex h-full flex-col items-start gap-4 rounded-2xl border-[3px] border-go bg-go/[0.07] p-6 sm:p-7">
-        <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-go text-white">
-          <CalendarSync className="size-7" />
-        </span>
-        <div className="min-w-0">
-          <p className="font-heading text-xl font-extrabold">Forfait riverain renouvelé chaque semaine</p>
-          <ul className="mt-3 space-y-3">
-            {weekly.map((ap) => {
-              const current = data?.sessions.find((s) => s.plate === ap.plate && s.location === ap.location)
-              const now = Date.now()
-              const pauseStart = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
-              const pauseEnd = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
-              const paused = pauseStart !== null && pauseStart <= now && (pauseEnd === null || now < pauseEnd)
-              const pauseLater = pauseStart !== null && pauseStart > now
-              return (
-                <li key={ap.id} className="rounded-xl bg-enamel/70 p-3">
-                  <p className="flex flex-wrap items-center gap-2 text-muted-foreground">
-                    <Plate plate={ap.plate} size="sm" /> zone {ap.location} ·{' '}
+      <section className="rise">
+        <h2 className="font-heading text-xl font-bold">Renouvellement riverain</h2>
+        <p className="mt-1 text-ink/60">Votre forfait de 7 jours, repayé tout seul à chaque expiration.</p>
+        <ul className="mt-5 divide-y divide-border border-y border-border">
+          {weekly.map((ap) => {
+            const current = data?.sessions.find((s) => s.plate === ap.plate && s.location === ap.location)
+            const now = Date.now()
+            const pauseStart = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
+            const pauseEnd = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
+            const paused = pauseStart !== null && pauseStart <= now && (pauseEnd === null || now < pauseEnd)
+            const pauseLater = pauseStart !== null && pauseStart > now
+            return (
+              <li key={ap.id} className="flex items-start justify-between gap-4 py-4">
+                <div className="min-w-0">
+                  <span className="flex items-center gap-3">
+                    <Plate plate={ap.plate} size="sm" />
+                    <ZonePlate zone={ap.location} />
+                  </span>
+                  <p className="mt-2 text-sm text-ink/60">
                     {ap.lastError ? (
                       <span className="text-destructive">{ap.lastError}</span>
                     ) : paused ? (
-                      <span className="font-bold text-amber-700">
-                        En pause {pauseEnd ? `jusqu'au ${dayText(pauseEnd - 1)} inclus` : 'sans date de fin'}
-                      </span>
+                      <>En pause {pauseEnd ? `jusqu'au ${dayText(pauseEnd - 1)} inclus` : 'sans date de fin'}</>
                     ) : current ? (
-                      <>prochain renouvellement {clock(current.expire)}</>
+                      <>Prochain renouvellement {clock(current.expire)}</>
                     ) : (
-                      <>paiement en cours…</>
+                      <>Paiement en cours…</>
+                    )}
+                    {pauseLater && (
+                      <span className="block">
+                        Pause prévue du {dayText(pauseStart!)} {pauseEnd ? `au ${dayText(pauseEnd - 1)}` : 'sans date de fin'}
+                      </span>
                     )}
                   </p>
-                  {pauseLater && (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Pause prévue du {dayText(pauseStart!)} {pauseEnd ? `au ${dayText(pauseEnd - 1)}` : 'sans date de fin'}
-                    </p>
-                  )}
-                  <button
-                    onClick={() => setManaging(ap)}
-                    className="mt-1.5 text-sm font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink"
-                  >
-                    Gérer
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-        <Button variant="outline" onClick={() => setOpen(true)} className="mt-auto h-12 rounded-xl bg-enamel px-5">
+                </div>
+                <button onClick={() => setManaging(ap)} className={cn('shrink-0 text-sm', ui.link)}>
+                  Gérer
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+        <button onClick={() => setOpen(true)} className={cn('mt-4 text-sm', ui.link)}>
           Ajouter une voiture
-        </Button>
+        </button>
         {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
         {pausing && <PauseDialog ap={pausing} onClose={() => setPausing(null)} onDone={onChanged} />}
         {managing && (
@@ -149,19 +144,17 @@ export function RiverainCard({
 
   return (
     <>
-      <ActionTile
-        tone="go"
-        icon={<Home />}
-        eyebrow="Vous êtes riverain ?"
-        title="Renouvellement automatique chaque semaine"
-        text={hosted
-          ? "Votre forfait résident de 7 jours est repayé tout seul à son expiration, même téléphone et ordinateur éteints."
-          : "Votre forfait résident de 7 jours est repayé tout seul à son expiration. Plus jamais d'oubli."}
-        cta="Activer"
-        onClick={() => setOpen(true)}
-        disabled={!data}
-        delay={80}
-      />
+      <section className="rise">
+        <h2 className="font-heading text-xl font-bold">Vous êtes riverain ?</h2>
+        <p className="mt-1 text-ink/60">
+          {hosted
+            ? 'Votre forfait résident de 7 jours, repayé tout seul à chaque expiration, même appareil éteint.'
+            : 'Votre forfait résident de 7 jours, repayé tout seul à chaque expiration.'}
+        </p>
+        <button onClick={() => setOpen(true)} disabled={!data} className={cn('mt-5', ui.secondary)}>
+          Activer le renouvellement
+        </button>
+      </section>
       {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
     </>
   )
@@ -277,58 +270,53 @@ function RiverainDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-1.5rem)] gap-0 overflow-y-auto rounded-2xl bg-enamel p-0 sm:max-w-lg">
-        <div className="bg-go px-6 pt-6 pb-5 text-white">
-          <DialogTitle className="flex items-center gap-2 text-2xl font-black">
-            <CalendarSync className="size-6" /> Riverain, chaque semaine
-          </DialogTitle>
-          <DialogDescription className="mt-1 text-base text-white/85">
-            Vérifiez, puis activez. On s'occupe du reste.
-          </DialogDescription>
+      <DialogContent className={ui.dialog}>
+        <div className="px-6 pt-7">
+          <DialogTitle className={ui.dialogTitle}>Renouvellement riverain</DialogTitle>
+          <DialogDescription className="mt-1 text-ink/60">Vérifiez, puis activez. On s'occupe du reste.</DialogDescription>
         </div>
 
         <div className="space-y-6 p-6">
           <div>
-            <p className="mb-2 text-sm font-bold text-muted-foreground">Voiture</p>
+            <p className={ui.label}>Voiture</p>
             <div className="flex flex-wrap gap-2">
               {data.vehicles.map((v) => (
                 <button
                   key={v.plate}
                   onClick={() => setPlate(v.plate)}
                   aria-pressed={plate === v.plate}
-                  className={cn('rounded-xl border-[3px] p-1.5 transition', plate === v.plate ? 'border-go' : 'border-transparent opacity-55 hover:opacity-100')}
+                  className={choice(plate === v.plate, 'p-2')}
                 >
-                  <Plate plate={v.plate} />
+                  <Plate plate={v.plate} size="sm" />
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <label htmlFor="riverain-zone" className="mb-2 block text-sm font-bold text-muted-foreground">
+            <label htmlFor="riverain-zone" className={ui.label}>
               Zone de votre domicile <span className="font-normal">(à Paris, votre code postal)</span>
             </label>
             <div className="flex items-center gap-4">
-              <Input
+              <input
                 id="riverain-zone"
                 inputMode="numeric"
                 placeholder="75015"
                 value={zone}
                 onChange={(e) => setZone(e.target.value.replace(/\s/g, ''))}
                 autoFocus={!zone}
-                className="h-14 max-w-44 bg-white text-center font-heading text-2xl font-black tracking-[0.12em]"
+                className={cn(ui.field, 'max-w-40 font-heading font-bold tracking-[0.08em] tabular-nums')}
               />
-              {zone.length >= 3 && <ZonePlate zone={zone} />}
             </div>
           </div>
 
           {!data.payments.length && <NoPayment compact onRefresh={async () => onDone()} />}
 
           <div>
-            <label htmlFor="riverain-email" className="mb-2 block text-sm font-bold text-muted-foreground">
+            <label htmlFor="riverain-email" className={ui.label}>
               E-mail pour les confirmations <span className="font-normal">(facultatif)</span>
             </label>
-            <Input
+            <input
               id="riverain-email"
               type="email"
               inputMode="email"
@@ -336,14 +324,14 @@ function RiverainDialog({
               placeholder="vous@exemple.fr"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-12 bg-white text-base"
+              className={cn(ui.field, 'h-12 text-base')}
             />
-            <p className="mt-1.5 text-sm text-muted-foreground">
+            <p className="mt-1.5 text-sm text-ink/50">
               Une confirmation à chaque paiement et une alerte en cas de problème. Gardée chiffrée, effacée dès que vous
               arrêtez.
             </p>
             {demo && (
-              <p className="mt-2 rounded-lg bg-amber/25 px-3 py-2 text-sm font-bold text-ink">
+              <p className="mt-2 rounded-lg bg-amber/20 px-3 py-2 text-sm text-ink">
                 Mode démo : aucun e-mail n'est envoyé. Connectez-vous avec votre compte PayByPhone pour les recevoir.
               </p>
             )}
@@ -351,13 +339,13 @@ function RiverainDialog({
 
           {data.payments.length > 1 && (
             <div>
-              <p className="mb-2 text-sm font-bold text-muted-foreground">Payer avec</p>
+              <p className={ui.label}>Payer avec</p>
               <div className="flex flex-wrap gap-2">
                 {data.payments.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setPayment(p.id)}
-                    className={cn('rounded-lg border-2 px-3 py-2 text-sm font-bold', payment === p.id ? 'border-go bg-go/10 text-go' : 'border-border')}
+                    className={choice(payment === p.id, 'px-3 py-2 text-sm font-bold')}
                   >
                     {p.label}
                   </button>
@@ -367,7 +355,7 @@ function RiverainDialog({
           )}
 
           {/* Summary */}
-          <div className="rounded-xl bg-muted/70 p-4" aria-live="polite">
+          <div className="rounded-xl bg-muted p-4" aria-live="polite">
             {error ? (
               <p className="text-destructive">{error}</p>
             ) : loading ? (
@@ -377,18 +365,18 @@ function RiverainDialog({
             ) : rate && quote ? (
               <ul className="space-y-1.5">
                 <li className="flex items-center gap-2">
-                  <Check className="size-4 text-go" />
+                  <Check className="size-4" />
                   <span>
                     Tarif <strong>{rate.name}</strong>, 7 jours
                   </span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Repeat className="size-4 text-go" />
+                  <Repeat className="size-4" />
                   {hasCurrent ? 'Prend le relais à la fin du ticket en cours' : 'Première semaine payée tout de suite'}
                 </li>
                 <li className="flex items-baseline justify-between pt-2">
                   <span className="text-muted-foreground">Chaque semaine</span>
-                  <span className="font-heading text-3xl font-black">{money(quote.cost)}</span>
+                  <span className="font-heading text-3xl font-bold">{money(quote.cost)}</span>
                 </li>
               </ul>
             ) : (
@@ -396,14 +384,10 @@ function RiverainDialog({
             )}
           </div>
 
-          <Button
-            onClick={activate}
-            disabled={!rate || !quote || saving}
-            className="h-14 w-full rounded-xl bg-go text-lg font-bold shadow-[0_4px_0_#145236] hover:bg-go/90 active:translate-y-1 active:shadow-none"
-          >
-            {saving ? <Loader2 className="size-5 animate-spin" /> : <>Activer le renouvellement {quote ? `· ${money(quote.cost)}/semaine` : ''}</>}
-          </Button>
-          <p className="-mt-3 text-center text-sm text-muted-foreground">
+          <button onClick={activate} disabled={!rate || !quote || saving} className={ui.primary}>
+            {saving ? <Loader2 className="size-5 animate-spin" /> : <>Activer {quote ? `· ${money(quote.cost)} par semaine` : ''}</>}
+          </button>
+          <p className="-mt-3 text-center text-sm text-ink/50">
             {hosted
               ? "Fonctionne en ligne, même appareil éteint. Pour payer à votre place, paybybot garde de quoi se reconnecter à PayByPhone, chiffré, et l'efface dès que vous arrêtez."
               : 'Laissez paybybot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.'}
@@ -451,34 +435,32 @@ function PauseDialog({ ap, onClose, onDone }: { ap: Autopilot; onClose: () => vo
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-1.5rem)] gap-0 overflow-y-auto rounded-2xl bg-enamel p-0 sm:max-w-md">
-        <div className="bg-ink px-6 pt-6 pb-5 text-white">
-          <DialogTitle className="flex items-center gap-2 text-2xl font-black">
-            <Pause className="size-6" /> Pause vacances
-          </DialogTitle>
-          <DialogDescription className="mt-1 text-base text-white/80">
+      <DialogContent className={ui.dialog}>
+        <div className="px-6 pt-7">
+          <DialogTitle className={ui.dialogTitle}>Pause vacances</DialogTitle>
+          <DialogDescription className="mt-1 text-ink/60">
             Aucun forfait ne sera payé pendant la pause. Un ticket déjà en cours reste valable jusqu’à sa fin.
           </DialogDescription>
         </div>
         <div className="space-y-5 p-6">
           <div className="flex items-center gap-3">
-            <Plate plate={ap.plate} />
+            <Plate plate={ap.plate} size="sm" />
             <ZonePlate zone={ap.location} />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-1.5">
-              <span className="block text-sm font-bold text-muted-foreground">Premier jour de pause</span>
-              <Input type="date" min={today} value={start} onChange={(e) => setStart(e.target.value)} className="h-12 bg-white text-base" />
+              <span className={ui.label}>Premier jour</span>
+              <input type="date" min={today} value={start} onChange={(e) => setStart(e.target.value)} className={cn(ui.field, 'h-12 text-base')} />
             </label>
             <label className="space-y-1.5">
-              <span className="block text-sm font-bold text-muted-foreground">Dernier jour de pause</span>
-              <Input
+              <span className={ui.label}>Dernier jour</span>
+              <input
                 type="date"
                 min={start}
                 value={end}
                 disabled={noEnd}
                 onChange={(e) => setEnd(e.target.value)}
-                className="h-12 bg-white text-base"
+                className={cn(ui.field, 'h-12 text-base disabled:opacity-40')}
               />
             </label>
           </div>
@@ -486,7 +468,7 @@ function PauseDialog({ ap, onClose, onDone }: { ap: Autopilot; onClose: () => vo
             <input type="checkbox" checked={noEnd} onChange={(e) => setNoEnd(e.target.checked)} className="size-5 accent-[var(--ink)]" />
             <span>Pas de date de fin pour le moment</span>
           </label>
-          <p className="rounded-xl bg-muted/70 p-4 text-muted-foreground">
+          <p className={ui.note}>
             {noEnd
               ? `En pause à partir du ${start ? dayText(new Date(start + 'T12:00').getTime()) : '…'}, jusqu’à ce que vous repreniez.`
               : end
@@ -494,9 +476,9 @@ function PauseDialog({ ap, onClose, onDone }: { ap: Autopilot; onClose: () => vo
                 : 'Choisissez le dernier jour de pause.'}
           </p>
           {error && <p role="alert" className="rounded-lg border-l-4 border-destructive bg-destructive/10 px-4 py-3 text-destructive">{error}</p>}
-          <Button onClick={save} disabled={!valid || saving} className="h-14 w-full rounded-xl bg-ink text-lg font-bold hover:bg-ink/90">
+          <button onClick={save} disabled={!valid || saving} className={ui.primary}>
             {saving ? <Loader2 className="size-5 animate-spin" /> : 'Mettre en pause'}
-          </Button>
+          </button>
         </div>
       </DialogContent>
     </Dialog>
@@ -526,7 +508,7 @@ function ManageDialog({
   const row = 'flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-base font-bold transition hover:bg-muted'
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="gap-0 rounded-2xl bg-enamel p-2 sm:max-w-sm">
+      <DialogContent className="gap-0 rounded-2xl bg-white p-2 sm:max-w-sm">
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <Plate plate={ap.plate} size="sm" />
           <DialogTitle className="text-base font-bold">Renouvellement zone {ap.location}</DialogTitle>
@@ -534,7 +516,7 @@ function ManageDialog({
         </div>
         {pauseSet ? (
           <button onClick={onResume} className={row}>
-            <Play className="size-5 text-go" /> {start! <= now ? 'Reprendre maintenant' : 'Annuler la pause prévue'}
+            <Play className="size-5" /> {start! <= now ? 'Reprendre maintenant' : 'Annuler la pause prévue'}
           </button>
         ) : (
           <button onClick={onPause} className={row}>

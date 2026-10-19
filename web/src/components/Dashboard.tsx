@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, LogOut, Plus, RefreshCw, SquareParking } from 'lucide-react'
+import { LogOut, Plus, SquareParking } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ActionTile, Plate, Wordmark, ZonePlate } from '@/components/signs'
@@ -92,14 +92,14 @@ export function Dashboard({
   onLogout: () => void
 }) {
   const now = useNow()
-  const [refreshing, setRefreshing] = useState(false)
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
 
-  async function refresh() {
-    setRefreshing(true)
-    await onRefresh()
-    setRefreshing(false)
-  }
+  // Fresh data when coming back to the tab (it also refreshes every minute).
+  useEffect(() => {
+    const onVisible = () => document.visibilityState === 'visible' && onRefresh()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [onRefresh])
 
   return (
     <div className="grain min-h-dvh">
@@ -108,9 +108,8 @@ export function Dashboard({
           <Wordmark />
           <div className="flex items-center gap-2">
             {me.demo && <Badge className="bg-amber text-ink">Mode démo</Badge>}
-            <span className="hidden text-sm text-muted-foreground sm:inline">{me.username}</span>
-            <Button variant="ghost" size="lg" onClick={onLogout}>
-              <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>
+            <Button variant="ghost" size="icon-lg" onClick={onLogout} aria-label="Déconnexion" title="Déconnexion">
+              <LogOut className="size-5" />
             </Button>
           </div>
         </div>
@@ -118,16 +117,11 @@ export function Dashboard({
 
       <main className="mx-auto max-w-5xl px-5 pt-10 pb-24">
         {/* Hero action */}
-        <section className="rise flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-bold tracking-[0.2em] text-signal uppercase">Mon stationnement</p>
-            <h1 className="mt-1 text-4xl font-black tracking-tight sm:text-5xl">
-              {sessions.length ? 'Vous êtes en règle.' : 'Aucun ticket en cours.'}
-            </h1>
-          </div>
-          <Button variant="outline" size="lg" onClick={refresh} className="h-12 self-start rounded-xl bg-enamel px-4 sm:self-auto">
-            <RefreshCw className={`size-5 ${refreshing ? 'animate-spin' : ''}`} /> Actualiser
-          </Button>
+        <section className="rise">
+          <p className="text-sm font-bold tracking-[0.2em] text-signal uppercase">Mon stationnement</p>
+          <h1 className="mt-1 text-4xl font-black tracking-tight sm:text-5xl">
+            {sessions.length ? 'Vous êtes en règle.' : 'Aucun ticket en cours.'}
+          </h1>
         </section>
 
         {/* The two main actions, same size side by side */}
@@ -162,27 +156,6 @@ export function Dashboard({
           </p>
         )}
 
-        {/* Account details */}
-        <section className="mt-14">
-          <div className="rounded-2xl bg-enamel p-6">
-            <h2 className="text-xl font-extrabold">Mes véhicules</h2>
-            <div className="mt-4 flex flex-wrap gap-3">
-              {data?.vehicles.length ? (
-                data.vehicles.map((v) => <Plate key={v.plate} plate={v.plate} />)
-              ) : (
-                <p className="text-muted-foreground">Ajoutez un véhicule dans l'application PayByPhone.</p>
-              )}
-            </div>
-            <h2 className="mt-8 text-xl font-extrabold">Moyens de paiement</h2>
-            <ul className="mt-3 space-y-2">
-              {data?.payments.map((p) => (
-                <li key={p.id} className="flex items-center gap-3">
-                  <CreditCard className="size-5 text-signal" /> {p.label}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
         <HostedFooter className="mt-14" hosted={!!me.hosted} />
       </main>
     </div>

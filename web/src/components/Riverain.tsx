@@ -33,6 +33,7 @@ export function RiverainCard({
   const weekly = data?.autopilots.filter(isWeekly) ?? []
 
   const [pausing, setPausing] = useState<Autopilot | null>(null)
+  const [managing, setManaging] = useState<Autopilot | null>(null)
 
   async function resume(id: string) {
     try {
@@ -103,23 +104,12 @@ export function RiverainCard({
                       Pause prévue du {dayText(pauseStart!)} {pauseEnd ? `au ${dayText(pauseEnd - 1)}` : 'sans date de fin'}
                     </p>
                   )}
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-bold">
-                    {paused || pauseLater ? (
-                      <button onClick={() => resume(ap.id)} className="inline-flex items-center gap-1 text-go underline-offset-4 hover:underline">
-                        <Play className="size-3.5" /> {paused ? 'Reprendre maintenant' : 'Annuler la pause'}
-                      </button>
-                    ) : (
-                      <button onClick={() => setPausing(ap)} className="inline-flex items-center gap-1 text-ink underline-offset-4 hover:underline">
-                        <Pause className="size-3.5" /> Pause vacances
-                      </button>
-                    )}
-                    <button onClick={() => editEmail(ap)} className="inline-flex items-center gap-1 text-ink underline-offset-4 hover:underline">
-                      <Mail className="size-3.5" /> {ap.email ? ap.email : 'Recevoir les confirmations par e-mail'}
-                    </button>
-                    <button onClick={() => stop(ap.id)} className="text-destructive underline-offset-4 hover:underline">
-                      Arrêter
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setManaging(ap)}
+                    className="mt-1.5 text-sm font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink"
+                  >
+                    Gérer
+                  </button>
                 </li>
               )
             })}
@@ -130,6 +120,29 @@ export function RiverainCard({
         </Button>
         {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
         {pausing && <PauseDialog ap={pausing} onClose={() => setPausing(null)} onDone={onChanged} />}
+        {managing && (
+          <ManageDialog
+            ap={managing}
+            onClose={() => setManaging(null)}
+            onPause={() => {
+              setPausing(managing)
+              setManaging(null)
+            }}
+            onResume={() => {
+              resume(managing.id)
+              setManaging(null)
+            }}
+            onEmail={() => {
+              const ap = managing
+              setManaging(null)
+              editEmail(ap)
+            }}
+            onStop={() => {
+              stop(managing.id)
+              setManaging(null)
+            }}
+          />
+        )}
       </section>
     )
   }
@@ -485,6 +498,59 @@ function PauseDialog({ ap, onClose, onDone }: { ap: Autopilot; onClose: () => vo
             {saving ? <Loader2 className="size-5 animate-spin" /> : 'Mettre en pause'}
           </Button>
         </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** The options of one renewal, behind a single "Gérer" link to keep the card quiet. */
+function ManageDialog({
+  ap,
+  onClose,
+  onPause,
+  onResume,
+  onEmail,
+  onStop,
+}: {
+  ap: Autopilot
+  onClose: () => void
+  onPause: () => void
+  onResume: () => void
+  onEmail: () => void
+  onStop: () => void
+}) {
+  const now = Date.now()
+  const start = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
+  const end = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
+  const pauseSet = start !== null && (end === null || now < end)
+  const row = 'flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-base font-bold transition hover:bg-muted'
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="gap-0 rounded-2xl bg-enamel p-2 sm:max-w-sm">
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+          <Plate plate={ap.plate} size="sm" />
+          <DialogTitle className="text-base font-bold">Renouvellement zone {ap.location}</DialogTitle>
+          <DialogDescription className="sr-only">Options du renouvellement</DialogDescription>
+        </div>
+        {pauseSet ? (
+          <button onClick={onResume} className={row}>
+            <Play className="size-5 text-go" /> {start! <= now ? 'Reprendre maintenant' : 'Annuler la pause prévue'}
+          </button>
+        ) : (
+          <button onClick={onPause} className={row}>
+            <Pause className="size-5" /> Pause vacances
+          </button>
+        )}
+        <button onClick={onEmail} className={row}>
+          <Mail className="size-5" />
+          <span className="min-w-0">
+            Confirmations par e-mail
+            <span className="block truncate text-sm font-normal text-muted-foreground">{ap.email || 'Désactivées'}</span>
+          </span>
+        </button>
+        <button onClick={onStop} className={`${row} text-destructive hover:bg-destructive/10`}>
+          <Repeat className="size-5" /> Arrêter le renouvellement
+        </button>
       </DialogContent>
     </Dialog>
   )

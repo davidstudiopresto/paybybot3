@@ -1,213 +1,230 @@
 import { useState } from 'react'
-import { ArrowRight, ExternalLink, Eye, EyeOff, HelpCircle, Loader2, LockKeyhole, Sparkles } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { ArrowRight, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
-import { Plate, Wordmark } from '@/components/signs'
+import { ParkingSign } from '@/components/signs'
 import { api, type Me } from '@/lib/api'
 
-export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; hosted: boolean }) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [accepted, setAccepted] = useState(false)
-  const [showWhy, setShowWhy] = useState(false)
+/** Countries where PayByPhone is used, with their calling code and flag stripes. */
+const COUNTRIES = [
+  { id: 'FR', name: 'France', code: '33', placeholder: '6 12 34 56 78', flag: ['v', '#0055a4', '#ffffff', '#ef4135'] },
+  { id: 'BE', name: 'Belgique', code: '32', placeholder: '470 12 34 56', flag: ['v', '#000000', '#fdda24', '#ef3340'] },
+  { id: 'CH', name: 'Suisse', code: '41', placeholder: '78 123 45 67', flag: ['ch'] },
+  { id: 'LU', name: 'Luxembourg', code: '352', placeholder: '621 123 456', flag: ['h', '#ed2939', '#ffffff', '#00a1de'] },
+  { id: 'DE', name: 'Allemagne', code: '49', placeholder: '1512 3456789', flag: ['h', '#000000', '#dd0000', '#ffce00'] },
+  { id: 'IT', name: 'Italie', code: '39', placeholder: '312 345 6789', flag: ['v', '#009246', '#ffffff', '#ce2b37'] },
+  { id: 'NL', name: 'Pays-Bas', code: '31', placeholder: '6 12345678', flag: ['h', '#ae1c28', '#ffffff', '#21468b'] },
+] as const
 
-  async function submit(u = username, p = password) {
+function Flag({ flag }: { flag: readonly string[] }) {
+  if (flag[0] === 'ch') {
+    return (
+      <svg viewBox="0 0 30 20" className="h-4 w-6 rounded-[3px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)]" aria-hidden>
+        <rect width="30" height="20" fill="#da291c" />
+        <rect x="13" y="4" width="4" height="12" fill="#fff" />
+        <rect x="9" y="8" width="12" height="4" fill="#fff" />
+      </svg>
+    )
+  }
+  const [dir, a, b, c] = flag
+  return (
+    <svg viewBox="0 0 30 20" className="h-4 w-6 rounded-[3px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)]" aria-hidden>
+      {dir === 'v' ? (
+        <>
+          <rect width="10" height="20" fill={a} />
+          <rect x="10" width="10" height="20" fill={b} />
+          <rect x="20" width="10" height="20" fill={c} />
+        </>
+      ) : (
+        <>
+          <rect width="30" height="7" fill={a} />
+          <rect y="6.67" width="30" height="6.67" fill={b} />
+          <rect y="13.33" width="30" height="6.67" fill={c} />
+        </>
+      )}
+    </svg>
+  )
+}
+
+/** "06 12 34 56 78" + France -> "+33612345678"; a number typed with its + prefix is kept as is. */
+function phoneUsername(national: string, code: string) {
+  const raw = national.trim()
+  if (raw.startsWith('+')) return '+' + raw.replace(/\D/g, '')
+  return '+' + code + raw.replace(/\D/g, '').replace(/^0/, '')
+}
+
+const fieldBox =
+  'flex h-14 items-center rounded-xl border border-ink/20 bg-white transition focus-within:border-ink focus-within:ring-3 focus-within:ring-ink/10'
+
+export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; hosted: boolean }) {
+  const [mode, setMode] = useState<'phone' | 'email'>('phone')
+  const [country, setCountry] = useState<(typeof COUNTRIES)[number]['id']>('FR')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
+  const selected = COUNTRIES.find((c) => c.id === country) ?? COUNTRIES[0]
+  const link = 'text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink'
+
+  async function submit(demo = false) {
     setError(null)
-    setLoading(true)
+    setLoading(demo ? 'demo' : 'login')
     try {
-      onLogin(await api.login(u, p, u === 'demo' ? false : accepted))
+      const username = demo ? 'demo' : mode === 'phone' ? phoneUsername(phone, selected.code) : email.trim()
+      // Clicking "Se connecter" is the acceptance of the terms and privacy policy, stated right above it.
+      onLogin(await api.login(username, demo ? 'demo' : password, !demo))
     } catch (e) {
       setError((e as Error).message)
     } finally {
-      setLoading(false)
+      setLoading(null)
     }
   }
 
   return (
-    <div className="grain grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
-      {/* The big blue road sign */}
-      <section className="relative flex flex-col justify-between overflow-hidden bg-signal px-5 pt-6 pb-7 text-white sm:p-12 lg:p-16">
-        <div className="absolute -right-24 -bottom-24 size-[28rem] rounded-[4rem] border-[18px] border-white/10" aria-hidden />
-        <div className="absolute -right-6 bottom-16 hidden font-heading text-[22rem] leading-none font-black text-white/[0.06] select-none sm:block" aria-hidden>
-          P
-        </div>
-        <div className="rise relative [&_span]:text-white [&_.bg-signal]:shadow-[inset_0_0_0_3px_var(--signal),inset_0_0_0_5px_#fff]">
-          <Wordmark />
-        </div>
-        <div className="relative my-5 max-w-xl sm:my-14">
-          <h1 className="rise font-heading text-[2.6rem] leading-[0.95] font-black tracking-tight sm:text-6xl" style={{ animationDelay: '80ms' }}>
-            Garez-vous.
-            <br />
-            <span className="text-amber">On s'occupe du ticket.</span>
-          </h1>
-          <p className="rise mt-6 hidden max-w-md text-lg text-white/85 sm:block" style={{ animationDelay: '160ms' }}>
-            Payez votre stationnement PayByPhone en quelques clics, et laissez l'application le renouveler toute seule
-            pour ne plus jamais prendre d'amende.
-          </p>
-        </div>
-        <div className="rise relative flex flex-wrap items-center gap-3 text-sm text-white/80 sm:gap-4" style={{ animationDelay: '240ms' }}>
-          <Plate plate="AB123CD" size="sm" className="hidden sm:inline-flex" />
-          <span className="flex items-center gap-2">
-            <LockKeyhole className="size-4" />{' '}
-            {hosted ? 'Aucune donnée conservée, mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}
-          </span>
-        </div>
-      </section>
+    <div className="flex min-h-dvh flex-col bg-white">
+      <header className="px-6 pt-6 sm:px-8 sm:pt-8">
+        <span className="inline-flex items-center gap-2.5">
+          <ParkingSign className="size-9 rounded-[8px] text-[22px]" />
+          <span className="font-heading text-xl font-black tracking-tight">paybybot</span>
+        </span>
+      </header>
 
-      {/* Form */}
-      <section className="flex items-start justify-center px-5 pt-6 pb-10 sm:items-center sm:p-12">
+      <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center sm:pt-0">
         <form
-          className="rise w-full max-w-md"
-          style={{ animationDelay: '120ms' }}
+          className="rise w-full max-w-[26rem]"
           onSubmit={(e) => {
             e.preventDefault()
             submit()
           }}
         >
-          <p className="hidden text-sm font-bold tracking-[0.2em] text-signal uppercase sm:block">Connexion</p>
-          <h2 className="text-2xl font-extrabold tracking-tight sm:mt-2 sm:text-3xl">Votre compte PayByPhone</h2>
-          {hosted && (
-            <a href="#/securite" className="mt-3 inline-flex items-center gap-2 rounded-full bg-go/10 px-3 py-1 text-sm font-bold text-go hover:bg-go/15">
-              <LockKeyhole className="size-3.5" /> Aucune donnée conservée · en savoir plus
+          <h1 className="font-heading text-[2.6rem] leading-[1.05] font-bold tracking-[-0.03em] text-ink">
+            Connexion à paybybot
+          </h1>
+          <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
+            Avec votre compte PayByPhone.{' '}
+            {hosted ? 'Aucune donnée conservée, mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}{' '}
+            <a href="#/securite" target="_blank" rel="noopener" className={link}>
+              En savoir plus
             </a>
-          )}
-          <p className="mt-2 text-muted-foreground">
-            Les mêmes identifiants que dans l'application PayByPhone de votre téléphone.
           </p>
 
-          <div className="mt-5 space-y-4 sm:mt-8 sm:space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-base">Téléphone ou e-mail</Label>
-              <div className="relative">
-                <Input
+          <div className="mt-9 space-y-3">
+            {mode === 'phone' ? (
+              <div className={fieldBox}>
+                <label className="relative flex h-full shrink-0 items-center gap-1.5 border-r border-ink/10 pr-3 pl-4">
+                  <span className="sr-only">Pays</span>
+                  <Flag flag={selected.flag} />
+                  <ChevronDown className="size-4 text-ink/40" />
+                  <select
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value as typeof country)}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                    aria-label="Pays du numéro"
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} (+{c.code})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span className="pl-3 text-lg text-ink/45 tabular-nums">+{selected.code}</span>
+                <input
                   id="username"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  placeholder={selected.placeholder}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  aria-label="Numéro de téléphone"
+                  required
+                  className="h-full min-w-0 flex-1 bg-transparent px-2 text-lg text-ink tabular-nums outline-none placeholder:text-ink/30"
+                />
+              </div>
+            ) : (
+              <div className={fieldBox}>
+                <input
+                  id="username"
+                  type="email"
+                  inputMode="email"
                   autoComplete="username"
-                  placeholder="06 12 34 56 78"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="h-14 bg-enamel pr-14 text-lg"
-                  aria-describedby="username-privacy"
+                  placeholder="Adresse e-mail"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="h-full min-w-0 flex-1 bg-transparent px-4 text-lg text-ink outline-none placeholder:text-ink/30"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowWhy((v) => !v)}
-                  aria-expanded={showWhy}
-                  aria-controls="username-why"
-                  aria-label="Pourquoi paybybot demande-t-il ce numéro ?"
-                  title="Pourquoi ce numéro ?"
-                  className="absolute inset-y-0 right-1.5 my-auto grid size-11 place-items-center rounded-lg text-signal transition hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-                >
-                  <HelpCircle className="size-6" />
-                </button>
               </div>
-              {showWhy && (
-                <div id="username-why" className="rounded-xl border-2 border-accent bg-accent/50 p-4 text-[0.95rem] leading-snug">
-                  <p className="font-bold text-ink">Pourquoi ce numéro ?</p>
-                  <p className="mt-1 text-ink/80">
-                    C'est l'identifiant de votre compte PayByPhone : il sert uniquement à vous y connecter, avec votre mot de
-                    passe.{' '}
-                    {hosted
-                      ? "paybybot ne conserve ni l'un ni l'autre, et ne voit jamais votre carte bancaire."
-                      : "Ils restent sur cet ordinateur, et paybybot ne voit jamais votre carte bancaire."}
-                  </p>
-                </div>
-              )}
-              <p id="username-privacy" className="flex items-start gap-2 text-sm leading-snug text-muted-foreground">
-                <LockKeyhole className="mt-0.5 size-3.5 shrink-0 text-go" />
-                <span>
-                  Vos données sont protégées : rien n'est conservé.{' '}
-                  <a href="#/securite" target="_blank" rel="noopener" className="inline-flex items-center gap-0.5 font-bold text-signal underline-offset-4 hover:underline">
-                    Sécurité et données <ExternalLink className="size-3" />
-                  </a>{' '}
-                  ·{' '}
-                  <a href="#/confidentialite" target="_blank" rel="noopener" className="inline-flex items-center gap-0.5 font-bold text-signal underline-offset-4 hover:underline">
-                    Confidentialité <ExternalLink className="size-3" />
-                  </a>
-                </span>
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-base">Mot de passe</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-14 bg-enamel pr-14 text-lg"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                  aria-pressed={showPassword}
-                  title={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                  className="absolute inset-y-0 right-1.5 my-auto grid size-11 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-ink focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-                >
-                  {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                </button>
-              </div>
+            )}
+
+
+            <div className={fieldBox}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="Mot de passe PayByPhone"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-label="Mot de passe"
+                required
+                className="h-full min-w-0 flex-1 bg-transparent px-4 text-lg text-ink outline-none placeholder:text-ink/30"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                aria-pressed={showPassword}
+                className="mr-1.5 grid size-11 shrink-0 place-items-center rounded-lg text-ink/40 transition hover:text-ink focus-visible:ring-3 focus-visible:ring-ink/10 focus-visible:outline-none"
+              >
+                {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+              </button>
             </div>
           </div>
 
+
+          <p className="mt-6 text-sm leading-relaxed text-ink/50">
+            En cliquant sur « Se connecter », j'accepte les{' '}
+            <a href="#/cgu" target="_blank" rel="noopener" className={link}>
+              conditions d'utilisation
+            </a>{' '}
+            et la{' '}
+            <a href="#/confidentialite" target="_blank" rel="noopener" className={link}>
+              politique de confidentialité
+            </a>
+            .
+          </p>
+
           {error && (
-            <p role="alert" className="mt-5 rounded-lg border-l-4 border-destructive bg-destructive/10 px-4 py-3 text-destructive">
+            <p role="alert" className="mt-5 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
               {error}
             </p>
           )}
 
-          <label className="mt-5 flex cursor-pointer items-start gap-3 text-[0.95rem] leading-snug">
-            <input
-              type="checkbox"
-              checked={accepted}
-              onChange={(e) => setAccepted(e.target.checked)}
-              required
-              className="mt-0.5 size-5 shrink-0 accent-[var(--signal)]"
-            />
-            <span>
-              J'accepte les{' '}
-              <a href="#/cgu" target="_blank" rel="noopener" className="font-bold text-signal underline-offset-4 hover:underline">
-                conditions d'utilisation
-              </a>{' '}
-              et la{' '}
-              <a href="#/confidentialite" target="_blank" rel="noopener" className="font-bold text-signal underline-offset-4 hover:underline">
-                politique de confidentialité
-              </a>
-              .
-            </span>
-          </label>
-
-          <Button type="submit" disabled={loading || !accepted} className="mt-5 h-14 w-full rounded-xl text-lg font-bold">
-            {loading ? <Loader2 className="size-5 animate-spin" /> : <>Se connecter <ArrowRight className="size-5" /></>}
-          </Button>
-
-          <div className="my-8 flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> ou <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading}
-            onClick={() => submit('demo', 'demo')}
-            className="h-14 w-full rounded-xl border-2 border-dashed bg-transparent text-base"
+          <button
+            type="submit"
+            disabled={loading !== null}
+            className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-ink text-lg font-bold text-white transition hover:bg-ink/90 active:scale-[0.99] disabled:opacity-60"
           >
-            <Sparkles className="size-5 text-signal" /> Essayer sans compte (démo)
-          </Button>
-          <p className="mt-3 text-center text-sm text-muted-foreground">
-            La démo utilise de fausses données : aucun paiement réel.
+            {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>Se connecter <ArrowRight className="size-5" /></>}
+          </button>
+
+          <p className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-ink/50">
+            <button type="button" onClick={() => setMode((m) => (m === 'phone' ? 'email' : 'phone'))} className={link}>
+              {mode === 'phone' ? 'Utiliser un e-mail' : 'Utiliser un numéro'}
+            </button>
+            <span aria-hidden>·</span>
+            <button type="button" onClick={() => submit(true)} disabled={loading !== null} className={link}>
+              {loading === 'demo' ? 'Ouverture…' : 'Essayer la démo, sans compte'}
+            </button>
           </p>
-          <HostedFooter className="mt-10" hosted={hosted} />
         </form>
-      </section>
+      </main>
+
+      <HostedFooter className="px-6 pb-8" hosted={hosted} />
     </div>
   )
 }
+

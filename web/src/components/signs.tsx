@@ -64,7 +64,7 @@ export function Wordmark() {
     <span className="flex items-center gap-3">
       <ParkingSign />
       <span className="font-heading text-2xl leading-none font-black tracking-tight">
-        paybybot<span className="text-signal">3</span>
+        paybybot
       </span>
     </span>
   )

@@ -274,7 +274,7 @@ def web(port, no_browser):
     """
     from .web import serve
 
-    click.echo(f"paybybot3 est ouvert sur http://127.0.0.1:{port} (Ctrl+C pour arrêter)")
+    click.echo(f"paybybot est ouvert sur http://127.0.0.1:{port} (Ctrl+C pour arrêter)")
     serve(port=port, open_browser=not no_browser)
 
 

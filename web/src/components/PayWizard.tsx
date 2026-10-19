@@ -291,15 +291,15 @@ export function PayWizard({
                 ))}
               </div>
             )}
-            <div className="mt-8 flex items-center justify-center gap-6 rounded-2xl bg-enamel py-10">
-              <Button variant="outline" className="size-16 rounded-full" onClick={() => setDuration((d) => Math.max(1, d - (unit === 'Minutes' ? 15 : 1)))} aria-label="Moins">
+            <div className="mt-8 flex items-center justify-center gap-3 rounded-2xl bg-enamel px-3 py-8 sm:gap-6 sm:py-10">
+              <Button variant="outline" className="size-14 shrink-0 rounded-full sm:size-16" onClick={() => setDuration((d) => Math.max(1, d - (unit === 'Minutes' ? 15 : 1)))} aria-label="Moins">
                 <Minus className="size-6" />
               </Button>
-              <p className="min-w-44 text-center">
-                <span className="block font-heading text-7xl leading-none font-black tabular-nums">{duration}</span>
+              <p className="min-w-28 text-center sm:min-w-44">
+                <span className="block font-heading text-6xl leading-none font-black tabular-nums sm:text-7xl">{duration}</span>
                 <span className="text-xl text-muted-foreground">{unitLabel(unit, duration)}</span>
               </p>
-              <Button variant="outline" className="size-16 rounded-full" onClick={() => setDuration((d) => d + (unit === 'Minutes' ? 15 : 1))} aria-label="Plus">
+              <Button variant="outline" className="size-14 shrink-0 rounded-full sm:size-16" onClick={() => setDuration((d) => d + (unit === 'Minutes' ? 15 : 1))} aria-label="Plus">
                 <Plus className="size-6" />
               </Button>
             </div>
@@ -345,7 +345,7 @@ export function PayWizard({
                 <Plate plate={plate} />
                 <ZonePlate zone={parking.location} />
               </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-5 p-6 text-lg">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 p-5 text-base sm:gap-y-5 sm:p-6 sm:text-lg">
                 <dt className="text-muted-foreground">Tarif</dt>
                 <dd className="text-right font-bold">{rate?.name}</dd>
                 <dt className="text-muted-foreground">Durée</dt>
@@ -355,7 +355,7 @@ export function PayWizard({
                 <dt className="text-muted-foreground">Fin</dt>
                 <dd className="text-right font-bold">{quote ? clock(quote.expire) : '…'}</dd>
                 <dt className="text-muted-foreground">Paiement</dt>
-                <dd className="text-right font-bold">{data.payments.find((p) => p.id === payment)?.label}</dd>
+                <dd className="text-right font-bold">{data.payments.find((p) => p.id === payment)?.label.split(' — ')[0]}</dd>
               </dl>
               <div className="flex items-center justify-between bg-ink px-6 py-5 text-white">
                 <span className="text-lg">Total</span>
@@ -380,7 +380,7 @@ export function PayWizard({
         )}
       </main>
 
-      <footer className="fixed inset-x-0 bottom-0 border-t border-border/70 bg-paper/95 backdrop-blur">
+      <footer className="fixed inset-x-0 bottom-0 border-t border-border/70 bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <div className="mx-auto flex max-w-2xl gap-3 px-5 py-4">
           {step > 0 && !unconfirmed && (
             <Button variant="outline" onClick={() => setStep((s) => s - 1)} className="h-14 rounded-xl bg-enamel px-5 text-lg">

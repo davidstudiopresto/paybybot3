@@ -1,5 +1,5 @@
 #!/bin/bash
-# Double-click this file (macOS) to open paybybot3 in your browser.
+# Double-click this file (macOS) to open paybybot in your browser.
 cd "$(dirname "$0")" || exit 1
 
 if ! command -v python3 >/dev/null 2>&1; then
@@ -17,5 +17,5 @@ if [ ! -x venv/bin/python ] || ! venv/bin/python -c "import paybybot3.web" >/dev
   }
 fi
 
-echo "paybybot3 est ouvert dans votre navigateur. Laissez cette fenêtre ouverte (fermez-la pour arrêter)."
+echo "paybybot est ouvert dans votre navigateur. Laissez cette fenêtre ouverte (fermez-la pour arrêter)."
 venv/bin/python -m paybybot3 web

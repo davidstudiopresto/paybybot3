@@ -16,8 +16,8 @@ It opens your browser on `http://127.0.0.1:8765`. You can log in with your PayBy
 through a step-by-step wizard (with the exact price shown before paying), and enable a weekly automatic renewal of the resident rate.
 A demo mode lets you try it without an account. Credentials are kept in memory only, never written to disk.
 
-Non-technical users can download the ZIP and double-click `Lancer paybybot3.command` (macOS) or
-`Lancer paybybot3.bat` (Windows): see the [French guide](GUIDE.md).
+Non-technical users can download the ZIP and double-click `Lancer paybybot.command` (macOS) or
+`Lancer paybybot.bat` (Windows): see the [French guide](GUIDE.md).
 
 ### Developing the interface
 

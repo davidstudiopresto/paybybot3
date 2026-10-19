@@ -62,7 +62,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       credentials: 'same-origin',
     })
   } catch {
-    throw new ApiError(0, "L'application paybybot3 ne répond plus. Est-elle toujours lancée ?")
+    throw new ApiError(0, "L'application paybybot ne répond plus. Est-elle toujours lancée ?")
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))

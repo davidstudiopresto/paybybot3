@@ -186,7 +186,7 @@ function RiverainDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden rounded-2xl bg-enamel p-0 sm:max-w-lg">
+      <DialogContent className="max-h-[calc(100dvh-1.5rem)] gap-0 overflow-y-auto rounded-2xl bg-enamel p-0 sm:max-w-lg">
         <div className="bg-go px-6 pt-6 pb-5 text-white">
           <DialogTitle className="flex items-center gap-2 text-2xl font-black">
             <CalendarSync className="size-6" /> Riverain, chaque semaine
@@ -288,7 +288,7 @@ function RiverainDialog({
             {saving ? <Loader2 className="size-5 animate-spin" /> : <>Activer le renouvellement {quote ? `· ${money(quote.cost)}/semaine` : ''}</>}
           </Button>
           <p className="-mt-3 text-center text-sm text-muted-foreground">
-            Laissez paybybot3 ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.
+            Laissez paybybot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.
           </p>
         </div>
       </DialogContent>

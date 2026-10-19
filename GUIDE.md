@@ -1,6 +1,6 @@
-# paybybot3 — le guide simple
+# paybybot — le guide simple
 
-paybybot3 vous permet de **payer votre stationnement PayByPhone depuis votre ordinateur**, en quelques clics,
+paybybot vous permet de **payer votre stationnement PayByPhone depuis votre ordinateur**, en quelques clics,
 et, si vous êtes riverain, de **renouveler automatiquement votre forfait résident chaque semaine** pour ne plus oublier de le reprendre.
 
 ![Le principe](https://img.shields.io/badge/vos_identifiants-restent_sur_votre_ordinateur-1d4ea3)
@@ -12,15 +12,15 @@ Ouvrez le fichier téléchargé pour obtenir un dossier `paybybot3`.
 
 ## 2. Lancer
 
-- **Sur Mac** : double-cliquez sur **`Lancer paybybot3.command`**.
+- **Sur Mac** : double-cliquez sur **`Lancer paybybot.command`**.
   La première fois, macOS peut refuser de l'ouvrir : faites alors *clic droit → Ouvrir → Ouvrir*.
-- **Sur Windows** : double-cliquez sur **`Lancer paybybot3.bat`**.
+- **Sur Windows** : double-cliquez sur **`Lancer paybybot.bat`**.
 
 Si Python n'est pas installé, la page de téléchargement s'ouvre : installez-le (sous Windows, cochez
 *« Add Python to PATH »*), puis relancez le fichier.
 
 La première fois, l'installation prend environ une minute. Ensuite, votre navigateur s'ouvre tout seul sur l'application.
-**Laissez la petite fenêtre noire ouverte** tant que vous utilisez paybybot3.
+**Laissez la petite fenêtre noire ouverte** tant que vous utilisez paybybot.
 
 ## 3. Utiliser
 

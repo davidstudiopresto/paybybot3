@@ -28,27 +28,27 @@ export function LoginView({ onLogin }: { onLogin: (me: Me) => void }) {
   return (
     <div className="grain grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
       {/* The big blue road sign */}
-      <section className="relative flex flex-col justify-between overflow-hidden bg-signal p-8 text-white sm:p-12 lg:p-16">
+      <section className="relative flex flex-col justify-between overflow-hidden bg-signal px-5 pt-6 pb-7 text-white sm:p-12 lg:p-16">
         <div className="absolute -right-24 -bottom-24 size-[28rem] rounded-[4rem] border-[18px] border-white/10" aria-hidden />
-        <div className="absolute -right-6 bottom-16 font-heading text-[22rem] leading-none font-black text-white/[0.06] select-none" aria-hidden>
+        <div className="absolute -right-6 bottom-16 hidden font-heading text-[22rem] leading-none font-black text-white/[0.06] select-none sm:block" aria-hidden>
           P
         </div>
         <div className="rise relative [&_span]:text-white [&_.bg-signal]:shadow-[inset_0_0_0_3px_var(--signal),inset_0_0_0_5px_#fff]">
           <Wordmark />
         </div>
-        <div className="relative my-14 max-w-xl">
-          <h1 className="rise font-heading text-5xl leading-[0.95] font-black tracking-tight sm:text-6xl" style={{ animationDelay: '80ms' }}>
+        <div className="relative my-5 max-w-xl sm:my-14">
+          <h1 className="rise font-heading text-[2.6rem] leading-[0.95] font-black tracking-tight sm:text-6xl" style={{ animationDelay: '80ms' }}>
             Garez-vous.
             <br />
             <span className="text-amber">On s'occupe du ticket.</span>
           </h1>
-          <p className="rise mt-6 max-w-md text-lg text-white/85" style={{ animationDelay: '160ms' }}>
+          <p className="rise mt-6 hidden max-w-md text-lg text-white/85 sm:block" style={{ animationDelay: '160ms' }}>
             Payez votre stationnement PayByPhone en quelques clics, et laissez l'application le renouveler toute seule
             pour ne plus jamais prendre d'amende.
           </p>
         </div>
-        <div className="rise relative flex flex-wrap items-center gap-4 text-sm text-white/80" style={{ animationDelay: '240ms' }}>
-          <Plate plate="AB123CD" size="sm" />
+        <div className="rise relative flex flex-wrap items-center gap-3 text-sm text-white/80 sm:gap-4" style={{ animationDelay: '240ms' }}>
+          <Plate plate="AB123CD" size="sm" className="hidden sm:inline-flex" />
           <span className="flex items-center gap-2">
             <LockKeyhole className="size-4" /> Vos identifiants restent sur cet ordinateur.
           </span>
@@ -56,7 +56,7 @@ export function LoginView({ onLogin }: { onLogin: (me: Me) => void }) {
       </section>
 
       {/* Form */}
-      <section className="flex items-center justify-center p-6 sm:p-12">
+      <section className="flex items-start justify-center px-5 pt-6 pb-10 sm:items-center sm:p-12">
         <form
           className="rise w-full max-w-md"
           style={{ animationDelay: '120ms' }}
@@ -65,13 +65,13 @@ export function LoginView({ onLogin }: { onLogin: (me: Me) => void }) {
             submit()
           }}
         >
-          <p className="text-sm font-bold tracking-[0.2em] text-signal uppercase">Connexion</p>
-          <h2 className="mt-2 text-3xl font-extrabold tracking-tight">Votre compte PayByPhone</h2>
+          <p className="hidden text-sm font-bold tracking-[0.2em] text-signal uppercase sm:block">Connexion</p>
+          <h2 className="text-2xl font-extrabold tracking-tight sm:mt-2 sm:text-3xl">Votre compte PayByPhone</h2>
           <p className="mt-2 text-muted-foreground">
             Les mêmes identifiants que dans l'application PayByPhone de votre téléphone.
           </p>
 
-          <div className="mt-8 space-y-5">
+          <div className="mt-5 space-y-4 sm:mt-8 sm:space-y-5">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-base">Téléphone ou e-mail</Label>
               <Input
@@ -116,7 +116,7 @@ export function LoginView({ onLogin }: { onLogin: (me: Me) => void }) {
             </p>
           )}
 
-          <Button type="submit" disabled={loading} className="mt-7 h-14 w-full rounded-xl text-lg font-bold">
+          <Button type="submit" disabled={loading} className="mt-6 h-14 w-full rounded-xl text-lg font-bold sm:mt-7">
             {loading ? <Loader2 className="size-5 animate-spin" /> : <>Se connecter <ArrowRight className="size-5" /></>}
           </Button>
 

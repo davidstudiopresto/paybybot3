@@ -379,6 +379,9 @@ async def persist_session(request: Request, call_next):
     return response
 
 
+RESIDENT_RATE = re.compile(r"r[ée]sid|riverain", re.I)
+
+
 def friendly_error(e):
     """Turn a technical exception into a message a non-technical user can act on."""
     text = str(e)
@@ -392,6 +395,10 @@ def friendly_error(e):
         return "PayByPhone refuse ce stationnement (zone, tarif ou durée non autorisés)."
     if "Payment job failed" in text:
         return "Le paiement a été refusé. Vérifiez votre moyen de paiement dans l'application PayByPhone."
+    if "GraphQL error" in text:  # never show PayByPhone's raw answer
+        if "getRateOptions" in text:
+            return "PayByPhone ne trouve pas de tarif pour ce véhicule dans cette zone. Vérifiez le numéro de zone."
+        return "PayByPhone a renvoyé une erreur. Réessayez dans un instant."
     return "Une erreur est survenue : " + text[:200]
 
 
@@ -963,7 +970,8 @@ def login(body: Login, request: Request, response: Response):
         token = secrets.token_urlsafe(32)
         SESSIONS[token] = session
     set_session_cookie(response, token)
-    return {"username": session.username, "demo": demo, "hosted": HOSTED}
+    log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
+    return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
 @app.post("/api/logout")
@@ -982,7 +990,30 @@ def config():
 @app.get("/api/me")
 def me(pbb_session: str = Cookie(None)):
     s = current(pbb_session)
-    return {"username": s.username, "demo": s.demo, "hosted": HOSTED}
+    return {"username": s.username, "demo": s.demo, "hosted": HOSTED, "firstName": first_name(s)}
+
+
+def token_claims(session):
+    """The fields of PayByPhone's access token (a JWT), read without verifying it: only used for display."""
+    if session.demo:
+        return {}
+    try:
+        payload = (getattr(session.bot, "authorization", "") or "").split(" ")[-1].split(".")[1]
+        return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+    except Exception:
+        return {}
+
+
+def first_name(session):
+    """The account holder's first name if PayByPhone gives it, for the greeting; None otherwise."""
+    claims = token_claims(session)
+    for key in ("given_name", "firstName", "first_name", "givenName"):
+        if isinstance(claims.get(key), str) and claims[key].strip():
+            return claims[key].strip()[:40]
+    name = claims.get("name")
+    if isinstance(name, str) and name.strip() and "@" not in name and not name.strip().lstrip("+").isdigit():
+        return name.strip().split()[0][:40]
+    return None
 
 
 def guarded(fn):
@@ -1203,14 +1234,35 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
 
 @app.get("/api/resident-zone")
 def resident_zone(pbb_session: str = Cookie(None)):
-    """Guess the home zone from PayByPhone's history: the last ticket of almost a day or more is a resident one."""
+    """Guess the home zone from PayByPhone's history: a zone where the car is offered the resident rate.
+
+    Long tickets (about a day or more) are tried first, then the others; each candidate is checked with
+    PayByPhone, since only the home zone offers the resident rate. At most a few zones are checked.
+    """
     s = current(pbb_session)
 
     def find():
-        for x in s.call("get_past_sessions", limit=30) + s.call("get_parking_sessions"):
+        history = s.call("get_past_sessions", limit=30) + s.call("get_parking_sessions")
+
+        def long_ticket(x):
             start, end = parse_dt(x.get("startTime")), parse_dt(x.get("expireTime"))
-            if start and end and end - start >= timedelta(hours=20) and x.get("locationId"):
-                return {"zone": str(x["locationId"])}
+            return bool(start and end and end - start >= timedelta(hours=20))
+
+        candidates, seen = [], set()
+        for x in sorted(history, key=lambda x: not long_ticket(x)):  # stable: keeps recency within each group
+            zone, plate = str(x.get("locationId") or ""), (x.get("vehicle") or {}).get("licensePlate")
+            if zone and plate and zone not in seen:
+                seen.add(zone)
+                candidates.append((zone, plate))
+        for zone, plate in candidates[:5]:
+            try:
+                rates = s.call("get_rate_options", zone, plate) or []
+            except Exception as e:
+                log.info("resident zone: zone check failed: %s", str(e)[:120])
+                continue
+            if any(RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type"))) and not r.get("parkingNotAllowedReason")
+                   for r in rates):
+                return {"zone": zone}
         return {"zone": None}
 
     return guarded(find)

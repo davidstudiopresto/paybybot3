@@ -225,20 +225,19 @@ function RiverainDialog({
     const covered = new Set(data.autopilots.filter(isWeekly).map((a) => a.plate))
     const plates = data.vehicles.map((v) => v.plate)
     setPlate(plates.find((p) => p === last.plate && !covered.has(p)) ?? plates.find((p) => !covered.has(p)) ?? plates[0] ?? '')
-    setZone(last.location ?? '')
+    // The home zone: the one where PayByPhone offers this account the resident rate. The last one-off
+    // payment's zone is not used, it is rarely the home one.
+    setZone('')
     setZoneFromHistory(false)
-    if (!last.location) {
-      // No zone known on this device: the PayByPhone history usually tells it.
-      api.residentZone().then(
-        (r) => {
-          if (r.zone) {
-            setZone((z) => z || r.zone!)
-            setZoneFromHistory(true)
-          }
-        },
-        () => {},
-      )
-    }
+    api.residentZone().then(
+      (r) => {
+        if (r.zone) {
+          setZone((z) => z || r.zone!)
+          setZoneFromHistory(true)
+        }
+      },
+      () => {},
+    )
     setPayment(data.payments.find((p) => p.id === last.paymentAccountId)?.id ?? data.payments[0]?.id ?? '')
   }, [open, data])
 

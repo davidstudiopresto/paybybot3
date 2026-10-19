@@ -46,7 +46,7 @@ export type Overview = {
   autopilots: Autopilot[]
   history: HistoryItem[]
 }
-export type Me = { username: string; demo: boolean; hosted?: boolean }
+export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
 
 export class ApiError extends Error {
   status: number

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { LogOut, Repeat } from 'lucide-react'
 import { Plate, ZonePlate } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
+import { AccountButton } from '@/components/Account'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { ExtendDialog } from '@/components/Extend'
@@ -112,13 +113,15 @@ export function Dashboard({
     <div className="flex min-h-dvh flex-col bg-white">
       <TopBar>
         {me.demo && <span className="rounded-full bg-amber/25 px-2.5 py-0.5 text-xs font-bold text-ink">Démo</span>}
-        <button onClick={onLogout} className={cn(ui.pillGray, 'gap-2')}>
-          <LogOut className="size-4" /> Déconnexion
+        <AccountButton data={data} />
+        <button onClick={onLogout} aria-label="Déconnexion" title="Déconnexion" className={cn(ui.pillGray, 'gap-2')}>
+          <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>
         </button>
       </TopBar>
 
       <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-12 pb-16">
-        <h1 className="rise font-heading text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.035em]">
+        <p className="rise text-lg text-ink/60">{me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}</p>
+        <h1 className="rise mt-1 font-heading text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.035em]">
           {!data ? '…' : sessions.length ? 'Vous êtes en règle.' : 'Aucun ticket en cours.'}
         </h1>
         <p className="mt-3 text-[1.05rem] text-ink/60">

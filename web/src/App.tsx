@@ -10,11 +10,11 @@ import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal
 import { Wordmark } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
-type Route = 'faq' | 'connexion' | 'inscription' | null
+type Route = 'faq' | 'connexion' | 'inscription' | 'demo' | null
 
 function routeFromHash(hash: string): Route {
   const id = hash.replace(/^#\/?/, '')
-  return id === 'faq' || id === 'connexion' || id === 'inscription' ? id : null
+  return id === 'faq' || id === 'connexion' || id === 'inscription' || id === 'demo' ? id : null
 }
 
 export default function App() {
@@ -37,6 +37,14 @@ export default function App() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+
+  // "Démo" link on the home page: open the demo account directly.
+  useEffect(() => {
+    if (route !== 'demo' || me === undefined) return
+    history.replaceState(null, '', window.location.pathname)
+    setRoute(null)
+    if (me === null) api.login('demo', 'demo').then(setMe, (e) => toast.error((e as Error).message))
+  }, [route, me])
 
   useEffect(() => {
     api.me().then(setMe, () => setMe(null))

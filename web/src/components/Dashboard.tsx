@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Clock3, CreditCard, LogOut, Plus, RefreshCw, Repeat, Trash2 } from 'lucide-react'
+import { CreditCard, LogOut, RefreshCw, Repeat, SquareParking, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Plate, Wordmark, ZonePlate } from '@/components/signs'
+import { ActionTile, Plate, Wordmark, ZonePlate } from '@/components/signs'
 import { isWeekly, RiverainCard } from '@/components/Riverain'
 import { api, clock, money, remaining, unitLabel, type Autopilot, type Me, type Overview, type Session } from '@/lib/api'
 
@@ -140,17 +140,25 @@ export function Dashboard({
               {sessions.length ? 'Vous êtes en règle.' : 'Aucun ticket en cours.'}
             </h1>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" size="icon" onClick={refresh} className="size-14 rounded-xl bg-enamel" aria-label="Actualiser">
-              <RefreshCw className={`size-5 ${refreshing ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button onClick={onPay} className="h-14 rounded-xl px-6 text-lg font-bold shadow-[0_4px_0_var(--signal-deep)] active:translate-y-1 active:shadow-none">
-              <Plus className="size-5" /> Payer un stationnement
-            </Button>
-          </div>
+          <Button variant="outline" size="lg" onClick={refresh} className="h-12 self-start rounded-xl bg-enamel px-4 sm:self-auto">
+            <RefreshCw className={`size-5 ${refreshing ? 'animate-spin' : ''}`} /> Actualiser
+          </Button>
         </section>
 
-        <RiverainCard data={data} onChanged={onRefresh} />
+        {/* The two main actions, same size side by side */}
+        <section className="mt-8 grid gap-5 md:grid-cols-2">
+          <ActionTile
+            tone="signal"
+            icon={<SquareParking />}
+            eyebrow="Ponctuel"
+            title="Payer un stationnement"
+            text="Choisissez la zone, le tarif et la durée. Le prix exact s'affiche avant de payer."
+            cta="Payer"
+            onClick={onPay}
+            disabled={!data}
+          />
+          <RiverainCard data={data} onChanged={onRefresh} />
+        </section>
 
         <div className="kerb my-8" aria-hidden />
 
@@ -164,16 +172,9 @@ export function Dashboard({
             ))}
           </div>
         ) : (
-          <button
-            onClick={onPay}
-            className="rise group flex w-full flex-col items-center gap-3 rounded-2xl border-[3px] border-dashed border-input bg-enamel/50 px-6 py-14 text-center transition hover:border-signal hover:bg-enamel"
-          >
-            <Clock3 className="size-10 text-muted-foreground transition group-hover:text-signal" />
-            <span className="font-heading text-2xl font-extrabold">Votre voiture n'est pas couverte</span>
-            <span className="max-w-md text-muted-foreground">
-              Cliquez ici pour payer votre stationnement. Comptez moins d'une minute.
-            </span>
-          </button>
+          <p className="rise rounded-2xl bg-muted/70 px-6 py-5 text-lg text-muted-foreground">
+            Aucune voiture n'est couverte en ce moment.
+          </p>
         )}
 
         {/* Autopilot */}
@@ -203,7 +204,7 @@ export function Dashboard({
         </section>
 
         {/* Account details */}
-        <section className="mt-14 grid gap-6 md:grid-cols-2">
+        <section className="mt-14">
           <div className="rounded-2xl bg-enamel p-6">
             <h2 className="text-xl font-extrabold">Mes véhicules</h2>
             <div className="mt-4 flex flex-wrap gap-3">
@@ -221,28 +222,6 @@ export function Dashboard({
                 </li>
               ))}
             </ul>
-          </div>
-          <div className="rounded-2xl bg-enamel p-6">
-            <h2 className="text-xl font-extrabold">Activité récente</h2>
-            {data?.history.length ? (
-              <ul className="mt-4 space-y-3">
-                {data.history.map((h, i) => (
-                  <li key={i} className="flex gap-3">
-                    {h.kind === 'success' ? (
-                      <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-go" />
-                    ) : (
-                      <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
-                    )}
-                    <span>
-                      {h.message}
-                      <span className="block text-sm text-muted-foreground">{clock(h.at)}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-muted-foreground">Rien pour l'instant.</p>
-            )}
           </div>
         </section>
       </main>

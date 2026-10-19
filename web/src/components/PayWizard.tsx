@@ -49,7 +49,7 @@ function Choice({ selected, onClick, children, disabled }: { selected: boolean; 
   )
 }
 
-export function PayWizard({ data, onClose, onPaid }: { data: Overview; onClose: () => void; onPaid: () => void }) {
+export function PayWizard({ data, demo, onClose, onPaid }: { data: Overview; demo: boolean; onClose: () => void; onPaid: () => void }) {
   const last = useMemo(loadLast, [])
   const [step, setStep] = useState(0)
   const [plate, setPlate] = useState(
@@ -146,7 +146,12 @@ export function PayWizard({ data, onClose, onPaid }: { data: Overview; onClose: 
           <span className="grid size-24 place-items-center rounded-full bg-go text-white shadow-[0_0_0_12px_rgb(31_122_77/0.15)]">
             <Check className="size-12" strokeWidth={3} />
           </span>
-          <h1 className="mt-8 text-4xl font-black">C'est payé !</h1>
+          <h1 className="mt-8 text-4xl font-black">{demo ? 'Paiement simulé' : "C'est payé !"}</h1>
+          {demo && (
+            <p className="mt-3 rounded-xl bg-amber/25 px-4 py-2 font-bold text-ink">
+              Mode démo : rien n'a été payé ni envoyé à PayByPhone.
+            </p>
+          )}
           <p className="mt-3 text-lg text-muted-foreground">
             Votre voiture <Plate plate={plate} size="sm" className="mx-1 align-middle" /> est en règle jusqu'à{' '}
             <strong className="text-ink">{clock(done.expire)}</strong>.

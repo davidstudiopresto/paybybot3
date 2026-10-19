@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, CalendarSync, Check, Home, Loader2, Repeat } from 'lucide-react'
+import { CalendarSync, Check, Home, Loader2, Repeat } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Plate, ZonePlate } from '@/components/signs'
+import { ActionTile, Plate, ZonePlate } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { cn } from '@/lib/utils'
 import { api, clock, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
@@ -23,11 +23,11 @@ export function RiverainCard({ data, onChanged }: { data: Overview | null; onCha
 
   if (weekly.length) {
     return (
-      <section className="rise mt-8 flex flex-wrap items-center gap-4 rounded-2xl border-[3px] border-go bg-go/[0.07] p-5">
-        <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-go text-white">
-          <CalendarSync className="size-6" />
+      <section className="rise flex h-full flex-col items-start gap-4 rounded-2xl border-[3px] border-go bg-go/[0.07] p-6 sm:p-7">
+        <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-go text-white">
+          <CalendarSync className="size-7" />
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <p className="font-heading text-xl font-extrabold">Forfait riverain renouvelé chaque semaine</p>
           {weekly.map((ap) => {
             const current = data?.sessions.find((s) => s.plate === ap.plate && s.location === ap.location)
@@ -45,7 +45,7 @@ export function RiverainCard({ data, onChanged }: { data: Overview | null; onCha
             )
           })}
         </div>
-        <Button variant="outline" onClick={() => setOpen(true)} className="h-11 rounded-xl bg-enamel">
+        <Button variant="outline" onClick={() => setOpen(true)} className="mt-auto h-12 rounded-xl bg-enamel px-5">
           Ajouter une voiture
         </Button>
         {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} />}
@@ -55,29 +55,17 @@ export function RiverainCard({ data, onChanged }: { data: Overview | null; onCha
 
   return (
     <>
-      <button
+      <ActionTile
+        tone="go"
+        icon={<Home />}
+        eyebrow="Vous êtes riverain ?"
+        title="Renouvellement automatique chaque semaine"
+        text="Votre forfait résident de 7 jours est repayé tout seul à son expiration. Plus jamais d'oubli."
+        cta="Activer"
         onClick={() => setOpen(true)}
         disabled={!data}
-        className="rise group relative mt-8 flex w-full flex-col gap-5 overflow-hidden rounded-2xl bg-go p-6 text-left text-white shadow-[0_5px_0_#145236] transition active:translate-y-1 active:shadow-none sm:flex-row sm:items-center sm:p-7"
-        style={{ animationDelay: '80ms' }}
-      >
-        <span className="absolute -top-10 -right-10 size-44 rounded-full border-[14px] border-white/10" aria-hidden />
-        <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-white text-go shadow-[inset_0_0_0_3px_var(--go),inset_0_0_0_5px_#fff]">
-          <Home className="size-8" />
-        </span>
-        <span className="relative flex-1">
-          <span className="text-sm font-bold tracking-[0.2em] text-white/75 uppercase">Vous êtes riverain ?</span>
-          <span className="mt-1 block font-heading text-2xl leading-tight font-black sm:text-3xl">
-            Renouvellement automatique chaque semaine
-          </span>
-          <span className="mt-1 block text-white/85">
-            Votre forfait résident de 7 jours est repayé tout seul à son expiration. Plus jamais d'oubli.
-          </span>
-        </span>
-        <span className="relative flex items-center gap-2 self-start rounded-xl bg-white px-5 py-3 font-bold text-go transition group-hover:gap-3 sm:self-center">
-          Activer <ArrowRight className="size-5" />
-        </span>
-      </button>
+        delay={80}
+      />
       {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} />}
     </>
   )

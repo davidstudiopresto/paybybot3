@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ActionTile, Plate, Wordmark, ZonePlate } from '@/components/signs'
 import { ExtendDialog } from '@/components/Extend'
+import { HostedFooter } from '@/components/Footer'
 import { RiverainCard } from '@/components/Riverain'
 import { clock, money, remaining, type Me, type Overview, type Session } from '@/lib/api'
 
@@ -182,6 +183,7 @@ export function Dashboard({
             </ul>
           </div>
         </section>
+        {me.hosted && <HostedFooter className="mt-14" />}
       </main>
     </div>
   )

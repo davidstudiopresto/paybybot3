@@ -3,6 +3,7 @@ import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Sparkles } from 'lucide-
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { HostedFooter } from '@/components/Footer'
 import { Plate, Wordmark } from '@/components/signs'
 import { api, type Me } from '@/lib/api'
 
@@ -136,6 +137,7 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
           <p className="mt-3 text-center text-sm text-muted-foreground">
             La démo utilise de fausses données : aucun paiement réel.
           </p>
+          {hosted && <HostedFooter className="mt-10" />}
         </form>
       </section>
     </div>

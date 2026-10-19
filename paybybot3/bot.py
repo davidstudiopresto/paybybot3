@@ -32,22 +32,43 @@ class Bot:
     }
 
     def __init__(self, username, password):
+        self._authenticate(
+            {
+                "grant_type": "password",
+                "username": username,
+                "password": password,
+                "client_id": "paybyphone_web",
+            }
+        )
+
+    @classmethod
+    def from_refresh_token(cls, refresh_token):
+        """Log in again without the password, as the official app does."""
+        bot = cls.__new__(cls)
+        bot._authenticate(
+            {
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+                "client_id": "paybyphone_web",
+            }
+        )
+        return bot
+
+    def _authenticate(self, data):
         r = requests.post(
             self.TOKEN_URL,
             headers={
                 **self.base_headers,
                 "Content-Type": "application/x-www-form-urlencoded",
             },
-            data={
-                "grant_type": "password",
-                "username": username,
-                "password": password,
-                "client_id": "paybyphone_web",
-            },
+            data=data,
         )
         r.raise_for_status()
         j = r.json()
         self.authorization = j["token_type"] + " " + j["access_token"]
+        # May be rotated on each refresh: callers keeping it must store the new one.
+        self.refresh_token = j.get("refresh_token")
+        self.expires_in = j.get("expires_in")
 
     def _graphql(self, query, variables=None):
         r = requests.post(

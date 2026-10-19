@@ -23,7 +23,9 @@ Non-technical users can download the ZIP and double-click `Lancer paybybot.comma
 
 The same interface can be deployed on Vercel (`main.py`, `requirements.txt`, `vercel.json`). In hosted mode the
 server keeps no state: the PayByPhone access token is stored in an encrypted cookie (set `PAYBYBOT_SECRET`), the
-password is never stored, and the weekly automatic renewal is only available in the local version.
+password is never stored. Weekly renewals are stored in Supabase (`supabase/migrations/`) with an encrypted
+PayByPhone refresh token, and `/api/cron/renew` is called every 5 minutes by `pg_cron`. Server settings:
+`PAYBYBOT_SECRET`, `PAYBYBOT_SUPABASE_URL`, `PAYBYBOT_SUPABASE_KEY` (publishable key) and `PAYBYBOT_DB_TOKEN`.
 
 ### Developing the interface
 

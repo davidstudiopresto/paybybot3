@@ -7,14 +7,17 @@ Two modes:
 - local (``paybybot3 web``): sessions live in this process' memory, with the
   password, so the weekly renewal can run in the background;
 - hosted (``PAYBYBOT_HOSTED=1``, e.g. on Vercel): no server state; the
-  PayByPhone access token is kept in an encrypted cookie (key from
-  ``PAYBYBOT_SECRET``), the password is never stored, and there is no
-  background renewal.
+  PayByPhone tokens are kept in an encrypted cookie (key from
+  ``PAYBYBOT_SECRET``) and the password is never stored. Weekly renewals are
+  kept in Supabase (``PAYBYBOT_SUPABASE_URL`` / ``_KEY`` / ``PAYBYBOT_DB_TOKEN``)
+  with an encrypted refresh token, and processed by ``/api/cron/renew``,
+  called every few minutes by a scheduler.
 """
 
 import base64
 import contextvars
 import hashlib
+import hmac
 import json
 import logging
 import os
@@ -39,8 +42,8 @@ log = logging.getLogger("paybybot3.web")
 STATIC_DIR = Path(__file__).parent / "static"
 COOKIE = "pbb_session"
 HOSTED = os.environ.get("PAYBYBOT_HOSTED") == "1"
-HOSTED_ONLY_LOCAL = ("Le renouvellement automatique hebdomadaire n'est disponible que dans la version installée "
-                     "sur ordinateur : la version en ligne ne garde pas votre mot de passe.")
+RELOGIN = ("Votre connexion PayByPhone a expiré : reconnectez-vous sur paybybot pour relancer "
+           "le renouvellement automatique.")
 
 app = FastAPI(title="paybybot3", docs_url=None, redoc_url=None)
 
@@ -212,8 +215,10 @@ class UserSession:
         if self.demo:
             state["s"] = [{**x, "startTime": x["startTime"].isoformat(), "expireTime": x["expireTime"].isoformat()}
                           for x in self.bot.sessions]
+            state["ap"] = list(self.autopilots.values())
         else:
             state["t"] = self.bot.authorization
+            state["r"] = getattr(self.bot, "refresh_token", None)
         return state
 
     @classmethod
@@ -228,8 +233,20 @@ class UserSession:
         else:
             self.bot = Bot.__new__(Bot)
             self.bot.authorization = state["t"]
-        self.autopilots, self.history, self.attempts = {}, [], []
+            self.bot.refresh_token = state.get("r")
+        self.autopilots = {ap["id"]: ap for ap in state.get("ap", [])}
+        self.history, self.attempts = [], []
         self.unconfirmed = {(plate, location): at for plate, location, at in state.get("uc", [])}
+        return self
+
+    @classmethod
+    def for_bot(cls, bot, username=""):
+        """A session around an already logged-in bot (background renewals)."""
+        self = cls.__new__(cls)
+        self.username, self._password, self.demo = username, None, False
+        self.lock = threading.Lock()
+        self.bot = bot
+        self.autopilots, self.history, self.attempts, self.unconfirmed = {}, [], [], {}
         return self
 
     def call(self, method, *args, **kwargs):
@@ -462,6 +479,100 @@ def start_autopilot():
 
 
 # --------------------------------------------------------------------------
+# Hosted weekly renewals (Supabase + scheduler)
+# --------------------------------------------------------------------------
+
+
+def owner_id(username):
+    """Stable id of a PayByPhone account that does not reveal the phone number."""
+    key = os.environ.get("PAYBYBOT_SECRET", "").encode()
+    return hmac.new(key, ("owner:" + username).encode(), hashlib.sha256).hexdigest()
+
+
+def encrypt_credential(refresh_token):
+    return _fernet().encrypt(refresh_token.encode()).decode()
+
+
+def decrypt_credential(value):
+    return _fernet().decrypt(value.encode()).decode()
+
+
+def store(fn, **params):
+    """Call one of the renewal_* database functions (see the Supabase migration)."""
+    r = requests.post(
+        os.environ["PAYBYBOT_SUPABASE_URL"].rstrip("/") + "/rest/v1/rpc/" + fn,
+        headers={"apikey": os.environ["PAYBYBOT_SUPABASE_KEY"], "Content-Type": "application/json"},
+        json={"p_token": os.environ["PAYBYBOT_DB_TOKEN"], **params},
+        timeout=15,
+    )
+    r.raise_for_status()
+    return r.json() if r.content else None
+
+
+def stored_to_autopilot(row):
+    """Database row -> the shape the interface already uses for renewals."""
+    return {
+        "id": row["id"], "label": row.get("label") or "", "plate": row["plate"], "location": row["location"],
+        "rate": row["rate"], "duration": fmt_qty(row["duration"]), "unit": row["unit"],
+        "paymentAccountId": row["payment_account_id"], "enabled": row["enabled"],
+        "lastCheck": row.get("last_check"), "lastPayment": row.get("last_payment"), "lastError": row.get("last_error"),
+    }
+
+
+def utc_iso(dt):
+    return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
+
+
+def process_renewal(row, refresh_token=None):
+    """Check one stored renewal and pay for it if no session is active. Never raises."""
+    now = datetime.now(timezone.utc)
+    patch = {}
+    try:
+        refresh = refresh_token or decrypt_credential(row["credential"])
+        bot = Bot.from_refresh_token(refresh)
+    except Exception as e:
+        log.warning("renewal %s: login with refresh token failed: %s", row["id"], str(e)[:200])
+        store("renewal_update", p_id=row["id"],
+              p_patch={"last_error": RELOGIN, "next_check": utc_iso(now + timedelta(hours=6))})
+        return "relogin"
+    if bot.refresh_token and bot.refresh_token != refresh:
+        patch["credential"] = encrypt_credential(bot.refresh_token)
+    session = UserSession.for_bot(bot)
+    outcome = "error"
+    try:
+        active = session.call("get_parking_sessions", licensePlate=row["plate"], locationId=row["location"])
+        if active:
+            expire = max(x["expireTime"] for x in active)
+            patch.update(next_check=utc_iso(expire + timedelta(seconds=30)), last_error=None)
+            outcome = "active"
+        else:
+            _, found = pay_and_confirm(session, row["location"], row["rate"], fmt_qty(row["duration"]), row["unit"],
+                                       row["plate"], row["payment_account_id"])
+            expire = max(x["expireTime"] for x in found)
+            patch.update(last_payment=utc_iso(now), next_check=utc_iso(expire + timedelta(seconds=30)),
+                         last_error=None)
+            outcome = "paid"
+    except Unconfirmed:
+        # Never retry blindly: the payment may have gone through, retrying could pay twice.
+        patch.update(enabled=False, last_error=UNCONFIRMED + " Renouvellement suspendu.")
+        outcome = "unconfirmed"
+    except Exception as e:
+        patch.update(last_error=friendly_error(e), next_check=utc_iso(now + timedelta(minutes=30)))
+    log.info("renewal %s zone=%s plate=%s: %s", row["id"], row["location"], row["plate"][:2] + "***", outcome)
+    store("renewal_update", p_id=row["id"], p_patch=patch)
+    return outcome
+
+
+@app.api_route("/api/cron/renew", methods=["GET", "POST"])
+def cron_renew():
+    """Called every few minutes by the scheduler. Only acts on renewals that are due, so extra calls are harmless."""
+    if not HOSTED:
+        raise HTTPException(404)
+    results = [process_renewal(row) for row in store("renewal_claim_due", p_limit=2)]
+    return {"processed": len(results), "outcomes": results}
+
+
+# --------------------------------------------------------------------------
 # API
 # --------------------------------------------------------------------------
 
@@ -500,6 +611,13 @@ def login(body: Login, response: Response):
     log.info("login ok for %s (%s)", masked, "demo" if demo else "PayByPhone account %s***" % session.username[:5])
     if HOSTED:
         token = seal(session)
+        refresh = getattr(session.bot, "refresh_token", None)
+        if not demo and refresh:
+            try:  # renewals that lost their PayByPhone connection start again with this one
+                store("renewal_set_credential", p_owner=owner_id(session.username),
+                      p_credential=encrypt_credential(refresh))
+            except Exception as e:
+                log.warning("could not refresh stored renewals: %s", e)
     else:
         token = secrets.token_urlsafe(32)
         SESSIONS[token] = session
@@ -552,7 +670,8 @@ def overview(pbb_session: str = Cookie(None)):
                          for v in vehicles],
             "payments": payments,
             "sessions": [serialize_session(x) for x in s.call("get_parking_sessions")],
-            "autopilots": list(s.autopilots.values()),
+            "autopilots": ([stored_to_autopilot(r) for r in store("renewal_list", p_owner=owner_id(s.username))]
+                           if HOSTED and not s.demo else list(s.autopilots.values())),
             "history": s.history[:10],
         }
 
@@ -679,19 +798,39 @@ def debug(pbb_session: str = Cookie(None)):
 
 @app.post("/api/autopilots")
 def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
-    if HOSTED:
-        raise HTTPException(501, HOSTED_ONLY_LOCAL)
     s = current(pbb_session)
+    if HOSTED and not s.demo:
+        refresh = getattr(s.bot, "refresh_token", None)
+        if not refresh:
+            raise HTTPException(401, "Reconnectez-vous pour activer le renouvellement automatique.")
+
+        def save():
+            row = store("renewal_save", p_row={
+                "owner": owner_id(s.username), "label": body.label, "plate": body.plate, "location": body.location,
+                "rate": body.rate, "duration": fmt_qty(body.duration), "unit": body.unit,
+                "payment_account_id": body.paymentAccountId, "credential": encrypt_credential(refresh)})
+            process_renewal(row, refresh_token=refresh)  # pay the first week now if nothing is active
+            stored = next((r for r in store("renewal_list", p_owner=owner_id(s.username)) if r["id"] == row["id"]), row)
+            return stored_to_autopilot(stored)
+
+        return guarded(save)
     ap = {**body.model_dump(), "duration": fmt_qty(body.duration), "id": uuid.uuid4().hex[:8], "enabled": True,
           "lastCheck": None, "lastPayment": None, "lastError": None}
     s.autopilots[ap["id"]] = ap
-    threading.Thread(target=lambda: guarded(lambda: run_autopilot(s, ap)), daemon=True).start()
+    if HOSTED:  # demo on a serverless host: no background thread, run it now
+        run_autopilot(s, ap)
+    else:
+        threading.Thread(target=lambda: guarded(lambda: run_autopilot(s, ap)), daemon=True).start()
     return ap
 
 
 @app.delete("/api/autopilots/{ap_id}")
 def delete_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
-    current(pbb_session).autopilots.pop(ap_id, None)
+    s = current(pbb_session)
+    if HOSTED and not s.demo:
+        guarded(lambda: store("renewal_delete", p_owner=owner_id(s.username), p_id=ap_id))
+    else:
+        s.autopilots.pop(ap_id, None)
     return {"ok": True}
 
 
@@ -711,7 +850,8 @@ def spa(path: str):
     index = STATIC_DIR / "index.html"
     if not index.exists():
         raise HTTPException(404, "Interface non compilée : lancez `npm run build` dans web/.")
-    return FileResponse(index)
+    # Always revalidate the page: a cached copy would point to the assets of a previous deployment.
+    return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 
 def serve(host="127.0.0.1", port=8765, open_browser=True):

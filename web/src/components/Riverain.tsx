@@ -18,8 +18,6 @@ export const isWeekly = (ap: Autopilot) => ap.label === WEEKLY_LABEL
 const isResident = (r: Rate) => /r[ée]sid|riverain/i.test(`${r.name} ${r.type}`) && !r.parkingNotAllowedReason
 
 /** Prominent dashboard card: weekly resident renewal, set up in two clicks. */
-const GUIDE_URL = 'https://github.com/davidstudiopresto/paybybot3/blob/web-interface/GUIDE.md'
-
 export function RiverainCard({ data, onChanged, hosted = false }: { data: Overview | null; onChanged: () => void; hosted?: boolean }) {
   const [open, setOpen] = useState(false)
   const weekly = data?.autopilots.filter(isWeekly) ?? []
@@ -60,24 +58,8 @@ export function RiverainCard({ data, onChanged, hosted = false }: { data: Overvi
         <Button variant="outline" onClick={() => setOpen(true)} className="mt-auto h-12 rounded-xl bg-enamel px-5">
           Ajouter une voiture
         </Button>
-        {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} />}
+        {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />}
       </section>
-    )
-  }
-
-  if (hosted) {
-    // The online version keeps no password, so nothing can pay in the background.
-    return (
-      <ActionTile
-        tone="go"
-        icon={<Home />}
-        eyebrow="Vous êtes riverain ?"
-        title="Renouvellement automatique chaque semaine"
-        text="Disponible dans la version à installer sur votre ordinateur : elle repaie votre forfait résident de 7 jours à chaque expiration."
-        cta="Installer la version ordinateur"
-        onClick={() => window.open(GUIDE_URL, '_blank', 'noopener')}
-        delay={80}
-      />
     )
   }
 
@@ -88,13 +70,15 @@ export function RiverainCard({ data, onChanged, hosted = false }: { data: Overvi
         icon={<Home />}
         eyebrow="Vous êtes riverain ?"
         title="Renouvellement automatique chaque semaine"
-        text="Votre forfait résident de 7 jours est repayé tout seul à son expiration. Plus jamais d'oubli."
+        text={hosted
+          ? "Votre forfait résident de 7 jours est repayé tout seul à son expiration, même téléphone et ordinateur éteints."
+          : "Votre forfait résident de 7 jours est repayé tout seul à son expiration. Plus jamais d'oubli."}
         cta="Activer"
         onClick={() => setOpen(true)}
         disabled={!data}
         delay={80}
       />
-      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} />}
+      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />}
     </>
   )
 }
@@ -104,11 +88,13 @@ function RiverainDialog({
   onOpenChange,
   data,
   onDone,
+  hosted,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   data: Overview
   onDone: () => void
+  hosted: boolean
 }) {
   const [plate, setPlate] = useState('')
   const [zone, setZone] = useState('')
@@ -306,7 +292,9 @@ function RiverainDialog({
             {saving ? <Loader2 className="size-5 animate-spin" /> : <>Activer le renouvellement {quote ? `· ${money(quote.cost)}/semaine` : ''}</>}
           </Button>
           <p className="-mt-3 text-center text-sm text-muted-foreground">
-            Laissez paybybot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.
+            {hosted
+              ? "Fonctionne en ligne, même appareil éteint. Vous pouvez arrêter à tout moment."
+              : 'Laissez paybybot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.'}
           </p>
         </div>
       </DialogContent>

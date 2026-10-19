@@ -1170,8 +1170,32 @@ def delete_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
 # Front-end
 # --------------------------------------------------------------------------
 
+# A page loaded during a deployment switch can ask for the previous build's files, which no longer
+# exist: instead of a blank page, a missing script reloads the page once to get the current build.
+RELOAD_ONCE_JS = ("try{if(!sessionStorage.getItem('pbb-reloaded')){sessionStorage.setItem('pbb-reloaded','1');"
+                  "location.reload()}}catch(e){}")
+
+
+class Assets(StaticFiles):
+    async def get_response(self, path, scope):
+        try:
+            return await super().get_response(path, scope)
+        except HTTPException as e:
+            if e.status_code != 404:
+                raise
+        except Exception:
+            pass
+        from fastapi.responses import Response as RawResponse
+
+        if path.endswith(".js"):
+            return RawResponse(RELOAD_ONCE_JS, media_type="text/javascript", headers={"Cache-Control": "no-store"})
+        if path.endswith(".css"):
+            return RawResponse("", media_type="text/css", headers={"Cache-Control": "no-store"})
+        return RawResponse(status_code=404)
+
+
 if (STATIC_DIR / "assets").exists():
-    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
+    app.mount("/assets", Assets(directory=STATIC_DIR / "assets"), name="assets")
 
 
 @app.get("/{path:path}", include_in_schema=False)

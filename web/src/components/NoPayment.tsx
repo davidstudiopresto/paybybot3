@@ -35,7 +35,7 @@ export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Pro
         </div>
       </div>
       <div className="mt-5 flex flex-wrap gap-3">
-        <Button onClick={check} disabled={checking} className="h-12 rounded-xl bg-ink px-5 font-bold text-white hover:bg-ink/90">
+        <Button onClick={check} disabled={checking} className="h-12 rounded-xl bg-eu px-5 font-bold text-white hover:bg-eu/90">
           {checking ? <Loader2 className="size-5 animate-spin" /> : <RefreshCw className="size-5" />} J'ai ajouté une carte
         </Button>
         <Button

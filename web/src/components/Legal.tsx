@@ -108,7 +108,7 @@ function Security() {
           [false, 'Aucun cookie de suivi ni outil de mesure d’audience'],
         ].map(([yes, text]) => (
           <p key={text as string} className="flex items-start gap-3 rounded-xl border border-border p-4 font-bold">
-            <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-ink text-white">
+            <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-eu text-white">
               {yes ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
             </span>
             {text as string}
@@ -555,7 +555,7 @@ export function LegalView({ page, hosted }: { page: LegalPage; hosted: boolean }
               href={`#/${p.id}`}
               aria-current={p.id === page ? 'page' : undefined}
               className={`rounded-full border px-3 py-1 text-sm font-bold transition ${
-                p.id === page ? 'border-ink bg-ink text-white' : 'border-ink/15 text-ink/70 hover:border-ink/40'
+                p.id === page ? 'border-eu bg-eu text-white' : 'border-ink/15 text-ink/70 hover:border-ink/40'
               }`}
             >
               {p.label}

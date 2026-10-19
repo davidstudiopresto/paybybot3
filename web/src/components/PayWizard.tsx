@@ -42,7 +42,7 @@ function Choice({ selected, onClick, children, disabled }: { selected: boolean; 
     >
       {children}
       {selected && (
-        <span className="absolute top-1/2 right-4 grid size-6 -translate-y-1/2 place-items-center rounded-full bg-ink text-white">
+        <span className="absolute top-1/2 right-4 grid size-6 -translate-y-1/2 place-items-center rounded-full bg-eu text-white">
           <Check className="size-3.5" strokeWidth={3} />
         </span>
       )}
@@ -161,7 +161,7 @@ export function PayWizard({
     return (
       <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-white p-6">
         <div className="rise flex max-w-md flex-col items-center text-center">
-          <span className="grid size-16 place-items-center rounded-full bg-ink text-white">
+          <span className="grid size-16 place-items-center rounded-full bg-eu text-white">
             <Check className="size-8" strokeWidth={3} />
           </span>
           <h1 className={cn('mt-6', ui.title)}>{demo ? 'Paiement simulé' : "C'est payé !"}</h1>
@@ -192,8 +192,8 @@ export function PayWizard({
           <ol className="flex flex-1 gap-1.5" aria-label="Étapes">
             {STEPS.map((label, i) => (
               <li key={label} className="flex-1" aria-current={i === step ? 'step' : undefined}>
-                <span className={cn('block h-1 rounded-full transition-colors', i <= step ? 'bg-ink' : 'bg-border')} />
-                <span className={cn('mt-1.5 hidden text-xs sm:block', i === step ? 'font-bold text-ink' : 'text-ink/40')}>
+                <span className={cn('block h-1 rounded-full transition-colors', i <= step ? 'bg-eu' : 'bg-border')} />
+                <span className={cn('mt-1.5 hidden text-xs sm:block', i === step ? 'font-bold text-eu' : 'text-ink/40')}>
                   {label}
                 </span>
               </li>
@@ -284,7 +284,7 @@ export function PayWizard({
                       setUnit(u)
                       setDuration(PRESETS[u][0])
                     }}
-                    className={cn('rounded-lg px-5 py-2.5 font-bold capitalize transition', unit === u ? 'bg-white text-ink shadow-sm' : 'text-ink/50')}
+                    className={cn('rounded-lg px-5 py-2.5 font-bold capitalize transition', unit === u ? 'bg-white text-eu shadow-sm' : 'text-ink/50')}
                   >
                     {unitLabel(u, 2)}
                   </button>

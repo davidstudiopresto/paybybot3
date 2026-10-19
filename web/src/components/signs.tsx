@@ -8,7 +8,7 @@ export function Plate({ plate, size = 'md', className }: { plate: string; size?:
   return (
     <span
       className={cn(
-        'inline-flex items-stretch overflow-hidden rounded-[5px] border-[1.5px] border-ink bg-white font-heading font-bold tracking-[0.06em] text-ink',
+        'inline-flex items-stretch overflow-hidden rounded-[6px] border-2 border-ink bg-white font-heading font-extrabold tracking-[0.06em] text-ink shadow-[0_2px_0_var(--ink)]',
         size === 'sm' && 'h-7 text-sm',
         size === 'md' && 'h-10 text-xl',
         size === 'lg' && 'h-14 text-3xl',

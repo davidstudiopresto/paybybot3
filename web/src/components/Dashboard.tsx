@@ -40,7 +40,7 @@ function Ticket({ session, now, data, onRefresh }: { session: Session; now: numb
       <p className="mt-2 text-muted-foreground">jusqu'à {clock(session.expire)}</p>
       <div className="mt-5 h-1 overflow-hidden rounded-full bg-muted" aria-hidden>
         <div
-          className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-ink'}`}
+          className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-eu'}`}
           style={{ width: `${(1 - progress) * 100}%` }}
         />
       </div>
@@ -117,7 +117,7 @@ export function Dashboard({
         <button
           onClick={onPay}
           disabled={!data}
-          className="mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-ink text-lg font-bold text-white transition hover:bg-ink/90 active:scale-[0.99] disabled:opacity-50"
+          className="mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-eu text-lg font-bold text-white transition hover:bg-eu/90 active:scale-[0.99] disabled:opacity-50"
         >
           Payer un stationnement <ArrowRight className="size-5" />
         </button>

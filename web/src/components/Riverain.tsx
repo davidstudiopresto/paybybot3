@@ -465,7 +465,7 @@ function PauseDialog({ ap, onClose, onDone }: { ap: Autopilot; onClose: () => vo
             </label>
           </div>
           <label className="flex cursor-pointer items-center gap-3">
-            <input type="checkbox" checked={noEnd} onChange={(e) => setNoEnd(e.target.checked)} className="size-5 accent-[var(--ink)]" />
+            <input type="checkbox" checked={noEnd} onChange={(e) => setNoEnd(e.target.checked)} className="size-5 accent-[var(--eu)]" />
             <span>Pas de date de fin pour le moment</span>
           </label>
           <p className={ui.note}>

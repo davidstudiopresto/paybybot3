@@ -53,7 +53,7 @@ function phoneUsername(national: string, code: string) {
 }
 
 const fieldBox =
-  'flex h-14 items-center rounded-xl border border-ink/20 bg-white transition focus-within:border-ink focus-within:ring-3 focus-within:ring-ink/10'
+  'flex h-14 items-center rounded-xl border border-ink/20 bg-white transition focus-within:border-eu focus-within:ring-3 focus-within:ring-eu/15'
 
 export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; hosted: boolean }) {
   const [mode, setMode] = useState<'phone' | 'email'>('phone')
@@ -206,7 +206,7 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
           <button
             type="submit"
             disabled={loading !== null}
-            className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-ink text-lg font-bold text-white transition hover:bg-ink/90 active:scale-[0.99] disabled:opacity-60"
+            className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-eu text-lg font-bold text-white transition hover:bg-eu/90 active:scale-[0.99] disabled:opacity-60"
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>Se connecter <ArrowRight className="size-5" /></>}
           </button>

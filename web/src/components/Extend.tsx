@@ -125,7 +125,7 @@ export function ExtendDialog({
                         setUnit(u)
                         setDuration(PRESETS[u][0])
                       }}
-                      className={cn('rounded-lg px-4 py-2 font-bold capitalize transition', unit === u ? 'bg-white text-ink shadow-sm' : 'text-ink/50')}
+                      className={cn('rounded-lg px-4 py-2 font-bold capitalize transition', unit === u ? 'bg-white text-eu shadow-sm' : 'text-ink/50')}
                     >
                       {unitLabel(u, 2)}
                     </button>

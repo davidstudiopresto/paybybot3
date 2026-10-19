@@ -148,7 +148,7 @@ function Security() {
           où vous ouvrez PaybyBot, pour les afficher.
         </p>
         <p>
-          Sur votre appareil, PaybyBot retient aussi votre dernière zone, voiture et carte pour pré-remplir le prochain
+          Sur votre appareil, PaybyBot retient aussi votre dernière zone, dernier véhicule et dernière carte pour pré-remplir le prochain
           paiement. Elles ne quittent pas votre navigateur.
         </p>
       </Section>
@@ -331,7 +331,7 @@ function Privacy() {
           de mesure d’audience.
         </p>
         <p>
-          Votre navigateur garde aussi votre dernière zone, voiture et carte (stockage local) pour pré-remplir le prochain
+          Votre navigateur garde aussi votre dernière zone, dernier véhicule et dernière carte (stockage local) pour pré-remplir le prochain
           paiement. Vous pouvez l’effacer depuis les réglages de votre navigateur.
         </p>
       </Section>
@@ -400,7 +400,7 @@ function Terms() {
         <p>
           En utilisant PaybyBot, vous l’autorisez à transmettre en votre nom à PayByPhone les demandes que vous faites
           (paiement, prolongation) et, si vous activez le renouvellement riverain, à prendre automatiquement un nouveau
-          ticket à l’expiration du précédent, avec la voiture, la zone, le tarif, la durée et le moyen de paiement que vous
+          ticket à l’expiration du précédent, avec le véhicule, la zone, le tarif, la durée et le moyen de paiement que vous
           avez choisis, jusqu’à ce que vous l’arrêtiez.
         </p>
         <p>
@@ -431,8 +431,8 @@ function Terms() {
       <Section title="6. Renouvellement riverain">
         <p>
           Une fois activé, le renouvellement paie automatiquement, sans nouvelle confirmation, une semaine au tarif résident
-          à chaque expiration, tant que vous ne l’arrêtez pas. Il ne paie pas si un ticket est déjà en cours pour la même
-          voiture dans la même zone.
+          à chaque expiration, tant que vous ne l’arrêtez pas. Il ne paie pas si un ticket est déjà en cours pour le même
+          véhicule dans la même zone.
         </p>
         <p>
           Vous pouvez le mettre en pause entre deux dates, ou sans date de fin : aucun paiement n’est fait pendant la pause, et

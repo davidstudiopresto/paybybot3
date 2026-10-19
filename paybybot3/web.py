@@ -589,7 +589,7 @@ def notify(details, event, **info):
     if event == "activated" and rule:
         lines = ["Les tickets automatiques sont activés pour %s, %s." % (car, rule_text(rule))]
         if info.get("expire"):
-            lines.append("Un ticket couvre déjà votre voiture jusqu'au %s." % paris_text(info["expire"]))
+            lines.append("Un ticket couvre déjà votre véhicule jusqu'au %s." % paris_text(info["expire"]))
         if info.get("next"):
             lines.append("Prochain ticket : %s." % paris_text(info["next"]))
         lines.append("Rien n'est payé les dimanches et jours fériés, gratuits à Paris.")
@@ -598,7 +598,7 @@ def notify(details, event, **info):
     elif event == "activated":
         lines = ["Le renouvellement automatique de votre forfait résident est activé pour %s." % car]
         if info.get("expire"):
-            lines.append("Votre voiture est couverte jusqu'au %s. Le forfait suivant sera payé automatiquement à "
+            lines.append("Votre véhicule est couvert jusqu'au %s. Le forfait suivant sera payé automatiquement à "
                          "cette date." % paris_text(info["expire"]))
         send_email(to, "Renouvellement activé · %s" % plate_text(details.get("plate")), "Renouvellement activé",
                    lines, open_app)
@@ -1080,7 +1080,7 @@ def pay(body: Parking, pbb_session: str = Cookie(None)):
     def run():
         pending = s.unconfirmed.get((body.plate, body.location))
         if pending and time.time() - pending < 30 * 60:
-            raise HTTPException(423, "Un paiement précédent pour cette voiture dans cette zone n'a pas été confirmé. "
+            raise HTTPException(423, "Un paiement précédent pour ce véhicule dans cette zone n'a pas été confirmé. "
                                      "Vérifiez dans l'application PayByPhone avant de payer à nouveau.")
         if s.call("get_parking_sessions", licensePlate=body.plate, locationId=body.location):
             raise HTTPException(409, "Un stationnement est déjà en cours pour %s dans cette zone." % body.plate)
@@ -1109,7 +1109,7 @@ def extend(body: Extension, pbb_session: str = Cookie(None)):
     def run():
         pending = s.unconfirmed.get((body.plate, body.location))
         if pending and time.time() - pending < 30 * 60:
-            raise HTTPException(423, "Un paiement précédent pour cette voiture dans cette zone n'a pas été confirmé. "
+            raise HTTPException(423, "Un paiement précédent pour ce véhicule dans cette zone n'a pas été confirmé. "
                                      "Vérifiez dans l'application PayByPhone avant de payer à nouveau.")
         before = next((x for x in s.call("get_parking_sessions", licensePlate=body.plate, locationId=body.location)
                        if x.get("parkingSessionId") == body.sessionId), None)

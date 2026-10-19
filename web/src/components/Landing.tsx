@@ -23,7 +23,7 @@ function SiteHeader() {
 
 const STEPS = [
   ['Connectez PayByPhone', 'Avec vos identifiants habituels. Pas de nouveau compte, pas de nouveau mot de passe.'],
-  ['Vérifiez', 'Voiture, zone et carte sont retrouvées dans votre compte PayByPhone. Ajoutez un e-mail si vous voulez.'],
+  ['Vérifiez', 'Véhicule, zone et carte sont retrouvées dans votre compte PayByPhone. Ajoutez un e-mail si vous voulez.'],
   ["C'est tout", 'Le forfait résident est repayé à chaque échéance, même téléphone éteint.'],
 ]
 
@@ -161,7 +161,7 @@ const QUESTIONS: [string, ReactNode][] = [
   [
     'Quelles informations me demandez-vous ?',
     <>
-      Rien de ce que PayByPhone sait déjà : votre numéro, vos voitures et votre carte viennent de votre compte, et votre
+      Rien de ce que PayByPhone sait déjà : votre numéro, vos véhicules et votre carte viennent de votre compte, et votre
       zone de votre historique de stationnement. Il ne reste qu'un e-mail, facultatif, pour les confirmations. Si votre
       zone est introuvable, on vous demande votre adresse, seulement pour la retrouver : elle n'est pas conservée.
     </>,

@@ -128,7 +128,7 @@ export function Dashboard({
               ? sessions.length > 1
                 ? `${sessions.length} tickets en cours.`
                 : 'Votre ticket en cours :'
-              : "Aucune voiture n'est couverte en ce moment."}
+              : "Aucun véhicule n'est couvert en ce moment."}
         </p>
 
         {data && sessions.length > 0 && (

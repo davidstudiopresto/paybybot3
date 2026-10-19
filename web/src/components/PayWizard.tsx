@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
 import { api, ApiError, clock, money, unitLabel, type Money, type Overview, type Parking, type Rate, type Unit } from '@/lib/api'
 
-const STEPS = ['Voiture', 'Zone', 'Tarif', 'Durée', 'Paiement', 'Confirmer'] as const
+const STEPS = ['Véhicule', 'Zone', 'Tarif', 'Durée', 'Paiement', 'Confirmer'] as const
 export const PRESETS: Record<Unit, number[]> = { Days: [1, 2, 3, 7], Hours: [1, 2, 3, 4], Minutes: [15, 30, 45, 60] }
 const LAST_KEY = 'paybybot3:last'
 
@@ -183,7 +183,7 @@ export function PayWizard({
             </p>
           )}
           <p className={ui.subtitle}>
-            Votre voiture <Plate plate={plate} size="sm" className="mx-1 align-middle" /> est en règle jusqu'à{' '}
+            Votre véhicule <Plate plate={plate} size="sm" className="mx-1 align-middle" /> est en règle jusqu'à{' '}
             <strong className="font-bold text-ink">{clock(done.expire)}</strong>.
           </p>
           <button onClick={onPaid} className={cn('mt-10', ui.primary)}>
@@ -221,7 +221,7 @@ export function PayWizard({
 
         {step === 0 && (
           <>
-            <h1 className={cn('mt-2', ui.title)}>Quelle voiture ?</h1>
+            <h1 className={cn('mt-2', ui.title)}>Quel véhicule ?</h1>
             <div className="mt-8 grid gap-3">
               {data.vehicles.map((v) => (
                 <Choice key={v.plate} selected={plate === v.plate} onClick={() => setPlate(v.plate)}>

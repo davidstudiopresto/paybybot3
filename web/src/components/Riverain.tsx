@@ -167,7 +167,7 @@ export function RiverainCard({
           </ul>
         )}
         <button onClick={() => setOpen(true)} className={cn('text-sm', ui.link)}>
-          Renouveler une autre voiture
+          Renouveler un autre véhicule
         </button>
         <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />
       </section>
@@ -263,7 +263,7 @@ function RiverainDialog({
       try {
         const rates = await api.rates(zone, plate)
         const resident = rates.find(isResident)
-        if (!resident) throw new Error("Aucun tarif résident pour cette voiture dans cette zone. Vérifiez votre carte de stationnement résident dans l'application PayByPhone.")
+        if (!resident) throw new Error("Aucun tarif résident pour ce véhicule dans cette zone. Vérifiez votre carte de stationnement résident dans l'application PayByPhone.")
         if (!resident.acceptedTimeUnits.includes('Days')) throw new Error("Le tarif résident de cette zone ne se paie pas à la journée.")
         const q = await api.quote(parking(resident))
         if (!cancelled) {
@@ -324,7 +324,7 @@ function RiverainDialog({
 
         <div className="space-y-6 p-6">
           <div>
-            <p className={ui.label}>Voiture</p>
+            <p className={ui.label}>Véhicule</p>
             <div className="flex flex-wrap gap-2">
               {data.vehicles.map((v) => (
                 <button

@@ -1040,6 +1040,31 @@ def login(body: Login, request: Request, response: Response):
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
+class SignupCheck(BaseModel):
+    username: str = Field(max_length=120)
+
+
+@app.post("/api/signup/check")
+def signup_check(body: SignupCheck, request: Request):
+    """Tell the sign-up page, as soon as the number is typed, that this account is already signed up.
+    Limited per device, since it reveals whether a number uses PaybyBot."""
+    if not HOSTED:
+        return {"exists": False}
+    ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    key = hmac.new(_subkey(_secrets()[0], "rate"), ip.encode(), hashlib.sha256).hexdigest()
+    if not store("rate_hit", p_key="check:" + key, p_window_seconds=900, p_max=20):
+        return {"exists": False}  # too many checks: say nothing, sign-up still refuses at the end
+
+    def exists():
+        for candidate in login_candidates(body.username)[:3]:
+            owner = owner_id(candidate)
+            if store("account_get", p_owner=owner) or store("renewal_list", p_owner=owner):
+                return True
+        return False
+
+    return {"exists": guarded(exists)}
+
+
 # --------------------------------------------------------------------------
 # Sign-up: the e-mail is confirmed with a 6-digit code before the account exists
 # --------------------------------------------------------------------------

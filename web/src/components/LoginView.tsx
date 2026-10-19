@@ -71,6 +71,33 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
   const [noAccount, setNoAccount] = useState(false)
   const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
+  const EXISTS = 'Un compte PaybyBot existe déjà pour ce compte PayByPhone.'
+
+  // Sign-up: say right away, once the number is typed, that it is already signed up.
+  useEffect(() => {
+    if (!signup) return
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 9) {
+      setAccountExists(false)
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const { exists } = await api.signupCheck(phoneUsername(phone, selected.code))
+        if (cancelled) return
+        setAccountExists(exists)
+        
+      } catch {
+        // the final check at "Continuer" still applies
+      }
+    }, 400)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signup, phone, country])
   const selected = COUNTRIES.find((c) => c.id === country) ?? COUNTRIES[0]
   const link = 'text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink'
 
@@ -175,6 +202,14 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
                 />
               </div>
             )}
+            {accountExists && (
+              <p role="alert" className="rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
+                {EXISTS}{' '}
+                <a href="#/connexion" className="font-bold underline underline-offset-[3px]">
+                  Se connecter
+                </a>
+              </p>
+            )}
 
 
             <div className={fieldBox}>
@@ -262,7 +297,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
             </p>
           )}
 
-          {error && (
+          {error && !accountExists && (
             <p role="alert" className="mt-5 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
               {error}
               {noAccount && (
@@ -273,20 +308,12 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
                   </a>
                 </>
               )}
-              {accountExists && (
-                <>
-                  {' '}
-                  <a href="#/connexion" className="font-bold underline underline-offset-[3px]">
-                    Se connecter
-                  </a>
-                </>
-              )}
             </p>
           )}
 
           <button
             type="submit"
-            disabled={loading !== null || (signup && (!accepted || !signupZone))}
+            disabled={loading !== null || (signup && (!accepted || !signupZone || accountExists))}
             className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}

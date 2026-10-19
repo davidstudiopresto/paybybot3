@@ -62,6 +62,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
   const selected = COUNTRIES.find((c) => c.id === country) ?? COUNTRIES[0]
@@ -185,17 +186,40 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
           </div>
 
 
-          <p className="mt-6 text-sm leading-relaxed text-ink/50">
-            En cliquant sur « {signup ? 'Continuer' : 'Se connecter'} », j'accepte les{' '}
-            <a href="#/cgu" target="_blank" rel="noopener" className={link}>
-              conditions d'utilisation
-            </a>{' '}
-            et la{' '}
-            <a href="#/confidentialite" target="_blank" rel="noopener" className={link}>
-              politique de confidentialité
-            </a>
-            .
-          </p>
+          {signup ? (
+            <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-ink/70">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={(e) => setAccepted(e.target.checked)}
+                required
+                className="mt-0.5 size-5 shrink-0 accent-[var(--eu)]"
+              />
+              <span>
+                J'accepte les{' '}
+                <a href="#/cgu" target="_blank" rel="noopener" className={link}>
+                  conditions d'utilisation
+                </a>{' '}
+                et la{' '}
+                <a href="#/confidentialite" target="_blank" rel="noopener" className={link}>
+                  politique de confidentialité
+                </a>
+                .
+              </span>
+            </label>
+          ) : (
+            <p className="mt-6 text-sm leading-relaxed text-ink/50">
+              En cliquant sur « Se connecter », j'accepte les{' '}
+              <a href="#/cgu" target="_blank" rel="noopener" className={link}>
+                conditions d'utilisation
+              </a>{' '}
+              et la{' '}
+              <a href="#/confidentialite" target="_blank" rel="noopener" className={link}>
+                politique de confidentialité
+              </a>
+              .
+            </p>
+          )}
 
           {error && (
             <p role="alert" className="mt-5 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
@@ -205,7 +229,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
 
           <button
             type="submit"
-            disabled={loading !== null}
+            disabled={loading !== null || (signup && !accepted)}
             className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-eu text-lg font-bold text-white transition hover:bg-eu/90 active:scale-[0.99] disabled:opacity-60"
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}

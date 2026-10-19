@@ -34,51 +34,69 @@ const STEPS = [
   ["C'est tout", 'Le forfait résident est repayé à chaque échéance, même téléphone éteint.'],
 ]
 
+/** What the dashboard looks like once the renewal runs: a ticket that renews itself. */
+function Preview() {
+  return (
+    <div className="relative mx-auto w-full max-w-[28rem]" aria-hidden>
+      <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-eu/[0.05] sm:-inset-10" />
+      <div className="rounded-2xl border border-border bg-white p-6 shadow-[0_24px_60px_-28px_rgb(30_42_94/0.35)]">
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-3">
+            <Plate plate="AB123CD" size="sm" />
+            <ZonePlate zone="75017" />
+          </span>
+          <span className="text-sm text-muted-foreground">9,00 €</span>
+        </div>
+        <p className="mt-6 font-heading text-[2.8rem] leading-none font-bold tracking-tight tabular-nums">6 j 23 h</p>
+        <p className="mt-2 text-muted-foreground">jusqu'au lundi 26 octobre, 9h00</p>
+        <div className="mt-6 h-1 overflow-hidden rounded-full bg-muted">
+          <div className="h-full w-[97%] rounded-full bg-eu" />
+        </div>
+        <p className="mt-5 flex items-center gap-2 text-sm text-ink/70">
+          <Repeat className="size-4 text-eu" /> Renouvelé automatiquement à la fin
+        </p>
+      </div>
+      <p className="mt-5 text-center text-sm text-ink/45">Votre tableau de bord, une fois inscrit</p>
+    </div>
+  )
+}
+
 /** Public home page: one message, the automatic renewal. */
 export function Landing({ hosted }: { hosted: boolean }) {
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-[12vh] pb-20">
-        <section className="rise">
-          <h1 className={ui.title}>Votre forfait riverain se renouvelle tout seul.</h1>
-          <p className={ui.subtitle}>
-            paybybot repaie votre forfait résident PayByPhone à chaque échéance. Plus d'oubli, plus d'amende.
-          </p>
-
-          {/* What it looks like once set up */}
-          <div className="mt-9 rounded-2xl border border-border p-5" aria-hidden>
-            <span className="flex items-center gap-3">
-              <Plate plate="AB123CD" size="sm" />
-              <ZonePlate zone="75017" />
-            </span>
-            <p className="mt-4 flex items-center gap-2 text-ink/70">
-              <Repeat className="size-4 text-eu" /> Renouvelé automatiquement chaque semaine
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-[10vh] pb-24 sm:px-8 lg:pt-[14vh]">
+        <section className="rise grid items-center gap-12 lg:grid-cols-[1.45fr_1fr] lg:gap-16">
+          <div className="max-w-[40rem]">
+            <h1 className={cn(ui.title, 'lg:text-[3.75rem] lg:leading-[1.03]')}>Votre forfait riverain se renouvelle tout seul.</h1>
+            <p className={cn(ui.subtitle, 'lg:mt-5 lg:text-xl')}>
+              paybybot repaie votre forfait résident PayByPhone à chaque échéance. Plus d'oubli, plus d'amende.
+            </p>
+            <a href="#/inscription" className={cn('mt-9 lg:max-w-sm', ui.primary)}>
+              S'inscrire <ArrowRight className="size-5" />
+            </a>
+            <p className="mt-4 text-center text-sm text-ink/50 lg:max-w-sm">
+              Déjà inscrit ?{' '}
+              <a href="#/connexion" className={ui.link}>
+                Se connecter
+              </a>
             </p>
           </div>
-
-          <a href="#/inscription" className={cn('mt-8', ui.primary)}>
-            S'inscrire <ArrowRight className="size-5" />
-          </a>
-          <p className="mt-4 text-center text-sm text-ink/50">
-            Déjà inscrit ?{' '}
-            <a href="#/connexion" className={ui.link}>
-              Se connecter
-            </a>
-          </p>
+          <Preview />
         </section>
 
-        <section className="mt-20">
-          <h2 className="font-heading text-xl font-bold">Comment ça marche</h2>
-          <ol className="mt-5 space-y-5">
+        <section className="mt-24 lg:mt-36">
+          <h2 className="font-heading text-xl font-bold lg:text-2xl">Comment ça marche</h2>
+          <ol className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-10">
             {STEPS.map(([title, text], i) => (
-              <li key={title} className="flex gap-4">
+              <li key={title} className="flex gap-4 lg:flex-col lg:gap-4 lg:border-t lg:border-border lg:pt-6">
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-eu/[0.08] font-heading font-bold text-eu">
                   {i + 1}
                 </span>
                 <span>
-                  <strong className="block text-ink">{title}</strong>
+                  <strong className="block text-ink lg:text-lg">{title}</strong>
                   <span className="text-ink/60">{text}</span>
                 </span>
               </li>
@@ -86,12 +104,19 @@ export function Landing({ hosted }: { hosted: boolean }) {
           </ol>
         </section>
 
-        <section className="mt-16">
-          <h2 className="font-heading text-xl font-bold">Questions fréquentes</h2>
-          <Faq className="mt-3" limit={4} />
-          <a href="#/faq" className={cn('mt-4 inline-block text-sm', ui.link)}>
-            Toutes les questions
-          </a>
+        <section className="mt-20 grid gap-6 lg:mt-32 lg:grid-cols-[1fr_2fr] lg:gap-20">
+          <div>
+            <h2 className="font-heading text-xl font-bold lg:text-2xl">Questions fréquentes</h2>
+            <a href="#/faq" className={cn('mt-3 hidden text-sm lg:inline-block', ui.link)}>
+              Toutes les questions
+            </a>
+          </div>
+          <div>
+            <Faq limit={4} />
+            <a href="#/faq" className={cn('mt-4 inline-block text-sm lg:hidden', ui.link)}>
+              Toutes les questions
+            </a>
+          </div>
         </section>
       </main>
 

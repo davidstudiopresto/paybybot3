@@ -160,7 +160,7 @@ const FAQ_TITLE = 'Questions fréquentes.'
 
 function FaqTitle({ as: Tag = 'h1' }: { as?: 'h1' | 'h2' }) {
   return (
-    <Tag className="text-center font-heading text-[2.2rem] leading-[1.05] font-bold tracking-[-0.03em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+    <Tag className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
       {FAQ_TITLE}
     </Tag>
   )

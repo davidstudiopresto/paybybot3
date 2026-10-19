@@ -2,13 +2,15 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/overpass";
-@import "@fontsource-variable/atkinson-hyperlegible-next";
+@import "@fontsource-variable/figtree";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: 'Overpass Variable', sans-serif;
-    --font-sans: 'Atkinson Hyperlegible Next Variable', sans-serif;
+    /* Figtree everywhere (soft and round, like Meta AI); Overpass only for plates, zones and the P sign. */
+    --font-heading: 'Figtree Variable', sans-serif;
+    --font-sans: 'Figtree Variable', sans-serif;
+    --font-plate: 'Overpass Variable', sans-serif;
     --color-eu: var(--eu);
     --color-signal: var(--signal);
     --color-signal-deep: var(--signal-deep);

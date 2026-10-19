@@ -15,7 +15,7 @@ export const ui = {
     'h-14 w-full rounded-xl border border-ink/20 bg-white px-4 text-lg text-ink outline-none transition placeholder:text-ink/30 focus:border-eu focus:ring-3 focus:ring-eu/15',
   /** Field label. */
   label: 'mb-2 block text-sm font-bold text-ink/60',
-  title: 'font-heading text-[2.2rem] leading-[1.05] font-bold tracking-[-0.03em] text-ink sm:text-[2.6rem]',
+  title: 'font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem]',
   subtitle: 'mt-3 text-[1.05rem] leading-relaxed text-ink/60',
   /** Dialog content shell and its plain header. */
   dialog: 'max-h-[calc(100dvh-1.5rem)] gap-0 overflow-y-auto rounded-2xl bg-white p-0 sm:max-w-md',

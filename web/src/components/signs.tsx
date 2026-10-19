@@ -8,7 +8,7 @@ export function Plate({ plate, size = 'md', className }: { plate: string; size?:
   return (
     <span
       className={cn(
-        'inline-flex items-stretch overflow-hidden rounded-[6px] border-2 border-ink bg-white font-heading font-extrabold tracking-[0.06em] text-ink shadow-[0_2px_0_var(--ink)]',
+        'inline-flex items-stretch overflow-hidden rounded-[6px] border-2 border-ink bg-white font-plate font-extrabold tracking-[0.06em] text-ink shadow-[0_2px_0_var(--ink)]',
         size === 'sm' && 'h-7 text-sm',
         size === 'md' && 'h-10 text-xl',
         size === 'lg' && 'h-14 text-3xl',
@@ -34,7 +34,7 @@ export function ZonePlate({ zone, className }: { zone: string; className?: strin
   return (
     <span className={cn('inline-flex items-baseline gap-1.5 text-ink', className)}>
       <span className="text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">Zone</span>
-      <span className="font-heading text-base font-bold tabular-nums">{zone}</span>
+      <span className="font-plate text-base font-bold tabular-nums">{zone}</span>
     </span>
   )
 }
@@ -44,7 +44,7 @@ export function ParkingSign({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        'grid size-11 place-items-center rounded-[10px] bg-eu font-heading text-[28px] leading-none font-black text-white shadow-[inset_0_0_0_3px_var(--eu),inset_0_0_0_5px_#fff]',
+        'grid size-11 place-items-center rounded-[10px] bg-eu font-plate text-[28px] leading-none font-black text-white shadow-[inset_0_0_0_3px_var(--eu),inset_0_0_0_5px_#fff]',
         className,
       )}
       aria-hidden

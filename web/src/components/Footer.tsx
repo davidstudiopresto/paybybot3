@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils'
 
-const REPO_URL = 'https://github.com/davidstudiopresto/paybybot3/tree/web-interface'
 const LINKS = [
   ['#/securite', 'Sécurité et données'],
   ['#/confidentialite', 'Confidentialité'],
@@ -19,24 +18,14 @@ export function HostedFooter({ className, hosted = true }: { className?: string;
           </a>
         ))}
       </nav>
-      <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-        {hosted && (
-          <>
-            <span className="inline-flex items-center gap-1.5">
-              <svg viewBox="0 0 76 65" className="size-3" aria-hidden>
-                <path d="M37.5 0 75 65H0z" fill="currentColor" />
-              </svg>
-              Hébergé sur Vercel, à Paris
-            </span>
-            <span aria-hidden>·</span>
-          </>
-        )}
-        <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline-offset-4 hover:text-ink hover:underline">
-          Projet open source
-        </a>
-        <span aria-hidden>·</span>
-        <span>Service non officiel, indépendant de PayByPhone</span>
-      </p>
+      {hosted && (
+        <p className="flex items-center justify-center gap-1.5">
+          <svg viewBox="0 0 76 65" className="size-3" aria-hidden>
+            <path d="M37.5 0 75 65H0z" fill="currentColor" />
+          </svg>
+          Hébergé sur Vercel, à Paris
+        </p>
+      )}
     </footer>
   )
 }

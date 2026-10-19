@@ -55,7 +55,7 @@ function phoneUsername(national: string, code: string) {
 const fieldBox =
   'flex h-14 items-center rounded-xl border border-ink/20 bg-white transition focus-within:border-eu focus-within:ring-3 focus-within:ring-eu/15'
 
-export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; hosted: boolean }) {
+export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: Me) => void; hosted: boolean; signup?: boolean }) {
   const [mode, setMode] = useState<'phone' | 'email'>('phone')
   const [country, setCountry] = useState<(typeof COUNTRIES)[number]['id']>('FR')
   const [phone, setPhone] = useState('')
@@ -84,10 +84,10 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <header className="px-6 pt-6 sm:px-8 sm:pt-8">
-        <span className="inline-flex items-center gap-2.5">
+        <a href="#/" aria-label="paybybot, accueil" className="inline-flex items-center gap-2.5">
           <ParkingSign className="size-9 rounded-[8px] text-[22px]" />
           <span className="font-heading text-xl font-black tracking-tight">paybybot</span>
-        </span>
+        </a>
       </header>
 
       <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center sm:pt-0">
@@ -99,10 +99,10 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
           }}
         >
           <h1 className="font-heading text-[2.6rem] leading-[1.05] font-bold tracking-[-0.03em] text-ink">
-            Connexion à paybybot
+            {signup ? 'Inscription' : 'Connexion à paybybot'}
           </h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
-            Avec votre compte PayByPhone.{' '}
+            {signup ? 'Avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.'}{' '}
             {hosted ? 'Aucune donnée conservée, mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}{' '}
             <a href="#/securite" target="_blank" rel="noopener" className={link}>
               En savoir plus
@@ -186,7 +186,7 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
 
 
           <p className="mt-6 text-sm leading-relaxed text-ink/50">
-            En cliquant sur « Se connecter », j'accepte les{' '}
+            En cliquant sur « {signup ? 'Continuer' : 'Se connecter'} », j'accepte les{' '}
             <a href="#/cgu" target="_blank" rel="noopener" className={link}>
               conditions d'utilisation
             </a>{' '}
@@ -208,10 +208,28 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
             disabled={loading !== null}
             className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-eu text-lg font-bold text-white transition hover:bg-eu/90 active:scale-[0.99] disabled:opacity-60"
           >
-            {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>Se connecter <ArrowRight className="size-5" /></>}
+            {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}
           </button>
 
-          <p className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-ink/50">
+          <p className="mt-6 text-center text-sm text-ink/50">
+            {signup ? (
+              <>
+                Déjà inscrit ?{' '}
+                <a href="#/connexion" className={link}>
+                  Se connecter
+                </a>
+              </>
+            ) : (
+              <>
+                Pas encore inscrit ?{' '}
+                <a href="#/inscription" className={link}>
+                  S'inscrire
+                </a>
+              </>
+            )}
+          </p>
+
+          <p className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-ink/50">
             <button type="button" onClick={() => setMode((m) => (m === 'phone' ? 'email' : 'phone'))} className={link}>
               {mode === 'phone' ? 'Utiliser un e-mail' : 'Utiliser un numéro'}
             </button>

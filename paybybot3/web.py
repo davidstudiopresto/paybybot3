@@ -112,8 +112,8 @@ class DemoBot:
 
     def _price(self, ratePolicyId, quantity, unit):
         quantity = float(quantity)
-        if str(ratePolicyId) == "101":
-            return round(1.5 * quantity, 2)
+        if str(ratePolicyId) == "101":  # Paris resident rate: 1.50 € a day, 9 € a week
+            return round(9 * (quantity // 7) + 1.5 * (quantity % 7), 2)
         hours = quantity / 60 if unit == "Minutes" else quantity
         return round(4.0 * hours, 2)
 
@@ -1200,6 +1200,46 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     else:
         threading.Thread(target=lambda: guarded(lambda: run_autopilot(s, ap)), daemon=True).start()
     return ap
+
+
+@app.get("/api/resident-zone")
+def resident_zone(pbb_session: str = Cookie(None)):
+    """Guess the home zone from PayByPhone's history: the last ticket of almost a day or more is a resident one."""
+    s = current(pbb_session)
+
+    def find():
+        for x in s.call("get_past_sessions", limit=30) + s.call("get_parking_sessions"):
+            start, end = parse_dt(x.get("startTime")), parse_dt(x.get("expireTime"))
+            if start and end and end - start >= timedelta(hours=20) and x.get("locationId"):
+                return {"zone": str(x["locationId"])}
+        return {"zone": None}
+
+    return guarded(find)
+
+
+class AddressQuery(BaseModel):
+    q: str = Field(max_length=200)
+
+
+@app.post("/api/address")
+def address_search(body: AddressQuery, pbb_session: str = Cookie(None)):
+    """Address autocomplete through the French State's address service (Géoplateforme), relayed so the
+    browser talks to paybybot only. Sent in a POST body so it never shows in URL logs; only used to find the
+    zone, neither logged nor stored."""
+    current(pbb_session)
+    q = body.q.strip()[:120]
+    if len(q) < 3:
+        return []
+    try:
+        r = requests.get("https://data.geopf.fr/geocodage/search",
+                         params={"q": q, "autocomplete": 1, "limit": 5, "index": "address"}, timeout=5)
+        r.raise_for_status()
+        features = r.json().get("features", [])
+    except Exception as e:
+        log.warning("address search failed: %s", type(e).__name__)
+        raise HTTPException(502, "La recherche d'adresse ne répond pas. Tapez votre code postal à la place.")
+    return [{"label": f["properties"].get("label"), "postcode": f["properties"].get("postcode")}
+            for f in features if f.get("properties", {}).get("postcode")]
 
 
 def update_own_renewal(s, ap_id, patch):

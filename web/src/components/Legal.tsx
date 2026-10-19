@@ -300,6 +300,11 @@ function Privacy() {
             <strong>Resend Inc.</strong>, pour l’envoi des e-mails de confirmation, depuis l’Irlande, sans suivi
             d’ouverture ni de clic. Il reçoit votre adresse et le contenu du message, uniquement au moment de l’envoi.
           </li>
+          <li>
+            <strong>Géoplateforme (IGN, État français)</strong>, pour la recherche d’adresse, seulement si votre zone
+            n’a pas pu être retrouvée dans votre historique PayByPhone. paybybot relaie ce que vous tapez, sans le
+            conserver ni l’inscrire dans ses journaux, et ne garde que la zone qui en découle.
+          </li>
         </ul>
         <p>
           Vercel, Supabase et Resend sont des sociétés américaines. Les données sont hébergées et traitées dans l’Union européenne,

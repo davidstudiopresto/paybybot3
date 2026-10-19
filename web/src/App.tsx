@@ -3,10 +3,18 @@ import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import { Dashboard } from '@/components/Dashboard'
 import { LoginView } from '@/components/LoginView'
+import { FaqView, Landing } from '@/components/Landing'
 import { PayWizard } from '@/components/PayWizard'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { ParkingSign } from '@/components/signs'
-import { api, ApiError, type Me, type Overview } from '@/lib/api'
+import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
+
+type Route = 'faq' | 'connexion' | 'inscription' | null
+
+function routeFromHash(hash: string): Route {
+  const id = hash.replace(/^#\/?/, '')
+  return id === 'faq' || id === 'connexion' || id === 'inscription' ? id : null
+}
 
 export default function App() {
   const [me, setMe] = useState<Me | null | undefined>(undefined)
@@ -14,10 +22,15 @@ export default function App() {
   const [paying, setPaying] = useState(false)
   const [hosted, setHosted] = useState(false)
   const [legal, setLegal] = useState<LegalPage | null>(() => legalPageFromHash(window.location.hash))
+  const [route, setRoute] = useState(() => routeFromHash(window.location.hash))
+  // Right after "S'inscrire": open the renewal setup on the dashboard.
+  const [onboarding, setOnboarding] = useState(false)
+  const [zoneReady, setZoneReady] = useState(true)
 
   useEffect(() => {
     const onHash = () => {
       setLegal(legalPageFromHash(window.location.hash))
+      setRoute(routeFromHash(window.location.hash))
       window.scrollTo(0, 0)
     }
     window.addEventListener('hashchange', onHash)
@@ -48,6 +61,7 @@ export default function App() {
   async function logout() {
     await api.logout().catch(() => {})
     setData(null)
+    forgetZoneLookup()
     setMe(null)
   }
 
@@ -60,11 +74,46 @@ export default function App() {
         <div className="grid min-h-dvh place-items-center">
           <ParkingSign className="animate-pulse" />
         </div>
+      ) : route === 'faq' ? (
+        <FaqView hosted={hosted} />
       ) : me === null ? (
-        <LoginView onLogin={setMe} hosted={hosted} />
+        route === 'connexion' || route === 'inscription' ? (
+          <LoginView
+            signup={route === 'inscription'}
+            hosted={hosted}
+            onLogin={(m) => {
+              forgetZoneLookup()
+              if (route === 'inscription') {
+                setOnboarding(true)
+                setZoneReady(false)
+                api.residentZone().finally(() => setZoneReady(true))
+              }
+              history.replaceState(null, '', window.location.pathname)
+              setRoute(null)
+              setMe(m)
+            }}
+          />
+        ) : (
+          <Landing hosted={hosted} />
+        )
+      ) : onboarding && (!data || !zoneReady) ? (
+        <div className="grid min-h-dvh place-items-center bg-white px-6">
+          <div className="rise flex flex-col items-center gap-6 text-center">
+            <ParkingSign className="animate-pulse" />
+            <p className="max-w-64 text-lg text-ink/70">Récupération de vos paramètres PayByPhone…</p>
+          </div>
+        </div>
       ) : (
         <>
-          <Dashboard me={me} data={data} onRefresh={refresh} onPay={() => setPaying(true)} onLogout={logout} />
+          <Dashboard
+            me={me}
+            data={data}
+            onRefresh={refresh}
+            onPay={() => setPaying(true)}
+            onLogout={logout}
+            onboarding={onboarding}
+            onOnboarded={() => setOnboarding(false)}
+          />
           {paying && data && (
             <PayWizard
               data={data}

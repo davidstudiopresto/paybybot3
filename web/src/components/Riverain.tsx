@@ -119,13 +119,25 @@ export function RiverainCard({
   onChanged,
   hosted = false,
   demo = false,
+  autoOpen = false,
+  onAutoOpened,
 }: {
   data: Overview | null
   onChanged: () => void
   hosted?: boolean
   demo?: boolean
+  /** Open the setup right away (just signed up). */
+  autoOpen?: boolean
+  onAutoOpened?: () => void
 }) {
   const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (autoOpen && data) {
+      setOpen(true)
+      onAutoOpened?.()
+    }
+  }, [autoOpen, data, onAutoOpened])
   const weekly = data?.autopilots.filter(isWeekly) ?? []
 
   if (weekly.length && data) {
@@ -197,6 +209,7 @@ function RiverainDialog({
 }) {
   const [plate, setPlate] = useState('')
   const [zone, setZone] = useState('')
+  const [zoneFromHistory, setZoneFromHistory] = useState(false)
   const [payment, setPayment] = useState('')
   const [email, setEmail] = useState('')
   const [rate, setRate] = useState<Rate | null>(null)
@@ -213,6 +226,19 @@ function RiverainDialog({
     const plates = data.vehicles.map((v) => v.plate)
     setPlate(plates.find((p) => p === last.plate && !covered.has(p)) ?? plates.find((p) => !covered.has(p)) ?? plates[0] ?? '')
     setZone(last.location ?? '')
+    setZoneFromHistory(false)
+    if (!last.location) {
+      // No zone known on this device: the PayByPhone history usually tells it.
+      api.residentZone().then(
+        (r) => {
+          if (r.zone) {
+            setZone((z) => z || r.zone!)
+            setZoneFromHistory(true)
+          }
+        },
+        () => {},
+      )
+    }
     setPayment(data.payments.find((p) => p.id === last.paymentAccountId)?.id ?? data.payments[0]?.id ?? '')
   }, [open, data])
 
@@ -313,22 +339,14 @@ function RiverainDialog({
             </div>
           </div>
 
-          <div>
-            <label htmlFor="riverain-zone" className={ui.label}>
-              Zone de votre domicile <span className="font-normal">(à Paris, votre code postal)</span>
-            </label>
-            <div className="flex items-center gap-4">
-              <input
-                id="riverain-zone"
-                inputMode="numeric"
-                placeholder="75015"
-                value={zone}
-                onChange={(e) => setZone(e.target.value.replace(/\s/g, ''))}
-                autoFocus={!zone}
-                className={cn(ui.field, 'max-w-40 font-heading font-bold tracking-[0.08em] tabular-nums')}
-              />
-            </div>
-          </div>
+          <ZoneField
+            zone={zone}
+            fromHistory={zoneFromHistory}
+            onZone={(z) => {
+              setZone(z)
+              setZoneFromHistory(false)
+            }}
+          />
 
           {!data.payments.length && <NoPayment compact onRefresh={async () => onDone()} />}
 
@@ -400,7 +418,7 @@ function RiverainDialog({
                 </li>
               </ul>
             ) : (
-              <p className="text-muted-foreground">Tapez le numéro de zone pour voir le prix.</p>
+              <p className="text-muted-foreground">Indiquez votre adresse pour voir le prix.</p>
             )}
           </div>
 
@@ -415,6 +433,109 @@ function RiverainDialog({
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** The home zone: shown when known (history, last payment), else found from the address. */
+function ZoneField({ zone, fromHistory, onZone }: { zone: string; fromHistory: boolean; onZone: (zone: string) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<{ label: string; postcode: string }[]>([])
+  const [searching, setSearching] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const open = editing || !zone
+
+  useEffect(() => {
+    const q = query.trim()
+    setError(null)
+    if (/^\d{5}$/.test(q)) {
+      setResults([{ label: `Code postal ${q}`, postcode: q }])
+      return
+    }
+    if (q.length < 4) {
+      setResults([])
+      return
+    }
+    let cancelled = false
+    setSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const found = await api.searchAddress(q)
+        if (!cancelled) setResults(found)
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message)
+      } finally {
+        if (!cancelled) setSearching(false)
+      }
+    }, 250)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [query])
+
+  if (!open) {
+    return (
+      <div>
+        <p className={ui.label}>Zone de votre domicile</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-3">
+            <ZonePlate zone={zone} />
+            {fromHistory && <span className="text-sm text-ink/50">d'après votre historique</span>}
+          </span>
+          <button onClick={() => setEditing(true)} className={cn('text-sm', ui.link)}>
+            Changer
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <label htmlFor="riverain-address" className={ui.label}>
+        Votre adresse <span className="font-normal">(pour trouver votre zone, non conservée)</span>
+      </label>
+      <div className="relative">
+        <input
+          id="riverain-address"
+          autoComplete="street-address"
+          placeholder="12 rue de Lévis, Paris"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          autoFocus
+          className={cn(ui.field, 'h-12 pr-10 text-base')}
+        />
+        {searching && <Loader2 className="absolute top-3.5 right-3.5 size-5 animate-spin text-ink/30" />}
+      </div>
+      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+      {results.length > 0 && (
+        <ul className="mt-2 overflow-hidden rounded-xl border border-ink/15" role="listbox" aria-label="Adresses trouvées">
+          {results.map((r) => (
+            <li key={r.label}>
+              <button
+                role="option"
+                aria-selected={false}
+                onClick={() => {
+                  onZone(r.postcode)
+                  setQuery('')
+                  setEditing(false)
+                }}
+                className="flex w-full items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 text-left last:border-b-0 hover:bg-muted"
+              >
+                <span className="truncate">{r.label}</span>
+                <span className="shrink-0 text-sm font-bold text-ink/50">{r.postcode}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {zone && (
+        <button onClick={() => setEditing(false)} className={cn('mt-2 text-sm', ui.link)}>
+          Garder la zone {zone}
+        </button>
+      )}
+    </div>
   )
 }
 

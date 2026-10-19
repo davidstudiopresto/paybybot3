@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, Plus, Repeat } from 'lucide-react'
+import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Plus, Power, Repeat, ShieldCheck } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { Plate, ZonePlate } from '@/components/signs'
@@ -54,6 +54,46 @@ function Preview() {
   )
 }
 
+const GUARANTEES = [
+  [Lock, 'Mot de passe jamais enregistré', 'Il sert seulement à vous connecter à PayByPhone. Il n’est écrit nulle part.'],
+  [CreditCard, 'Aucun numéro de carte', 'Le paiement est fait par PayByPhone, avec la carte de votre compte, au même tarif que dans l’application.'],
+  [KeyRound, 'Tout est chiffré', 'Le peu qui est gardé pour le renouvellement est chiffré, avec une clé différente pour chaque usage.'],
+  [MapPin, 'Hébergé à Paris', 'Serveurs et base de données en France, dans l’Union européenne.'],
+  [EyeOff, 'Aucun traceur', 'Ni publicité, ni revente de données, ni outil de mesure d’audience.'],
+  [Power, 'Vous gardez la main', 'Vos tickets restent dans l’application PayByPhone. Un clic pour tout arrêter et tout effacer.'],
+] as const
+
+/** What makes paybybot safe to hand a PayByPhone login to: only claims the security page backs up. */
+function Security() {
+  return (
+    <section className="mt-24 lg:mt-36">
+      <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+        Vos données, protégées.
+      </h2>
+      <p className="mx-auto mt-4 max-w-[36rem] text-center text-[1.05rem] text-ink/60 lg:text-lg">
+        paybybot agit sur votre compte PayByPhone sans jamais garder votre mot de passe ni votre carte.
+      </p>
+      <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-ink/10 bg-ink/10 sm:grid-cols-2 lg:grid-cols-3">
+        {GUARANTEES.map(([Icon, title, text]) => (
+          <li key={title} className="bg-white p-6 lg:p-8">
+            <span className="grid size-10 place-items-center rounded-full bg-eu/[0.08] text-eu">
+              <Icon className="size-5" />
+            </span>
+            <strong className="mt-4 block text-lg font-semibold text-ink">{title}</strong>
+            <span className="mt-1 block text-ink/60">{text}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-6 flex flex-col items-center gap-2 text-center text-sm text-ink/55 sm:flex-row sm:justify-center sm:gap-4">
+        <span>Édité par Studio Presto, société française basée à Paris.</span>
+        <a href="#/securite" className={ui.link}>
+          Tout le détail sur la sécurité
+        </a>
+      </p>
+    </section>
+  )
+}
+
 /** Public home page: one message, the automatic renewal. */
 export function Landing({ hosted }: { hosted: boolean }) {
   return (
@@ -76,6 +116,13 @@ export function Landing({ hosted }: { hosted: boolean }) {
                 Se connecter
               </a>
             </p>
+            <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink/65" aria-label="Garanties">
+              {['Mot de passe jamais enregistré', 'Hébergé à Paris', 'Aucun traceur'].map((t) => (
+                <li key={t} className="flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-eu" /> {t}
+                </li>
+              ))}
+            </ul>
           </div>
           <Preview />
         </section>
@@ -96,6 +143,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
             ))}
           </ol>
         </section>
+
+        <Security />
 
         <section id="faq" className="mt-24 lg:mt-36">
           <FaqTitle as="h2" />

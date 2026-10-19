@@ -88,8 +88,8 @@ const post = <T>(path: string, body?: unknown) =>
 export const api = {
   config: () => request<{ hosted: boolean }>('/api/config'),
   me: () => request<Me>('/api/me'),
-  login: (username: string, password: string, accepted = false, signup?: { email: string }) =>
-    post<Me>('/api/login', { username, password, accepted, ...(signup ? { signup: true, email: signup.email } : {}) }),
+  login: (username: string, password: string, accepted = false, signup?: { email: string; zone: string }) =>
+    post<Me>('/api/login', { username, password, accepted, ...(signup ? { signup: true, ...signup } : {}) }),
   account: () => request<Account>('/api/account'),
   updateAccount: (patch: Partial<Account>) =>
     request<Account>('/api/account', { method: 'PUT', body: JSON.stringify(patch) }),

@@ -28,9 +28,27 @@ class Account(unittest.TestCase):
         self.assertEqual(send.call_args.args[0], "a@b.fr")
         self.assertEqual(self.s.account, {})
 
-    def test_sign_up_needs_an_email(self):
+    def test_sign_up_needs_an_email_and_a_zone(self):
         with self.assertRaises(HTTPException):
-            web.login(web.Login(username="+33612345678", password="x", signup=True), None, Response())
+            web.login(web.Login(username="+33612345678", password="x", signup=True, zone="75017"), None, Response())
+        with self.assertRaises(HTTPException):
+            web.login(web.Login(username="+33612345678", password="x", signup=True, email="a@b.fr"), None, Response())
+
+    def test_sign_up_refused_when_the_account_exists(self):
+        web.update_account(web.AccountPatch(email="a@b.fr"), "t")
+        self.assertTrue(web.has_account(self.s))
+        with patch.object(web, "UserSession", return_value=self.s), self.assertRaises(HTTPException) as e:
+            web.login(web.Login(username="+33612345678", password="x", signup=True, email="c@d.fr", zone="75017"),
+                      None, Response())
+        self.assertEqual(e.exception.status_code, 409)
+
+    def test_sign_up_saves_email_and_zone(self):
+        fresh = web.UserSession("demo", "", demo=True)
+        fresh.demo = False
+        with patch.object(web, "UserSession", return_value=fresh):
+            web.login(web.Login(username="+33612345678", password="x", signup=True, email="c@d.fr", zone="75017"),
+                      None, Response())
+        self.assertEqual(fresh.account, {"email": "c@d.fr", "zone": "75017"})
 
 
 if __name__ == "__main__":

@@ -397,7 +397,17 @@ function RiverainDialog({
 }
 
 /** The home zone: shown when known (history, last payment), else found from the address. */
-export function ZoneField({ zone, fromHistory, onZone }: { zone: string; fromHistory: boolean; onZone: (zone: string) => void }) {
+export function ZoneField({
+  zone,
+  fromHistory,
+  onZone,
+  autoFocus = true,
+}: {
+  zone: string
+  fromHistory: boolean
+  onZone: (zone: string) => void
+  autoFocus?: boolean
+}) {
   const [editing, setEditing] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<{ label: string; postcode: string }[]>([])
@@ -463,7 +473,7 @@ export function ZoneField({ zone, fromHistory, onZone }: { zone: string; fromHis
           placeholder="12 rue de Lévis, Paris"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          autoFocus
+          autoFocus={autoFocus}
           className={cn(ui.field, 'h-12 pr-10 text-base')}
         />
         {searching && <Loader2 className="absolute top-3.5 right-3.5 size-5 animate-spin text-ink/30" />}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ArrowRight, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { TopBar } from '@/components/TopBar'
+import { ZoneField } from '@/components/Riverain'
 import { ui } from '@/lib/styles'
 import { api, type Me } from '@/lib/api'
 
@@ -63,6 +64,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
+  const [signupZone, setSignupZone] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -77,7 +79,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
       const username = demo ? 'demo' : mode === 'phone' ? phoneUsername(phone, selected.code) : email.trim()
       // Clicking "Se connecter" is the acceptance of the terms and privacy policy, stated right above it.
       onLogin(
-        await api.login(username, demo ? 'demo' : password, !demo, signup && !demo ? { email: signupEmail.trim() } : undefined),
+        await api.login(username, demo ? 'demo' : password, !demo, signup && !demo ? { email: signupEmail.trim(), zone: signupZone } : undefined),
       )
     } catch (e) {
       setError((e as Error).message)
@@ -211,7 +213,12 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
             )}
           </div>
           {signup && (
-            <p className="mt-2 text-sm text-ink/50">Pour les confirmations de paiement et les alertes. Gardé chiffré.</p>
+            <>
+              <p className="mt-2 text-sm text-ink/50">Pour les confirmations de paiement et les alertes. Gardé chiffré.</p>
+              <div className="mt-6">
+                <ZoneField zone={signupZone} fromHistory={false} onZone={setSignupZone} autoFocus={false} />
+              </div>
+            </>
           )}
 
 
@@ -258,7 +265,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
 
           <button
             type="submit"
-            disabled={loading !== null || (signup && !accepted)}
+            disabled={loading !== null || (signup && (!accepted || !signupZone))}
             className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}

@@ -772,6 +772,13 @@ def load_account(s):
     return dict(s.account)
 
 
+def has_account(s):
+    """Signed up already: an account, or renewals stored before accounts existed."""
+    if load_account(s):
+        return True
+    return bool(HOSTED and not s.demo and store("renewal_list", p_owner=owner_id(s.username)))
+
+
 def save_account(s, patch):
     account = {**load_account(s), **{k: v for k, v in patch.items() if k in ACCOUNT_FIELDS}}
     if HOSTED and not s.demo:
@@ -940,6 +947,7 @@ class Login(BaseModel):
     accepted: bool = False  # terms of use and privacy policy
     signup: bool = False
     email: str = Field(default="", max_length=254, pattern=EMAIL_PATTERN)  # required at sign-up
+    zone: str = Field(default="", pattern=r"^$|^\w{3,10}$")  # home zone, asked at sign-up
 
 
 class AccountPatch(BaseModel):
@@ -984,6 +992,8 @@ def login(body: Login, request: Request, response: Response):
     masked = body.username.strip()[:4] + "***"
     if body.signup and not demo and not body.email.strip():
         raise HTTPException(400, "Indiquez votre adresse e-mail.")
+    if body.signup and not demo and not body.zone.strip():
+        raise HTTPException(400, "Indiquez votre adresse pour trouver votre zone de résidence.")
     if HOSTED and not demo:
         if not body.accepted:
             raise HTTPException(400, "Acceptez les conditions d'utilisation et la politique de confidentialité.")
@@ -994,6 +1004,9 @@ def login(body: Login, request: Request, response: Response):
         log.warning("login failed for %s: %s", masked, e)
         raise HTTPException(400, friendly_error(e))
     log.info("login ok for %s (%s)", masked, "demo" if demo else "PayByPhone account %s***" % session.username[:5])
+    if body.signup and not demo and guarded(lambda: has_account(session)):
+        log.info("sign-up refused: account already exists for %s", masked)
+        raise HTTPException(409, "Un compte PaybyBot existe déjà pour ce compte PayByPhone. Connectez-vous.")
     if HOSTED:
         token = seal(session)
         refresh = getattr(session.bot, "refresh_token", None)
@@ -1006,9 +1019,9 @@ def login(body: Login, request: Request, response: Response):
     else:
         token = secrets.token_urlsafe(32)
         SESSIONS[token] = session
-    if body.email.strip():
+    if body.email.strip() or body.zone.strip():
         try:
-            save_account(session, {"email": body.email.strip()})
+            save_account(session, {k: v for k, v in (("email", body.email.strip()), ("zone", body.zone.strip())) if v})
             if HOSTED and demo:
                 token = seal(session)  # the demo account lives in the cookie
         except Exception as e:
@@ -1343,8 +1356,8 @@ class AddressQuery(BaseModel):
 def address_search(body: AddressQuery, pbb_session: str = Cookie(None)):
     """Address autocomplete through the French State's address service (Géoplateforme), relayed so the
     browser talks to PaybyBot only. Sent in a POST body so it never shows in URL logs; only used to find the
-    zone, neither logged nor stored."""
-    current(pbb_session)
+    zone, neither logged nor stored. Open without a session: the sign-up page asks for the address before the
+    PayByPhone login (same-origin requests only, like every POST)."""
     q = body.q.strip()[:120]
     if len(q) < 3:
         return []

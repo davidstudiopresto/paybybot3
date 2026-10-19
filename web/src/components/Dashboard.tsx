@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, LogOut, Repeat } from 'lucide-react'
+import { LogOut, Repeat } from 'lucide-react'
 import { Plate, ZonePlate } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
@@ -143,7 +143,7 @@ export function Dashboard({
           // The renewal is the point of the app: once it runs, a one-off payment is a quiet secondary action.
           <div className="mt-6 flex flex-col items-start gap-3">
             <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
-            <button onClick={onPay} className={quietLink}>
+            <button onClick={onPay} className={cn(ui.pillGray, 'mt-2')}>
               Payer un stationnement ponctuel
             </button>
           </div>
@@ -158,8 +158,8 @@ export function Dashboard({
               autoOpen={onboarding}
               onAutoOpened={onOnboarded}
             />
-            <button onClick={onPay} disabled={!data} className={`mt-5 flex items-center gap-1.5 ${quietLink}`}>
-              Payer un stationnement ponctuel <ArrowRight className="size-4" />
+            <button onClick={onPay} disabled={!data} className={cn(ui.pillGray, 'mt-5')}>
+              Payer un stationnement ponctuel
             </button>
           </div>
         )}

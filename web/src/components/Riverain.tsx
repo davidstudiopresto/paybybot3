@@ -494,7 +494,7 @@ function ZoneField({ zone, fromHistory, onZone }: { zone: string; fromHistory: b
   return (
     <div>
       <label htmlFor="riverain-address" className={ui.label}>
-        Votre adresse <span className="font-normal">(pour trouver votre zone, non conservée)</span>
+        Votre adresse
       </label>
       <div className="relative">
         <input

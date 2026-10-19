@@ -2,29 +2,22 @@ import type { ReactNode } from 'react'
 import { ArrowRight, Plus, Repeat } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
-import { Plate, Wordmark, ZonePlate } from '@/components/signs'
+import { Plate, ZonePlate } from '@/components/signs'
+import { TopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
 /** Header of the public pages: logo back home, then "Se connecter" and "S'inscrire". */
 function SiteHeader() {
   return (
-    <header className="flex items-center justify-between gap-3 px-5 pt-6 sm:px-8 sm:pt-8">
-      <a href="#/" aria-label="paybybot, accueil" className="shrink-0">
-        <Wordmark />
+    <TopBar>
+      <a href="#/connexion" className={ui.pillGray}>
+        Se connecter
       </a>
-      <nav className="flex items-center gap-4 sm:gap-5" aria-label="Compte">
-        <a href="#/connexion" className={cn('text-[0.95rem] whitespace-nowrap', ui.link)}>
-          Se connecter
-        </a>
-        <a
-          href="#/inscription"
-          className="flex h-10 items-center rounded-xl bg-eu px-3.5 text-[0.95rem] font-bold whitespace-nowrap text-white transition hover:bg-eu/90 sm:px-4"
-        >
-          S'inscrire
-        </a>
-      </nav>
-    </header>
+      <a href="#/inscription" className={ui.pillBlue}>
+        S'inscrire
+      </a>
+    </TopBar>
   )
 }
 

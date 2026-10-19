@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { ArrowRight, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
-import { ParkingSign } from '@/components/signs'
+import { TopBar } from '@/components/TopBar'
+import { ui } from '@/lib/styles'
 import { api, type Me } from '@/lib/api'
 
 /** Countries where PayByPhone is used, with their calling code and flag stripes. */
@@ -84,12 +85,17 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
-      <header className="px-6 pt-6 sm:px-8 sm:pt-8">
-        <a href="#/" aria-label="paybybot, accueil" className="inline-flex items-center gap-2.5">
-          <ParkingSign className="size-9 rounded-[8px] text-[22px]" />
-          <span className="font-heading text-xl font-black tracking-tight">paybybot</span>
-        </a>
-      </header>
+      <TopBar>
+        {signup ? (
+          <a href="#/connexion" className={ui.pillGray}>
+            Se connecter
+          </a>
+        ) : (
+          <a href="#/inscription" className={ui.pillBlue}>
+            S'inscrire
+          </a>
+        )}
+      </TopBar>
 
       <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center sm:pt-0">
         <form
@@ -230,7 +236,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
           <button
             type="submit"
             disabled={loading !== null || (signup && !accepted)}
-            className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-eu text-lg font-bold text-white transition hover:bg-eu/90 active:scale-[0.99] disabled:opacity-60"
+            className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}
           </button>

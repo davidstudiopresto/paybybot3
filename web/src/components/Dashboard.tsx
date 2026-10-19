@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, LogOut, Repeat } from 'lucide-react'
-import { Plate, Wordmark, ZonePlate } from '@/components/signs'
+import { Plate, ZonePlate } from '@/components/signs'
+import { TopBar } from '@/components/TopBar'
+import { cn } from '@/lib/utils'
+import { ui } from '@/lib/styles'
 import { ExtendDialog } from '@/components/Extend'
 import { HostedFooter } from '@/components/Footer'
 import { ManageRenewal, RenewalNote, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
@@ -107,20 +110,12 @@ export function Dashboard({
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
-      <header className="flex items-center justify-between px-6 pt-6 sm:px-8 sm:pt-8">
-        <Wordmark />
-        <span className="flex items-center gap-3">
-          {me.demo && <span className="rounded-full bg-amber/25 px-2.5 py-0.5 text-xs font-bold text-ink">Démo</span>}
-          <button
-            onClick={onLogout}
-            aria-label="Déconnexion"
-            title="Déconnexion"
-            className="grid size-10 place-items-center rounded-lg text-ink/50 transition hover:bg-muted hover:text-ink"
-          >
-            <LogOut className="size-5" />
-          </button>
-        </span>
-      </header>
+      <TopBar>
+        {me.demo && <span className="rounded-full bg-amber/25 px-2.5 py-0.5 text-xs font-bold text-ink">Démo</span>}
+        <button onClick={onLogout} className={cn(ui.pillGray, 'gap-2')}>
+          <LogOut className="size-4" /> Déconnexion
+        </button>
+      </TopBar>
 
       <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-12 pb-16">
         <h1 className="rise font-heading text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.035em]">

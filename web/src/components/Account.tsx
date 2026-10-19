@@ -167,9 +167,13 @@ function DeleteConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDelete
         <div className="p-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Supprimer votre compte ?</DialogTitle>
           <DialogDescription className="mt-2 leading-relaxed text-ink/65">
-            Les renouvellements automatiques s’arrêtent et tout ce que PaybyBot garde est effacé. Les tickets en cours
-            restent valables, et votre compte PayByPhone n’est pas touché. Vous recevrez une confirmation par e-mail.
+            Tout ce que PaybyBot garde est effacé, et votre compte PayByPhone n’est pas touché. Vous recevrez une
+            confirmation par e-mail.
           </DialogDescription>
+          <p role="note" className="mt-4 rounded-xl bg-amber/20 px-4 py-3 text-sm leading-relaxed text-ink">
+            Votre forfait en cours reste valable jusqu’à sa fin, au plus tard en fin de semaine. Ensuite, votre
+            stationnement ne sera plus ni renouvelé ni prolongé.
+          </p>
           <div className="mt-7 grid gap-3">
             <button
               onClick={erase}

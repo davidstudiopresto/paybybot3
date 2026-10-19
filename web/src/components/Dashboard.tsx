@@ -149,19 +149,13 @@ export function Dashboard({
             </button>
           </div>
         ) : (
-          <>
-            <button
-              onClick={onPay}
-              disabled={!data}
-              className="mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-eu text-lg font-bold text-white transition hover:bg-eu/90 active:scale-[0.99] disabled:opacity-50"
-            >
-              Payer un stationnement <ArrowRight className="size-5" />
+          // No renewal yet: setting it up is the main action, a one-off payment comes second.
+          <div className="mt-10 border-t border-border pt-8">
+            <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
+            <button onClick={onPay} disabled={!data} className={`mt-5 flex items-center gap-1.5 ${quietLink}`}>
+              Payer un stationnement ponctuel <ArrowRight className="size-4" />
             </button>
-
-            <div className="mt-12 border-t border-border pt-8">
-              <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
-            </div>
-          </>
+          </div>
         )}
       </main>
 

@@ -171,7 +171,7 @@ export function RiverainCard({
             ? 'Votre forfait résident de 7 jours, repayé tout seul à chaque expiration, même appareil éteint.'
             : 'Votre forfait résident de 7 jours, repayé tout seul à chaque expiration.'}
         </p>
-        <button onClick={() => setOpen(true)} disabled={!data} className={cn('mt-5', ui.secondary)}>
+        <button onClick={() => setOpen(true)} disabled={!data} className={cn('mt-5', ui.primary)}>
           Activer le renouvellement
         </button>
       </section>

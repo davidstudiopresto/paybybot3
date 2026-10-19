@@ -13,12 +13,13 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [accepted, setAccepted] = useState(false)
 
   async function submit(u = username, p = password) {
     setError(null)
     setLoading(true)
     try {
-      onLogin(await api.login(u, p))
+      onLogin(await api.login(u, p, u === 'demo' ? false : accepted))
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -51,7 +52,8 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
         <div className="rise relative flex flex-wrap items-center gap-3 text-sm text-white/80 sm:gap-4" style={{ animationDelay: '240ms' }}>
           <Plate plate="AB123CD" size="sm" className="hidden sm:inline-flex" />
           <span className="flex items-center gap-2">
-            <LockKeyhole className="size-4" /> {hosted ? "Votre mot de passe n'est jamais enregistré." : 'Vos identifiants restent sur cet ordinateur.'}
+            <LockKeyhole className="size-4" />{' '}
+            {hosted ? 'Aucune donnée conservée, mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}
           </span>
         </div>
       </section>
@@ -68,6 +70,11 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
         >
           <p className="hidden text-sm font-bold tracking-[0.2em] text-signal uppercase sm:block">Connexion</p>
           <h2 className="text-2xl font-extrabold tracking-tight sm:mt-2 sm:text-3xl">Votre compte PayByPhone</h2>
+          {hosted && (
+            <a href="#/securite" className="mt-3 inline-flex items-center gap-2 rounded-full bg-go/10 px-3 py-1 text-sm font-bold text-go hover:bg-go/15">
+              <LockKeyhole className="size-3.5" /> Aucune donnée conservée · en savoir plus
+            </a>
+          )}
           <p className="mt-2 text-muted-foreground">
             Les mêmes identifiants que dans l'application PayByPhone de votre téléphone.
           </p>
@@ -117,7 +124,28 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
             </p>
           )}
 
-          <Button type="submit" disabled={loading} className="mt-6 h-14 w-full rounded-xl text-lg font-bold sm:mt-7">
+          <label className="mt-5 flex cursor-pointer items-start gap-3 text-[0.95rem] leading-snug">
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(e) => setAccepted(e.target.checked)}
+              required
+              className="mt-0.5 size-5 shrink-0 accent-[var(--signal)]"
+            />
+            <span>
+              J'accepte les{' '}
+              <a href="#/cgu" className="font-bold text-signal underline-offset-4 hover:underline">
+                conditions d'utilisation
+              </a>{' '}
+              et la{' '}
+              <a href="#/confidentialite" className="font-bold text-signal underline-offset-4 hover:underline">
+                politique de confidentialité
+              </a>
+              .
+            </span>
+          </label>
+
+          <Button type="submit" disabled={loading || !accepted} className="mt-5 h-14 w-full rounded-xl text-lg font-bold">
             {loading ? <Loader2 className="size-5 animate-spin" /> : <>Se connecter <ArrowRight className="size-5" /></>}
           </Button>
 
@@ -137,7 +165,7 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
           <p className="mt-3 text-center text-sm text-muted-foreground">
             La démo utilise de fausses données : aucun paiement réel.
           </p>
-          {hosted && <HostedFooter className="mt-10" />}
+          <HostedFooter className="mt-10" hosted={hosted} />
         </form>
       </section>
     </div>

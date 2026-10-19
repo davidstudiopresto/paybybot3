@@ -77,7 +77,8 @@ const post = <T>(path: string, body?: unknown) =>
 export const api = {
   config: () => request<{ hosted: boolean }>('/api/config'),
   me: () => request<Me>('/api/me'),
-  login: (username: string, password: string) => post<Me>('/api/login', { username, password }),
+  login: (username: string, password: string, accepted = false) =>
+    post<Me>('/api/login', { username, password, accepted }),
   logout: () => post('/api/logout'),
   deleteData: () => request('/api/me/data', { method: 'DELETE' }),
   overview: () => request<Overview>('/api/overview'),

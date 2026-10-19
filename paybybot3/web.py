@@ -676,6 +676,7 @@ def cron_renew(request: Request):
 class Login(BaseModel):
     username: str = Field(max_length=120)
     password: str = Field(max_length=200)
+    accepted: bool = False  # terms of use and privacy policy
 
 
 class Parking(BaseModel):
@@ -700,6 +701,8 @@ def login(body: Login, request: Request, response: Response):
     demo = body.username.strip().lower() == "demo"
     masked = body.username.strip()[:4] + "***"
     if HOSTED and not demo:
+        if not body.accepted:
+            raise HTTPException(400, "Acceptez les conditions d'utilisation et la politique de confidentialité.")
         check_login_rate(request, body.username)
     try:
         session = UserSession(body.username.strip(), body.password, demo=demo)

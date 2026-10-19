@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { Dashboard } from '@/components/Dashboard'
 import { LoginView } from '@/components/LoginView'
 import { PayWizard } from '@/components/PayWizard'
+import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { ParkingSign } from '@/components/signs'
 import { api, ApiError, type Me, type Overview } from '@/lib/api'
 
@@ -12,6 +13,16 @@ export default function App() {
   const [data, setData] = useState<Overview | null>(null)
   const [paying, setPaying] = useState(false)
   const [hosted, setHosted] = useState(false)
+  const [legal, setLegal] = useState<LegalPage | null>(() => legalPageFromHash(window.location.hash))
+
+  useEffect(() => {
+    const onHash = () => {
+      setLegal(legalPageFromHash(window.location.hash))
+      window.scrollTo(0, 0)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
 
   useEffect(() => {
     api.me().then(setMe, () => setMe(null))
@@ -43,7 +54,9 @@ export default function App() {
   return (
     <>
       <Toaster />
-      {me === undefined ? (
+      {legal ? (
+        <LegalView page={legal} hosted={hosted} />
+      ) : me === undefined ? (
         <div className="grid min-h-dvh place-items-center">
           <ParkingSign className="animate-pulse" />
         </div>

@@ -183,7 +183,7 @@ export function Dashboard({
             </ul>
           </div>
         </section>
-        {me.hosted && <HostedFooter className="mt-14" />}
+        <HostedFooter className="mt-14" hosted={!!me.hosted} />
       </main>
     </div>
   )

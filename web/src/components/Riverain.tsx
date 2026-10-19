@@ -293,7 +293,7 @@ function RiverainDialog({
           </Button>
           <p className="-mt-3 text-center text-sm text-muted-foreground">
             {hosted
-              ? "Fonctionne en ligne, même appareil éteint. Vous pouvez arrêter à tout moment."
+              ? "Fonctionne en ligne, même appareil éteint. Pour payer à votre place, paybybot garde de quoi se reconnecter à PayByPhone, chiffré, et l'efface dès que vous arrêtez."
               : 'Laissez paybybot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.'}
           </p>
         </div>

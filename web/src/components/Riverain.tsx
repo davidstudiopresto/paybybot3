@@ -464,7 +464,7 @@ export function ZoneField({
   return (
     <div>
       <label htmlFor="riverain-address" className={ui.label}>
-        Votre adresse
+        Votre adresse de résidence
       </label>
       <div className="relative">
         <input

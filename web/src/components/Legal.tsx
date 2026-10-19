@@ -34,7 +34,7 @@ export function legalPageFromHash(hash: string): LegalPage | null {
   return LEGAL_PAGES.some((p) => p.id === id) ? (id as LegalPage) : null
 }
 
-const Mailto = () => (
+export const Mailto = () => (
   <a href={`mailto:${PUBLISHER.email}`} className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
     {PUBLISHER.email}
   </a>
@@ -81,41 +81,10 @@ function DataTable({ rows }: { rows: [string, string, string, string][] }) {
   )
 }
 
-function Security() {
+/** The detailed part of the security page: how it works, what is kept, protections, control. */
+export function SecurityDetails() {
   return (
     <>
-      <div className="rounded-2xl bg-muted p-6 sm:p-8">
-        <p className="font-heading text-3xl leading-tight font-bold tracking-tight sm:text-4xl">Aucune de vos données n’est conservée.</p>
-        <p className="mt-3 text-lg text-ink/70">
-          PaybyBot ne garde ni votre mot de passe, ni votre identifiant, ni vos véhicules, ni vos tickets, ni votre carte.
-          Tout est lu chez PayByPhone au moment où vous en avez besoin, puis oublié. Votre connexion ne vit que dans votre
-          navigateur, chiffrée, et s’efface d’elle-même au bout de 24 heures au plus.
-        </p>
-        <p className="mt-4 rounded-xl bg-white p-4 text-ink/70">
-          <strong className="text-ink">Seule exception, si vous le choisissez :</strong> le renouvellement riverain doit
-          pouvoir payer à votre place quand vous n’êtes pas là. Il garde donc, chiffré, de quoi se reconnecter à PayByPhone et
-          le détail du forfait, et l’e-mail de confirmation si vous en donnez un. Tout est effacé dès que vous l’arrêtez.
-        </p>
-      </div>
-
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        {[
-          [true, 'Votre mot de passe n’est jamais enregistré'],
-          [true, 'Aucun numéro de carte bancaire : PayByPhone ne montre que les 4 derniers chiffres'],
-          [true, 'Données hébergées et traitées à Paris'],
-          [true, 'Code source ouvert, vérifiable par tous'],
-          [false, 'Aucune publicité, aucune revente de données'],
-          [false, 'Aucun cookie de suivi ni outil de mesure d’audience'],
-        ].map(([yes, text]) => (
-          <p key={text as string} className="flex items-start gap-3 rounded-xl border border-border p-4 font-bold">
-            <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-eu text-white">
-              {yes ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
-            </span>
-            {text as string}
-          </p>
-        ))}
-      </div>
-
       <Section title="Comment ça marche">
         <p>
           Quand vous vous connectez, votre identifiant et votre mot de passe sont transmis à PayByPhone, de façon chiffrée
@@ -197,6 +166,46 @@ function Security() {
           .
         </p>
       </Section>
+    </>
+  )
+}
+
+function Security() {
+  return (
+    <>
+      <div className="rounded-2xl bg-muted p-6 sm:p-8">
+        <p className="font-heading text-3xl leading-tight font-bold tracking-tight sm:text-4xl">Aucune de vos données n’est conservée.</p>
+        <p className="mt-3 text-lg text-ink/70">
+          PaybyBot ne garde ni votre mot de passe, ni votre identifiant, ni vos véhicules, ni vos tickets, ni votre carte.
+          Tout est lu chez PayByPhone au moment où vous en avez besoin, puis oublié. Votre connexion ne vit que dans votre
+          navigateur, chiffrée, et s’efface d’elle-même au bout de 24 heures au plus.
+        </p>
+        <p className="mt-4 rounded-xl bg-white p-4 text-ink/70">
+          <strong className="text-ink">Seule exception, si vous le choisissez :</strong> le renouvellement riverain doit
+          pouvoir payer à votre place quand vous n’êtes pas là. Il garde donc, chiffré, de quoi se reconnecter à PayByPhone et
+          le détail du forfait, et l’e-mail de confirmation si vous en donnez un. Tout est effacé dès que vous l’arrêtez.
+        </p>
+      </div>
+
+      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        {[
+          [true, 'Votre mot de passe n’est jamais enregistré'],
+          [true, 'Aucun numéro de carte bancaire : PayByPhone ne montre que les 4 derniers chiffres'],
+          [true, 'Données hébergées et traitées à Paris'],
+          [true, 'Code source ouvert, vérifiable par tous'],
+          [false, 'Aucune publicité, aucune revente de données'],
+          [false, 'Aucun cookie de suivi ni outil de mesure d’audience'],
+        ].map(([yes, text]) => (
+          <p key={text as string} className="flex items-start gap-3 rounded-xl border border-border p-4 font-bold">
+            <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-eu text-white">
+              {yes ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
+            </span>
+            {text as string}
+          </p>
+        ))}
+      </div>
+
+      <SecurityDetails />
     </>
   )
 }

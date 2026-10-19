@@ -5,6 +5,7 @@ import { Dashboard } from '@/components/Dashboard'
 import { LoginView } from '@/components/LoginView'
 import { FaqView, Landing } from '@/components/Landing'
 import { PayWizard } from '@/components/PayWizard'
+import { SecurityPage } from '@/components/SecurityPage'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { Wordmark } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
@@ -69,7 +70,7 @@ export default function App() {
     <>
       <Toaster />
       {legal ? (
-        <LegalView page={legal} hosted={hosted} />
+        legal === 'securite' ? <SecurityPage hosted={hosted} /> : <LegalView page={legal} hosted={hosted} />
       ) : me === undefined ? (
         <div className="grid min-h-dvh place-items-center">
           <span className="animate-pulse">

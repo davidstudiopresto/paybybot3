@@ -1241,6 +1241,11 @@ def debug(pbb_session: str = Cookie(None)):
 @app.post("/api/autopilots")
 def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
+    if not body.email.strip():  # confirmations go to the account e-mail by default
+        try:
+            body.email = load_account(s).get("email") or ""
+        except Exception as e:
+            log.warning("account e-mail unreadable: %s", e)
     days = sorted(set(body.days)) if body.days else None
     start = (body.start or schedule.DEFAULT_START) if days else None
     if HOSTED and not s.demo:

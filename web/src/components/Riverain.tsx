@@ -119,25 +119,14 @@ export function RiverainCard({
   onChanged,
   hosted = false,
   demo = false,
-  autoOpen = false,
-  onAutoOpened,
 }: {
   data: Overview | null
   onChanged: () => void
   hosted?: boolean
   demo?: boolean
-  /** Open the setup right away (just signed up). */
-  autoOpen?: boolean
-  onAutoOpened?: () => void
 }) {
   const [open, setOpen] = useState(false)
 
-  useEffect(() => {
-    if (autoOpen && data) {
-      setOpen(true)
-      onAutoOpened?.()
-    }
-  }, [autoOpen, data, onAutoOpened])
   const weekly = data?.autopilots.filter(isWeekly) ?? []
 
   if (weekly.length && data) {
@@ -169,7 +158,7 @@ export function RiverainCard({
         <button onClick={() => setOpen(true)} className={cn('text-sm', ui.link)}>
           Renouveler un autre véhicule
         </button>
-        <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />
+        <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />
       </section>
     )
   }
@@ -187,7 +176,7 @@ export function RiverainCard({
           Activer le renouvellement
         </button>
       </section>
-      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
+      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />}
     </>
   )
 }
@@ -198,20 +187,17 @@ function RiverainDialog({
   data,
   onDone,
   hosted,
-  demo,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   data: Overview
   onDone: () => void
   hosted: boolean
-  demo: boolean
 }) {
   const [plate, setPlate] = useState('')
   const [zone, setZone] = useState('')
   const [zoneFromHistory, setZoneFromHistory] = useState(false)
   const [payment, setPayment] = useState('')
-  const [email, setEmail] = useState('')
   const [rate, setRate] = useState<Rate | null>(null)
   const [quote, setQuote] = useState<{ cost: Money } | null>(null)
   const [loading, setLoading] = useState(false)
@@ -294,7 +280,7 @@ function RiverainDialog({
     setSaving(true)
     try {
       const p = parking(rate)
-      await api.addAutopilot({ ...p, label: WEEKLY_LABEL, email: email.trim() })
+      await api.addAutopilot({ ...p, label: WEEKLY_LABEL }) // confirmations go to the account e-mail
       saveLast(p)
       toast.success('Renouvellement hebdomadaire activé.', {
         description: data.sessions.some((s) => s.plate === plate && s.location === zone)
@@ -348,31 +334,6 @@ function RiverainDialog({
           />
 
           {!data.payments.length && <NoPayment compact onRefresh={async () => onDone()} />}
-
-          <div>
-            <label htmlFor="riverain-email" className={ui.label}>
-              E-mail pour les confirmations <span className="font-normal">(facultatif)</span>
-            </label>
-            <input
-              id="riverain-email"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              placeholder="vous@exemple.fr"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={cn(ui.field, 'h-12 text-base')}
-            />
-            <p className="mt-1.5 text-sm text-ink/50">
-              Une confirmation à chaque paiement et une alerte en cas de problème. Gardée chiffrée, effacée dès que vous
-              arrêtez.
-            </p>
-            {demo && (
-              <p className="mt-2 rounded-lg bg-amber/20 px-3 py-2 text-sm text-ink">
-                Mode démo : aucun e-mail n'est envoyé. Connectez-vous avec votre compte PayByPhone pour les recevoir.
-              </p>
-            )}
-          </div>
 
           {data.payments.length > 1 && (
             <div>

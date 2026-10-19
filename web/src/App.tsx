@@ -70,6 +70,7 @@ export default function App() {
   async function logout() {
     await api.logout().catch(() => {})
     setData(null)
+    setOnboarding(false)
     forgetZoneLookup()
     setMe(null)
   }
@@ -124,8 +125,6 @@ export default function App() {
             onRefresh={refresh}
             onPay={() => setPaying(true)}
             onLogout={logout}
-            onboarding={onboarding}
-            onOnboarded={() => setOnboarding(false)}
           />
           {paying && data && (
             <PayWizard

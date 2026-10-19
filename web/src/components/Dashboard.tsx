@@ -87,12 +87,8 @@ export function Dashboard({
   onRefresh,
   onPay,
   onLogout,
-  onboarding = false,
-  onOnboarded,
 }: {
   me: Me
-  onboarding?: boolean
-  onOnboarded?: () => void
   data: Overview | null
   onRefresh: () => Promise<void>
   onPay: () => void
@@ -158,8 +154,6 @@ export function Dashboard({
               onChanged={onRefresh}
               hosted={!!me.hosted}
               demo={me.demo}
-              autoOpen={onboarding}
-              onAutoOpened={onOnboarded}
             />
             <button onClick={onPay} disabled={!data} className={cn(ui.primaryGray, 'mt-3')}>
               Payer un stationnement ponctuel

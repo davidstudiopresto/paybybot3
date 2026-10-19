@@ -1,7 +1,7 @@
 # paybybot3 — le guide simple
 
 paybybot3 vous permet de **payer votre stationnement PayByPhone depuis votre ordinateur**, en quelques clics,
-et de le **renouveler automatiquement** pour ne plus oublier de reprendre un ticket.
+et, si vous êtes riverain, de **renouveler automatiquement votre forfait résident chaque semaine** pour ne plus oublier de le reprendre.
 
 ![Le principe](https://img.shields.io/badge/vos_identifiants-restent_sur_votre_ordinateur-1d4ea3)
 
@@ -29,8 +29,9 @@ La première fois, l'installation prend environ une minute. Ensuite, votre navig
 2. Cliquez sur **Payer un stationnement** et laissez-vous guider :
    voiture → zone (à Paris, le code postal de la rue, par exemple `75015`) → tarif → durée → carte → vérification.
 3. Le prix exact s'affiche **avant** de payer.
-4. Cochez **Renouveler automatiquement** si vous voulez que le ticket soit repayé dès qu'il expire.
-   Cela fonctionne tant que l'application reste ouverte sur l'ordinateur.
+4. **Riverain ?** Cliquez sur la carte verte **Renouvellement automatique chaque semaine**, vérifiez la zone de
+   votre domicile, puis **Activer** : votre forfait résident de 7 jours est repayé tout seul à chaque expiration.
+   Cela fonctionne tant que l'application reste ouverte sur l'ordinateur. Le lien **Arrêter** le désactive.
 
 Votre voiture et votre carte doivent déjà être enregistrées dans votre compte PayByPhone (sur votre téléphone).
 

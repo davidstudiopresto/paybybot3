@@ -13,7 +13,7 @@ Not comfortable with the command line? paybybot3 ships a simple web interface (i
     paybybot3 web
 
 It opens your browser on `http://127.0.0.1:8765`. You can log in with your PayByPhone account, pay for parking
-through a step-by-step wizard (with the exact price shown before paying), and enable automatic renewal.
+through a step-by-step wizard (with the exact price shown before paying), and enable a weekly automatic renewal of the resident rate.
 A demo mode lets you try it without an account. Credentials are kept in memory only, never written to disk.
 
 Non-technical users can download the ZIP and double-click `Lancer paybybot3.command` (macOS) or

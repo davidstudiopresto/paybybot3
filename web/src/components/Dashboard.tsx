@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, LogOut, Plus, RefreshCw, SquareParking } from 'lucide-react'
+import { CreditCard, LogOut, Plus, RefreshCw, SquareParking, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ActionTile, Plate, Wordmark, ZonePlate } from '@/components/signs'
 import { ExtendDialog } from '@/components/Extend'
 import { HostedFooter } from '@/components/Footer'
 import { RiverainCard } from '@/components/Riverain'
-import { clock, money, remaining, type Me, type Overview, type Session } from '@/lib/api'
+import { api, clock, money, remaining, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -181,6 +181,25 @@ export function Dashboard({
                 </li>
               ))}
             </ul>
+            <div className="mt-8 border-t border-border pt-5">
+              <Button
+                variant="ghost"
+                className="h-11 rounded-xl px-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={async () => {
+                  const ok = window.confirm(
+                    'Supprimer toutes vos données de paybybot ? Vos renouvellements automatiques seront arrêtés et vous serez déconnecté. Vos tickets en cours chez PayByPhone restent valables.',
+                  )
+                  if (!ok) return
+                  await api.deleteData().catch(() => {})
+                  onLogout()
+                }}
+              >
+                <Trash2 className="size-4" /> Supprimer mes données
+              </Button>
+              <p className="mt-1 px-3 text-sm text-muted-foreground">
+                Efface les renouvellements enregistrés et vous déconnecte. Votre mot de passe n'est jamais conservé.
+              </p>
+            </div>
           </div>
         </section>
         {me.hosted && <HostedFooter className="mt-14" />}

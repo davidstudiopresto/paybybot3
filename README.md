@@ -25,7 +25,14 @@ The same interface can be deployed on Vercel (`main.py`, `requirements.txt`, `ve
 server keeps no state: the PayByPhone access token is stored in an encrypted cookie (set `PAYBYBOT_SECRET`), the
 password is never stored. Weekly renewals are stored in Supabase (`supabase/migrations/`) with an encrypted
 PayByPhone refresh token, and `/api/cron/renew` is called every 5 minutes by `pg_cron`. Server settings:
-`PAYBYBOT_SECRET`, `PAYBYBOT_SUPABASE_URL`, `PAYBYBOT_SUPABASE_KEY` (publishable key) and `PAYBYBOT_DB_TOKEN`.
+`PAYBYBOT_SECRET` (optionally `PAYBYBOT_SECRET_OLD` while rotating it), `PAYBYBOT_SUPABASE_URL`,
+`PAYBYBOT_SUPABASE_KEY` (publishable key), `PAYBYBOT_DB_TOKEN`, `PAYBYBOT_CRON_TOKEN_SHA256` and `CRON_SECRET`.
+
+Security measures: strict Content-Security-Policy and no framing, same-origin check on every state-changing
+call, login cookies that expire after 12 hours idle and 24 hours at most, login rate limiting, separate keys per
+purpose, renewal details and refresh tokens encrypted before they reach the database, an authenticated scheduler
+call, pinned dependencies, and a "delete my data" button. Changing `PAYBYBOT_SECRET` invalidates every login and
+every stored renewal at once.
 
 ### Developing the interface
 

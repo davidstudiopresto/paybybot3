@@ -33,7 +33,7 @@ import requests
 from fastapi import Cookie, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .bot import Bot
 
@@ -42,6 +42,9 @@ log = logging.getLogger("paybybot3.web")
 STATIC_DIR = Path(__file__).parent / "static"
 COOKIE = "pbb_session"
 HOSTED = os.environ.get("PAYBYBOT_HOSTED") == "1"
+SESSION_IDLE = 12 * 3600  # an unused login cookie expires after 12 hours...
+SESSION_MAX = 24 * 3600  # ...and any login after 24 hours
+LOGIN_LIMITS = (("ip", 10), ("user", 5))  # attempts per 15 minutes, per device and per account
 RELOGIN = ("Votre connexion PayByPhone a expiré : reconnectez-vous sur paybybot pour relancer "
            "le renouvellement automatique.")
 
@@ -210,7 +213,7 @@ class UserSession:
 
     def to_state(self):
         """What the hosted mode keeps in the encrypted cookie: never the password."""
-        state = {"u": self.username, "d": self.demo,
+        state = {"u": self.username, "d": self.demo, "iat": getattr(self, "issued_at", int(time.time())),
                  "uc": [[plate, location, at] for (plate, location), at in self.unconfirmed.items()]}
         if self.demo:
             state["s"] = [{**x, "startTime": x["startTime"].isoformat(), "expireTime": x["expireTime"].isoformat()}
@@ -274,23 +277,39 @@ SESSIONS = {}
 _loaded = contextvars.ContextVar("pbb_loaded", default=None)
 
 
-def _fernet():
-    from cryptography.fernet import Fernet
-
-    secret = os.environ.get("PAYBYBOT_SECRET")
-    if not secret:
+def _secrets():
+    """Current secret first; PAYBYBOT_SECRET_OLD lets data sealed with the previous one still be read."""
+    current_secret = os.environ.get("PAYBYBOT_SECRET")
+    if not current_secret:
         raise RuntimeError("PAYBYBOT_SECRET is not set")
-    return Fernet(base64.urlsafe_b64encode(hashlib.sha256(secret.encode()).digest()))
+    return [x for x in (current_secret, os.environ.get("PAYBYBOT_SECRET_OLD")) if x]
+
+
+def _subkey(secret, purpose):
+    """Separate keys per use, so one leaked key does not unlock the others."""
+    return hashlib.sha256(("paybybot:%s:%s" % (purpose, secret)).encode()).digest()
+
+
+def _fernet(purpose="cookie"):
+    from cryptography.fernet import Fernet, MultiFernet
+
+    return MultiFernet([Fernet(base64.urlsafe_b64encode(_subkey(x, purpose))) for x in _secrets()])
 
 
 def seal(session):
-    return _fernet().encrypt(json.dumps(session.to_state()).encode()).decode()
+    state = session.to_state()
+    state.setdefault("iat", int(time.time()))
+    return _fernet().encrypt(json.dumps(state).encode()).decode()
 
 
 def current(token):
     if HOSTED:
         try:
-            session = UserSession.from_state(json.loads(_fernet().decrypt((token or "").encode())))
+            state = json.loads(_fernet().decrypt((token or "").encode(), ttl=SESSION_IDLE))
+            if time.time() - state.get("iat", 0) > SESSION_MAX:
+                raise ValueError("login too old")
+            session = UserSession.from_state(state)
+            session.issued_at = state["iat"]
         except Exception:
             raise HTTPException(401, "Session expirée, reconnectez-vous.")
         holder = _loaded.get()
@@ -307,14 +326,46 @@ def set_session_cookie(response, value):
     response.set_cookie(COOKIE, value, httponly=True, samesite="strict", secure=HOSTED, path="/")
 
 
+SECURITY_HEADERS = {
+    # Only our own scripts, styles, fonts and API; never shown inside another site's frame (clickjacking).
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+                               "img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; "
+                               "base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+
+
+def same_origin(request):
+    """State-changing calls must come from paybybot's own pages."""
+    origin = request.headers.get("origin")
+    if origin:
+        return origin.split("://", 1)[-1] == request.headers.get("host")
+    return request.headers.get("sec-fetch-site") in (None, "same-origin", "none")
+
+
 @app.middleware("http")
 async def persist_session(request: Request, call_next):
-    """Hosted mode: write back what a request changed (demo tickets, payment locks)."""
+    """Origin check, security headers, and (hosted) writing back what a request changed."""
+    from fastapi.responses import JSONResponse
+
+    if (request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith("/api/")
+            and request.url.path != "/api/cron/renew" and not same_origin(request)):
+        return JSONResponse({"detail": "Requête refusée."}, status_code=403, headers=SECURITY_HEADERS)
     holder = []
     _loaded.set(holder)
     response = await call_next(request)
-    if HOSTED and holder and response.status_code != 401:
+    if HOSTED and holder and response.status_code != 401 and not getattr(holder[-1], "logged_out", False):
         set_session_cookie(response, seal(holder[-1]))
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    if HOSTED:
+        response.headers.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+    if request.url.path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-store")
     return response
 
 
@@ -485,16 +536,52 @@ def start_autopilot():
 
 def owner_id(username):
     """Stable id of a PayByPhone account that does not reveal the phone number."""
-    key = os.environ.get("PAYBYBOT_SECRET", "").encode()
-    return hmac.new(key, ("owner:" + username).encode(), hashlib.sha256).hexdigest()
+    return hmac.new(_subkey(_secrets()[0], "owner"), username.encode(), hashlib.sha256).hexdigest()
 
 
 def encrypt_credential(refresh_token):
-    return _fernet().encrypt(refresh_token.encode()).decode()
+    return _fernet("credential").encrypt(refresh_token.encode()).decode()
 
 
 def decrypt_credential(value):
-    return _fernet().decrypt(value.encode()).decode()
+    return _fernet("credential").decrypt(value.encode()).decode()
+
+
+RENEWAL_FIELDS = ("label", "plate", "location", "rate", "duration", "unit", "payment_account_id")
+
+
+def encrypt_details(details):
+    """Plate, zone, rate... are stored encrypted too: the database alone reveals nothing usable."""
+    return _fernet("renewal").encrypt(json.dumps({k: details[k] for k in RENEWAL_FIELDS}).encode()).decode()
+
+
+def with_details(row):
+    """Database row (encrypted data) -> row with its details in clear."""
+    return {**row, **json.loads(_fernet("renewal").decrypt(row["data"].encode()))}
+
+
+def check_login_rate(request, username):
+    """Hosted: refuse bursts of login attempts (password guessing through paybybot)."""
+    ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    keys = {"ip": hmac.new(_subkey(_secrets()[0], "rate"), ip.encode(), hashlib.sha256).hexdigest(),
+            "user": owner_id(username.strip().lower())}
+    for kind, limit in LOGIN_LIMITS:
+        if not store("rate_hit", p_key=kind + ":" + keys[kind], p_window_seconds=900, p_max=limit):
+            log.warning("login rate limit hit (%s)", kind)
+            raise HTTPException(429, "Trop de tentatives de connexion. Réessayez dans 15 minutes.")
+
+
+def cron_authorized(request):
+    """The scheduler sends a bearer token: Supabase's (checked by its SHA-256) or Vercel Cron's CRON_SECRET."""
+    auth = request.headers.get("authorization") or ""
+    token = auth[7:] if auth.lower().startswith("bearer ") else ""
+    if not token:
+        return False
+    expected_hash = os.environ.get("PAYBYBOT_CRON_TOKEN_SHA256", "")
+    if expected_hash and hmac.compare_digest(hashlib.sha256(token.encode()).hexdigest(), expected_hash):
+        return True
+    vercel_secret = os.environ.get("CRON_SECRET", "")
+    return bool(vercel_secret) and hmac.compare_digest(token, vercel_secret)
 
 
 def store(fn, **params):
@@ -511,6 +598,7 @@ def store(fn, **params):
 
 def stored_to_autopilot(row):
     """Database row -> the shape the interface already uses for renewals."""
+    row = with_details(row)
     return {
         "id": row["id"], "label": row.get("label") or "", "plate": row["plate"], "location": row["location"],
         "rate": row["rate"], "duration": fmt_qty(row["duration"]), "unit": row["unit"],
@@ -527,6 +615,12 @@ def process_renewal(row, refresh_token=None):
     """Check one stored renewal and pay for it if no session is active. Never raises."""
     now = datetime.now(timezone.utc)
     patch = {}
+    try:
+        row = with_details(row)
+    except Exception as e:
+        log.warning("renewal %s: unreadable details: %s", row.get("id"), e)
+        store("renewal_update", p_id=row["id"], p_patch={"enabled": False, "last_error": RELOGIN})
+        return "unreadable"
     try:
         refresh = refresh_token or decrypt_credential(row["credential"])
         bot = Bot.from_refresh_token(refresh)
@@ -564,10 +658,12 @@ def process_renewal(row, refresh_token=None):
 
 
 @app.api_route("/api/cron/renew", methods=["GET", "POST"])
-def cron_renew():
-    """Called every few minutes by the scheduler. Only acts on renewals that are due, so extra calls are harmless."""
+def cron_renew(request: Request):
+    """Called every few minutes by the scheduler. Only acts on renewals that are due."""
     if not HOSTED:
         raise HTTPException(404)
+    if not cron_authorized(request):
+        raise HTTPException(401, "Unauthorized")
     results = [process_renewal(row) for row in store("renewal_claim_due", p_limit=2)]
     return {"processed": len(results), "outcomes": results}
 
@@ -578,31 +674,33 @@ def cron_renew():
 
 
 class Login(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=120)
+    password: str = Field(max_length=200)
 
 
 class Parking(BaseModel):
-    location: str
-    rate: str
-    duration: float
-    unit: str
-    plate: str
-    paymentAccountId: str
+    location: str = Field(max_length=20)
+    rate: str = Field(max_length=40)
+    duration: float = Field(gt=0, le=10000)
+    unit: str = Field(pattern="^(Days|Hours|Minutes)$")
+    plate: str = Field(max_length=20)
+    paymentAccountId: str = Field(max_length=80)
 
 
 class Extension(Parking):
-    sessionId: str
+    sessionId: str = Field(max_length=80)
 
 
 class Autopilot(Parking):
-    label: str = ""
+    label: str = Field(default="", max_length=60)
 
 
 @app.post("/api/login")
-def login(body: Login, response: Response):
+def login(body: Login, request: Request, response: Response):
     demo = body.username.strip().lower() == "demo"
     masked = body.username.strip()[:4] + "***"
+    if HOSTED and not demo:
+        check_login_rate(request, body.username)
     try:
         session = UserSession(body.username.strip(), body.password, demo=demo)
     except Exception as e:
@@ -685,7 +783,7 @@ def rates(location: str, plate: str, pbb_session: str = Cookie(None)):
 
 
 class QuoteRequest(Parking):
-    sessionId: str = ""  # set to price an extension of this session
+    sessionId: str = Field(default="", max_length=80)  # set to price an extension of this session
 
 
 @app.post("/api/quote")
@@ -790,6 +888,8 @@ def extend(body: Extension, pbb_session: str = Cookie(None)):
 
 @app.get("/api/debug")
 def debug(pbb_session: str = Cookie(None)):
+    if HOSTED:  # diagnosis stays in the server logs online
+        raise HTTPException(404)
     s = current(pbb_session)
     report = guarded(lambda: diagnosis(s))
     log.warning("diagnosis (on demand): %s", json.dumps(report, default=str))
@@ -806,9 +906,10 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
 
         def save():
             row = store("renewal_save", p_row={
-                "owner": owner_id(s.username), "label": body.label, "plate": body.plate, "location": body.location,
-                "rate": body.rate, "duration": fmt_qty(body.duration), "unit": body.unit,
-                "payment_account_id": body.paymentAccountId, "credential": encrypt_credential(refresh)})
+                "owner": owner_id(s.username), "credential": encrypt_credential(refresh),
+                "data": encrypt_details({"label": body.label, "plate": body.plate, "location": body.location,
+                                         "rate": body.rate, "duration": fmt_qty(body.duration), "unit": body.unit,
+                                         "payment_account_id": body.paymentAccountId})})
             process_renewal(row, refresh_token=refresh)  # pay the first week now if nothing is active
             stored = next((r for r in store("renewal_list", p_owner=owner_id(s.username)) if r["id"] == row["id"]), row)
             return stored_to_autopilot(stored)
@@ -822,6 +923,20 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     else:
         threading.Thread(target=lambda: guarded(lambda: run_autopilot(s, ap)), daemon=True).start()
     return ap
+
+
+@app.delete("/api/me/data")
+def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
+    """Erase everything kept for this account (stored renewals), then log out."""
+    s = current(pbb_session)
+    if HOSTED and not s.demo:
+        guarded(lambda: store("renewal_delete_owner", p_owner=owner_id(s.username)))
+    s.autopilots.clear()
+    s.logged_out = True  # the middleware must not write the cookie back
+    SESSIONS.pop(pbb_session or "", None)
+    response.delete_cookie(COOKIE, path="/")
+    log.info("data deleted for %s***", s.username[:4])
+    return {"ok": True}
 
 
 @app.delete("/api/autopilots/{ap_id}")

@@ -79,6 +79,7 @@ export const api = {
   me: () => request<Me>('/api/me'),
   login: (username: string, password: string) => post<Me>('/api/login', { username, password }),
   logout: () => post('/api/logout'),
+  deleteData: () => request('/api/me/data', { method: 'DELETE' }),
   overview: () => request<Overview>('/api/overview'),
   rates: (location: string, plate: string) =>
     request<Rate[]>(`/api/rates?${new URLSearchParams({ location, plate })}`),

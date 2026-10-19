@@ -94,9 +94,15 @@ class DemoBot:
             unit, timedelta(minutes=quantity)
         )
 
+    def _find(self, parkingSessionId):
+        return next((x for x in self.sessions if x["parkingSessionId"] == parkingSessionId), None)
+
     def _create_quote(self, locationId, ratePolicyId, durationQuantity, durationTimeUnit, licensePlate,
-                      paymentAccountId=""):
+                      paymentAccountId="", operation="Start", parkingSessionId=""):
         now = datetime.now(timezone.utc)
+        current = self._find(parkingSessionId) if operation == "Extend" else None
+        if current:
+            now = current["expireTime"].replace(tzinfo=timezone.utc)
         return {
             "quoteId": str(uuid.uuid4()),
             "cost": {"amount": self._price(ratePolicyId, durationQuantity, durationTimeUnit), "currency": "EUR"},
@@ -125,6 +131,16 @@ class DemoBot:
         self.sessions.append(session)
         return {"parkingSessionId": session["parkingSessionId"], "cost": session["totalCost"],
                 "expireTime": session["expireTime"].isoformat()}
+
+    def extend(self, parkingSessionId, durationQuantity, durationTimeUnit, licensePlate, locationId, ratePolicyId,
+               paymentAccountId):
+        time.sleep(1.2)
+        current = self._find(parkingSessionId)
+        cost = self._price(ratePolicyId, durationQuantity, durationTimeUnit)
+        current["expireTime"] += self._delta(durationQuantity, durationTimeUnit)
+        current["totalCost"] = {"amount": round(current["totalCost"]["amount"] + cost, 2), "currency": "EUR"}
+        return {"parkingSessionId": parkingSessionId, "cost": {"amount": cost, "currency": "EUR"},
+                "expireTime": current["expireTime"].isoformat()}
 
 
 # --------------------------------------------------------------------------
@@ -379,6 +395,10 @@ class Parking(BaseModel):
     paymentAccountId: str
 
 
+class Extension(Parking):
+    sessionId: str
+
+
 class Autopilot(Parking):
     label: str = ""
 
@@ -451,14 +471,19 @@ def rates(location: str, plate: str, pbb_session: str = Cookie(None)):
     return guarded(lambda: s.call("get_rate_options", locationId=location.strip(), licensePlate=plate))
 
 
+class QuoteRequest(Parking):
+    sessionId: str = ""  # set to price an extension of this session
+
+
 @app.post("/api/quote")
-def quote(body: Parking, pbb_session: str = Cookie(None)):
+def quote(body: QuoteRequest, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
 
     def run():
         q = s.call("_create_quote", locationId=body.location, ratePolicyId=body.rate,
                    durationQuantity=fmt_qty(body.duration), durationTimeUnit=body.unit,
-                   licensePlate=body.plate, paymentAccountId=body.paymentAccountId)
+                   licensePlate=body.plate, paymentAccountId=body.paymentAccountId,
+                   operation="Extend" if body.sessionId else "Start", parkingSessionId=body.sessionId)
         details = q.get("details") or {}
         return {"cost": q.get("cost"), "start": iso(details.get("parkingStartTime")),
                 "expire": iso(details.get("parkingExpiryTime"))}
@@ -496,6 +521,57 @@ def pay(body: Parking, pbb_session: str = Cookie(None)):
         if e.status_code in (502, 504):
             log.warning("pay failed: %s", e.detail)
             s.log("error", "Paiement échoué (zone %s) : %s" % (body.location, e.detail))
+        raise
+
+
+@app.post("/api/extend")
+def extend(body: Extension, pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+
+    def run():
+        pending = s.unconfirmed.get((body.plate, body.location))
+        if pending and time.time() - pending < 30 * 60:
+            raise HTTPException(423, "Un paiement précédent pour cette voiture dans cette zone n'a pas été confirmé. "
+                                     "Vérifiez dans l'application PayByPhone avant de payer à nouveau.")
+        before = next((x for x in s.call("get_parking_sessions", licensePlate=body.plate, locationId=body.location)
+                       if x.get("parkingSessionId") == body.sessionId), None)
+        if before is None:
+            raise HTTPException(409, "Ce ticket n'est plus en cours : il ne peut pas être prolongé.")
+        before_expire = before["expireTime"]  # keep the value: the session dict may be updated in place
+        log.info("extend: session=%s zone=%s %s %s plate=%s demo=%s", body.sessionId, body.location,
+                 body.duration, body.unit, body.plate[:2] + "***", s.demo)
+        try:
+            result = s.call("extend", parkingSessionId=body.sessionId, durationQuantity=fmt_qty(body.duration),
+                            durationTimeUnit=body.unit, licensePlate=body.plate, locationId=body.location,
+                            ratePolicyId=body.rate, paymentAccountId=body.paymentAccountId)
+        except Exception as e:
+            log.warning("extend: PayByPhone refused: %s", str(e)[:1000])
+            raise
+        log.info("extend: PayByPhone answered jobId=%s jobStatus=%s cost=%s new expire=%s", result.get("jobId"),
+                 result.get("jobStatus"), result.get("cost"), result.get("expireTime"))
+        s.attempts.append({"at": datetime.now(timezone.utc).isoformat(), "location": body.location,
+                           "plate": body.plate, "operation": "extend",
+                           **{k: result.get(k) for k in ("quoteId", "parkingSessionId", "jobId", "jobStatus")}})
+        # Confirmed only once PayByPhone lists the session with its later end time.
+        for i in range(10):
+            now = next((x for x in s.call("get_parking_sessions", licensePlate=body.plate, locationId=body.location)
+                        if x.get("parkingSessionId") == body.sessionId), None)
+            if now and now["expireTime"] > before_expire:
+                log.info("extend: confirmed after %s check(s)", i + 1)
+                s.log("success", "Ticket prolongé : zone %s, %s" % (body.location, body.plate))
+                return {"ok": True, "expire": iso(now["expireTime"]), "cost": result.get("cost")}
+            if not s.demo:
+                time.sleep(3)
+        s.unconfirmed[(body.plate, body.location)] = time.time()
+        log.warning("extend: end time unchanged for session %s", body.sessionId)
+        log_diagnosis(s)
+        raise HTTPException(504, UNCONFIRMED)
+
+    try:
+        return guarded(run)
+    except HTTPException as e:
+        if e.status_code in (502, 504):
+            log.warning("extend failed: %s", e.detail)
         raise
 
 

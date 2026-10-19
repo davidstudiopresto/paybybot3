@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, LogOut, RefreshCw, SquareParking } from 'lucide-react'
+import { CreditCard, LogOut, Plus, RefreshCw, SquareParking } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ActionTile, Plate, Wordmark, ZonePlate } from '@/components/signs'
+import { ExtendDialog } from '@/components/Extend'
 import { RiverainCard } from '@/components/Riverain'
 import { clock, money, remaining, type Me, type Overview, type Session } from '@/lib/api'
 
@@ -15,7 +16,20 @@ function useNow(interval = 1000) {
   return now
 }
 
-function Ticket({ session, now, index }: { session: Session; now: number; index: number }) {
+function Ticket({
+  session,
+  now,
+  index,
+  data,
+  onRefresh,
+}: {
+  session: Session
+  now: number
+  index: number
+  data: Overview
+  onRefresh: () => Promise<void>
+}) {
+  const [extending, setExtending] = useState(false)
   const start = new Date(session.start).getTime()
   const end = new Date(session.expire).getTime()
   const left = end - now
@@ -49,12 +63,16 @@ function Ticket({ session, now, index }: { session: Session; now: number; index:
         </div>
       </div>
       {/* Ticket stub */}
-      <div className="perforated relative flex items-center justify-between gap-4 border-t-2 border-dashed border-border bg-accent/60 px-6 py-4 sm:w-44 sm:flex-col sm:justify-center sm:border-t-0 sm:border-l-2">
+      <div className="perforated relative flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t-2 border-dashed border-border bg-accent/60 px-6 py-4 sm:w-44 sm:flex-col sm:flex-nowrap sm:justify-center sm:border-t-0 sm:border-l-2">
         <span className="flex items-center gap-2 text-sm font-bold text-go">
           <span className="blink size-2.5 rounded-full bg-go" /> Payé
         </span>
         <span className="font-heading text-2xl font-black">{money(session.cost)}</span>
+        <Button onClick={() => setExtending(true)} className="h-12 w-full rounded-xl px-4 font-bold sm:h-11 sm:w-auto">
+          <Plus className="size-4" /> Prolonger
+        </Button>
       </div>
+      <ExtendDialog session={session} data={data} open={extending} onOpenChange={setExtending} onDone={onRefresh} />
     </article>
   )
 }
@@ -134,7 +152,7 @@ export function Dashboard({
         ) : sessions.length ? (
           <div className="grid gap-5">
             {sessions.map((s, i) => (
-              <Ticket key={s.id} session={s} now={now} index={i} />
+              <Ticket key={s.id} session={s} now={now} index={i} data={data} onRefresh={onRefresh} />
             ))}
           </div>
         ) : (

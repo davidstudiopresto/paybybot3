@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { api, ApiError, clock, money, unitLabel, type Money, type Overview, type Parking, type Rate, type Unit } from '@/lib/api'
 
 const STEPS = ['Voiture', 'Zone', 'Tarif', 'Durée', 'Paiement', 'Confirmer'] as const
-const PRESETS: Record<Unit, number[]> = { Days: [1, 2, 3, 7], Hours: [1, 2, 3, 4], Minutes: [15, 30, 45, 60] }
+export const PRESETS: Record<Unit, number[]> = { Days: [1, 2, 3, 7], Hours: [1, 2, 3, 4], Minutes: [15, 30, 45, 60] }
 const LAST_KEY = 'paybybot3:last'
 
 export function loadLast(): Partial<Parking> {

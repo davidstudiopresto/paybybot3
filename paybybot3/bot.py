@@ -224,7 +224,10 @@ class Bot:
         durationTimeUnit,
         licensePlate,
         paymentAccountId="",
+        operation="Start",
+        parkingSessionId="",
     ):
+        """operation is "Start" for a new session, "Extend" to add time to parkingSessionId."""
         cardType, paymentScope = self._resolve_payment(paymentAccountId)
         query = """mutation CreateQuotesV1($requests: [QuoteRequestInput!]!) {
   createQuotesV1(input: {requests: $requests}) {
@@ -265,12 +268,12 @@ class Bot:
                         "locationId": str(locationId),
                         "advertisedLocationId": str(locationId),
                         "ratePolicyId": str(ratePolicyId),
-                        "parkingQuoteOperation": "Start",
+                        "parkingQuoteOperation": operation,
                         "durationTimeUnit": durationTimeUnit,
                         "durationQuantity": str(durationQuantity),
                         "licensePlate": licensePlate,
                         "stall": "",
-                        "parkingSessionId": "",
+                        "parkingSessionId": parkingSessionId or "",
                         "paymentAccountId": paymentAccountId or "",
                         "paymentCardType": cardType,
                         "paymentScope": paymentScope,
@@ -305,6 +308,28 @@ class Bot:
         return self._graphql(query, {"input": {"request": {"quoteId": quoteId}}})[
             "startParkingSessionV1"
         ]["parkingSessionResponse"]
+
+    def _extend_session(self, parkingSessionId, quoteId):
+        query = """mutation ExtendParkingSessionV1($input: ExtendParkingSessionV1Input!) {
+  extendParkingSessionV1(input: $input) {
+    parkingSessionResponse {
+      parkingSessionId
+      expireTime
+      isEarlyCapture
+      segmentTotalCost {
+        amount
+        currency
+      }
+      metadata
+    }
+  }
+}"""
+        variables = {
+            "input": {"request": {"parkingSessionId": parkingSessionId, "quoteId": quoteId}}
+        }
+        return self._graphql(query, variables)["extendParkingSessionV1"][
+            "parkingSessionResponse"
+        ]
 
     def _create_job(
         self,
@@ -449,11 +474,36 @@ class Bot:
             licensePlate=licensePlate,
             paymentAccountId=paymentAccountId,
         )
-        quoteId = quote["quoteId"]
+        session = self._start_session(quote["quoteId"])
+        return self._charge(quote, session, locationId, paymentAccountId)
 
-        session = self._start_session(quoteId)
+    def extend(
+        self,
+        parkingSessionId,
+        durationQuantity,
+        durationTimeUnit,
+        licensePlate,
+        locationId,
+        ratePolicyId,
+        paymentAccountId,
+    ):
+        """Add time to an ongoing session, the way the official app does."""
+        quote = self._create_quote(
+            locationId=locationId,
+            ratePolicyId=ratePolicyId,
+            durationQuantity=durationQuantity,
+            durationTimeUnit=durationTimeUnit,
+            licensePlate=licensePlate,
+            paymentAccountId=paymentAccountId,
+            operation="Extend",
+            parkingSessionId=parkingSessionId,
+        )
+        session = self._extend_session(parkingSessionId, quote["quoteId"])
+        return self._charge(quote, session, locationId, paymentAccountId)
+
+    def _charge(self, quote, session, locationId, paymentAccountId):
+        """Create the payment job for a started or extended session and wait for it."""
         parkingSessionId = session["parkingSessionId"]
-
         vendorId = self._get_vendor_id(locationId)
         jobId = self._create_job(
             parkingSessionId=parkingSessionId,
@@ -476,7 +526,7 @@ class Bot:
             sleep(2)
 
         return {
-            "quoteId": quoteId,
+            "quoteId": quote["quoteId"],
             "cost": quote.get("cost"),
             "parkingSessionId": parkingSessionId,
             "expireTime": session.get("expireTime"),

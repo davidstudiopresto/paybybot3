@@ -81,7 +81,8 @@ export const api = {
   overview: () => request<Overview>('/api/overview'),
   rates: (location: string, plate: string) =>
     request<Rate[]>(`/api/rates?${new URLSearchParams({ location, plate })}`),
-  quote: (p: Parking) => post<{ cost: Money; start: string; expire: string }>('/api/quote', p),
+  quote: (p: Parking & { sessionId?: string }) => post<{ cost: Money; start: string; expire: string }>('/api/quote', p),
+  extend: (p: Parking & { sessionId: string }) => post<{ ok: true; expire: string; cost: Money }>('/api/extend', p),
   pay: (p: Parking) => post<{ ok: true; expire: string; cost: Money }>('/api/pay', p),
   addAutopilot: (p: Parking & { label: string }) => post<Autopilot>('/api/autopilots', p),
   deleteAutopilot: (id: string) => request(`/api/autopilots/${id}`, { method: 'DELETE' }),

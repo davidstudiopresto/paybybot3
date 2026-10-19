@@ -205,7 +205,7 @@ function Privacy() {
   return (
     <>
       <p className="text-lg text-muted-foreground">
-        Cette politique est propre à paybybot. Elle explique quelles données le service traite, pourquoi, combien de temps,
+        Cette politique est propre à PaybyBot. Elle explique quelles données le service traite, pourquoi, combien de temps,
         et quels sont vos droits, au sens du Règlement général sur la protection des données (RGPD).
       </p>
 
@@ -376,7 +376,7 @@ function Terms() {
   return (
     <>
       <p className="text-lg text-muted-foreground">
-        Ces conditions encadrent l’utilisation de paybybot. En vous connectant avec votre compte PayByPhone, vous les
+        Ces conditions encadrent l’utilisation de PaybyBot. En vous connectant avec votre compte PayByPhone, vous les
         acceptez.
       </p>
 
@@ -455,7 +455,7 @@ function Terms() {
         </p>
         <p>
           Dans les limites permises par la loi, PaybyBot et son propriétaire ne sont pas responsables des amendes ou forfaits
-          post-stationnement, des paiements refusés ou non réalisés, ni des indisponibilités de PayByPhone ou de paybybot.
+          post-stationnement, des paiements refusés ou non réalisés, ni des indisponibilités de PayByPhone ou de PaybyBot.
           Cette limitation ne s’applique pas en cas de faute lourde ou intentionnelle.
         </p>
       </Section>

@@ -561,7 +561,7 @@ def send_email(to, subject, title, lines, button=None):
         '<p style="margin:0 0 18px"><b style="font-size:20px;letter-spacing:-0.3px;color:#0d1830">PaybyBot</b></p>'
         '<h1 style="margin:0 0 14px;font-size:22px;color:#0d1830">%s</h1>%s%s'
         '<p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#4f5a70">Vous recevez cet e-mail parce que vous '
-        "avez activé le renouvellement automatique sur paybybot. Pour ne plus en recevoir, retirez votre adresse ou "
+        "avez activé le renouvellement automatique sur PaybyBot. Pour ne plus en recevoir, retirez votre adresse ou "
         "arrêtez le renouvellement depuis l'application. PaybyBot est un service indépendant de PayByPhone.</p>"
         "</div></div>" % (escape(title), paragraphs, cta)
     )

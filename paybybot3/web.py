@@ -5,6 +5,7 @@ and serves the single-page app built from ``web/`` (copied into ``static/``).
 PayByPhone credentials only live in this process' memory.
 """
 
+import json
 import logging
 import re
 import secrets
@@ -65,6 +66,9 @@ class DemoBot:
             if (licensePlate is None or s["vehicle"]["licensePlate"] == licensePlate)
             and (locationId is None or s["locationId"] == locationId)
         ]
+
+    def _get_parking_sessions(self):
+        return self.get_parking_sessions()
 
     def get_rate_options(self, locationId, licensePlate):
         if not str(locationId).isdigit():
@@ -168,6 +172,8 @@ class UserSession:
             self.bot, self.username = connect(username, password)
         self.autopilots = {}  # id -> dict
         self.history = []  # most recent first
+        self.attempts = []  # every real payment request, for diagnosis
+        self.unconfirmed = {}  # (plate, location) -> time of an unconfirmed payment
 
     def call(self, method, *args, **kwargs):
         """Call a bot method, logging in again once if the token expired."""
@@ -263,10 +269,17 @@ def pay_and_confirm(session, location, rate, duration, unit, plate, paymentAccou
     """Pay, then poll the current sessions like the CLI does: success only once PayByPhone lists it."""
     log.info("pay: zone=%s rate=%s %s %s plate=%s demo=%s", location, rate, duration, unit, plate[:2] + "***",
              session.demo)
-    result = session.call("pay", durationQuantity=duration, durationTimeUnit=unit, licensePlate=plate,
-                          locationId=location, ratePolicyId=rate, paymentAccountId=paymentAccountId)
-    log.info("pay: PayByPhone answered parkingSessionId=%s jobStatus=%s cost=%s",
-             result.get("parkingSessionId"), result.get("jobStatus"), result.get("cost"))
+    try:
+        result = session.call("pay", durationQuantity=duration, durationTimeUnit=unit, licensePlate=plate,
+                              locationId=location, ratePolicyId=rate, paymentAccountId=paymentAccountId)
+    except Exception as e:
+        log.warning("pay: PayByPhone refused: %s", str(e)[:1000])
+        raise
+    log.info("pay: PayByPhone answered quoteId=%s parkingSessionId=%s jobId=%s jobStatus=%s cost=%s",
+             result.get("quoteId"), result.get("parkingSessionId"), result.get("jobId"), result.get("jobStatus"),
+             result.get("cost"))
+    session.attempts.append({"at": datetime.now(timezone.utc).isoformat(), "location": location, "plate": plate,
+                             **{k: result.get(k) for k in ("quoteId", "parkingSessionId", "jobId", "jobStatus")}})
     for i in range(attempts):
         found = session.call("get_parking_sessions", licensePlate=plate, locationId=location)
         if found:
@@ -276,7 +289,36 @@ def pay_and_confirm(session, location, rate, duration, unit, plate, paymentAccou
             time.sleep(delay)
     log.warning("pay: no session visible for zone=%s after %ss (jobStatus=%s)", location, attempts * delay,
                 result.get("jobStatus"))
+    session.unconfirmed[(plate, location)] = time.time()
+    log_diagnosis(session)
     raise Unconfirmed(UNCONFIRMED)
+
+
+def diagnosis(session):
+    """Unfiltered current sessions and the state of every payment job: no card data in there."""
+    report = {"sessions": [], "jobs": []}
+    for x in session.call("_get_parking_sessions"):
+        report["sessions"].append({
+            "id": x.get("parkingSessionId"), "status": x.get("status"), "type": x.get("type"),
+            "locationId": x.get("locationId"), "plate": (x.get("vehicle") or {}).get("licensePlate"),
+            "start": iso(x.get("startTime")), "expire": iso(x.get("expireTime")), "cost": x.get("totalCost"),
+        })
+    for a in session.attempts:
+        job = None
+        if a.get("jobId") and not session.demo:
+            try:
+                job = session.call("_get_job", a["jobId"])
+            except Exception as e:
+                job = {"error": str(e)[:300]}
+        report["jobs"].append({**a, "job": job})
+    return report
+
+
+def log_diagnosis(session):
+    try:
+        log.warning("diagnosis: %s", json.dumps(diagnosis(session), default=str))
+    except Exception as e:
+        log.warning("diagnosis failed: %s", e)
 
 
 def run_autopilot(session, ap):
@@ -433,6 +475,10 @@ def pay(body: Parking, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
 
     def run():
+        pending = s.unconfirmed.get((body.plate, body.location))
+        if pending and time.time() - pending < 30 * 60:
+            raise HTTPException(423, "Un paiement précédent pour cette voiture dans cette zone n'a pas été confirmé. "
+                                     "Vérifiez dans l'application PayByPhone avant de payer à nouveau.")
         if s.call("get_parking_sessions", licensePlate=body.plate, locationId=body.location):
             raise HTTPException(409, "Un stationnement est déjà en cours pour %s dans cette zone." % body.plate)
         try:
@@ -451,6 +497,14 @@ def pay(body: Parking, pbb_session: str = Cookie(None)):
             log.warning("pay failed: %s", e.detail)
             s.log("error", "Paiement échoué (zone %s) : %s" % (body.location, e.detail))
         raise
+
+
+@app.get("/api/debug")
+def debug(pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+    report = guarded(lambda: diagnosis(s))
+    log.warning("diagnosis (on demand): %s", json.dumps(report, default=str))
+    return report
 
 
 @app.post("/api/autopilots")

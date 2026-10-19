@@ -306,7 +306,16 @@ class Bot:
             "startParkingSessionV1"
         ]["parkingSessionResponse"]
 
-    def _create_job(self, parkingSessionId, vendorId, endingTime, isEarlyCapture, metadata):
+    def _create_job(
+        self,
+        parkingSessionId,
+        vendorId,
+        endingTime,
+        isEarlyCapture,
+        metadata,
+        amount=None,
+        paymentAccountId="",
+    ):
         query = """mutation CreateJobV1($input: CreateJobV1Input!) {
   createJobV1(input: $input) {
     createJobResponse {
@@ -316,23 +325,32 @@ class Bot:
 }"""
         if isinstance(metadata, (dict, list)):
             metadata = json.dumps(metadata)
-        variables = {
-            "input": {
-                "request": {
-                    "lineItems": [
-                        {
-                            "productType": "parking",
-                            "productReferenceId": parkingSessionId,
-                            "vendorId": str(vendorId),
-                            "endingTime": endingTime,
-                            "isEarlyCapture": bool(isEarlyCapture),
-                            "required": True,
-                            "metadata": metadata or "{}",
-                        }
-                    ]
-                }
-            }
+        line_item = {
+            "productType": "parking",
+            "productReferenceId": parkingSessionId,
+            "vendorId": str(vendorId),
+            "endingTime": endingTime,
+            "isEarlyCapture": bool(isEarlyCapture),
+            "required": True,
+            "metadata": metadata or "{}",
         }
+        # Like the official web app: without the amount the job fails with
+        # InvalidFulfillmentAmount and the payment is voided.
+        if amount and amount.get("amount"):
+            line_item["amount"] = {
+                "value": amount["amount"],
+                "isoCurrencyCode": amount.get("currency") or "EUR",
+            }
+        request = {"lineItems": [line_item]}
+        if paymentAccountId:
+            request["paymentMethod"] = {
+                "paymentMethodType": "PaymentAccount",
+                "paymentDetails": {
+                    "$type": "paymentAccount",
+                    "paymentAccountId": paymentAccountId,
+                },
+            }
+        variables = {"input": {"request": request}}
         return self._graphql(query, variables)["createJobV1"]["createJobResponse"][
             "jobId"
         ]
@@ -384,16 +402,34 @@ class Bot:
         found = failures(job.get("executionDetails"))
         for cg in job.get("captureGroups") or []:
             found += failures(cg.get("executionDetails"))
+            if cg.get("stage") == "void":
+                found.append({"isFailure": True, "code": "Voided", "message": "Payment voided"})
             for li in cg.get("lineItems") or []:
                 found += failures(li.get("executionDetails"))
+                if li.get("status") == "fulfillmentFailed":
+                    found.append({"isFailure": True, "code": "FulfillmentFailed", "message": "Fulfillment failed"})
         return found
+
+    _TERMINAL_LINE_ITEM_STATUSES = {
+        "fulfilled",
+        "fulfillmentFailed",
+        "cancelled",
+        "canceled",
+        "voided",
+        "refunded",
+    }
 
     def _job_is_terminal(self, job):
         if job.get("status") in ("closed", "completed", "settled"):
             return True
         groups = job.get("captureGroups") or []
-        return bool(groups) and all(
-            cg.get("status") in self._TERMINAL_CAPTURE_STATUSES for cg in groups
+        # A capture group can be "captureNotRequired" before its line items are
+        # fulfilled (or fail), so wait for the line items too.
+        line_items = [li for cg in groups for li in cg.get("lineItems") or []]
+        return (
+            bool(groups)
+            and all(cg.get("status") in self._TERMINAL_CAPTURE_STATUSES for cg in groups)
+            and all(li.get("status") in self._TERMINAL_LINE_ITEM_STATUSES for li in line_items)
         )
 
     def pay(
@@ -425,10 +461,12 @@ class Bot:
             endingTime=session["expireTime"],
             isEarlyCapture=session.get("isEarlyCapture", False),
             metadata=session.get("metadata"),
+            amount=session.get("segmentTotalCost") or quote.get("cost"),
+            paymentAccountId=paymentAccountId,
         )
 
         job = None
-        for _ in range(6):
+        for _ in range(15):
             job = self._get_job(jobId)
             failures = self._job_failures(job)
             if failures:

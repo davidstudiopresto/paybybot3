@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { NoPayment } from '@/components/NoPayment'
 import { Plate, ZonePlate } from '@/components/signs'
 import { cn } from '@/lib/utils'
-import { api, clock, money, unitLabel, type Money, type Overview, type Parking, type Rate, type Unit } from '@/lib/api'
+import { api, ApiError, clock, money, unitLabel, type Money, type Overview, type Parking, type Rate, type Unit } from '@/lib/api'
 
 const STEPS = ['Voiture', 'Zone', 'Tarif', 'Durée', 'Paiement', 'Confirmer'] as const
 const PRESETS: Record<Unit, number[]> = { Days: [1, 2, 3, 7], Hours: [1, 2, 3, 4], Minutes: [15, 30, 45, 60] }
@@ -80,6 +80,8 @@ export function PayWizard({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<{ expire: string; cost: Money } | null>(null)
+  // After an unconfirmed payment, never offer to pay again from here: it could charge twice.
+  const [unconfirmed, setUnconfirmed] = useState(false)
 
   useEffect(() => {
     if (!payment && data.payments[0]) setPayment(data.payments[0].id)
@@ -140,6 +142,7 @@ export function PayWizard({
       setDone(res)
     } catch (e) {
       setError((e as Error).message)
+      if (e instanceof ApiError && (e.status === 504 || e.status === 423)) setUnconfirmed(true)
     } finally {
       setBusy(false)
     }
@@ -379,12 +382,16 @@ export function PayWizard({
 
       <footer className="fixed inset-x-0 bottom-0 border-t border-border/70 bg-paper/95 backdrop-blur">
         <div className="mx-auto flex max-w-2xl gap-3 px-5 py-4">
-          {step > 0 && (
+          {step > 0 && !unconfirmed && (
             <Button variant="outline" onClick={() => setStep((s) => s - 1)} className="h-14 rounded-xl bg-enamel px-5 text-lg">
               <ArrowLeft className="size-5" /> Retour
             </Button>
           )}
-          {step < 5 ? (
+          {unconfirmed ? (
+            <Button onClick={onPaid} className="h-14 flex-1 rounded-xl text-lg font-bold">
+              Retour à l'accueil
+            </Button>
+          ) : step < 5 ? (
             <Button onClick={next} disabled={!canContinue || busy} className="h-14 flex-1 rounded-xl text-lg font-bold">
               {busy ? <Loader2 className="size-5 animate-spin" /> : <>Continuer <ArrowRight className="size-5" /></>}
             </Button>

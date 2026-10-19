@@ -1004,9 +1004,14 @@ def login(body: Login, request: Request, response: Response):
         log.warning("login failed for %s: %s", masked, e)
         raise HTTPException(400, friendly_error(e))
     log.info("login ok for %s (%s)", masked, "demo" if demo else "PayByPhone account %s***" % session.username[:5])
-    if body.signup and not demo and guarded(lambda: has_account(session)):
-        log.info("sign-up refused: account already exists for %s", masked)
-        raise HTTPException(409, "Un compte PaybyBot existe déjà pour ce compte PayByPhone.")
+    if not demo and (body.signup or HOSTED):
+        exists = guarded(lambda: has_account(session))
+        if body.signup and exists:
+            log.info("sign-up refused: account already exists for %s", masked)
+            raise HTTPException(409, "Un compte PaybyBot existe déjà pour ce compte PayByPhone.")
+        if not body.signup and not exists:  # online, logging in needs a sign-up first
+            log.info("login refused: no account yet for %s", masked)
+            raise HTTPException(404, "Aucun compte PaybyBot pour ce compte PayByPhone.")
     if HOSTED:
         token = seal(session)
         refresh = getattr(session.bot, "refresh_token", None)

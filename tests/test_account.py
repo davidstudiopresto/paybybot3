@@ -51,5 +51,16 @@ class Account(unittest.TestCase):
         self.assertEqual(fresh.account, {"email": "c@d.fr", "zone": "75017"})
 
 
+class HostedLogin(unittest.TestCase):
+    def test_login_without_account_is_refused_online(self):
+        s = web.UserSession("demo", "", demo=True)
+        s.demo = False
+        with patch.object(web, "HOSTED", True), patch.object(web, "UserSession", return_value=s), \
+                patch.object(web, "has_account", return_value=False), patch.object(web, "check_login_rate"), \
+                self.assertRaises(HTTPException) as e:
+            web.login(web.Login(username="+33612345678", password="x", accepted=True), None, Response())
+        self.assertEqual(e.exception.status_code, 404)
+
+
 if __name__ == "__main__":
     unittest.main()

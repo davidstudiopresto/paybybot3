@@ -79,7 +79,7 @@ export default function App() {
     <>
       <Toaster />
       {legal ? (
-        legal === 'securite' ? <SecurityPage hosted={hosted} /> : <LegalView page={legal} hosted={hosted} />
+        legal === 'securite' ? <SecurityPage hosted={hosted} signedIn={!!me} /> : <LegalView page={legal} hosted={hosted} signedIn={!!me} />
       ) : me === undefined ? (
         <div className="grid min-h-dvh place-items-center">
           <span className="animate-pulse">
@@ -87,7 +87,7 @@ export default function App() {
           </span>
         </div>
       ) : route === 'faq' ? (
-        <FaqView hosted={hosted} />
+        <FaqView hosted={hosted} signedIn={!!me} />
       ) : me === null ? (
         route === 'connexion' || route === 'inscription' ? (
           <LoginView

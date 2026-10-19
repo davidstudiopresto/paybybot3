@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { ArrowRight, Building2, KeyRound, Lock, ShieldCheck } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { LEGAL_PAGES, LEGAL_UPDATED, PUBLISHER } from '@/components/Legal'
-import { TopBar } from '@/components/TopBar'
+import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 
 /** Small uppercase label above a section title. */
@@ -52,14 +52,10 @@ const SUBPROCESSORS = [
 ]
 
 /** The security page, laid out like a trust page: seal, practice, framework, sub-processors, then the details. */
-export function SecurityPage({ hosted }: { hosted: boolean }) {
+export function SecurityPage({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
   return (
     <div className="min-h-dvh bg-white">
-      <TopBar>
-        <a href="#/connexion" className="inline-flex h-9 items-center rounded-full bg-ink/[0.06] px-3 text-sm font-semibold whitespace-nowrap text-ink transition hover:bg-ink/[0.1] sm:h-10 sm:px-4 sm:text-[0.95rem]">
-          Se connecter
-        </a>
-      </TopBar>
+      <PublicTopBar signedIn={signedIn} />
 
       <header className="mx-auto max-w-6xl px-6 pt-16 sm:px-8 lg:pt-24">
         <h1 className="rise font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3.4rem]">

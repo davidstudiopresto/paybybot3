@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { ArrowRight, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
-import { TopBar } from '@/components/TopBar'
+import { PublicTopBar } from '@/components/TopBar'
 import { ZoneField } from '@/components/Riverain'
-import { ui } from '@/lib/styles'
 import { api, ApiError, type Me } from '@/lib/api'
 
 /** Countries where PayByPhone is used, with their calling code and flag stripes. */
@@ -93,17 +92,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
-      <TopBar>
-        {signup ? (
-          <a href="#/connexion" className={ui.pillGray}>
-            Se connecter
-          </a>
-        ) : (
-          <a href="#/inscription" className={ui.pillBlue}>
-            S'inscrire
-          </a>
-        )}
-      </TopBar>
+      <PublicTopBar />
 
       <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center sm:pt-0">
         <form

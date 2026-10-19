@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, Check, Mail, X } from 'lucide-react'
+import { Check, Mail, X } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
-import { Wordmark } from '@/components/signs'
+import { PublicTopBar } from '@/components/TopBar'
 
 /** Who publishes paybybot. Shown in the legal pages. */
 export const PUBLISHER = {
@@ -547,20 +547,11 @@ const CONTENT: Record<LegalPage, { title: string; body: () => ReactNode }> = {
   'mentions-legales': { title: 'Mentions légales', body: Notice },
 }
 
-export function LegalView({ page, hosted }: { page: LegalPage; hosted: boolean }) {
+export function LegalView({ page, hosted, signedIn = false }: { page: LegalPage; hosted: boolean; signedIn?: boolean }) {
   const { title, body: Body } = CONTENT[page]
   return (
     <div className="min-h-dvh bg-white">
-      <header>
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 pt-6 sm:px-8 sm:pt-8">
-          <a href="#/" aria-label="Accueil PaybyBot">
-            <Wordmark />
-          </a>
-          <a href="#/" className="flex items-center gap-2 rounded-xl px-3 py-2 font-bold hover:bg-muted">
-            <ArrowLeft className="size-4" /> Retour
-          </a>
-        </div>
-      </header>
+      <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto max-w-3xl px-5 pt-10 pb-20">
         <nav className="flex flex-wrap gap-2" aria-label="Pages d'information">
           {LEGAL_PAGES.map((p) => (

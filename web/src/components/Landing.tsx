@@ -3,32 +3,10 @@ import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Plus, Power, Re
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { Plate, ZonePlate } from '@/components/signs'
-import { TopBar } from '@/components/TopBar'
+import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
-/** Header of the public pages: logo back home, then "Se connecter" and "S'inscrire". */
-function SiteHeader() {
-  return (
-    <TopBar>
-      <a href="#/faq" className="hidden px-2 text-[0.95rem] font-medium text-ink/70 transition hover:text-ink sm:inline">
-        FAQ
-      </a>
-      <a href="#/securite" className="hidden px-2 text-[0.95rem] font-medium text-ink/70 transition hover:text-ink sm:inline">
-        Sécurité
-      </a>
-      <a href="#/demo" className="mr-2 hidden px-2 text-[0.95rem] font-medium text-ink/70 transition hover:text-ink sm:inline">
-        Démo
-      </a>
-      <a href="#/connexion" className={ui.pillGray}>
-        Se connecter
-      </a>
-      <a href="#/inscription" className={ui.pillBlue}>
-        S'inscrire
-      </a>
-    </TopBar>
-  )
-}
 
 const STEPS = [
   ['Connectez PayByPhone', 'Avec vos identifiants habituels. Pas de nouveau compte, pas de nouveau mot de passe.'],
@@ -107,7 +85,7 @@ function Security() {
 export function Landing({ hosted }: { hosted: boolean }) {
   return (
     <div className="flex min-h-dvh flex-col bg-white">
-      <SiteHeader />
+      <PublicTopBar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-[10vh] pb-24 sm:px-8 lg:pt-[14vh]">
         <section className="rise grid items-center gap-12 lg:grid-cols-[1.45fr_1fr] lg:gap-16">
@@ -233,10 +211,10 @@ function Faq({ className }: { className?: string }) {
   )
 }
 
-export function FaqView({ hosted }: { hosted: boolean }) {
+export function FaqView({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
   return (
     <div className="flex min-h-dvh flex-col bg-white">
-      <SiteHeader />
+      <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-16 pb-24 sm:px-8 lg:pt-24">
         <div className="rise">
           <FaqTitle />

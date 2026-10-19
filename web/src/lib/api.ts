@@ -87,6 +87,8 @@ export const api = {
   overview: () => request<Overview>('/api/overview'),
   rates: (location: string, plate: string) =>
     request<Rate[]>(`/api/rates?${new URLSearchParams({ location, plate })}`),
+  lastRate: (location: string, plate: string) =>
+    request<{ rate: string | null; inZone: boolean }>(`/api/last-rate?${new URLSearchParams({ location, plate })}`),
   quote: (p: Parking & { sessionId?: string }) => post<{ cost: Money; start: string; expire: string }>('/api/quote', p),
   extend: (p: Parking & { sessionId: string }) => post<{ ok: true; expire: string; cost: Money }>('/api/extend', p),
   pay: (p: Parking) => post<{ ok: true; expire: string; cost: Money }>('/api/pay', p),

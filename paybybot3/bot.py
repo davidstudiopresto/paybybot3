@@ -104,7 +104,7 @@ class Bot:
             "getVehiclesV3"
         ]
 
-    def _get_parking_sessions(self):
+    def _get_parking_sessions(self, periodType="CURRENT", limit=50):
         query = """query GetParkingSessionsV1($input: GetParkingSessionsInput!) {
   getParkingSessionsV1(input: $input) {
     parkingSessionId
@@ -132,7 +132,7 @@ class Bot:
   }
 }"""
         sessions = self._graphql(
-            query, {"input": {"periodType": "CURRENT", "offset": 0, "limit": 50}}
+            query, {"input": {"periodType": periodType, "offset": 0, "limit": limit}}
         )["getParkingSessionsV1"]
         for s in sessions:
             s["startTime"] = _parse_dt(s.get("startTime"))
@@ -150,6 +150,11 @@ class Bot:
             return True
 
         return list(filter(pred, self._get_parking_sessions()))
+
+    def get_past_sessions(self, limit=20):
+        """Finished sessions, most recent first (PayByPhone's history)."""
+        sessions = self._get_parking_sessions(periodType="HISTORIC", limit=limit)
+        return sorted(sessions, key=lambda x: x.get("startTime") or datetime.min, reverse=True)
 
     def last_expiry(self, licensePlate, locationId):
         return max(

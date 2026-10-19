@@ -92,8 +92,11 @@ class DemoBot:
             and (locationId is None or s["locationId"] == locationId)
         ]
 
-    def _get_parking_sessions(self):
+    def _get_parking_sessions(self, periodType="CURRENT", limit=50):
         return self.get_parking_sessions()
+
+    def get_past_sessions(self, limit=20):
+        return sorted(self.sessions, key=lambda x: x["startTime"], reverse=True)
 
     def get_rate_options(self, locationId, licensePlate):
         if not str(locationId).isdigit():
@@ -932,6 +935,26 @@ def overview(pbb_session: str = Cookie(None)):
 def rates(location: str, plate: str, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
     return guarded(lambda: s.call("get_rate_options", locationId=location.strip(), licensePlate=plate))
+
+
+@app.get("/api/last-rate")
+def last_rate(location: str, plate: str, pbb_session: str = Cookie(None)):
+    """The rate this car used last, from PayByPhone's history: in this zone first, otherwise anywhere."""
+    s = current(pbb_session)
+    try:
+        sessions = s.call("get_past_sessions", limit=30) + s.call("get_parking_sessions")
+    except Exception as e:  # history is a convenience: never block the payment for it
+        log.info("history unavailable: %s", str(e)[:200])
+        return {"rate": None, "inZone": False}
+    mine = [x for x in sessions if (x.get("vehicle") or {}).get("licensePlate") == plate]
+    mine.sort(key=lambda x: x.get("startTime") or datetime.min, reverse=True)
+    for in_zone in (True, False):
+        for x in mine:
+            if (x.get("locationId") == location.strip()) == in_zone or not in_zone:
+                rate = (x.get("ratePolicy") or {}).get("ratePolicyId")
+                if rate:
+                    return {"rate": str(rate), "inZone": in_zone}
+    return {"rate": None, "inZone": False}
 
 
 class QuoteRequest(Parking):

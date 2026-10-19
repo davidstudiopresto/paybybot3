@@ -114,14 +114,26 @@ export function PayWizard({
     if (step === 1) {
       setBusy(true)
       try {
-        const found = await api.rates(parking.location, plate)
+        const [found, history] = await Promise.all([
+          api.rates(parking.location, plate),
+          api.lastRate(parking.location, plate).catch(() => ({ rate: null, inZone: false })),
+        ])
         if (!found.length) throw new Error("Aucun tarif trouvé pour cette zone. Vérifiez le numéro affiché sur l'horodateur.")
         setRates(found)
-        const remembered = found.find((r) => r.ratePolicyId === last.rate && !r.parkingNotAllowedReason)
-        pickRate(remembered ?? found.find((r) => !r.parkingNotAllowedReason) ?? found[0])
-        if (remembered && last.unit && remembered.acceptedTimeUnits.includes(last.unit)) {
+        const allowed = found.filter((r) => !r.parkingNotAllowedReason)
+        // Known rate: chosen last time on this device, or found in PayByPhone's history for this car.
+        const remembered =
+          allowed.find((r) => r.ratePolicyId === last.rate) ?? allowed.find((r) => r.ratePolicyId === history.rate)
+        const known = remembered ?? (allowed.length === 1 ? allowed[0] : undefined)
+        pickRate(known ?? allowed[0] ?? found[0])
+        if (remembered && last.rate === remembered.ratePolicyId && last.unit && remembered.acceptedTimeUnits.includes(last.unit)) {
           setUnit(last.unit)
           setDuration(last.duration ?? PRESETS[last.unit][0])
+        }
+        if (known) {
+          // No need to ask: go straight to the duration, where the rate can still be changed.
+          setStep(3)
+          return
         }
       } catch (e) {
         setError((e as Error).message)
@@ -275,6 +287,17 @@ export function PayWizard({
         {step === 3 && rate && (
           <>
             <h1 className={cn('mt-2', ui.title)}>Pour combien de temps ?</h1>
+            <p className={ui.subtitle}>
+              Tarif : <strong className="font-bold text-ink">{rate.name}</strong>
+              {rates.length > 1 && (
+                <>
+                  {' · '}
+                  <button onClick={() => setStep(2)} className={ui.link}>
+                    Changer
+                  </button>
+                </>
+              )}
+            </p>
             {rate.acceptedTimeUnits.length > 1 && (
               <div className="mt-8 inline-flex rounded-xl bg-muted p-1.5">
                 {rate.acceptedTimeUnits.map((u) => (

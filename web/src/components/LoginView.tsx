@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Sparkles } from 'lucide-react'
+import { ArrowRight, ExternalLink, Eye, EyeOff, HelpCircle, Loader2, LockKeyhole, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +14,7 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [accepted, setAccepted] = useState(false)
+  const [showWhy, setShowWhy] = useState(false)
 
   async function submit(u = username, p = password) {
     setError(null)
@@ -82,15 +83,54 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
           <div className="mt-5 space-y-4 sm:mt-8 sm:space-y-5">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-base">Téléphone ou e-mail</Label>
-              <Input
-                id="username"
-                autoComplete="username"
-                placeholder="06 12 34 56 78"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="h-14 bg-enamel text-lg"
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="username"
+                  autoComplete="username"
+                  placeholder="06 12 34 56 78"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-14 bg-enamel pr-14 text-lg"
+                  aria-describedby="username-privacy"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowWhy((v) => !v)}
+                  aria-expanded={showWhy}
+                  aria-controls="username-why"
+                  aria-label="Pourquoi paybybot demande-t-il ce numéro ?"
+                  title="Pourquoi ce numéro ?"
+                  className="absolute inset-y-0 right-1.5 my-auto grid size-11 place-items-center rounded-lg text-signal transition hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                >
+                  <HelpCircle className="size-6" />
+                </button>
+              </div>
+              {showWhy && (
+                <div id="username-why" className="rounded-xl border-2 border-accent bg-accent/50 p-4 text-[0.95rem] leading-snug">
+                  <p className="font-bold text-ink">Pourquoi ce numéro ?</p>
+                  <p className="mt-1 text-ink/80">
+                    C'est l'identifiant de votre compte PayByPhone : il sert uniquement à vous y connecter, avec votre mot de
+                    passe.{' '}
+                    {hosted
+                      ? "paybybot ne conserve ni l'un ni l'autre, et ne voit jamais votre carte bancaire."
+                      : "Ils restent sur cet ordinateur, et paybybot ne voit jamais votre carte bancaire."}
+                  </p>
+                </div>
+              )}
+              <p id="username-privacy" className="flex items-start gap-2 text-sm leading-snug text-muted-foreground">
+                <LockKeyhole className="mt-0.5 size-3.5 shrink-0 text-go" />
+                <span>
+                  Vos données sont protégées : rien n'est conservé.{' '}
+                  <a href="#/securite" target="_blank" rel="noopener" className="inline-flex items-center gap-0.5 font-bold text-signal underline-offset-4 hover:underline">
+                    Sécurité et données <ExternalLink className="size-3" />
+                  </a>{' '}
+                  ·{' '}
+                  <a href="#/confidentialite" target="_blank" rel="noopener" className="inline-flex items-center gap-0.5 font-bold text-signal underline-offset-4 hover:underline">
+                    Confidentialité <ExternalLink className="size-3" />
+                  </a>
+                </span>
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-base">Mot de passe</Label>
@@ -134,11 +174,11 @@ export function LoginView({ onLogin, hosted }: { onLogin: (me: Me) => void; host
             />
             <span>
               J'accepte les{' '}
-              <a href="#/cgu" className="font-bold text-signal underline-offset-4 hover:underline">
+              <a href="#/cgu" target="_blank" rel="noopener" className="font-bold text-signal underline-offset-4 hover:underline">
                 conditions d'utilisation
               </a>{' '}
               et la{' '}
-              <a href="#/confidentialite" className="font-bold text-signal underline-offset-4 hover:underline">
+              <a href="#/confidentialite" target="_blank" rel="noopener" className="font-bold text-signal underline-offset-4 hover:underline">
                 politique de confidentialité
               </a>
               .

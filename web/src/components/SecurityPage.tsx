@@ -14,32 +14,6 @@ function Eyebrow({ children, dark = false }: { children: ReactNode; dark?: boole
 
 const sectionTitle = 'mt-3 font-heading text-[2rem] leading-[1.08] font-semibold tracking-[-0.03em] text-ink sm:text-[2.5rem]'
 
-/** Hero emblem: what protects the data, drawn like a seal (no certification is claimed). */
-function Emblem() {
-  return (
-    <div className="relative mx-auto mt-12 grid w-full max-w-[34rem] grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-8" aria-hidden>
-      <div className="space-y-6 text-right text-[0.7rem] font-semibold tracking-[0.14em] text-white/50 uppercase">
-        <p>Chiffrement</p>
-        <p>Transport</p>
-      </div>
-      <div className="relative grid size-36 place-items-center sm:size-44">
-        <div className="absolute inset-0 rounded-full border border-white/15" />
-        <div className="absolute inset-3 rounded-full border border-white/25" />
-        <div className="absolute inset-0 -m-6 rounded-[2rem] border border-dashed border-white/10" />
-        <div className="text-center">
-          <Lock className="mx-auto size-6 text-white/80" strokeWidth={1.5} />
-          <p className="mt-2 font-heading text-2xl font-semibold tracking-tight text-white sm:text-3xl">AES</p>
-          <p className="text-[0.7rem] tracking-[0.2em] text-white/60 uppercase">+ HMAC</p>
-        </div>
-      </div>
-      <div className="space-y-6 text-[0.7rem] font-semibold tracking-[0.14em] text-white/50 uppercase">
-        <p>Clés séparées</p>
-        <p>HTTPS · HSTS</p>
-      </div>
-    </div>
-  )
-}
-
 const PRACTICE = [
   [Lock, 'Chiffrement', 'AES-128 avec signature HMAC-SHA256, une clé distincte par usage. HTTPS imposé partout (HSTS).'],
   [Building2, 'Hébergement en UE', 'Application et base de données hébergées à Paris, dans l’Union européenne.'],
@@ -87,23 +61,18 @@ export function SecurityPage({ hosted }: { hosted: boolean }) {
         </a>
       </TopBar>
 
-      <section className="bg-[#0d1830] px-6 pt-16 pb-20 text-center sm:pt-20">
-        <Eyebrow dark>La confiance se construit</Eyebrow>
-        <h1 className="mt-4 font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-white sm:text-[3.4rem]">
+      <header className="mx-auto max-w-6xl px-6 pt-16 sm:px-8 lg:pt-24">
+        <h1 className="rise font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3.4rem]">
           Sécurité et données
         </h1>
-        <p className="mx-auto mt-4 max-w-[34rem] text-[1.05rem] text-white/65 sm:text-lg">
+        <p className="mt-4 max-w-[38rem] text-[1.05rem] text-ink/60 sm:text-lg">
           Votre mot de passe n’est jamais stocké. Vos données sont chiffrées, hébergées à Paris, et effacées dès que vous
           arrêtez.
         </p>
-        <Emblem />
-        <p className="mt-12 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm text-white/80">
-          <ShieldCheck className="size-4" /> Conçu selon les principes du RGPD
-        </p>
-      </section>
+      </header>
 
       <main className="mx-auto max-w-6xl px-6 pb-20 sm:px-8">
-        <section className="pt-20">
+        <section className="pt-16">
           <Eyebrow>Protection des données</Eyebrow>
           <h2 className={sectionTitle}>La sécurité, concrètement.</h2>
           <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

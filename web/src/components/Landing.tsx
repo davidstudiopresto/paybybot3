@@ -11,6 +11,12 @@ import { ui } from '@/lib/styles'
 function SiteHeader() {
   return (
     <TopBar>
+      <a href="#/faq" className="hidden px-2 text-[0.95rem] font-medium text-ink/70 transition hover:text-ink sm:inline">
+        FAQ
+      </a>
+      <a href="#/securite" className="mr-2 hidden px-2 text-[0.95rem] font-medium text-ink/70 transition hover:text-ink sm:inline">
+        Sécurité
+      </a>
       <a href="#/connexion" className={ui.pillGray}>
         Se connecter
       </a>

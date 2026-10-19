@@ -110,7 +110,11 @@ export function Dashboard({
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <TopBar>
-        {me.demo && <span className="rounded-full bg-amber/25 px-2.5 py-0.5 text-xs font-bold text-ink">Démo</span>}
+        {me.demo && (
+          <span className="inline-flex h-9 items-center rounded-full bg-amber/25 px-3 text-sm font-semibold text-ink sm:h-10 sm:px-4 sm:text-[0.95rem]">
+            Démo
+          </span>
+        )}
         <AccountButton data={data} onDeleted={onDeleted ?? onLogout} />
         <button onClick={onLogout} aria-label="Déconnexion" title="Déconnexion" className={cn(ui.pillGray, 'gap-2')}>
           <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>

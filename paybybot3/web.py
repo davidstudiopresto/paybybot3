@@ -5,6 +5,7 @@ and serves the single-page app built from ``web/`` (copied into ``static/``).
 PayByPhone credentials only live in this process' memory.
 """
 
+import re
 import secrets
 import threading
 import time
@@ -124,13 +125,44 @@ class DemoBot:
 # --------------------------------------------------------------------------
 
 
+def login_candidates(username):
+    """PayByPhone wants phone numbers in international format; people type 06 12 34 56 78."""
+    raw = username.strip()
+    if "@" in raw:
+        return [raw]
+    digits = re.sub(r"[\s.\-()]", "", raw)
+    candidates = []
+    if re.fullmatch(r"0[1-9]\d{8}", digits):  # French national format
+        candidates += ["+33" + digits[1:], "+33" + digits]
+    elif re.fullmatch(r"(00)?33\d{9,10}", digits):
+        candidates.append("+" + digits.lstrip("0"))
+    candidates += [digits, raw]
+    return list(dict.fromkeys(c for c in candidates if c))
+
+
+def connect(username, password):
+    """Log in, trying the usual phone formats; returns (bot, username that worked)."""
+    error = None
+    for candidate in login_candidates(username):
+        try:
+            return Bot(candidate, password), candidate
+        except requests.HTTPError as e:
+            if e.response is None or e.response.status_code != 400:
+                raise
+            error = e
+    raise error
+
+
 class UserSession:
     def __init__(self, username, password, demo=False):
         self.username = username
         self._password = password
         self.demo = demo
         self.lock = threading.Lock()
-        self.bot = DemoBot() if demo else Bot(username, password)
+        if demo:
+            self.bot = DemoBot()
+        else:
+            self.bot, self.username = connect(username, password)
         self.autopilots = {}  # id -> dict
         self.history = []  # most recent first
 

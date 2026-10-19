@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Plate, Wordmark, ZonePlate } from '@/components/signs'
+import { isWeekly, RiverainCard } from '@/components/Riverain'
 import { api, clock, money, remaining, unitLabel, type Autopilot, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -149,6 +150,8 @@ export function Dashboard({
           </div>
         </section>
 
+        <RiverainCard data={data} onChanged={onRefresh} />
+
         <div className="kerb my-8" aria-hidden />
 
         {/* Active tickets */}
@@ -186,9 +189,9 @@ export function Dashboard({
               </p>
             </div>
           </div>
-          {data?.autopilots.length ? (
+          {data?.autopilots.some((ap) => !isWeekly(ap)) ? (
             <ul className="mt-5 grid gap-3">
-              {data.autopilots.map((ap) => (
+              {data.autopilots.filter((ap) => !isWeekly(ap)).map((ap) => (
                 <AutopilotRow key={ap.id} ap={ap} onDelete={() => removeAutopilot(ap.id)} />
               ))}
             </ul>

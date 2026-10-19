@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Loader2, LockKeyhole, Sparkles } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +11,7 @@ export function LoginView({ onLogin }: { onLogin: (me: Me) => void }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   async function submit(u = username, p = password) {
     setError(null)
@@ -85,15 +86,27 @@ export function LoginView({ onLogin }: { onLogin: (me: Me) => void }) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-base">Mot de passe</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-14 bg-enamel text-lg"
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-14 bg-enamel pr-14 text-lg"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  aria-pressed={showPassword}
+                  title={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  className="absolute inset-y-0 right-1.5 my-auto grid size-11 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-ink focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                >
+                  {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                </button>
+              </div>
             </div>
           </div>
 

@@ -10,7 +10,7 @@ const STEPS = ['Voiture', 'Zone', 'Tarif', 'Durée', 'Paiement', 'Confirmer'] as
 const PRESETS: Record<Unit, number[]> = { Days: [1, 2, 3, 7], Hours: [1, 2, 3, 4], Minutes: [15, 30, 45, 60] }
 const LAST_KEY = 'paybybot3:last'
 
-function loadLast(): Partial<Parking> {
+export function loadLast(): Partial<Parking> {
   try {
     return JSON.parse(localStorage.getItem(LAST_KEY) || '{}')
   } catch {
@@ -18,7 +18,7 @@ function loadLast(): Partial<Parking> {
   }
 }
 
-function saveLast(p: Parking) {
+export function saveLast(p: Parking) {
   try {
     localStorage.setItem(LAST_KEY, JSON.stringify(p))
   } catch {

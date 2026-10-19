@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { ArrowRight, Building2, KeyRound, Lock, ShieldCheck } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
-import { LEGAL_PAGES, LEGAL_UPDATED, PUBLISHER, SecurityDetails } from '@/components/Legal'
+import { LEGAL_PAGES, LEGAL_UPDATED, PUBLISHER } from '@/components/Legal'
 import { TopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 
@@ -139,13 +139,6 @@ export function SecurityPage({ hosted }: { hosted: boolean }) {
           <p className="mt-3 text-sm text-ink/45">Certifications détenues par chaque prestataire.</p>
         </section>
 
-        <section className="pt-20">
-          <Eyebrow>Transparence</Eyebrow>
-          <h2 className={sectionTitle}>Le détail, sans rien cacher.</h2>
-          <div className="max-w-3xl">
-            <SecurityDetails />
-          </div>
-        </section>
 
         <section className="mt-20 flex flex-col gap-6 rounded-3xl border border-ink/10 bg-ink/[0.02] p-8 sm:flex-row sm:items-center sm:justify-between sm:p-10">
           <div>

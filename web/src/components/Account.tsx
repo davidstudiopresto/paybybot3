@@ -9,19 +9,19 @@ import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
 /** "Mon compte" in the top bar: what PaybyBot reads from the PayByPhone account, the home zone and e-mail. */
-export function AccountButton({ data }: { data: Overview | null }) {
+export function AccountButton({ data, onDeleted }: { data: Overview | null; onDeleted: () => void }) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <button onClick={() => setOpen(true)} disabled={!data} className={cn(ui.pillGray, 'gap-2')}>
         <UserRound className="size-4" /> Mon compte
       </button>
-      {open && data && <AccountDialog data={data} onClose={() => setOpen(false)} />}
+      {open && data && <AccountDialog data={data} onClose={() => setOpen(false)} onDeleted={onDeleted} />}
     </>
   )
 }
 
-function AccountDialog({ data, onClose }: { data: Overview; onClose: () => void }) {
+function AccountDialog({ data, onClose, onDeleted }: { data: Overview; onClose: () => void; onDeleted: () => void }) {
   const [zone, setZone] = useState<string | null | undefined>(undefined)
   const [email, setEmail] = useState<string | undefined>(undefined)
   const [editingZone, setEditingZone] = useState(false)
@@ -48,7 +48,7 @@ function AccountDialog({ data, onClose }: { data: Overview; onClose: () => void 
   const row = 'flex items-start justify-between gap-6 py-4'
   const label = 'shrink-0 pt-1 text-sm text-ink/55'
 
-  if (deleting) return <DeleteConfirm onCancel={() => setDeleting(false)} />
+  if (deleting) return <DeleteConfirm onCancel={() => setDeleting(false)} onDeleted={onDeleted} />
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -146,7 +146,7 @@ function AccountDialog({ data, onClose }: { data: Overview; onClose: () => void 
 }
 
 /** Validation before erasing everything PaybyBot keeps; a confirmation e-mail follows. */
-function DeleteConfirm({ onCancel }: { onCancel: () => void }) {
+function DeleteConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDeleted: () => void }) {
   const [busy, setBusy] = useState(false)
 
   async function erase() {
@@ -154,7 +154,7 @@ function DeleteConfirm({ onCancel }: { onCancel: () => void }) {
     try {
       await api.deleteData()
       toast.success('Votre compte PaybyBot est supprimé.', { description: 'Une confirmation vous est envoyée par e-mail.' })
-      setTimeout(() => window.location.assign('/'), 1200)
+      onDeleted() // straight back to the home page, without reloading
     } catch (e) {
       toast.error((e as Error).message)
       setBusy(false)

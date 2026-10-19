@@ -87,12 +87,14 @@ export function Dashboard({
   onRefresh,
   onPay,
   onLogout,
+  onDeleted,
 }: {
   me: Me
   data: Overview | null
   onRefresh: () => Promise<void>
   onPay: () => void
   onLogout: () => void
+  onDeleted?: () => void
 }) {
   const now = useNow()
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
@@ -109,7 +111,7 @@ export function Dashboard({
     <div className="flex min-h-dvh flex-col bg-white">
       <TopBar>
         {me.demo && <span className="rounded-full bg-amber/25 px-2.5 py-0.5 text-xs font-bold text-ink">Démo</span>}
-        <AccountButton data={data} />
+        <AccountButton data={data} onDeleted={onDeleted ?? onLogout} />
         <button onClick={onLogout} aria-label="Déconnexion" title="Déconnexion" className={cn(ui.pillGray, 'gap-2')}>
           <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>
         </button>

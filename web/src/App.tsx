@@ -98,7 +98,8 @@ export default function App() {
               if (route === 'inscription') {
                 setOnboarding(true)
                 setZoneReady(false)
-                api.residentZone().finally(() => setZoneReady(true))
+                // Long enough to read the message, even when PayByPhone answers fast.
+                Promise.all([api.residentZone(), new Promise((r) => setTimeout(r, 2500))]).finally(() => setZoneReady(true))
               }
               history.replaceState(null, '', window.location.pathname)
               setRoute(null)
@@ -120,6 +121,14 @@ export default function App() {
       ) : (
         <>
           <Dashboard
+            onDeleted={() => {
+              history.replaceState(null, '', window.location.pathname)
+              setRoute(null)
+              setData(null)
+              setOnboarding(false)
+              forgetZoneLookup()
+              setMe(null)
+            }}
             me={me}
             data={data}
             onRefresh={refresh}

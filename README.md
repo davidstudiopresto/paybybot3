@@ -26,7 +26,8 @@ server keeps no state: the PayByPhone access token is stored in an encrypted coo
 password is never stored. Weekly renewals are stored in Supabase (`supabase/migrations/`) with an encrypted
 PayByPhone refresh token, and `/api/cron/renew` is called every 5 minutes by `pg_cron`. Server settings:
 `PAYBYBOT_SECRET` (optionally `PAYBYBOT_SECRET_OLD` while rotating it), `PAYBYBOT_SUPABASE_URL`,
-`PAYBYBOT_SUPABASE_KEY` (publishable key), `PAYBYBOT_DB_TOKEN`, `PAYBYBOT_CRON_TOKEN_SHA256` and `CRON_SECRET`.
+`PAYBYBOT_SUPABASE_KEY` (publishable key), `PAYBYBOT_DB_TOKEN`, `PAYBYBOT_CRON_TOKEN_SHA256`, `CRON_SECRET`, and
+`RESEND_API_KEY` (send-only) for the optional confirmation e-mails. Renewals can be paused for the holidays.
 
 Security measures: strict Content-Security-Policy and no framing, same-origin check on every state-changing
 call, login cookies that expire after 12 hours idle and 24 hours at most, login rate limiting, separate keys per

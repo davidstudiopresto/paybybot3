@@ -94,7 +94,7 @@ function Security() {
         <p className="mt-4 rounded-xl bg-white/10 p-4 text-white/90">
           <strong className="text-white">Seule exception, si vous le choisissez :</strong> le renouvellement riverain doit
           pouvoir payer à votre place quand vous n’êtes pas là. Il garde donc, chiffré, de quoi se reconnecter à PayByPhone et
-          le détail du forfait. Tout est effacé dès que vous l’arrêtez.
+          le détail du forfait, et l’e-mail de confirmation si vous en donnez un. Tout est effacé dès que vous l’arrêtez.
         </p>
       </div>
 
@@ -136,6 +136,8 @@ function Security() {
             ['Jetons de connexion PayByPhone', 'Dans votre navigateur (cookie)', 'Chiffrés avec une clé que seul le serveur possède', '12 h sans activité, 24 h au plus'],
             ['Renouvellement riverain : jeton de reconnexion PayByPhone', 'Base de données à Paris', 'Chiffré ; la clé est conservée ailleurs', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Renouvellement riverain : plaque, zone, tarif, durée, moyen de paiement choisi', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à ce que vous l’arrêtiez'],
+            ['Renouvellement riverain : e-mail pour les confirmations (facultatif)', 'Base de données à Paris', 'Chiffré', 'Jusqu’à ce que vous le retiriez ou arrêtiez'],
+            ['Renouvellement riverain : dates de pause, de vérification et de paiement', 'Base de données à Paris', 'Dates seules, sans lien lisible avec vous', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Identifiant de votre compte', 'Base de données à Paris', 'Seulement une empreinte : le numéro ou l’e-mail n’y figure pas', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Tentatives de connexion (anti-piratage)', 'Base de données à Paris', 'Empreintes de l’appareil et du compte, jamais l’adresse IP ni l’identifiant en clair', '24 h au plus'],
             ['Journaux techniques', 'Hébergeur (Vercel)', 'Identifiant et plaque masqués', 'Durée limitée fixée par l’hébergeur'],
@@ -170,6 +172,11 @@ function Security() {
         <ul>
           <li>Tous vos tickets restent visibles et gérables dans l’application PayByPhone.</li>
           <li>Le lien « Arrêter » sur la carte riverain supprime le renouvellement et le jeton gardé.</li>
+          <li>La « Pause vacances » suspend les paiements entre deux dates, sans rien supprimer.</li>
+          <li>
+            Les e-mails de confirmation sont facultatifs : retirez votre adresse à tout moment depuis la carte riverain. Ils
+            ne contiennent aucun suivi d’ouverture ni de clic.
+          </li>
           <li>
             Changer votre mot de passe PayByPhone met fin à l’accès de paybybot : il faudra vous reconnecter pour l’utiliser
             à nouveau.
@@ -239,7 +246,8 @@ function Privacy() {
           <li>
             <strong>Renouvellement riverain (si vous l’activez) :</strong> un jeton de reconnexion PayByPhone, la plaque,
             la zone, le tarif, la durée et le moyen de paiement choisis, tous chiffrés ; une empreinte de votre identifiant ;
-            les dates des dernières vérifications et du dernier paiement, et le dernier message d’erreur éventuel.
+            les dates des dernières vérifications et du dernier paiement, les dates de pause éventuelles, et le dernier
+            message d’erreur éventuel. Si vous le donnez, votre e-mail, chiffré lui aussi.
           </li>
           <li>
             <strong>Sécurité :</strong> empreintes de votre adresse IP et de votre identifiant, pour limiter les tentatives
@@ -258,6 +266,11 @@ function Privacy() {
           <li>
             <strong>Fournir le service que vous demandez</strong> (connexion, paiement, prolongation, renouvellement) :
             exécution des conditions d’utilisation que vous acceptez (article 6.1.b du RGPD).
+          </li>
+          <li>
+            <strong>Vous tenir informé du renouvellement</strong> (confirmation de paiement, alerte en cas de problème), si
+            vous donnez votre e-mail : exécution du service demandé (article 6.1.b). Aucune lettre d’information, aucune
+            publicité.
           </li>
           <li>
             <strong>Sécuriser le service</strong> (limite de tentatives, journaux, prévention des paiements en double) :
@@ -283,9 +296,13 @@ function Privacy() {
             <strong>Supabase Inc.</strong>, fournisseur de la base de données des renouvellements, hébergée à Paris
             (France).
           </li>
+          <li>
+            <strong>Resend Inc.</strong>, pour l’envoi des e-mails de confirmation, depuis l’Irlande, sans suivi
+            d’ouverture ni de clic. Il reçoit votre adresse et le contenu du message, uniquement au moment de l’envoi.
+          </li>
         </ul>
         <p>
-          Vercel et Supabase sont des sociétés américaines. Les données sont hébergées et traitées dans l’Union européenne,
+          Vercel, Supabase et Resend sont des sociétés américaines. Les données sont hébergées et traitées dans l’Union européenne,
           et un éventuel accès depuis l’extérieur de l’Union est encadré par les garanties prévues par le RGPD, notamment les
           clauses contractuelles types de la Commission européenne prévues dans leurs accords de traitement des données.
         </p>
@@ -295,8 +312,9 @@ function Privacy() {
       <Section title="5. Durées de conservation">
         <ul>
           <li>Jetons de connexion (cookie) : 12 heures sans activité, 24 heures au plus.</li>
-          <li>Renouvellement riverain : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
+          <li>Renouvellement riverain, y compris l’e-mail : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
           <li>Tentatives de connexion : 24 heures au plus.</li>
+          <li>E-mails envoyés : conservés par Resend pour une durée limitée, le temps d’assurer leur bonne livraison.</li>
           <li>Journaux techniques : durée limitée fixée par l’hébergeur.</li>
         </ul>
       </Section>
@@ -412,6 +430,12 @@ function Terms() {
           voiture dans la même zone.
         </p>
         <p>
+          Vous pouvez le mettre en pause entre deux dates, ou sans date de fin : aucun paiement n’est fait pendant la pause, et
+          il reprend tout seul à la fin. Si vous donnez un e-mail, paybybot vous envoie une confirmation à chaque paiement et
+          une alerte en cas de problème ; ces e-mails sont informatifs et ne remplacent pas la vérification de votre
+          stationnement.
+        </p>
+        <p>
           Il peut ne pas aboutir, par exemple si votre connexion PayByPhone a expiré, si votre carte est refusée, si votre
           droit au tarif résident a pris fin ou si PayByPhone modifie son service. Dans ces cas, paybybot l’indique sur votre
           tableau de bord. Si un paiement n’est pas confirmé par PayByPhone, le renouvellement se met en pause pour éviter
@@ -490,6 +514,7 @@ function Notice() {
           Base de données : Supabase Inc., 970 Toa Payoh North #07-04, Singapour 318992 — supabase.com. Hébergement à Paris
           (France).
         </p>
+        <p>E-mails : Resend Inc., San Francisco, États-Unis — resend.com. Envoi depuis l’Irlande.</p>
       </Section>
       <Section title="Propriété intellectuelle">
         <p>

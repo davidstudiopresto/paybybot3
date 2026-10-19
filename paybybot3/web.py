@@ -26,7 +26,8 @@ import secrets
 import threading
 import time
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time as dtime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import requests
@@ -45,6 +46,10 @@ HOSTED = os.environ.get("PAYBYBOT_HOSTED") == "1"
 SESSION_IDLE = 12 * 3600  # an unused login cookie expires after 12 hours...
 SESSION_MAX = 24 * 3600  # ...and any login after 24 hours
 LOGIN_LIMITS = (("ip", 10), ("user", 5))  # attempts per 15 minutes, per device and per account
+PARIS = ZoneInfo("Europe/Paris")
+MAIL_FROM = os.environ.get("PAYBYBOT_MAIL_FROM", "paybybot <paybybot@studiopresto.fr>")
+MAIL_REPLY_TO = os.environ.get("PAYBYBOT_MAIL_REPLY_TO", "contact@studiopresto.fr")
+APP_URL = os.environ.get("PAYBYBOT_URL", "https://paybybot.vercel.app")
 RELOGIN = ("Votre connexion PayByPhone a expiré : reconnectez-vous sur paybybot pour relancer "
            "le renouvellement automatique.")
 
@@ -489,8 +494,125 @@ def log_diagnosis(session):
         log.warning("diagnosis failed: %s", e)
 
 
+def parse_dt(value):
+    if not value:
+        return None
+    dt = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def paused_now(paused_from, paused_until, now=None):
+    """A pause runs from paused_from (included) to paused_until (excluded, None = no end yet)."""
+    now = now or datetime.now(timezone.utc)
+    start, end = parse_dt(paused_from), parse_dt(paused_until)
+    return bool(start) and start <= now and (end is None or now < end)
+
+
+def pause_bounds(first_day, last_day):
+    """Dates picked in the interface are Paris days: from first_day 00:00 to the day after last_day 00:00."""
+    start = datetime.combine(date.fromisoformat(first_day), dtime(0), PARIS)
+    end = datetime.combine(date.fromisoformat(last_day) + timedelta(days=1), dtime(0), PARIS) if last_day else None
+    if end and end <= start:
+        raise HTTPException(422, "La date de fin doit être après la date de début.")
+    return start.astimezone(timezone.utc).isoformat(), end.astimezone(timezone.utc).isoformat() if end else None
+
+
+def paris_text(value):
+    dt = parse_dt(value)
+    if not dt:
+        return ""
+    local = dt.astimezone(PARIS)
+    days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+    months = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
+              "novembre", "décembre"]
+    return "%s %d %s à %s" % (days[local.weekday()], local.day, months[local.month - 1], local.strftime("%H:%M"))
+
+
+def plate_text(plate):
+    return "%s-%s-%s" % (plate[:2], plate[2:5], plate[5:]) if re.fullmatch(r"[A-Z]{2}\d{3}[A-Z]{2}", plate or "") else plate
+
+
+def money_text(cost):
+    if not cost or cost.get("amount") is None:
+        return ""
+    return ("%.2f €" % float(cost["amount"])).replace(".", ",")
+
+
+def send_email(to, subject, title, lines, button=None):
+    """Transactional e-mail through Resend. Silently skipped without an address or an API key."""
+    key = os.environ.get("RESEND_API_KEY")
+    if not to or not key:
+        return False
+    from html import escape
+
+    paragraphs = "".join('<p style="margin:0 0 12px;font-size:16px;line-height:1.5;color:#0d1830">%s</p>' % escape(x)
+                         for x in lines)
+    cta = ('<p style="margin:20px 0 0"><a href="%s" style="display:inline-block;background:#1d4ea3;color:#fff;'
+           'padding:12px 20px;border-radius:10px;font-weight:bold;text-decoration:none">%s</a></p>'
+           % (escape(button[1]), escape(button[0]))) if button else ""
+    html = (
+        '<div style="background:#f1ede3;padding:24px;font-family:Arial,Helvetica,sans-serif">'
+        '<div style="max-width:520px;margin:0 auto;background:#fdfcf8;border-radius:16px;padding:28px">'
+        '<p style="margin:0 0 18px"><span style="display:inline-block;background:#1d4ea3;color:#fff;font-weight:900;'
+        'border-radius:8px;padding:2px 9px;font-size:18px">P</span> <b style="font-size:18px;color:#0d1830">paybybot</b></p>'
+        '<h1 style="margin:0 0 14px;font-size:22px;color:#0d1830">%s</h1>%s%s'
+        '<p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#4f5a70">Vous recevez cet e-mail parce que vous '
+        "avez activé le renouvellement automatique sur paybybot. Pour ne plus en recevoir, retirez votre adresse ou "
+        "arrêtez le renouvellement depuis l'application. paybybot est un service indépendant de PayByPhone.</p>"
+        "</div></div>" % (escape(title), paragraphs, cta)
+    )
+    text = "\n\n".join([title] + list(lines) + ([button[0] + " : " + button[1]] if button else []))
+    try:
+        r = requests.post("https://api.resend.com/emails", timeout=10,
+                          headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
+                          json={"from": MAIL_FROM, "to": [to], "reply_to": MAIL_REPLY_TO, "subject": subject,
+                                "html": html, "text": text})
+        log.info("e-mail '%s': %s", subject, r.status_code)  # never the address
+        return r.ok
+    except Exception as e:
+        log.warning("e-mail '%s' failed: %s", subject, e)
+        return False
+
+
+def notify(details, event, **info):
+    """One message per renewal event; the address lives only in the encrypted details."""
+    to = (details or {}).get("email")
+    if not to:
+        return
+    car = "%s, zone %s" % (plate_text(details.get("plate")), details.get("location"))
+    open_app = ("Ouvrir paybybot", APP_URL)
+    if event == "activated":
+        lines = ["Le renouvellement automatique de votre forfait résident est activé pour %s." % car]
+        if info.get("expire"):
+            lines.append("Votre voiture est couverte jusqu'au %s. Le forfait suivant sera payé automatiquement à "
+                         "cette date." % paris_text(info["expire"]))
+        send_email(to, "Renouvellement activé · %s" % plate_text(details.get("plate")), "Renouvellement activé",
+                   lines, open_app)
+    elif event == "paid":
+        send_email(to, "Forfait renouvelé · %s" % plate_text(details.get("plate")), "Forfait renouvelé",
+                   ["Un nouveau forfait de %s %s a été payé automatiquement pour %s%s." % (
+                       fmt_qty(details.get("duration")), "jours" if details.get("unit") == "Days" else details.get("unit"),
+                       car, (" (%s)" % money_text(info.get("cost"))) if money_text(info.get("cost")) else ""),
+                    "Valable jusqu'au %s." % paris_text(info.get("expire")),
+                    "Le ticket apparaît aussi dans votre application PayByPhone."], open_app)
+    elif event == "paused":
+        until = ("jusqu'au %s inclus" % info["until_day"]) if info.get("until_day") else "sans date de fin"
+        send_email(to, "Renouvellement en pause · %s" % plate_text(details.get("plate")), "Renouvellement en pause",
+                   ["Aucun forfait ne sera payé pour %s à partir du %s, %s." % (car, info.get("from_day"), until),
+                    "Un ticket déjà en cours reste valable jusqu'à sa fin."], open_app)
+    elif event == "problem":
+        send_email(to, "Action requise · renouvellement %s" % plate_text(details.get("plate")),
+                   "Le renouvellement a besoin de vous",
+                   ["Le renouvellement automatique pour %s n'a pas pu payer :" % car, info.get("message", ""),
+                    "Ouvrez paybybot pour le relancer, et vérifiez votre stationnement dans l'application PayByPhone."],
+                   open_app)
+
+
 def run_autopilot(session, ap):
     """Pay for the configured parking if no session is active right now."""
+    if paused_now(ap.get("pausedFrom"), ap.get("pausedUntil")):
+        ap["lastCheck"] = datetime.now(timezone.utc).isoformat()
+        return
     active = session.call("get_parking_sessions", licensePlate=ap["plate"], locationId=ap["location"])
     ap["lastCheck"] = datetime.now(timezone.utc).isoformat()
     if active:
@@ -547,12 +669,12 @@ def decrypt_credential(value):
     return _fernet("credential").decrypt(value.encode()).decode()
 
 
-RENEWAL_FIELDS = ("label", "plate", "location", "rate", "duration", "unit", "payment_account_id")
+RENEWAL_FIELDS = ("label", "plate", "location", "rate", "duration", "unit", "payment_account_id", "email")
 
 
 def encrypt_details(details):
     """Plate, zone, rate... are stored encrypted too: the database alone reveals nothing usable."""
-    return _fernet("renewal").encrypt(json.dumps({k: details[k] for k in RENEWAL_FIELDS}).encode()).decode()
+    return _fernet("renewal").encrypt(json.dumps({k: details.get(k, "") for k in RENEWAL_FIELDS}).encode()).decode()
 
 
 def with_details(row):
@@ -604,6 +726,7 @@ def stored_to_autopilot(row):
         "rate": row["rate"], "duration": fmt_qty(row["duration"]), "unit": row["unit"],
         "paymentAccountId": row["payment_account_id"], "enabled": row["enabled"],
         "lastCheck": row.get("last_check"), "lastPayment": row.get("last_payment"), "lastError": row.get("last_error"),
+        "email": row.get("email") or "", "pausedFrom": row.get("paused_from"), "pausedUntil": row.get("paused_until"),
     }
 
 
@@ -621,6 +744,12 @@ def process_renewal(row, refresh_token=None):
         log.warning("renewal %s: unreadable details: %s", row.get("id"), e)
         store("renewal_update", p_id=row["id"], p_patch={"enabled": False, "last_error": RELOGIN})
         return "unreadable"
+    previous_error = row.get("last_error")
+    if paused_now(row.get("paused_from"), row.get("paused_until"), now):
+        # Check again when the pause ends, without even logging in to PayByPhone meanwhile.
+        resume = parse_dt(row.get("paused_until")) or now + timedelta(hours=12)
+        store("renewal_update", p_id=row["id"], p_patch={"next_check": utc_iso(resume)})
+        return "paused"
     try:
         refresh = refresh_token or decrypt_credential(row["credential"])
         bot = Bot.from_refresh_token(refresh)
@@ -628,11 +757,14 @@ def process_renewal(row, refresh_token=None):
         log.warning("renewal %s: login with refresh token failed: %s", row["id"], str(e)[:200])
         store("renewal_update", p_id=row["id"],
               p_patch={"last_error": RELOGIN, "next_check": utc_iso(now + timedelta(hours=6))})
+        if previous_error != RELOGIN:
+            notify(row, "problem", message=RELOGIN)
         return "relogin"
     if bot.refresh_token and bot.refresh_token != refresh:
         patch["credential"] = encrypt_credential(bot.refresh_token)
     session = UserSession.for_bot(bot)
     outcome = "error"
+    result, expire = None, None
     try:
         active = session.call("get_parking_sessions", licensePlate=row["plate"], locationId=row["location"])
         if active:
@@ -640,8 +772,8 @@ def process_renewal(row, refresh_token=None):
             patch.update(next_check=utc_iso(expire + timedelta(seconds=30)), last_error=None)
             outcome = "active"
         else:
-            _, found = pay_and_confirm(session, row["location"], row["rate"], fmt_qty(row["duration"]), row["unit"],
-                                       row["plate"], row["payment_account_id"])
+            result, found = pay_and_confirm(session, row["location"], row["rate"], fmt_qty(row["duration"]),
+                                            row["unit"], row["plate"], row["payment_account_id"])
             expire = max(x["expireTime"] for x in found)
             patch.update(last_payment=utc_iso(now), next_check=utc_iso(expire + timedelta(seconds=30)),
                          last_error=None)
@@ -654,6 +786,10 @@ def process_renewal(row, refresh_token=None):
         patch.update(last_error=friendly_error(e), next_check=utc_iso(now + timedelta(minutes=30)))
     log.info("renewal %s zone=%s plate=%s: %s", row["id"], row["location"], row["plate"][:2] + "***", outcome)
     store("renewal_update", p_id=row["id"], p_patch=patch)
+    if outcome == "paid":
+        notify(row, "paid", cost=(result or {}).get("cost"), expire=expire)
+    elif patch.get("last_error") and patch["last_error"] != previous_error:
+        notify(row, "problem", message=patch["last_error"])
     return outcome
 
 
@@ -692,8 +828,21 @@ class Extension(Parking):
     sessionId: str = Field(max_length=80)
 
 
+EMAIL_PATTERN = r"^$|^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$"
+
+
 class Autopilot(Parking):
     label: str = Field(default="", max_length=60)
+    email: str = Field(default="", max_length=254, pattern=EMAIL_PATTERN)
+
+
+class Pause(BaseModel):
+    start: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")  # first paused day (Paris)
+    end: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")  # last paused day; None = no end yet
+
+
+class EmailChange(BaseModel):
+    email: str = Field(default="", max_length=254, pattern=EMAIL_PATTERN)
 
 
 @app.post("/api/login")
@@ -912,9 +1061,15 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                 "owner": owner_id(s.username), "credential": encrypt_credential(refresh),
                 "data": encrypt_details({"label": body.label, "plate": body.plate, "location": body.location,
                                          "rate": body.rate, "duration": fmt_qty(body.duration), "unit": body.unit,
-                                         "payment_account_id": body.paymentAccountId})})
-            process_renewal(row, refresh_token=refresh)  # pay the first week now if nothing is active
+                                         "payment_account_id": body.paymentAccountId,
+                                         "email": body.email.strip()})})
+            details = {**with_details(row)}
+            outcome = process_renewal(row, refresh_token=refresh)  # pay the first week now if nothing is active
             stored = next((r for r in store("renewal_list", p_owner=owner_id(s.username)) if r["id"] == row["id"]), row)
+            if outcome in ("paid", "active"):
+                active = s.call("get_parking_sessions", licensePlate=body.plate, locationId=body.location)
+                notify(details, "activated",
+                       expire=max((x["expireTime"] for x in active), default=None) if active else None)
             return stored_to_autopilot(stored)
 
         return guarded(save)
@@ -925,6 +1080,65 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
         run_autopilot(s, ap)
     else:
         threading.Thread(target=lambda: guarded(lambda: run_autopilot(s, ap)), daemon=True).start()
+    return ap
+
+
+def update_own_renewal(s, ap_id, patch):
+    """Hosted: change one of the user's stored renewals; returns it in the interface's shape."""
+    try:
+        return stored_to_autopilot(store("renewal_update_owned", p_owner=owner_id(s.username), p_id=ap_id,
+                                         p_patch=patch))
+    except requests.HTTPError:
+        raise HTTPException(404, "Renouvellement introuvable.")
+
+
+@app.post("/api/autopilots/{ap_id}/pause")
+def pause_autopilot(ap_id: str, body: Pause, pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+    start, end = pause_bounds(body.start, body.end)
+    info = {"from_day": date.fromisoformat(body.start).strftime("%d/%m/%Y"),
+            "until_day": date.fromisoformat(body.end).strftime("%d/%m/%Y") if body.end else None}
+    if HOSTED and not s.demo:
+        ap = update_own_renewal(s, ap_id, {"paused_from": start, "paused_until": end})
+        notify(ap, "paused", **info)
+        log.info("renewal %s paused", ap_id)
+        return ap
+    ap = s.autopilots.get(ap_id)
+    if not ap:
+        raise HTTPException(404, "Renouvellement introuvable.")
+    ap.update(pausedFrom=start, pausedUntil=end)
+    return ap
+
+
+@app.delete("/api/autopilots/{ap_id}/pause")
+def resume_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+    if HOSTED and not s.demo:
+        # Check right away: a ticket may be needed now.
+        return update_own_renewal(s, ap_id, {"paused_from": None, "paused_until": None,
+                                             "next_check": utc_iso(datetime.now(timezone.utc))})
+    ap = s.autopilots.get(ap_id)
+    if not ap:
+        raise HTTPException(404, "Renouvellement introuvable.")
+    ap.update(pausedFrom=None, pausedUntil=None)
+    if HOSTED:
+        run_autopilot(s, ap)
+    return ap
+
+
+@app.put("/api/autopilots/{ap_id}/email")
+def change_autopilot_email(ap_id: str, body: EmailChange, pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+    if HOSTED and not s.demo:
+        current_row = next((r for r in store("renewal_list", p_owner=owner_id(s.username)) if r["id"] == ap_id), None)
+        if not current_row:
+            raise HTTPException(404, "Renouvellement introuvable.")
+        details = {**with_details(current_row), "email": body.email.strip()}
+        return update_own_renewal(s, ap_id, {"data": encrypt_details(details)})
+    ap = s.autopilots.get(ap_id)
+    if not ap:
+        raise HTTPException(404, "Renouvellement introuvable.")
+    ap["email"] = body.email.strip()
     return ap
 
 

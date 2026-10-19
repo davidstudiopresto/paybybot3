@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CalendarSync, Check, Home, Loader2, Repeat } from 'lucide-react'
+import { CalendarSync, Check, Home, Loader2, Mail, Pause, Play, Repeat } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -22,6 +22,33 @@ export function RiverainCard({ data, onChanged, hosted = false }: { data: Overvi
   const [open, setOpen] = useState(false)
   const weekly = data?.autopilots.filter(isWeekly) ?? []
 
+  const [pausing, setPausing] = useState<Autopilot | null>(null)
+
+  async function resume(id: string) {
+    try {
+      await api.resumeAutopilot(id)
+      toast.success('Renouvellement repris.')
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+    onChanged()
+  }
+
+  async function editEmail(ap: Autopilot) {
+    const value = window.prompt(
+      "Adresse e-mail pour recevoir une confirmation à chaque paiement et une alerte en cas de problème (laisser vide pour ne plus rien recevoir) :",
+      ap.email ?? '',
+    )
+    if (value === null) return
+    try {
+      await api.setAutopilotEmail(ap.id, value.trim())
+      toast.success(value.trim() ? 'Les confirmations seront envoyées à cette adresse.' : 'Vous ne recevrez plus d’e-mails.')
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+    onChanged()
+  }
+
   async function stop(id: string) {
     await api.deleteAutopilot(id)
     toast.success('Renouvellement hebdomadaire arrêté.', { description: 'Le ticket en cours reste valable.' })
@@ -36,29 +63,62 @@ export function RiverainCard({ data, onChanged, hosted = false }: { data: Overvi
         </span>
         <div className="min-w-0">
           <p className="font-heading text-xl font-extrabold">Forfait riverain renouvelé chaque semaine</p>
-          {weekly.map((ap) => {
-            const current = data?.sessions.find((s) => s.plate === ap.plate && s.location === ap.location)
-            return (
-              <p key={ap.id} className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground">
-                <Plate plate={ap.plate} size="sm" /> zone {ap.location} ·{' '}
-                {ap.lastError ? (
-                  <span className="text-destructive">{ap.lastError}</span>
-                ) : current ? (
-                  <>prochain renouvellement {clock(current.expire)}</>
-                ) : (
-                  <>paiement en cours…</>
-                )}
-                <button onClick={() => stop(ap.id)} className="font-bold text-destructive underline-offset-4 hover:underline">
-                  Arrêter
-                </button>
-              </p>
-            )
-          })}
+          <ul className="mt-3 space-y-3">
+            {weekly.map((ap) => {
+              const current = data?.sessions.find((s) => s.plate === ap.plate && s.location === ap.location)
+              const now = Date.now()
+              const pauseStart = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
+              const pauseEnd = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
+              const paused = pauseStart !== null && pauseStart <= now && (pauseEnd === null || now < pauseEnd)
+              const pauseLater = pauseStart !== null && pauseStart > now
+              return (
+                <li key={ap.id} className="rounded-xl bg-enamel/70 p-3">
+                  <p className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                    <Plate plate={ap.plate} size="sm" /> zone {ap.location} ·{' '}
+                    {ap.lastError ? (
+                      <span className="text-destructive">{ap.lastError}</span>
+                    ) : paused ? (
+                      <span className="font-bold text-amber-700">
+                        En pause {pauseEnd ? `jusqu'au ${dayText(pauseEnd - 1)} inclus` : 'sans date de fin'}
+                      </span>
+                    ) : current ? (
+                      <>prochain renouvellement {clock(current.expire)}</>
+                    ) : (
+                      <>paiement en cours…</>
+                    )}
+                  </p>
+                  {pauseLater && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Pause prévue du {dayText(pauseStart!)} {pauseEnd ? `au ${dayText(pauseEnd - 1)}` : 'sans date de fin'}
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-bold">
+                    {paused || pauseLater ? (
+                      <button onClick={() => resume(ap.id)} className="inline-flex items-center gap-1 text-go underline-offset-4 hover:underline">
+                        <Play className="size-3.5" /> {paused ? 'Reprendre maintenant' : 'Annuler la pause'}
+                      </button>
+                    ) : (
+                      <button onClick={() => setPausing(ap)} className="inline-flex items-center gap-1 text-ink underline-offset-4 hover:underline">
+                        <Pause className="size-3.5" /> Pause vacances
+                      </button>
+                    )}
+                    <button onClick={() => editEmail(ap)} className="inline-flex items-center gap-1 text-ink underline-offset-4 hover:underline">
+                      <Mail className="size-3.5" /> {ap.email ? ap.email : 'Recevoir les confirmations par e-mail'}
+                    </button>
+                    <button onClick={() => stop(ap.id)} className="text-destructive underline-offset-4 hover:underline">
+                      Arrêter
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
         </div>
         <Button variant="outline" onClick={() => setOpen(true)} className="mt-auto h-12 rounded-xl bg-enamel px-5">
           Ajouter une voiture
         </Button>
         {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />}
+        {pausing && <PauseDialog ap={pausing} onClose={() => setPausing(null)} onDone={onChanged} />}
       </section>
     )
   }
@@ -99,6 +159,7 @@ function RiverainDialog({
   const [plate, setPlate] = useState('')
   const [zone, setZone] = useState('')
   const [payment, setPayment] = useState('')
+  const [email, setEmail] = useState('')
   const [rate, setRate] = useState<Rate | null>(null)
   const [quote, setQuote] = useState<{ cost: Money } | null>(null)
   const [loading, setLoading] = useState(false)
@@ -169,7 +230,7 @@ function RiverainDialog({
     setSaving(true)
     try {
       const p = parking(rate)
-      await api.addAutopilot({ ...p, label: WEEKLY_LABEL })
+      await api.addAutopilot({ ...p, label: WEEKLY_LABEL, email: email.trim() })
       saveLast(p)
       toast.success('Renouvellement hebdomadaire activé.', {
         description: data.sessions.some((s) => s.plate === plate && s.location === zone)
@@ -237,6 +298,26 @@ function RiverainDialog({
 
           {!data.payments.length && <NoPayment compact onRefresh={async () => onDone()} />}
 
+          <div>
+            <label htmlFor="riverain-email" className="mb-2 block text-sm font-bold text-muted-foreground">
+              E-mail pour les confirmations <span className="font-normal">(facultatif)</span>
+            </label>
+            <Input
+              id="riverain-email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="vous@exemple.fr"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-12 bg-white text-base"
+            />
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Une confirmation à chaque paiement et une alerte en cas de problème. Gardée chiffrée, effacée dès que vous
+              arrêtez.
+            </p>
+          </div>
+
           {data.payments.length > 1 && (
             <div>
               <p className="mb-2 text-sm font-bold text-muted-foreground">Payer avec</p>
@@ -296,6 +377,95 @@ function RiverainDialog({
               ? "Fonctionne en ligne, même appareil éteint. Pour payer à votre place, paybybot garde de quoi se reconnecter à PayByPhone, chiffré, et l'efface dès que vous arrêtez."
               : 'Laissez paybybot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.'}
           </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function dayText(ms: number) {
+  return new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+}
+
+function isoDay(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** Vacation pause: no payment between two days (Paris time), or from a day with no end yet. */
+function PauseDialog({ ap, onClose, onDone }: { ap: Autopilot; onClose: () => void; onDone: () => void }) {
+  const today = isoDay(new Date())
+  const [start, setStart] = useState(today)
+  const [end, setEnd] = useState('')
+  const [noEnd, setNoEnd] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const valid = start >= today && (noEnd || (end !== '' && end >= start))
+
+  async function save() {
+    setSaving(true)
+    setError(null)
+    try {
+      await api.pauseAutopilot(ap.id, start, noEnd ? null : end)
+      toast.success('Pause enregistrée.', {
+        description: noEnd ? 'Reprenez quand vous voulez depuis le tableau de bord.' : 'Le renouvellement reprendra tout seul.',
+      })
+      onClose()
+      onDone()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[calc(100dvh-1.5rem)] gap-0 overflow-y-auto rounded-2xl bg-enamel p-0 sm:max-w-md">
+        <div className="bg-ink px-6 pt-6 pb-5 text-white">
+          <DialogTitle className="flex items-center gap-2 text-2xl font-black">
+            <Pause className="size-6" /> Pause vacances
+          </DialogTitle>
+          <DialogDescription className="mt-1 text-base text-white/80">
+            Aucun forfait ne sera payé pendant la pause. Un ticket déjà en cours reste valable jusqu’à sa fin.
+          </DialogDescription>
+        </div>
+        <div className="space-y-5 p-6">
+          <div className="flex items-center gap-3">
+            <Plate plate={ap.plate} />
+            <ZonePlate zone={ap.location} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5">
+              <span className="block text-sm font-bold text-muted-foreground">Premier jour de pause</span>
+              <Input type="date" min={today} value={start} onChange={(e) => setStart(e.target.value)} className="h-12 bg-white text-base" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="block text-sm font-bold text-muted-foreground">Dernier jour de pause</span>
+              <Input
+                type="date"
+                min={start}
+                value={end}
+                disabled={noEnd}
+                onChange={(e) => setEnd(e.target.value)}
+                className="h-12 bg-white text-base"
+              />
+            </label>
+          </div>
+          <label className="flex cursor-pointer items-center gap-3">
+            <input type="checkbox" checked={noEnd} onChange={(e) => setNoEnd(e.target.checked)} className="size-5 accent-[var(--ink)]" />
+            <span>Pas de date de fin pour le moment</span>
+          </label>
+          <p className="rounded-xl bg-muted/70 p-4 text-muted-foreground">
+            {noEnd
+              ? `En pause à partir du ${start ? dayText(new Date(start + 'T12:00').getTime()) : '…'}, jusqu’à ce que vous repreniez.`
+              : end
+                ? `En pause du ${dayText(new Date(start + 'T12:00').getTime())} au ${dayText(new Date(end + 'T12:00').getTime())} inclus. Reprise automatique le lendemain.`
+                : 'Choisissez le dernier jour de pause.'}
+          </p>
+          {error && <p role="alert" className="rounded-lg border-l-4 border-destructive bg-destructive/10 px-4 py-3 text-destructive">{error}</p>}
+          <Button onClick={save} disabled={!valid || saving} className="h-14 w-full rounded-xl bg-ink text-lg font-bold hover:bg-ink/90">
+            {saving ? <Loader2 className="size-5 animate-spin" /> : 'Mettre en pause'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

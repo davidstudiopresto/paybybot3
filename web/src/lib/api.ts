@@ -34,6 +34,9 @@ export type Autopilot = Parking & {
   lastCheck: string | null
   lastPayment: string | null
   lastError: string | null
+  email?: string
+  pausedFrom?: string | null
+  pausedUntil?: string | null
 }
 export type HistoryItem = { at: string; kind: 'success' | 'error'; message: string }
 export type Overview = {
@@ -87,7 +90,12 @@ export const api = {
   quote: (p: Parking & { sessionId?: string }) => post<{ cost: Money; start: string; expire: string }>('/api/quote', p),
   extend: (p: Parking & { sessionId: string }) => post<{ ok: true; expire: string; cost: Money }>('/api/extend', p),
   pay: (p: Parking) => post<{ ok: true; expire: string; cost: Money }>('/api/pay', p),
-  addAutopilot: (p: Parking & { label: string }) => post<Autopilot>('/api/autopilots', p),
+  addAutopilot: (p: Parking & { label: string; email?: string }) => post<Autopilot>('/api/autopilots', p),
+  pauseAutopilot: (id: string, start: string, end: string | null) =>
+    post<Autopilot>(`/api/autopilots/${id}/pause`, { start, end }),
+  resumeAutopilot: (id: string) => request<Autopilot>(`/api/autopilots/${id}/pause`, { method: 'DELETE' }),
+  setAutopilotEmail: (id: string, email: string) =>
+    request<Autopilot>(`/api/autopilots/${id}/email`, { method: 'PUT', body: JSON.stringify({ email }) }),
   deleteAutopilot: (id: string) => request(`/api/autopilots/${id}`, { method: 'DELETE' }),
 }
 

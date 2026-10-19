@@ -5,3 +5,4 @@ starlette==1.9.0
 pydantic==2.14.1
 requests==2.34.2
 cryptography==50.0.2
+tzdata==2026.5

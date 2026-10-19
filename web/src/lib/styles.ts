@@ -5,6 +5,9 @@ export const ui = {
   /** The one main action of a screen. */
   primary:
     'flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:opacity-50',
+  /** Same size as the main button, in grey: a second, quieter action. */
+  primaryGray:
+    'flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-ink/[0.06] text-lg font-bold text-ink transition hover:bg-ink/[0.1] active:scale-[0.99] disabled:opacity-50',
   /** Top bar buttons: a grey pill and a blue one (slight gradient). */
   pillGray:
     'inline-flex h-9 items-center rounded-full bg-ink/[0.06] px-3 text-sm sm:h-10 sm:px-4 sm:text-[0.95rem] font-semibold whitespace-nowrap text-ink transition hover:bg-ink/[0.1]',

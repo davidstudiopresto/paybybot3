@@ -143,7 +143,7 @@ export function Dashboard({
           // The renewal is the point of the app: once it runs, a one-off payment is a quiet secondary action.
           <div className="mt-6 flex flex-col items-start gap-3">
             <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
-            <button onClick={onPay} className={cn(ui.pillGray, 'mt-2')}>
+            <button onClick={onPay} className={ui.primaryGray}>
               Payer un stationnement ponctuel
             </button>
           </div>
@@ -158,7 +158,7 @@ export function Dashboard({
               autoOpen={onboarding}
               onAutoOpened={onOnboarded}
             />
-            <button onClick={onPay} disabled={!data} className={cn(ui.pillGray, 'mt-5')}>
+            <button onClick={onPay} disabled={!data} className={cn(ui.primaryGray, 'mt-3')}>
               Payer un stationnement ponctuel
             </button>
           </div>

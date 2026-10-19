@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Plus, Power, Repeat, ShieldCheck } from 'lucide-react'
+import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Plus, Power, Repeat } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { Plate, ZonePlate } from '@/components/signs'
@@ -125,13 +125,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
                 Se connecter
               </a>
             </p>
-            <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink/65" aria-label="Garanties">
-              {['Mot de passe jamais enregistré', 'Hébergé à Paris', 'Aucun traceur'].map((t) => (
-                <li key={t} className="flex items-center gap-1.5">
-                  <ShieldCheck className="size-4 text-eu" /> {t}
-                </li>
-              ))}
-            </ul>
           </div>
           <Preview />
         </section>

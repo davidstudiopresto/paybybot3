@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { NoPayment } from '@/components/NoPayment'
 import { ActionTile, Plate, ZonePlate } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { cn } from '@/lib/utils'
@@ -101,6 +102,10 @@ function RiverainDialog({
     setZone(last.location ?? '')
     setPayment(data.payments.find((p) => p.id === last.paymentAccountId)?.id ?? data.payments[0]?.id ?? '')
   }, [open, data])
+
+  useEffect(() => {
+    if (open && !payment && data.payments[0]) setPayment(data.payments[0].id)
+  }, [open, data.payments, payment])
 
   const ready = open && plate && payment && /^\w{3,}$/.test(zone)
 
@@ -216,6 +221,8 @@ function RiverainDialog({
               {zone.length >= 3 && <ZonePlate zone={zone} />}
             </div>
           </div>
+
+          {!data.payments.length && <NoPayment compact onRefresh={async () => onDone()} />}
 
           {data.payments.length > 1 && (
             <div>

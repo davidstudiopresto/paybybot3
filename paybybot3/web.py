@@ -385,10 +385,16 @@ def overview(pbb_session: str = Cookie(None)):
 
     def load():
         vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]
+        accounts = s.call("get_payment_accounts") or {}
+        payments = normalize_accounts(accounts)
+        if not payments and not s.demo:
+            # Only types and counts, never card details: helps spot a payment type we don't handle yet.
+            log.info("no usable payment method; PayByPhone returned %s",
+                     {k: len(v) if isinstance(v, list) else type(v).__name__ for k, v in accounts.items()})
         return {
             "vehicles": [{"plate": v["licensePlate"], "country": v.get("country"), "type": v.get("type")}
                          for v in vehicles],
-            "payments": normalize_accounts(s.call("get_payment_accounts")),
+            "payments": payments,
             "sessions": [serialize_session(x) for x in s.call("get_parking_sessions")],
             "autopilots": list(s.autopilots.values()),
             "history": s.history[:10],

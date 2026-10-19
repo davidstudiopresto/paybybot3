@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, CreditCard, Loader2, Minus, Plus, Repeat, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { NoPayment } from '@/components/NoPayment'
 import { Plate, ZonePlate } from '@/components/signs'
 import { cn } from '@/lib/utils'
 import { api, clock, money, unitLabel, type Money, type Overview, type Parking, type Rate, type Unit } from '@/lib/api'
@@ -49,7 +50,19 @@ function Choice({ selected, onClick, children, disabled }: { selected: boolean; 
   )
 }
 
-export function PayWizard({ data, demo, onClose, onPaid }: { data: Overview; demo: boolean; onClose: () => void; onPaid: () => void }) {
+export function PayWizard({
+  data,
+  demo,
+  onClose,
+  onPaid,
+  onRefresh,
+}: {
+  data: Overview
+  demo: boolean
+  onClose: () => void
+  onPaid: () => void
+  onRefresh: () => Promise<void>
+}) {
   const last = useMemo(loadLast, [])
   const [step, setStep] = useState(0)
   const [plate, setPlate] = useState(
@@ -68,6 +81,10 @@ export function PayWizard({ data, demo, onClose, onPaid }: { data: Overview; dem
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<{ expire: string; cost: Money } | null>(null)
+
+  useEffect(() => {
+    if (!payment && data.payments[0]) setPayment(data.payments[0].id)
+  }, [data.payments, payment])
 
   const parking: Parking = { location: location.trim(), rate: rate?.ratePolicyId ?? '', duration, unit, plate, paymentAccountId: payment }
 
@@ -308,6 +325,11 @@ export function PayWizard({ data, demo, onClose, onPaid }: { data: Overview; dem
           <>
             <h1 className="mt-2 text-4xl font-black">Comment payer ?</h1>
             <p className="mt-3 text-lg text-muted-foreground">Les moyens de paiement enregistrés dans votre compte PayByPhone.</p>
+            {!data.payments.length && (
+              <div className="mt-8">
+                <NoPayment onRefresh={onRefresh} />
+              </div>
+            )}
             <div className="mt-8 grid gap-3">
               {data.payments.map((p) => (
                 <Choice key={p.id} selected={payment === p.id} onClick={() => setPayment(p.id)}>

@@ -54,6 +54,7 @@ export default function App() {
             <PayWizard
               data={data}
               demo={me.demo}
+              onRefresh={refresh}
               onClose={() => setPaying(false)}
               onPaid={() => {
                 setPaying(false)

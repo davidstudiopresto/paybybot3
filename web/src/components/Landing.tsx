@@ -187,11 +187,11 @@ export function Landing({ hosted }: { hosted: boolean }) {
     <div className="flex min-h-dvh flex-col bg-white pb-20 lg:pb-0">
       <PublicTopBar />
 
-      {/* Hero laid out like a product launch page: text left (680), video right (568), 64 apart at 1440. */}
+      {/* Hero laid out like a product launch page: text left (573), video right (675), 64 apart at 1440. */}
       {/* On a computer it fills the window (under the 4rem top bar): « Comment ça marche » starts below the fold,
           the title and video grow with the screen, and an arrow at the bottom invites to scroll. */}
       <section className="rise relative mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:max-w-[min(110rem,calc((100dvh-4rem)*1.9))] lg:items-center lg:py-20 lg:pr-[50px] lg:pl-[78px]">
-        <div className="grid w-full items-center gap-12 lg:grid-cols-[680fr_568fr] lg:gap-16">
+        <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="@container max-w-[40rem] lg:max-w-none">
             {/* Sized to its column (cqw), so « de votre forfait stationnement » keeps to one line. */}
             {/* Like a launch page: the problem in black, then « on s'en occupe » in the logo's blue, a size smaller. */}

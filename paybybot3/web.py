@@ -50,8 +50,8 @@ SESSION_MAX = 24 * 3600  # ...and any login after 24 hours
 REMEMBER = 30 * 24 * 3600  # "Se souvenir de moi": 30 days
 LOGIN_LIMITS = (("ip", 50), ("user", 20))  # attempts per 15 minutes, per device and per account
 PARIS = ZoneInfo("Europe/Paris")
-MAIL_FROM = os.environ.get("PAYBYBOT_MAIL_FROM", "PaybyBot <paybybot@studiopresto.fr>")
-MAIL_REPLY_TO = os.environ.get("PAYBYBOT_MAIL_REPLY_TO", "contact@studiopresto.fr")
+MAIL_FROM = os.environ.get("PAYBYBOT_MAIL_FROM", "PaybyBot <contact@paybybot.fr>")
+MAIL_REPLY_TO = os.environ.get("PAYBYBOT_MAIL_REPLY_TO", "contact@paybybot.fr")
 APP_URL = os.environ.get("PAYBYBOT_URL", "https://paybybot.vercel.app")
 RELOGIN = ("Votre connexion PayByPhone a expiré : reconnectez-vous sur PaybyBot pour relancer "
            "le renouvellement automatique.")

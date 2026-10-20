@@ -14,7 +14,7 @@ export const PUBLISHER = {
   rcs: '103 811 097 R.C.S. Paris',
   vat: 'FR59103811097',
   director: 'David Guenoun, Président',
-  email: 'contact@studiopresto.fr',
+  email: 'contact@paybybot.fr',
 }
 
 export const LEGAL_UPDATED = '20 octobre 2026'

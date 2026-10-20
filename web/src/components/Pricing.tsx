@@ -90,7 +90,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   )
 }
 
-const REASSURANCE = '1 mois offert, sans carte bancaire. Rien n’est prélevé avant la fin du mois offert.'
+export const REASSURANCE = '1 mois offert, sans carte bancaire. Rien n’est prélevé avant la fin du mois offert.'
 
 /** Public pricing page (#/tarifs). */
 export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {

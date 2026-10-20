@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pause, Play, Plus, Power, X } from 'lucide-react'
 import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
+import { PlanCards, REASSURANCE } from '@/components/Pricing'
 import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -180,8 +181,10 @@ function Testimonials() {
 
 /** Public home page: one message, the automatic renewal. */
 export function Landing({ hosted }: { hosted: boolean }) {
+  const cta = useRef<HTMLAnchorElement>(null)
+  const sticky = useStickyCta(cta)
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
+    <div className="flex min-h-dvh flex-col bg-white pb-20 lg:pb-0">
       <PublicTopBar />
 
       {/* Hero laid out like a product launch page: text left (573), video right (675), 64 apart at 1440. */}
@@ -199,6 +202,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
               Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.
             </p>
             <a
+              ref={cta}
               href="#/inscription"
               className={cn('mt-9 lg:mt-7 lg:h-12 lg:w-fit lg:rounded-full lg:px-8 lg:text-base', ui.primary)}
             >
@@ -238,6 +242,16 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
         <Security />
 
+        <section id="prix" className="mt-24 lg:mt-36">
+          <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+            Un prix simple.
+          </h2>
+          <p className="mx-auto mt-4 max-w-[34rem] text-center text-[1.05rem] text-ink/60 lg:text-lg">{REASSURANCE}</p>
+          <div className="mx-auto mt-12 max-w-3xl">
+            <PlanCards signedIn={false} />
+          </div>
+        </section>
+
         <Testimonials />
 
         <section id="faq" className="mt-24 lg:mt-36">
@@ -247,8 +261,34 @@ export function Landing({ hosted }: { hosted: boolean }) {
       </main>
 
       <HostedFooter className="px-6 pb-8" hosted={hosted} />
+
+      {/* Phones: the main action stays at hand once the hero button has scrolled away. */}
+      <div
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-white/90 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md transition duration-300 lg:hidden',
+          sticky ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-full opacity-0',
+        )}
+        aria-hidden={!sticky}
+      >
+        <a href="#/inscription" tabIndex={sticky ? 0 : -1} className={cn('h-12 text-base', ui.primary)}>
+          Essayer gratuitement <ArrowRight className="size-5" />
+        </a>
+      </div>
     </div>
   )
+}
+
+/** True once the given element has scrolled above the viewport. */
+function useStickyCta(ref: RefObject<HTMLElement | null>) {
+  const [past, setPast] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !('IntersectionObserver' in window)) return
+    const io = new IntersectionObserver(([e]) => setPast(!e.isIntersecting && e.boundingClientRect.top < 0))
+    io.observe(el)
+    return () => io.disconnect()
+  }, [ref])
+  return past
 }
 
 const QUESTIONS: [string, ReactNode][] = [

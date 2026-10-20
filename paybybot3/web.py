@@ -574,28 +574,52 @@ RENEWAL_FOOTER = ("Vous recevez cet e-mail parce que vous avez activé le renouv
                   "plus en recevoir, retirez votre adresse ou arrêtez le renouvellement depuis l'application.")
 
 
-def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER):
+SITE_URL = "https://paybybot.fr"
+
+
+def email_html(title, lines, button=None, footer=RENEWAL_FOOTER, code=None):
+    """The PaybyBot look for transactional e-mails: logo, white card, blue button, legal footer."""
+    from html import escape
+
+    font = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
+    def paragraphs(xs):
+        return "".join('<p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:#3d4350">%s</p>' % escape(x)
+                       for x in xs)
+
+    body = paragraphs(lines)
+    if code:  # the code stands out, right after the sentence that introduces it
+        body = paragraphs(lines[:1]) + (
+            '<p style="margin:6px 0 18px;padding:18px 0;border-radius:12px;background:#f1f4fb;text-align:center;'
+            'font-size:34px;font-weight:700;letter-spacing:8px;color:#111111">%s</p>' % escape(code)) + paragraphs(lines[1:])
+    cta = ('<p style="margin:22px 0 4px"><a href="%s" style="display:inline-block;background:#1d4ea3;'
+           'background-image:linear-gradient(90deg,#1d4ea3,#2a66d1);color:#ffffff;padding:13px 22px;border-radius:12px;'
+           'font-size:16px;font-weight:700;text-decoration:none">%s</a></p>'
+           % (escape(button[1]), escape(button[0]))) if button else ""
+    return (
+        '<div style="margin:0;padding:32px 16px;background:#f4f5f8;%s">'
+        '<div style="max-width:520px;margin:0 auto">'
+        '<p style="margin:0 0 18px 4px"><a href="%s" style="text-decoration:none">'
+        '<img src="%s/brand/paybybot-logo.png" width="120" alt="PaybyBot" style="display:block;border:0;height:auto"></a></p>'
+        '<div style="background:#ffffff;border:1px solid #e6e8ee;border-radius:16px;padding:32px 28px">'
+        '<h1 style="margin:0 0 16px;font-size:23px;line-height:1.25;letter-spacing:-0.3px;color:#111111">%s</h1>%s%s'
+        "</div>"
+        '<p style="margin:20px 4px 0;font-size:12.5px;line-height:1.55;color:#7a8091">%s</p>'
+        '<p style="margin:10px 4px 0;font-size:12.5px;line-height:1.55;color:#7a8091">'
+        'PaybyBot · Studio Presto · <a href="mailto:%s" style="color:#7a8091">%s</a> · '
+        '<a href="%s" style="color:#7a8091">paybybot.fr</a><br>PaybyBot est un service indépendant de PayByPhone.</p>'
+        "</div></div>"
+        % (font, SITE_URL, SITE_URL, escape(title), body, cta, escape(footer), MAIL_REPLY_TO, MAIL_REPLY_TO, SITE_URL)
+    )
+
+
+def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER, code=None):
     """Transactional e-mail through Resend. Silently skipped without an address or an API key."""
     key = os.environ.get("RESEND_API_KEY")
     if not to or not key:
         return False
-    from html import escape
-
-    paragraphs = "".join('<p style="margin:0 0 12px;font-size:16px;line-height:1.5;color:#0d1830">%s</p>' % escape(x)
-                         for x in lines)
-    cta = ('<p style="margin:20px 0 0"><a href="%s" style="display:inline-block;background:#1d4ea3;color:#fff;'
-           'padding:12px 20px;border-radius:10px;font-weight:bold;text-decoration:none">%s</a></p>'
-           % (escape(button[1]), escape(button[0]))) if button else ""
-    html = (
-        '<div style="background:#f1ede3;padding:24px;font-family:Arial,Helvetica,sans-serif">'
-        '<div style="max-width:520px;margin:0 auto;background:#fdfcf8;border-radius:16px;padding:28px">'
-        '<p style="margin:0 0 18px"><b style="font-size:20px;letter-spacing:-0.3px;color:#0d1830">PaybyBot</b></p>'
-        '<h1 style="margin:0 0 14px;font-size:22px;color:#0d1830">%s</h1>%s%s'
-        '<p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#4f5a70">%s PaybyBot est un service '
-        "indépendant de PayByPhone.</p>"
-        "</div></div>" % (escape(title), paragraphs, cta, escape(footer))
-    )
-    text = "\n\n".join([title] + list(lines) + ([button[0] + " : " + button[1]] if button else []))
+    html = email_html(title, lines, button, footer, code)
+    text = "\n\n".join([title] + list(lines[:1]) + ([code] if code else []) + list(lines[1:])
+                         + ([button[0] + " : " + button[1]] if button else []))
     try:
         r = requests.post("https://api.resend.com/emails", timeout=10,
                           headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
@@ -1142,8 +1166,8 @@ def mask_email(email):
 def send_code(email, code):
     sent = send_email(email, "Votre code PaybyBot : %s" % code, "Votre code de vérification",
                       ["Saisissez ce code sur PaybyBot pour finir votre inscription :",
-                       "%s %s" % (code[:3], code[3:]),
                        "Il est valable 10 minutes. Ne le communiquez à personne."],
+                      code="%s %s" % (code[:3], code[3:]),
                       footer="Vous recevez cet e-mail parce que cette adresse a été indiquée pour créer un compte "
                              "PaybyBot. Si ce n'est pas vous, ignorez-le : aucun compte ne sera créé.")
     if not sent:
@@ -1942,7 +1966,9 @@ def spa(path: str):
     if not index.exists():
         raise HTTPException(404, "Interface non compilée : lancez `npm run build` dans web/.")
     # Always revalidate the page: a cached copy would point to the assets of a previous deployment.
-    return FileResponse(index, headers={"Cache-Control": "no-cache"})
+    # Any other path gets the page with a 404 status: the app shows "page not found", search engines skip it.
+    return FileResponse(index, status_code=200 if path in ("", "index.html") else 404,
+                        headers={"Cache-Control": "no-cache"})
 
 
 def serve(host="127.0.0.1", port=8765, open_browser=True):

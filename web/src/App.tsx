@@ -9,6 +9,7 @@ import { SecurityPage } from '@/components/SecurityPage'
 import { AdminPage } from '@/components/Admin'
 import { PricingPage } from '@/components/Pricing'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
+import { NotFoundPage } from '@/components/NotFound'
 import { Wordmark } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
@@ -82,7 +83,9 @@ export default function App() {
   return (
     <>
       <Toaster />
-      {legal ? (
+      {!['/', '/index.html'].includes(window.location.pathname) ? (
+        <NotFoundPage hosted={hosted} />
+      ) : legal ? (
         legal === 'securite' ? <SecurityPage hosted={hosted} signedIn={!!me} /> : <LegalView page={legal} hosted={hosted} signedIn={!!me} />
       ) : me === undefined ? (
         <div className="grid min-h-dvh place-items-center">

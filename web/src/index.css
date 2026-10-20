@@ -152,8 +152,13 @@
 .rise { animation: rise .35s ease-out both; }
 
 @keyframes blink { 50% { opacity: .35; } }
+
+/* Testimonials: one row scrolling forever (the list is rendered twice, so -50% loops seamlessly). */
+@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee { animation: marquee 50s linear infinite; }
+.marquee:hover { animation-play-state: paused; }
 .blink { animation: blink 1.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .rise, .blink { animation: none; }
+  .rise, .blink, .marquee { animation: none; }
 }

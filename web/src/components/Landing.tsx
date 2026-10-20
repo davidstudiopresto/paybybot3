@@ -81,6 +81,35 @@ function Security() {
   )
 }
 
+/**
+ * Real users' feedback only, given with their consent: [first name and last name, short quote].
+ * The section stays hidden while the list is empty.
+ */
+const TESTIMONIALS: [string, string][] = Array.from({ length: 7 }, () => ['Prénom Nom', 'Avis à venir.'])
+
+function Testimonials() {
+  if (!TESTIMONIALS.length) return null
+  const card = (name: string, text: string, key: string, copy = false) => (
+    <li key={key} aria-hidden={copy || undefined} className="w-[22rem] shrink-0 rounded-2xl border border-ink/10 bg-ink/[0.02] p-6">
+      <p className="font-semibold text-ink">{name}</p>
+      <p className="mt-3 leading-relaxed text-ink/70">{text}</p>
+    </li>
+  )
+  return (
+    <section className="mt-24 lg:mt-36" aria-label="Retour Utilisateurs">
+      <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+        Retour Utilisateurs
+      </h2>
+      <div className="relative mt-12 -mx-6 overflow-hidden sm:-mx-8 [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
+        <ul className="marquee flex w-max gap-4">
+          {TESTIMONIALS.map(([name, text], i) => card(name, text, 'a' + i))}
+          {TESTIMONIALS.map(([name, text], i) => card(name, text, 'b' + i, true))}
+        </ul>
+      </div>
+    </section>
+  )
+}
+
 /** Public home page: one message, the automatic renewal. */
 export function Landing({ hosted }: { hosted: boolean }) {
   return (
@@ -127,6 +156,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
         </section>
 
         <Security />
+
+        <Testimonials />
 
         <section id="faq" className="mt-24 lg:mt-36">
           <FaqTitle as="h2" />

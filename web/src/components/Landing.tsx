@@ -192,8 +192,9 @@ export function Landing({ hosted }: { hosted: boolean }) {
           the title and video grow with the screen, and an arrow at the bottom invites to scroll. */}
       <section className="rise relative mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:max-w-[min(110rem,calc((100dvh-4rem)*1.9))] lg:items-center lg:py-20 lg:pr-[50px] lg:pl-[78px]">
         <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
-          <div className="max-w-[40rem]">
-            <h1 className={cn(ui.title, 'lg:text-[clamp(3.42rem,min(4.1vw,7.5vh),4.75rem)] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
+          <div className="@container max-w-[40rem] lg:max-w-none">
+            {/* Sized to its column (cqw), so « forfait de stationnement. » keeps to one line. */}
+            <h1 className={cn(ui.title, 'lg:text-[clamp(2.75rem,min(9.1cqw,7.5vh),4.75rem)] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
               Renouvellement automatique de votre{' '}
               <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] box-decoration-clone bg-clip-text text-transparent">
                 forfait de stationnement

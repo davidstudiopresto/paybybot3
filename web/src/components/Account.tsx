@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { ZoneField } from '@/components/Riverain'
 import { Plate, ZonePlate } from '@/components/signs'
-import { api, forgetZoneLookup, type Overview } from '@/lib/api'
+import { api, forgetZoneLookup, type Account, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -44,6 +44,15 @@ function AccountDialog({
   const [email, setEmail] = useState<string | undefined>(undefined)
   const [editingZone, setEditingZone] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [account, setAccount] = useState<Account | null | undefined>(undefined)
+
+  async function openPortal() {
+    try {
+      window.location.assign((await api.billingPortal()).url)
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
 
   useEffect(() => {
     api.residentZone().then(
@@ -51,8 +60,14 @@ function AccountDialog({
       () => setZone(null),
     )
     api.account().then(
-      (a) => setEmail(a.email),
-      () => setEmail(''),
+      (a) => {
+        setEmail(a.email)
+        setAccount(a)
+      },
+      () => {
+        setEmail('')
+        setAccount(null)
+      },
     )
   }, [])
 
@@ -124,6 +139,36 @@ function AccountDialog({
               </div>
             )}
           </div>
+
+          {!demo && (
+            <div className={row}>
+              <dt className={label}>Abonnement</dt>
+              <dd className="text-right">
+                {account === undefined ? (
+                  <Loader2 className="ml-auto size-4 animate-spin text-ink/40" />
+                ) : account?.plan ? (
+                  <span className="flex items-center gap-3">
+                    <span className="font-medium text-ink">{account.plan === 'yearly' ? 'Annuel' : 'Mensuel'}</span>
+                    <button onClick={openPortal} className={cn('text-sm', ui.link)}>
+                      Gérer
+                    </button>
+                  </span>
+                ) : (
+                  <span className="flex flex-col items-end gap-1">
+                    {account?.trialEnd && (
+                      <span className="text-ink/60">
+                        Mois offert jusqu’au{' '}
+                        {new Date(account.trialEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                      </span>
+                    )}
+                    <a href="#/tarifs" onClick={onClose} className={cn('text-sm', ui.link)}>
+                      Choisir mon offre
+                    </a>
+                  </span>
+                )}
+              </dd>
+            </div>
+          )}
 
           <div className={row}>
             <dt className={label}>E-mail</dt>

@@ -105,6 +105,8 @@ export const api = {
     request<Account>('/api/account', { method: 'PUT', body: JSON.stringify(patch) }),
   logout: () => post('/api/logout'),
   checkout: (plan: 'monthly' | 'yearly') => post<{ url: string }>('/api/billing/checkout', { plan }),
+  confirmCheckout: (session_id: string) => post<{ plan: string }>('/api/billing/confirm', { session_id }),
+  billingPortal: () => post<{ url: string }>('/api/billing/portal'),
   adminLogin: (email: string, password: string) => post('/api/admin/login', { email, password }),
   adminLogout: () => post('/api/admin/logout'),
   adminStats: () => request<import('@/components/Admin').AdminStats>('/api/admin/stats'),

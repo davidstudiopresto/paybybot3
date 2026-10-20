@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { LogOut, Repeat } from 'lucide-react'
 import { Plate, ZonePlate } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
@@ -100,7 +101,20 @@ export function Dashboard({
   const now = useNow()
   const [account, setAccount] = useState<Account | null>(null)
   useEffect(() => {
-    api.account().then(setAccount, () => {})
+    // Back from Stripe Checkout: record the subscription, then show the account as it is now.
+    const done = window.location.hash.match(/session_id=(cs_[A-Za-z0-9_]+)/)
+    const confirm = done
+      ? api.confirmCheckout(done[1]).then(
+          (r) => {
+            history.replaceState(null, '', window.location.pathname)
+            toast.success(`Offre ${r.plan === 'yearly' ? 'annuelle' : 'mensuelle'} activée.`, {
+              description: 'Rien n’est prélevé avant la fin de votre mois offert.',
+            })
+          },
+          (e) => toast.error((e as Error).message),
+        )
+      : Promise.resolve()
+    confirm.then(() => api.account().then(setAccount, () => {}))
   }, [])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)

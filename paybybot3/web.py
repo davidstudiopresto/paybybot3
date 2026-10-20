@@ -778,7 +778,7 @@ def with_details(row):
     return {**row, **json.loads(_fernet("renewal").decrypt(row["data"].encode()))}
 
 
-ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan")
+ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -1501,20 +1501,115 @@ def get_account(pbb_session: str = Cookie(None)):
     start = parse_dt(account.get("trial_start"))
     return {"email": account.get("email") or "", "zone": account.get("zone") or None,
             "trialEnd": (start + timedelta(days=TRIAL_DAYS)).isoformat() if start else None,
-            "plan": account.get("plan") or None}
+            "plan": subscription_plan(account)}
 
 
 class Checkout(BaseModel):
     plan: str = Field(pattern="^(monthly|yearly)$")
 
 
+class CheckoutDone(BaseModel):
+    session_id: str = Field(pattern=r"^cs_[A-Za-z0-9_]{10,200}$")
+
+
+ACTIVE_STATUSES = ("trialing", "active", "past_due")
+PLANS = {"monthly": (1000, "month", "PaybyBot · Mensuel"), "yearly": (9600, "year", "PaybyBot · Annuel")}  # cents, TTC
+
+
+def stripe(method, path, **data):
+    """Stripe REST API (form-encoded), with the key from STRIPE_SECRET_KEY."""
+    key = os.environ.get("STRIPE_SECRET_KEY")
+    if not key:
+        raise HTTPException(503, "Le paiement en ligne arrive très bientôt. Profitez de votre mois offert !")
+    r = requests.request(method, "https://api.stripe.com/v1/" + path, auth=(key, ""), data=data or None,
+                         timeout=15)
+    if not r.ok:
+        log.warning("stripe %s %s: %s %s", method, path.split("/")[0], r.status_code, r.text[:200])
+        raise HTTPException(502, "Le paiement est momentanément indisponible. Réessayez dans un instant.")
+    return r.json()
+
+
+def subscription_plan(account):
+    """The live plan from Stripe ('monthly' / 'yearly'), or None when there is no running subscription."""
+    sub_id = account.get("stripe_subscription")
+    if not sub_id or not os.environ.get("STRIPE_SECRET_KEY"):
+        return None
+    try:
+        sub = stripe("GET", "subscriptions/" + sub_id)
+    except HTTPException:
+        return account.get("plan")  # Stripe unreachable: trust the last known plan
+    return account.get("plan") if sub.get("status") in ACTIVE_STATUSES else None
+
+
 @app.post("/api/billing/checkout")
-def billing_checkout(body: Checkout, pbb_session: str = Cookie(None)):
+def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie(None)):
     """Stripe Checkout for the monthly or yearly plan; nothing is charged before the free month ends."""
-    current(pbb_session)
+    s = current(pbb_session)
+    if s.demo:
+        raise HTTPException(400, "Le paiement n'est pas disponible en mode démo.")
     if not os.environ.get("STRIPE_SECRET_KEY"):
         raise HTTPException(503, "Le paiement en ligne arrive très bientôt. Profitez de votre mois offert !")
-    raise HTTPException(503, "Le paiement en ligne arrive très bientôt.")
+    account = guarded(lambda: load_account(s))
+    base = APP_URL.rstrip("/")
+    amount, interval, name = PLANS[body.plan]
+    data = {"mode": "subscription", "line_items[0][quantity]": 1,
+            "line_items[0][price_data][currency]": "eur", "line_items[0][price_data][unit_amount]": amount,
+            "line_items[0][price_data][recurring][interval]": interval,
+            "line_items[0][price_data][product_data][name]": name,
+            "client_reference_id": owner_id(s.username), "metadata[plan]": body.plan,
+            "success_url": base + "/#/abonnement?session_id={CHECKOUT_SESSION_ID}",
+            "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true"}
+    if account.get("stripe_customer"):
+        data["customer"] = account["stripe_customer"]
+    elif account.get("email"):
+        data["customer_email"] = account["email"]
+    start = parse_dt(account.get("trial_start"))
+    trial_end = start + timedelta(days=TRIAL_DAYS) if start else None
+    if trial_end and trial_end > datetime.now(timezone.utc) + timedelta(hours=49):
+        # Nothing is charged before the free month ends (Stripe wants at least 48 h ahead).
+        data["subscription_data[trial_end]"] = int(trial_end.timestamp())
+    session = stripe("POST", "checkout/sessions", **data)
+    return {"url": session["url"]}
+
+
+@app.post("/api/billing/confirm")
+def billing_confirm(body: CheckoutDone, pbb_session: str = Cookie(None)):
+    """Back from Stripe Checkout: record the subscription on the account."""
+    s = current(pbb_session)
+    session = stripe("GET", "checkout/sessions/" + body.session_id)
+    if session.get("client_reference_id") != owner_id(s.username) or session.get("status") != "complete":
+        raise HTTPException(400, "Ce paiement n'a pas abouti.")
+    plan = (session.get("metadata") or {}).get("plan")
+    account = guarded(lambda: save_account(s, {"plan": plan, "stripe_customer": session.get("customer"),
+                                               "stripe_subscription": session.get("subscription")}))
+    log.info("subscription started (%s)", plan)
+    return {"plan": account.get("plan")}
+
+
+def portal_configuration():
+    """The customer portal settings, created once if the Stripe account has none yet."""
+    found = stripe("GET", "billing_portal/configurations?is_default=true&limit=1").get("data") or []
+    if found:
+        return found[0]["id"]
+    return stripe("POST", "billing_portal/configurations", **{
+        "business_profile[headline]": "PaybyBot : gérez votre abonnement",
+        "features[invoice_history][enabled]": "true",
+        "features[payment_method_update][enabled]": "true",
+        "features[subscription_cancel][enabled]": "true",
+        "features[subscription_cancel][mode]": "at_period_end",
+    })["id"]
+
+
+@app.post("/api/billing/portal")
+def billing_portal(pbb_session: str = Cookie(None)):
+    """Stripe's customer portal: change card or plan, see invoices, cancel."""
+    s = current(pbb_session)
+    account = guarded(lambda: load_account(s))
+    if not account.get("stripe_customer"):
+        raise HTTPException(400, "Aucun abonnement à gérer.")
+    portal = stripe("POST", "billing_portal/sessions", customer=account["stripe_customer"],
+                    return_url=APP_URL.rstrip("/") + "/", configuration=portal_configuration())
+    return {"url": portal["url"]}
 
 
 @app.put("/api/account")

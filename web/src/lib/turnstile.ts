@@ -69,7 +69,8 @@ export function useTurnstile() {
             waiting.current.splice(0).forEach((resolve) => resolve(token))
           },
           'expired-callback': () => (current.current = null),
-          'error-callback': () => {
+          'error-callback': (code: string) => {
+            console.warn('Turnstile error', code)
             setFailed(true)
             return false // Cloudflare retries by itself
           },

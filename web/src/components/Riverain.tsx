@@ -174,14 +174,8 @@ export function RiverainCard({
   return (
     <>
       <section className="rise">
-        <h2 className="font-heading text-xl font-bold">Vous êtes riverain ?</h2>
-        <p className="mt-1 text-ink/60">
-          {hosted
-            ? 'Votre forfait résident, repayé tout seul à chaque échéance, même appareil éteint.'
-            : 'Votre forfait résident, repayé tout seul à chaque échéance.'}
-        </p>
-        <button onClick={() => setOpen(true)} disabled={!data} className={cn('mt-5', ui.primary)}>
-          Activer le renouvellement
+        <button onClick={() => setOpen(true)} disabled={!data} className={ui.primary}>
+          Activer le renouvellement résident
         </button>
       </section>
       {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />}

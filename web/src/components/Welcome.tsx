@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ArrowRight, Car, Check, CreditCard, MapPin, Phone, Ticket, UserRound } from 'lucide-react'
+import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
 import { PayByPhone, Plate, Wordmark, ZonePlate } from '@/components/signs'
 import { api, until, type Me, type Overview } from '@/lib/api'
@@ -12,7 +12,19 @@ function phoneText(username: string) {
   return m ? `+33 ${m.slice(1).join(' ')}` : username
 }
 
-function Row({ icon, label, children, delay }: { icon: ReactNode; label: string; children: ReactNode; delay: number }) {
+function Row({
+  icon,
+  label,
+  children,
+  delay,
+  found = true,
+}: {
+  icon: ReactNode
+  label: string
+  children: ReactNode
+  delay: number
+  found?: boolean
+}) {
   return (
     <li className="rise flex items-start gap-4 py-4" style={{ animationDelay: `${delay}ms` }}>
       <span className="grid size-10 shrink-0 place-items-center rounded-full bg-eu/[0.08] text-eu">{icon}</span>
@@ -20,9 +32,15 @@ function Row({ icon, label, children, delay }: { icon: ReactNode; label: string;
         <p className="text-sm text-ink/55">{label}</p>
         <div className="mt-1 text-ink">{children}</div>
       </div>
-      <span className="mt-2.5 grid size-6 shrink-0 place-items-center rounded-full bg-[#e7f6ec] text-[#1a9a4a]">
-        <Check className="size-3.5" strokeWidth={3} />
-      </span>
+      {found ? (
+        <span className="mt-2.5 grid size-6 shrink-0 place-items-center rounded-full bg-[#e7f6ec] text-[#1a9a4a]">
+          <Check className="size-3.5" strokeWidth={3} />
+        </span>
+      ) : (
+        <span className="mt-2.5 grid size-6 shrink-0 place-items-center rounded-full bg-ink/[0.06] text-ink/40">
+          <Minus className="size-3.5" strokeWidth={3} />
+        </span>
+      )}
     </li>
   )
 }
@@ -64,6 +82,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               icon={<Car className="size-5" />}
               label={data.vehicles.length > 1 ? `${data.vehicles.length} véhicules` : 'Véhicule'}
               delay={next()}
+              found={data.vehicles.length > 0}
             >
               {data.vehicles.length ? (
                 <span className="flex flex-wrap gap-2 pt-0.5">
@@ -79,6 +98,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               icon={<CreditCard className="size-5" />}
               label={data.payments.length > 1 ? 'Moyens de paiement' : 'Moyen de paiement'}
               delay={next()}
+              found={data.payments.length > 0}
             >
               {data.payments.length ? (
                 <span className="flex flex-col gap-0.5 font-semibold">
@@ -90,7 +110,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                 <span className="text-ink/60">Aucune carte : ajoutez-en une dans l’application PayByPhone.</span>
               )}
             </Row>
-            <Row icon={<MapPin className="size-5" />} label="Zone de résidence" delay={next()}>
+            <Row icon={<MapPin className="size-5" />} label="Zone de résidence" delay={next()} found={zone !== null}>
               {zone === undefined ? (
                 <span className="inline-block h-5 w-24 animate-pulse rounded bg-ink/10" />
               ) : zone ? (

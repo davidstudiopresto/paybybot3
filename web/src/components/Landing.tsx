@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Plus, Power, Repeat } from 'lucide-react'
+import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Plus, Power, Repeat, ShieldCheck } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { Plate, ZonePlate } from '@/components/signs'
@@ -7,6 +7,13 @@ import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
+
+/** Under the main button: three facts the security and pricing pages back up. */
+const TRUST = [
+  [ShieldCheck, 'Paiement Stripe'],
+  [MapPin, 'Hébergé en France'],
+  [Power, 'Sans engagement'],
+] as const
 
 const STEPS = [
   ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
@@ -132,6 +139,13 @@ export function Landing({ hosted }: { hosted: boolean }) {
                 Se connecter
               </a>
             </p>
+            <ul className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink/55 lg:max-w-sm lg:justify-between lg:gap-x-0">
+              {TRUST.map(([Icon, text]) => (
+                <li key={text} className="flex items-center gap-1.5">
+                  <Icon className="size-4 text-eu" /> {text}
+                </li>
+              ))}
+            </ul>
           </div>
           <Preview />
         </section>

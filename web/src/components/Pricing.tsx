@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
 import { NoResidentStatus, ZoneField } from '@/components/Riverain'
-import { PayByPhone, Wordmark } from '@/components/signs'
+import { PayByPhone, Plate, Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { api, forgetZoneLookup, type Pricing } from '@/lib/api'
@@ -45,6 +45,31 @@ function usePricing(enabled: boolean) {
   }, [enabled])
   useEffect(load, [load])
   return [pricing, load] as const
+}
+
+/** One price per « riverain » vehicle (plate), and what the subscription covers. */
+function VehiclePrices({ plan, pricing, className }: { plan: Plan; pricing: Pricing | null; className?: string }) {
+  const vehicles = pricing?.vehicles ?? []
+  if (vehicles.length < 2) return null
+  const billed = pricing?.billed?.length ?? 1
+  return (
+    <div className={className}>
+      <ul className="space-y-1.5">
+        {vehicles.map((v) => (
+          <li key={v.plate} className="flex items-center justify-between gap-3 text-sm">
+            <Plate plate={v.plate} size="sm" />
+            <span className="text-ink/70 tabular-nums">
+              {euros(plan === 'monthly' ? v.monthly : v.yearly)} {plan === 'monthly' ? '/ mois' : '/ an'}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs leading-relaxed text-ink/50">
+        Prix par véhicule. Le total est celui de {billed > 1 ? `vos ${billed} véhicules renouvelés` : 'votre véhicule renouvelé'} :
+        vous ne payez que les véhicules dont le renouvellement est activé.
+      </p>
+    </div>
+  )
 }
 
 const INCLUDED = [
@@ -122,6 +147,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
             {p.price} <span className="text-base font-normal text-ink/50">{p.per}</span>
           </p>
           <p className="mt-2 text-sm text-ink/55">{p.note}</p>
+          {signedIn && <VehiclePrices plan={p.id} pricing={pricing} className="mt-5 border-t border-ink/10 pt-4" />}
           <ul className="mt-6 space-y-2 text-[0.95rem] text-ink/70">
             {INCLUDED.map((x) => (
               <li key={x} className="flex items-start gap-2">
@@ -354,6 +380,7 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
                 ))}
               </div>
 
+              <VehiclePrices plan={plan} pricing={pricing} className="mt-5 rounded-2xl bg-ink/[0.03] p-4" />
               <ul className="mt-6 grid gap-2 text-[0.95rem] text-ink/70 sm:grid-cols-2">
                 {INCLUDED.map((x) => (
                   <li key={x} className="flex items-start gap-2">

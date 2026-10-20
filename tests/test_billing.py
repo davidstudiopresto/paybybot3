@@ -99,7 +99,29 @@ class Billing(unittest.TestCase):
         mail.assert_not_called()  # no e-mail on a zone change
         update = calls[-1][2]
         self.assertEqual((update["items[0][price_data][unit_amount]"], update["proration_behavior"]), (2100, "none"))
-        saved.assert_called_with("o", {"billed_weekly_cents": 1050})
+        saved.assert_called_with("o", {"billed_weeklies": [1050]})
+
+    def test_one_price_per_vehicle_and_the_subscription_for_the_renewed_ones(self):
+        self.assertEqual(web.plan_total([900, 900], "monthly"), 3600)
+        self.assertEqual(web.plan_total([900, 0], "monthly"), 1800 + 490)  # the floor is per vehicle
+        self.assertEqual(web.plan_total([900, 900], "yearly"), 34560)
+        prices = [{"plate": "AB-123-CD", "type": "Car", "weekly": 900}, {"plate": "EF-456-GH", "type": "Car", "weekly": 450}]
+        with patch.object(web, "find_home_zone", return_value={"zone": "75015"}), \
+                patch.object(web, "vehicle_prices", return_value=prices), \
+                patch.object(web, "load_account", return_value={}), \
+                patch.object(web, "save_account", side_effect=lambda s, p: p), patch.object(web, "reprice"):
+            with patch.object(web, "renewed_plates", return_value=set()):  # none renewed yet: the first one
+                p = web.account_pricing(self.s)
+                self.assertEqual((p["billed"], p["monthly"]), (["AB-123-CD"], 1800))
+            with patch.object(web, "renewed_plates", return_value={"AB123CD", "EF456GH"}):
+                p = web.account_pricing(self.s)
+                self.assertEqual((p["monthly"], [v["monthly"] for v in p["vehicles"]]), (2700, [1800, 900]))
+
+    def test_checkout_bills_every_renewed_vehicle(self):
+        self.assertEqual(web.account_weeklies({"weeklies": [900, 450]}), [900, 450])
+        self.assertEqual(web.account_weeklies({"weekly_cents": 900}), [900])  # accounts priced before
+        self.assertEqual(web.weeklies_from({"weeklies": "450,900"}), [450, 900])
+        self.assertEqual(web.weeklies_from({"weekly_cents": "900"}), [900])
 
     def test_confirm_records_the_plan(self):
         self.owner = web.owner_id(self.s.username)

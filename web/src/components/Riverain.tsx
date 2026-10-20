@@ -183,6 +183,9 @@ export function RiverainCard({
   )
 }
 
+type Found = { rate: Rate | null; quote: Quote | null; error: string | null }
+type Quote = { cost: Money | null; afterCurrent?: boolean; currentExpire?: string | null; priceSource?: 'history' | 'paris' | null }
+
 function RiverainDialog({
   open,
   onOpenChange,
@@ -196,23 +199,37 @@ function RiverainDialog({
   onDone: () => void
   hosted: boolean
 }) {
-  const [plate, setPlate] = useState('')
+  const [plates, setPlates] = useState<string[] | null>(null) // the « riverain » vehicles (null: looking)
+  const [selected, setSelected] = useState<string[]>([])
   const [zone, setZone] = useState('')
   const [zoneFromHistory, setZoneFromHistory] = useState(false)
   const [payment, setPayment] = useState('')
-  const [rate, setRate] = useState<Rate | null>(null)
-  const [quote, setQuote] = useState<{ cost: Money | null; afterCurrent?: boolean; currentExpire?: string | null; priceSource?: 'history' | 'paris' | null } | null>(null)
+  const [found, setFound] = useState<Record<string, Found>>({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Prefill from the last payment each time the dialog opens.
+  const covered = new Set(data.autopilots.filter(isWeekly).map((a) => a.plate))
+
+  // Each time the dialog opens: the riverain vehicles not renewed yet (all ticked), the home zone, the card.
   useEffect(() => {
     if (!open) return
     const last = loadLast()
-    const covered = new Set(data.autopilots.filter(isWeekly).map((a) => a.plate))
-    const plates = data.vehicles.map((v) => v.plate)
-    setPlate(plates.find((p) => p === last.plate && !covered.has(p)) ?? plates.find((p) => !covered.has(p)) ?? plates[0] ?? '')
+    setError(null)
+    setFound({})
+    setPlates(null)
+    api.pricing().then(
+      (p) => {
+        const riverain = (p.vehicles?.length ? p.vehicles.map((v) => v.plate) : data.vehicles.map((v) => v.plate))
+        setPlates(riverain)
+        setSelected(riverain.filter((x) => !covered.has(x)))
+      },
+      () => {
+        const all = data.vehicles.map((v) => v.plate)
+        setPlates(all)
+        setSelected(all.filter((x) => !covered.has(x)).slice(0, 1))
+      },
+    )
     // The home zone: the one where PayByPhone offers this account the resident rate. The last one-off
     // payment's zone is not used, it is rarely the home one.
     setZone('')
@@ -227,43 +244,41 @@ function RiverainDialog({
       () => {},
     )
     setPayment(data.payments.find((p) => p.id === last.paymentAccountId)?.id ?? data.payments[0]?.id ?? '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, data])
 
   useEffect(() => {
     if (open && !payment && data.payments[0]) setPayment(data.payments[0].id)
   }, [open, data.payments, payment])
 
-  const ready = open && plate && payment && /^\w{3,}$/.test(zone)
+  const ready = open && selected.length > 0 && payment && /^\w{3,}$/.test(zone)
 
-  // Look up the resident rate and the weekly price as soon as the zone is complete.
+  // For each ticked vehicle: its resident rate and the price of a week, as soon as the zone is complete.
   useEffect(() => {
     if (!ready) {
-      setRate(null)
-      setQuote(null)
+      setFound({})
       return
     }
     let cancelled = false
     setLoading(true)
-    setError(null)
-    setQuote(null)
     const timer = setTimeout(async () => {
-      try {
-        const rates = await api.rates(zone, plate)
-        const resident = residentRateFor(rates, data.vehicles.find((v) => v.plate === plate)?.type)
-        if (!resident) throw new Error("Aucun tarif résident pour ce véhicule dans cette zone. Vérifiez votre carte de stationnement résident dans l'application PayByPhone.")
-        if (!resident.acceptedTimeUnits.includes('Days')) throw new Error("Le tarif résident de cette zone ne se paie pas à la journée.")
-        const q = await weeklyPrice(resident)
-        if (!cancelled) {
-          setRate(resident)
-          setQuote(q)
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setRate(null)
-          setError((e as Error).message)
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
+      const results = await Promise.all(
+        selected.map(async (plate): Promise<[string, Found]> => {
+          try {
+            const rates = await api.rates(zone, plate)
+            const resident = residentRateFor(rates, data.vehicles.find((v) => v.plate === plate)?.type)
+            if (!resident) throw new Error('Pas de tarif résident pour ce véhicule dans cette zone.')
+            if (!resident.acceptedTimeUnits.includes('Days')) throw new Error('Le tarif résident de cette zone ne se paie pas à la journée.')
+            const quote = await api.quote({ ...parking(resident, plate), renewal: true })
+            return [plate, { rate: resident, quote, error: null }]
+          } catch (e) {
+            return [plate, { rate: null, quote: null, error: (e as Error).message }]
+          }
+        }),
+      )
+      if (!cancelled) {
+        setFound(Object.fromEntries(results))
+        setLoading(false)
       }
     }, 350)
     return () => {
@@ -271,66 +286,94 @@ function RiverainDialog({
       clearTimeout(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, zone, plate, payment])
+  }, [ready, zone, selected.join(','), payment])
 
-  function parking(r: Rate): Parking {
+  function parking(r: Rate, plate: string): Parking {
     return { location: zone, rate: r.ratePolicyId, duration: WEEK_DAYS, unit: 'Days', plate, paymentAccountId: payment }
   }
 
-  /** Price of a week. With a ticket already running, the server prices it as an extension of that ticket
-   *  (or leaves it unknown): the renewal can be activated ahead and starts when that ticket ends. */
-  function weeklyPrice(r: Rate) {
-    return api.quote({ ...parking(r), renewal: true })
+  const samePlate = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCase() === b.replace(/[^0-9a-z]/gi, '').toUpperCase()
+  const runningFor = (plate: string) =>
+    !!found[plate]?.quote?.afterCurrent || data.sessions.some((s) => samePlate(s.plate, plate) && new Date(s.expire).getTime() > Date.now())
+  const ok = selected.filter((plate) => found[plate]?.rate && found[plate]?.quote)
+
+  function toggle(plate: string) {
+    setSelected((list) => (list.includes(plate) ? list.filter((x) => x !== plate) : [...list, plate]))
   }
 
   async function activate() {
-    if (!rate) return
+    if (!ok.length) return
     setSaving(true)
-    try {
-      const p = parking(rate)
-      await api.addAutopilot({ ...p, label: WEEKLY_LABEL }) // confirmations go to the account e-mail
-      saveLast(p)
-      toast.success('Renouvellement hebdomadaire activé.', {
-        description: hasCurrent
-          ? 'Il prendra le relais à la fin de votre ticket actuel.'
+    setError(null)
+    const failed: string[] = []
+    for (const plate of ok) {
+      try {
+        const p = parking(found[plate].rate!, plate)
+        await api.addAutopilot({ ...p, label: WEEKLY_LABEL }) // confirmations go to the account e-mail
+        saveLast(p)
+      } catch (e) {
+        failed.push(`${plate} : ${(e as Error).message}`)
+      }
+    }
+    setSaving(false)
+    const done = ok.length - failed.length
+    if (done) {
+      toast.success(done > 1 ? `Renouvellement activé pour ${done} véhicules.` : 'Renouvellement hebdomadaire activé.', {
+        description: ok.some(runningFor)
+          ? 'Chaque renouvellement prend le relais à la fin du ticket en cours.'
           : 'La première semaine est en cours de paiement.',
       })
-      onOpenChange(false)
       setTimeout(onDone, 2500)
       onDone()
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setSaving(false)
     }
+    if (failed.length) setError(failed.join('\n'))
+    else onOpenChange(false)
   }
-
-  const samePlate = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCase() === b.replace(/[^0-9a-z]/gi, '').toUpperCase()
-  const hasCurrent = !!quote?.afterCurrent || data.sessions.some((s) => samePlate(s.plate, plate) && new Date(s.expire).getTime() > Date.now())
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={ui.dialog}>
         <div className="px-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Renouvellement riverain</DialogTitle>
-          <DialogDescription className="mt-1 text-ink/60">Vérifiez, puis activez. On s'occupe du reste.</DialogDescription>
+          <DialogDescription className="mt-1 text-ink/60">
+            Choisissez les véhicules à renouveler, vérifiez, puis activez. On s'occupe du reste.
+          </DialogDescription>
         </div>
 
         <div className="space-y-6 p-6">
           <div>
-            <p className={ui.label}>Véhicule</p>
-            <div className="flex flex-wrap gap-2">
-              {data.vehicles.map((v) => (
-                <button
-                  key={v.plate}
-                  onClick={() => setPlate(v.plate)}
-                  aria-pressed={plate === v.plate}
-                  className={choice(plate === v.plate, 'p-2')}
-                >
-                  <Plate plate={v.plate} size="sm" />
-                </button>
-              ))}
-            </div>
+            <p className={ui.label}>{plates && plates.length > 1 ? 'Véhicules riverains' : 'Véhicule riverain'}</p>
+            {plates === null ? (
+              <div className="h-12 animate-pulse rounded-xl bg-ink/[0.05]" />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {plates.map((plate) =>
+                  covered.has(plate) ? (
+                    <span key={plate} className="inline-flex flex-col items-center gap-1 rounded-xl border border-ink/10 p-2 opacity-60">
+                      <Plate plate={plate} size="sm" />
+                      <span className="text-xs text-ink/55">Déjà renouvelé</span>
+                    </span>
+                  ) : (
+                    <button
+                      key={plate}
+                      onClick={() => toggle(plate)}
+                      aria-pressed={selected.includes(plate)}
+                      className={choice(selected.includes(plate), 'flex items-center gap-2 p-2')}
+                    >
+                      <span
+                        className={cn(
+                          'grid size-5 place-items-center rounded-md border',
+                          selected.includes(plate) ? 'border-eu bg-eu text-white' : 'border-ink/25',
+                        )}
+                      >
+                        {selected.includes(plate) && <Check className="size-3.5" strokeWidth={3} />}
+                      </span>
+                      <Plate plate={plate} size="sm" />
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
           </div>
 
           <ZoneField
@@ -361,53 +404,64 @@ function RiverainDialog({
             </div>
           )}
 
-          {/* Summary */}
+          {/* Summary: one line per ticked vehicle */}
           <div className="rounded-xl bg-muted p-4" aria-live="polite">
-            {error ? (
-              <p className="text-destructive">{error}</p>
+            {!selected.length ? (
+              <p className="text-muted-foreground">Cochez au moins un véhicule.</p>
+            ) : !/^\w{3,}$/.test(zone) ? (
+              <p className="text-muted-foreground">Indiquez votre arrondissement pour voir le prix.</p>
             ) : loading ? (
               <p className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" /> Recherche du tarif résident…
               </p>
-            ) : rate && quote ? (
-              <ul className="space-y-1.5">
-                <li className="flex items-center gap-2">
-                  <Check className="size-4" />
-                  <span>
-                    Tarif <strong>{rate.name}</strong>, 7 jours
-                  </span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Repeat className="size-4" />
-                  {hasCurrent
-                    ? quote?.currentExpire
-                      ? `Prend le relais à la fin du ticket en cours, ${clock(quote.currentExpire)}`
-                      : 'Prend le relais à la fin du ticket en cours'
-                    : 'Première semaine payée tout de suite'}
-                </li>
-                <li className="flex items-baseline justify-between pt-2">
-                  <span className="text-muted-foreground">
-                    Chaque semaine
-                    {quote.cost && quote.priceSource && (
-                      <span className="block text-xs">
-                        {quote.priceSource === 'history' ? 'Prix de votre dernière semaine' : 'Tarif résident parisien'}
-                      </span>
-                    )}
-                  </span>
-                  {quote.cost ? (
-                    <span className="font-heading text-3xl font-bold">{money(quote.cost)}</span>
-                  ) : (
-                    <span className="text-right text-sm text-muted-foreground">Prix PayByPhone du tarif résident</span>
-                  )}
-                </li>
-              </ul>
             ) : (
-              <p className="text-muted-foreground">Indiquez votre arrondissement pour voir le prix.</p>
+              <ul className="space-y-3">
+                {selected.map((plate) => {
+                  const f = found[plate]
+                  return (
+                    <li key={plate} className="flex items-start justify-between gap-3">
+                      <span className="min-w-0">
+                        <Plate plate={plate} size="sm" />
+                        <span className="mt-1 block text-sm text-muted-foreground">
+                          {f?.error ? (
+                            <span className="text-destructive">{f.error}</span>
+                          ) : f?.rate ? (
+                            <>
+                              <Repeat className="mr-1 inline size-3.5" />
+                              {runningFor(plate)
+                                ? f.quote?.currentExpire
+                                  ? `Prend le relais le ${clock(f.quote.currentExpire)}`
+                                  : 'Prend le relais à la fin du ticket en cours'
+                                : 'Première semaine payée tout de suite'}
+                            </>
+                          ) : null}
+                        </span>
+                      </span>
+                      {f?.quote?.cost ? (
+                        <span className="shrink-0 text-right">
+                          <span className="font-heading text-xl font-bold">{money(f.quote.cost)}</span>
+                          <span className="block text-xs text-muted-foreground">par semaine</span>
+                        </span>
+                      ) : f?.rate ? (
+                        <span className="shrink-0 text-right text-xs text-muted-foreground">Prix PayByPhone du tarif résident</span>
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ul>
             )}
           </div>
 
-          <button onClick={activate} disabled={!rate || !quote || saving} className={ui.primary}>
-            {saving ? <Loader2 className="size-5 animate-spin" /> : 'Activer le renouvellement automatique'}
+          {error && <p className="whitespace-pre-line text-sm text-destructive">{error}</p>}
+
+          <button onClick={activate} disabled={!ok.length || loading || saving} className={ui.primary}>
+            {saving ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : ok.length > 1 ? (
+              `Activer le renouvellement pour ${ok.length} véhicules`
+            ) : (
+              'Activer le renouvellement automatique'
+            )}
           </button>
           <p className="-mt-3 text-center text-sm text-ink/50">
             {hosted

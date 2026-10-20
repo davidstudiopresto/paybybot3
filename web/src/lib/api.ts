@@ -69,6 +69,18 @@ export type Pricing = {
   yearly: number | null
   /** Resident status active on PayByPhone in the home zone (null while the zone is unknown). */
   resident?: boolean | null
+  /** The « riverain » vehicles (a resident rate in the home zone), one price each. */
+  vehicles?: PricedVehicle[]
+  /** Plates the subscription is for: those with a renewal (the first vehicle while none has). */
+  billed?: string[]
+}
+export type PricedVehicle = {
+  plate: string
+  type?: string | null
+  weekly: number
+  monthly: number
+  yearly: number
+  renewed: boolean
 }
 
 export class ApiError extends Error {

@@ -4,7 +4,6 @@ import { ArrowRight, ChevronDown, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pa
 import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
-import { PlanCards } from '@/components/Pricing'
 import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -254,15 +253,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
         </section>
 
         <Security />
-
-        <section id="prix" className="mt-24 lg:mt-36">
-          <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
-            Un prix simple.
-          </h2>
-          <div className="mx-auto mt-12 max-w-3xl">
-            <PlanCards signedIn={false} />
-          </div>
-        </section>
 
         <Testimonials />
 

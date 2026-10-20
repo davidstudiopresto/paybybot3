@@ -3,8 +3,8 @@ import { toast } from 'sonner'
 import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
 import { ResidentGate, ZoneField, type ResidentStatus } from '@/components/Riverain'
-import { arrondissement, PayByPhone, Plate, Wordmark, ZonePlate } from '@/components/signs'
-import { api, forgetZoneLookup, until, type Me, type Overview } from '@/lib/api'
+import { arrondissement, PayByPhone, Plate, withPayByPhone, Wordmark, ZonePlate } from '@/components/signs'
+import { api, forgetZoneLookup, until, type Me, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -62,10 +62,19 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
   }, [])
 
   // PaybyBot is for resident-rate holders: checked as soon as the home zone is known (the zone tells where).
+  // The same lookup gives the « riverain » vehicles: only those are shown (undefined: looking).
   const [status, setStatus] = useState<ResidentStatus | null>(null)
+  const [vehicles, setVehicles] = useState<PricedVehicle[] | undefined>(undefined)
   useEffect(() => {
-    if (!zone || me.demo) return
-    api.residentStatus().then(setStatus, () => {})
+    if (!zone) return
+    setVehicles(undefined)
+    api.pricing().then(
+      (p) => {
+        setVehicles(p.vehicles ?? [])
+        if (!me.demo) setStatus({ zone: p.zone, resident: p.resident ?? null })
+      },
+      () => setVehicles([]),
+    )
   }, [zone, me.demo])
 
   // Not in the history: the arrondissement is asked here, and needed before going on (the price depends on it).
@@ -113,18 +122,26 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             )}
             <Row
               icon={<Car className="size-5" />}
-              label={data.vehicles.length > 1 ? `${data.vehicles.length} véhicules` : 'Véhicule'}
+              label={vehicles && vehicles.length > 1 ? `${vehicles.length} véhicules riverains` : 'Véhicule riverain'}
               delay={next()}
-              found={data.vehicles.length > 0}
+              found={!!vehicles?.length}
             >
-              {data.vehicles.length ? (
+              {!zone ? (
+                <span className="text-ink/60">Retrouvés dès que votre arrondissement est connu.</span>
+              ) : vehicles === undefined ? (
+                <span className="inline-block h-5 w-40 animate-pulse rounded bg-ink/10" />
+              ) : vehicles.length ? (
                 <span className="flex flex-wrap gap-2 pt-0.5">
-                  {data.vehicles.map((v) => (
+                  {vehicles.map((v) => (
                     <Plate key={v.plate} plate={v.plate} size="sm" />
                   ))}
                 </span>
               ) : (
-                <span className="text-ink/60">Aucun véhicule : ajoutez-le dans l’application PayByPhone.</span>
+                <span className="text-ink/60">
+                  {data.vehicles.length
+                    ? 'Aucun véhicule au tarif résident dans cet arrondissement.'
+                    : withPayByPhone('Aucun véhicule : ajoutez-le dans l’application PayByPhone.')}
+                </span>
               )}
             </Row>
             <Row

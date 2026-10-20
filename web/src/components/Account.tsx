@@ -3,8 +3,8 @@ import { Loader2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { ZoneField } from '@/components/Riverain'
-import { arrondissement, PayByPhone, VehiclePlate, ZonePlate } from '@/components/signs'
-import { api, forgetZoneLookup, type Account, type Overview } from '@/lib/api'
+import { arrondissement, PayByPhone, Plate, ZonePlate } from '@/components/signs'
+import { api, forgetZoneLookup, type Account, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -45,6 +45,14 @@ function AccountDialog({
   const [editingZone, setEditingZone] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [account, setAccount] = useState<Account | null | undefined>(undefined)
+  // Only the « riverain » vehicles (a resident rate in the home zone); undefined: looking, null: zone unknown.
+  const [vehicles, setVehicles] = useState<PricedVehicle[] | null | undefined>(undefined)
+  useEffect(() => {
+    if (zone === undefined) return
+    if (!zone) return setVehicles(null)
+    setVehicles(undefined)
+    api.pricing().then((p) => setVehicles(p.vehicles ?? []), () => setVehicles(null))
+  }, [zone])
 
   async function openPortal() {
     try {
@@ -100,12 +108,18 @@ function AccountDialog({
 
         <dl className="mx-6 mt-5 divide-y divide-ink/10 border-y border-ink/10">
           <div className={row}>
-            <dt className={label}>{data.vehicles.length > 1 ? 'Véhicules' : 'Véhicule'}</dt>
+            <dt className={label}>{vehicles && vehicles.length > 1 ? 'Véhicules riverains' : 'Véhicule riverain'}</dt>
             <dd className="flex flex-wrap justify-end gap-2">
-              {data.vehicles.length ? (
-                data.vehicles.map((v) => <VehiclePlate key={v.plate} plate={v.plate} type={v.type} />)
+              {vehicles === undefined ? (
+                <span className="inline-block h-5 w-32 animate-pulse rounded bg-ink/10" />
+              ) : vehicles === null ? (
+                <span className="text-right text-ink/60">Indiquez votre zone de résidence ci-dessous.</span>
+              ) : vehicles.length ? (
+                vehicles.map((v) => <Plate key={v.plate} plate={v.plate} size="sm" />)
               ) : (
-                <span className="text-ink/60">Aucun véhicule</span>
+                <span className="text-right text-ink/60">
+                  {data.vehicles.length ? 'Aucun véhicule au tarif résident' : 'Aucun véhicule'}
+                </span>
               )}
             </dd>
           </div>

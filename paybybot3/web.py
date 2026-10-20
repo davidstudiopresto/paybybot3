@@ -900,7 +900,7 @@ def with_details(row):
 
 
 ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
-                  "weekly_cents", "price_zone", "billed_weekly_cents")
+                  "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -1587,34 +1587,83 @@ MIN_MONTHLY_CENTS = 490
 DEFAULT_WEEKLY_CENTS = int(PARIS_RESIDENT_WEEK["amount"] * 100)
 
 
-def plan_cents(weekly_cents, plan):
-    monthly = max(2 * int(weekly_cents), MIN_MONTHLY_CENTS)
+def plan_total(weeklies, plan):
+    """The subscription for several vehicles: each one per month twice its resident week, never under 4.90 €;
+    per year twelve months with 20 % off."""
+    monthly = sum(max(2 * int(w), MIN_MONTHLY_CENTS) for w in weeklies) or MIN_MONTHLY_CENTS
     return monthly if plan == "monthly" else int(round(monthly * 12 * (1 - YEARLY_DISCOUNT)))
 
 
-def resident_rate(s, zone):
-    """(plate, rate) of the resident rate PayByPhone offers this account in the zone, cars first; (None, None)
-    when it offers none: the resident status (carte résident) is not active there for any of its vehicles."""
+def plan_cents(weekly_cents, plan):
+    return plan_total([weekly_cents], plan)
+
+
+def plate_key(plate):
+    """A plate as compared: « AB-123 cd » and « AB123CD » are the same vehicle."""
+    return re.sub(r"[^0-9A-Z]", "", str(plate).upper())
+
+
+def vehicle_resident_rate(s, zone, vehicle):
+    """The resident rate PayByPhone offers this vehicle in the zone (two-wheelers: the two-wheeler one), or None."""
+    wants_two = bool(TWO_WHEELS.search(str(vehicle.get("type") or "")))
+    rates = s.call("get_rate_options", zone, vehicle["licensePlate"]) or []
+    return next((r for r in rates if RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type")))
+                 and bool(TWO_WHEELS.search("%s %s" % (r.get("name"), r.get("type")))) == wants_two
+                 and not r.get("parkingNotAllowedReason")), None)
+
+
+def resident_vehicles(s, zone):
+    """The account's vehicles with a resident rate in the home zone, cars first, with that rate: [(vehicle, rate)].
+    PaybyBot only deals with these « riverain » vehicles."""
     vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]
-    two = [v for v in vehicles if TWO_WHEELS.search(str(v.get("type") or ""))]
-    for vehicle in [v for v in vehicles if v not in two] + two:
-        rates = s.call("get_rate_options", zone, vehicle["licensePlate"]) or []
-        wants_two = vehicle in two
-        rate = next((r for r in rates if RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type")))
-                     and bool(TWO_WHEELS.search("%s %s" % (r.get("name"), r.get("type")))) == wants_two
-                     and not r.get("parkingNotAllowedReason")), None)
+    vehicles.sort(key=lambda v: bool(TWO_WHEELS.search(str(v.get("type") or ""))))
+    found = []
+    for vehicle in vehicles:
+        rate = vehicle_resident_rate(s, zone, vehicle)
         if rate:
-            return vehicle["licensePlate"], rate
-    return None, None
+            found.append((vehicle, rate))
+    return found
+
+
+def resident_rate(s, zone):
+    """(plate, rate) of the first resident vehicle in the zone, cars first; (None, None) when there is none: the
+    resident status (carte résident) is not active there for any of its vehicles."""
+    found = resident_vehicles(s, zone)
+    return (found[0][0]["licensePlate"], found[0][1]) if found else (None, None)
 
 
 def weekly_resident_cents(s, zone):
-    """What a week at the resident rate costs this account in its home zone, in cents (None if unknown).
-    Cars first; an account with only two-wheelers gets the two-wheeler rate."""
+    """What a week at the resident rate costs this account in its home zone, in cents (None if unknown)."""
     plate, rate = resident_rate(s, zone)
-    if not rate:
-        return None
-    payments = normalize_accounts(s.call("get_payment_accounts") or {})
+    return week_price(s, zone, plate, rate) if rate else None
+
+
+def vehicle_prices(s, zone):
+    """Per resident vehicle (one plate): its resident week in the home zone, in cents (None if unknown)."""
+    found = resident_vehicles(s, zone)
+    payments = normalize_accounts(s.call("get_payment_accounts") or {}) if found else []
+    return [{"plate": v["licensePlate"], "type": v.get("type"),
+             "weekly": week_price(s, zone, v["licensePlate"], rate, payments)} for v, rate in found]
+
+
+def renewed_plates(s):
+    """Plates with an active resident renewal: the subscription is for these vehicles."""
+    if HOSTED and not s.demo:
+        rows = store("renewal_list", p_owner=owner_id(s.username)) or []
+        plates = []
+        for row in rows:
+            try:
+                plates.append(with_details(row)["plate"])
+            except Exception as e:
+                log.warning("renewal %s: unreadable details: %s", row.get("id"), e)
+    else:
+        plates = [ap["plate"] for ap in s.autopilots.values()]
+    return {plate_key(p) for p in plates}
+
+
+def week_price(s, zone, plate, rate, payments=None):
+    """What a week at this resident rate costs this vehicle, in cents: PayByPhone's quote, else the history."""
+    payments = normalize_accounts(s.call("get_payment_accounts") or {}) if payments is None else payments
     if payments:
         try:
             q = s.call("_create_quote", locationId=zone, ratePolicyId=str(rate["ratePolicyId"]), durationQuantity=7,
@@ -1631,20 +1680,59 @@ def weekly_resident_cents(s, zone):
 
 
 def account_pricing(s):
-    """The account's prices from its home zone; kept on the account for the e-mail links. None without a zone, or
-    without a resident rate there (see resident_rate)."""
+    """The account's prices from its home zone: one price per resident vehicle, and the subscription, for the
+    vehicles with a renewal (the first one while none has). The billed weeks are kept on the account for checkout
+    and the e-mail links. None without a zone, or without a priced resident vehicle there."""
     zone = (find_home_zone(s) or {}).get("zone")
     if not zone:
         return None
-    weekly = weekly_resident_cents(s, zone)
-    if weekly is None:
+    vehicles = [v for v in vehicle_prices(s, zone) if v["weekly"] is not None]
+    if not vehicles:
         return None
+    renewed = renewed_plates(s)
+    billed = [v for v in vehicles if plate_key(v["plate"]) in renewed] or vehicles[:1]
+    weeklies = sorted(v["weekly"] for v in billed)
     account = load_account(s)
-    if account.get("weekly_cents") != weekly or account.get("price_zone") != zone:
-        account = save_account(s, {"weekly_cents": weekly, "price_zone": zone})
+    if account.get("weeklies") != weeklies or account.get("price_zone") != zone:
+        account = save_account(s, {"weeklies": weeklies, "weekly_cents": weeklies[0], "price_zone": zone})
         reprice(account, owner_id(s.username) if HOSTED and not s.demo else None)
-    return {"zone": zone, "weekly": weekly, "monthly": plan_cents(weekly, "monthly"),
-            "yearly": plan_cents(weekly, "yearly")}
+    return {"zone": zone, "weekly": weeklies[0],
+            "monthly": plan_total(weeklies, "monthly"), "yearly": plan_total(weeklies, "yearly"),
+            "billed": [v["plate"] for v in billed],
+            "vehicles": [{"plate": v["plate"], "type": v["type"], "weekly": v["weekly"],
+                          "monthly": plan_cents(v["weekly"], "monthly"), "yearly": plan_cents(v["weekly"], "yearly"),
+                          "renewed": plate_key(v["plate"]) in renewed} for v in vehicles]}
+
+
+def follow_renewals(s):
+    """A renewal was added or stopped: a running subscription follows the renewed vehicles (next billing date)."""
+    if not HOSTED or s.demo:
+        return
+    try:
+        if load_account(s).get("stripe_subscription"):
+            account_pricing(s)
+    except Exception as e:
+        log.warning("subscription not updated for the renewed vehicles: %s", type(e).__name__)
+
+
+def account_weeklies(account):
+    """The resident weeks the subscription is for (older accounts: one week kept as weekly_cents)."""
+    if account.get("weeklies"):
+        return [int(w) for w in account["weeklies"]]
+    return [int(DEFAULT_WEEKLY_CENTS if account.get("weekly_cents") is None else account["weekly_cents"])]
+
+
+def billed_weeklies(account):
+    """The weeks the running Stripe subscription was last priced with (None: not recorded)."""
+    if account.get("billed_weeklies"):
+        return [int(w) for w in account["billed_weeklies"]]
+    return None if account.get("billed_weekly_cents") is None else [int(account["billed_weekly_cents"])]
+
+
+def weeklies_from(metadata):
+    """The weeks a Checkout session was priced with, from its metadata."""
+    text = (metadata or {}).get("weeklies") or (metadata or {}).get("weekly_cents") or ""
+    return [int(w) for w in str(text).split(",") if w.strip().isdigit()] or None
 
 
 def fmt_qty(value):
@@ -1774,6 +1862,7 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                 rule = rule_of(details)
                 notify(details, "activated", expire=covered_until(active) if active else None,
                        next=schedule.next_ticket(rule, datetime.now(timezone.utc)) if rule else None)
+            follow_renewals(s)
             return with_next_ticket(stored_to_autopilot(stored))
 
         return guarded(save)
@@ -1917,13 +2006,14 @@ def checkout_url(owner, account, plan, success_url):
     """A Stripe Checkout page for the plan; while the free month runs, the first charge waits for its end."""
     base = APP_URL.rstrip("/")
     interval, name = PLANS[plan]
-    weekly = int(DEFAULT_WEEKLY_CENTS if account.get("weekly_cents") is None else account["weekly_cents"])
-    amount = plan_cents(weekly, plan)
+    weeklies = account_weeklies(account)
+    amount = plan_total(weeklies, plan)
     data = {"mode": "subscription", "line_items[0][quantity]": 1,
             "line_items[0][price_data][currency]": "eur", "line_items[0][price_data][unit_amount]": amount,
             "line_items[0][price_data][recurring][interval]": interval,
             "line_items[0][price_data][product_data][name]": name,
-            "client_reference_id": owner, "metadata[plan]": plan, "metadata[weekly_cents]": weekly,
+            "client_reference_id": owner, "metadata[plan]": plan,
+            "metadata[weeklies]": ",".join(str(w) for w in weeklies),
             "success_url": success_url,
             "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true",
             # A simple page: euros only (no currency switch) and cards only (Apple Pay / Google Pay included,
@@ -1977,11 +2067,11 @@ def resume_renewals(owner):
 def reprice(account, owner):
     """The home zone's resident price changed (a move, a new city rate): the running subscription follows it from
     its next billing date, without proration. No e-mail: the Stripe receipt shows the new amount."""
-    sub_id, weekly = account.get("stripe_subscription"), account.get("weekly_cents")
-    if not (owner and sub_id and weekly is not None and os.environ.get("STRIPE_SECRET_KEY")):
+    sub_id = account.get("stripe_subscription")
+    if not (owner and sub_id and os.environ.get("STRIPE_SECRET_KEY")):
         return False
-    billed = account.get("billed_weekly_cents")
-    if billed is not None and int(billed) == int(weekly):
+    weeklies, billed = account_weeklies(account), billed_weeklies(account)
+    if billed is not None and sorted(billed) == sorted(weeklies):
         return False
     try:
         sub = stripe("GET", "subscriptions/" + sub_id)
@@ -1989,21 +2079,21 @@ def reprice(account, owner):
             return False
         item = sub["items"]["data"][0]
         plan = account.get("plan") or ("yearly" if item["price"]["recurring"]["interval"] == "year" else "monthly")
-        new = plan_cents(weekly, plan)
+        new = plan_total(weeklies, plan)
         if billed is None and item["price"].get("unit_amount") == new:  # already right, just not recorded
-            save_account_by_owner(owner, {"billed_weekly_cents": int(weekly)})
+            save_account_by_owner(owner, {"billed_weeklies": weeklies})
             return False
         stripe("POST", "subscriptions/" + sub_id, **{
             "items[0][id]": item["id"], "items[0][price_data][currency]": "eur",
             "items[0][price_data][product]": item["price"]["product"],
             "items[0][price_data][unit_amount]": new,
             "items[0][price_data][recurring][interval]": item["price"]["recurring"]["interval"],
-            "proration_behavior": "none", "metadata[weekly_cents]": weekly})
+            "proration_behavior": "none", "metadata[weeklies]": ",".join(str(w) for w in weeklies)})
     except (HTTPException, KeyError, IndexError) as e:
         log.warning("reprice failed: %s", str(e)[:200])
         return False
-    save_account_by_owner(owner, {"billed_weekly_cents": int(weekly)})
-    log.info("subscription repriced (%s)", plan)
+    save_account_by_owner(owner, {"billed_weeklies": weeklies})
+    log.info("subscription repriced (%s, %d vehicle(s))", plan, len(weeklies))
     return True
 
 
@@ -2082,11 +2172,11 @@ def billing_unlocked(session_id: str = ""):
     owner = session.get("client_reference_id")
     if session.get("status") != "complete" or not owner:
         return RedirectResponse(home + "/#/tarifs", 303)
-    billed = (session.get("metadata") or {}).get("weekly_cents")
+    billed = weeklies_from(session.get("metadata"))
     guarded(lambda: save_account_by_owner(owner, {"plan": (session.get("metadata") or {}).get("plan"),
                                                   "stripe_customer": session.get("customer"),
                                                   "stripe_subscription": session.get("subscription"),
-                                                  "billed_weekly_cents": int(billed) if billed else None}))
+                                                  "billed_weeklies": billed}))
     guarded(lambda: resume_renewals(owner))
     log.info("account unblocked from the e-mail link")
     return RedirectResponse(home + "/#/debloque", 303)
@@ -2100,10 +2190,10 @@ def billing_confirm(body: CheckoutDone, pbb_session: str = Cookie(None)):
     if session.get("client_reference_id") != owner_id(s.username) or session.get("status") != "complete":
         raise HTTPException(400, "Ce paiement n'a pas abouti.")
     plan = (session.get("metadata") or {}).get("plan")
-    billed = (session.get("metadata") or {}).get("weekly_cents")
+    billed = weeklies_from(session.get("metadata"))
     account = guarded(lambda: save_account(s, {"plan": plan, "stripe_customer": session.get("customer"),
                                                "stripe_subscription": session.get("subscription"),
-                                               "billed_weekly_cents": int(billed) if billed else None}))
+                                               "billed_weeklies": billed}))
     if HOSTED and not s.demo:
         guarded(lambda: resume_renewals(owner_id(s.username)))
     log.info("subscription started (%s)", plan)
@@ -2361,6 +2451,7 @@ def delete_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
     if HOSTED and not s.demo:
         guarded(lambda: store("renewal_delete", p_owner=owner_id(s.username), p_id=ap_id))
+        follow_renewals(s)
     else:
         s.autopilots.pop(ap_id, None)
     return {"ok": True}

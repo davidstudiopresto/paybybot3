@@ -4,6 +4,7 @@ import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { ZoneField } from '@/components/Riverain'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
+import { useTurnstile } from '@/lib/turnstile'
 
 /** Countries where PayByPhone is used, with their calling code and flag stripes. */
 const COUNTRIES = [
@@ -72,6 +73,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
   const [noAccount, setNoAccount] = useState(false)
   const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
+  const human = useTurnstile()
   const EXISTS = 'Un compte PaybyBot existe déjà pour ce compte PayByPhone.'
 
   // Sign-up: say right away, once the number is typed, that it is already signed up.
@@ -116,6 +118,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
         !demo,
         signup && !demo ? { email: signupEmail.trim(), zone: signupZone } : undefined,
         !signup && !demo && remember,
+        demo ? '' : await human.token(),
       )
       if (isPending(result)) setCodeSentTo(result.email)
       else onLogin(result)
@@ -308,6 +311,13 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
                 politique de confidentialité
               </a>
               .
+            </p>
+          )}
+
+          <div ref={human.box} className="mt-5 empty:hidden" />
+          {human.failed && !error && (
+            <p role="alert" className="mt-5 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
+              {human.failed}
             </p>
           )}
 

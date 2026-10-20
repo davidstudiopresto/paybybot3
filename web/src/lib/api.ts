@@ -90,14 +90,22 @@ const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) })
 
 export const api = {
-  config: () => request<{ hosted: boolean }>('/api/config'),
+  config: () => request<{ hosted: boolean; turnstileSiteKey?: string | null }>('/api/config'),
   me: () => request<Me>('/api/me'),
-  login: (username: string, password: string, accepted = false, signup?: { email: string; zone: string }, remember = false) =>
+  login: (
+    username: string,
+    password: string,
+    accepted = false,
+    signup?: { email: string; zone: string },
+    remember = false,
+    turnstile = '',
+  ) =>
     post<Me | SignupPending>('/api/login', {
       username,
       password,
       accepted,
       remember,
+      turnstile,
       ...(signup ? { signup: true, ...signup } : {}),
     }),
   account: () => request<Account>('/api/account'),
@@ -107,7 +115,8 @@ export const api = {
   checkout: (plan: 'monthly' | 'yearly') => post<{ url: string }>('/api/billing/checkout', { plan }),
   confirmCheckout: (session_id: string) => post<{ plan: string }>('/api/billing/confirm', { session_id }),
   billingPortal: () => post<{ url: string }>('/api/billing/portal'),
-  adminLogin: (email: string, password: string) => post('/api/admin/login', { email, password }),
+  adminLogin: (email: string, password: string, turnstile = '') =>
+    post('/api/admin/login', { email, password, turnstile }),
   adminLogout: () => post('/api/admin/logout'),
   adminStats: () => request<import('@/components/Admin').AdminStats>('/api/admin/stats'),
   signupCheck: (username: string) => post<{ exists: boolean }>('/api/signup/check', { username }),

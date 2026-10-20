@@ -4,6 +4,7 @@ import { ui } from '@/lib/styles'
 import { ApiError } from '@/lib/api'
 import { PublicTopBar } from '@/components/TopBar'
 import { api } from '@/lib/api'
+import { useTurnstile } from '@/lib/turnstile'
 
 export type AdminStats = {
   accounts: number
@@ -121,12 +122,13 @@ function AdminLoginForm({ onDone }: { onDone: () => void }) {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const human = useTurnstile()
 
   async function submit() {
     setBusy(true)
     setError(null)
     try {
-      await api.adminLogin(email.trim(), password)
+      await api.adminLogin(email.trim(), password, await human.token())
       setPassword('')
       onDone()
     } catch (e) {
@@ -168,7 +170,8 @@ function AdminLoginForm({ onDone }: { onDone: () => void }) {
             className={ui.field}
           />
         </div>
-        {error && <p className={`mt-4 ${ui.error}`}>{error}</p>}
+        <div ref={human.box} className="mt-4 empty:hidden" />
+        {(error || human.failed) && <p className={`mt-4 ${ui.error}`}>{error || human.failed}</p>}
         <button type="submit" disabled={busy} className={`mt-6 ${ui.primary}`}>
           {busy ? <Loader2 className="size-5 animate-spin" /> : 'Se connecter'}
         </button>

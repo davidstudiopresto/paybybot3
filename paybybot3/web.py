@@ -356,8 +356,9 @@ def set_session_cookie(response, value, remember=False):
 
 
 SECURITY_HEADERS = {
-    # Only our own scripts, styles, fonts and API; never shown inside another site's frame (clickjacking).
-    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+    # Only our own scripts, styles, fonts and API (plus Cloudflare's human check); never shown inside another site's frame (clickjacking).
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; "
+                               "style-src 'self' 'unsafe-inline'; frame-src https://challenges.cloudflare.com; "
                                "img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; "
                                "base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
     "X-Frame-Options": "DENY",
@@ -818,6 +819,34 @@ def check_login_rate(request, username):
             raise HTTPException(429, "Trop de tentatives de connexion. Réessayez dans 15 minutes.")
 
 
+TURNSTILE_VERIFY = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+
+def turnstile_site_key():
+    """Hosted, with both Cloudflare Turnstile keys set: sign-up and logins need a human check. Else ""."""
+    site, secret = os.environ.get("TURNSTILE_SITE_KEY", "").strip(), os.environ.get("TURNSTILE_SECRET_KEY", "").strip()
+    return site if HOSTED and site and secret else ""
+
+
+def check_human(request, token):
+    """Refuse the request unless Cloudflare confirms the Turnstile token (single use) came from a person."""
+    if not turnstile_site_key():
+        return
+    if not token:
+        raise HTTPException(400, "Vérification anti-robot manquante. Rechargez la page et réessayez.")
+    ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    try:
+        r = requests.post(TURNSTILE_VERIFY, timeout=10, data={
+            "secret": os.environ["TURNSTILE_SECRET_KEY"].strip(), "response": token, **({"remoteip": ip} if ip else {})})
+        result = r.json()
+    except Exception as e:
+        log.warning("human check unavailable: %s", type(e).__name__)
+        raise HTTPException(503, "La vérification anti-robot ne répond pas. Réessayez dans un instant.")
+    if not result.get("success"):
+        log.warning("human check refused: %s", result.get("error-codes"))
+        raise HTTPException(400, "La vérification anti-robot a échoué. Réessayez.")
+
+
 def cron_authorized(request):
     """The scheduler sends a bearer token: Supabase's (checked by its SHA-256) or Vercel Cron's CRON_SECRET."""
     auth = request.headers.get("authorization") or ""
@@ -967,6 +996,7 @@ class Login(BaseModel):
     remember: bool = False  # "Se souvenir de moi"
     email: str = Field(default="", max_length=254, pattern=EMAIL_PATTERN)  # required at sign-up
     zone: str = Field(default="", pattern=r"^$|^\w{3,10}$")  # home zone, asked at sign-up
+    turnstile: str = Field(default="", max_length=2048)  # Cloudflare's human check token (hosted)
 
 
 class AccountPatch(BaseModel):
@@ -1016,6 +1046,7 @@ def login(body: Login, request: Request, response: Response):
     if HOSTED and not demo:
         if not body.accepted:
             raise HTTPException(400, "Acceptez les conditions d'utilisation et la politique de confidentialité.")
+        check_human(request, body.turnstile)
         check_login_rate(request, body.username)
     try:
         session = UserSession(body.username.strip(), body.password, demo=demo)
@@ -1222,7 +1253,7 @@ def logout(response: Response, pbb_session: str = Cookie(None)):
 @app.get("/api/config")
 def config():
     """Public: lets the login page describe where credentials go."""
-    return {"hosted": HOSTED}
+    return {"hosted": HOSTED, "turnstileSiteKey": turnstile_site_key() or None}
 
 
 @app.get("/api/me")
@@ -1659,6 +1690,7 @@ def password_matches(password, stored):
 class AdminLogin(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=200)
+    turnstile: str = Field(default="", max_length=2048)
 
 
 @app.post("/api/admin/login")
@@ -1666,6 +1698,7 @@ def admin_login(body: AdminLogin, request: Request, response: Response):
     email, stored = os.environ.get("PAYBYBOT_ADMIN_EMAIL", ""), os.environ.get("PAYBYBOT_ADMIN_PASSWORD_HASH", "")
     if not HOSTED or not email or not stored:
         raise HTTPException(403, "Accès admin non configuré.")
+    check_human(request, body.turnstile)
     ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
     key = hmac.new(_subkey(_secrets()[0], "rate"), ip.encode(), hashlib.sha256).hexdigest()
     if not store("rate_hit", p_key="admin:" + key, p_window_seconds=900, p_max=5):

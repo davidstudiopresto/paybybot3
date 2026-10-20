@@ -98,6 +98,7 @@ export const api = {
   updateAccount: (patch: Partial<Account>) =>
     request<Account>('/api/account', { method: 'PUT', body: JSON.stringify(patch) }),
   logout: () => post('/api/logout'),
+  adminStats: () => request<import('@/components/Admin').AdminStats>('/api/admin/stats'),
   signupCheck: (username: string) => post<{ exists: boolean }>('/api/signup/check', { username }),
   verifySignup: (code: string) => post<Me>('/api/signup/verify', { code }),
   resendSignupCode: () => post<SignupPending>('/api/signup/resend'),

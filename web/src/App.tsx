@@ -6,15 +6,16 @@ import { LoginView } from '@/components/LoginView'
 import { FaqView, Landing } from '@/components/Landing'
 import { PayWizard } from '@/components/PayWizard'
 import { SecurityPage } from '@/components/SecurityPage'
+import { AdminPage } from '@/components/Admin'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { Wordmark } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
-type Route = 'faq' | 'connexion' | 'inscription' | 'demo' | null
+type Route = 'faq' | 'connexion' | 'inscription' | 'demo' | 'admin' | null
 
 function routeFromHash(hash: string): Route {
   const id = hash.replace(/^#\/?/, '')
-  return id === 'faq' || id === 'connexion' || id === 'inscription' || id === 'demo' ? id : null
+  return id === 'faq' || id === 'connexion' || id === 'inscription' || id === 'demo' || id === 'admin' ? id : null
 }
 
 export default function App() {
@@ -86,6 +87,8 @@ export default function App() {
             <Wordmark />
           </span>
         </div>
+      ) : route === 'admin' && me ? (
+        <AdminPage />
       ) : route === 'faq' ? (
         <FaqView hosted={hosted} signedIn={!!me} />
       ) : me === null ? (

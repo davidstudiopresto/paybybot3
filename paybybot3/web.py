@@ -1480,6 +1480,20 @@ def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     return {"email": account.get("email") or "", "zone": account.get("zone") or None}
 
 
+def is_admin(s):
+    """The site owner: PayByPhone accounts listed in PAYBYBOT_ADMINS (phone numbers, comma separated)."""
+    admins = [x.strip() for x in os.environ.get("PAYBYBOT_ADMINS", "").split(",") if x.strip()]
+    return not s.demo and any(owner_id(c) == owner_id(s.username) for a in admins for c in login_candidates(a))
+
+
+@app.get("/api/admin/stats")
+def admin_stats(pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+    if not HOSTED or not is_admin(s):
+        raise HTTPException(403, "Accès réservé.")
+    return guarded(lambda: store("admin_stats"))
+
+
 @app.get("/api/resident-zone")
 def resident_zone(pbb_session: str = Cookie(None)):
     """Guess the home zone from PayByPhone's history: a zone where the car is offered the resident rate.

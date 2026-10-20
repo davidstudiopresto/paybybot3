@@ -194,11 +194,11 @@ export function Landing({ hosted }: { hosted: boolean }) {
       <section className="rise relative mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:max-w-[min(110rem,calc((100dvh-4rem)*1.9))] lg:items-center lg:py-20 lg:pr-[50px] lg:pl-[78px]">
         <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="@container max-w-[40rem] lg:max-w-none">
-            {/* Sized to its column (cqw), so « de votre forfait stationnement » keeps to one line. */}
+            {/* Sized to its column (cqw), so « de votre stationnement résident » keeps to one line. */}
             {/* Like a launch page: the problem in black, then « on s'en occupe » in the logo's blue, a size smaller. */}
             <h1 className={cn(ui.title, 'font-medium lg:text-[clamp(2.75rem,min(7.9cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
               <span className="lg:block">Oubliez le renouvellement</span>{' '}
-              <span className="lg:block">de votre forfait stationnement</span>
+              <span className="lg:block">de votre stationnement résident</span>
               <span className="mt-[0.33em] block w-fit bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] box-decoration-clone bg-clip-text text-[0.83em] leading-[1.17] text-transparent lg:mt-[0.6em] lg:leading-[1.3]">
                 PaybyBot s'en <span className="lg:block">occupe pour vous</span>
               </span>

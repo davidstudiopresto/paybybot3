@@ -61,6 +61,9 @@ export type Account = {
 }
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
 
+/** The account's prices in cents: per month twice its weekly resident ticket, 20 % off per year (zone null: unknown). */
+export type Pricing = { zone: string | null; weekly: number | null; monthly: number | null; yearly: number | null }
+
 export class ApiError extends Error {
   status: number
   constructor(status: number, message: string) {
@@ -123,6 +126,7 @@ export const api = {
   confirmCheckout: (session_id: string) => post<{ plan: string }>('/api/billing/confirm', { session_id }),
   billingPortal: () => post<{ url: string }>('/api/billing/portal'),
   unlock: () => post<{ url: string }>('/api/billing/unlock'),
+  pricing: () => request<Pricing>('/api/pricing'),
   adminLogin: (email: string, password: string, turnstile = '') =>
     post('/api/admin/login', { email, password, turnstile }),
   adminLogout: () => post('/api/admin/logout'),

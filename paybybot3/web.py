@@ -846,7 +846,8 @@ def with_details(row):
     return {**row, **json.loads(_fernet("renewal").decrypt(row["data"].encode()))}
 
 
-ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription")
+ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
+                  "weekly_cents", "price_zone", "billed_weekly_cents")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -1525,6 +1526,65 @@ def known_price(s, body):
 
 WEEK = timedelta(days=7)
 
+# The subscription follows what the resident pays PayByPhone: per month, twice the weekly resident ticket of the
+# home zone; per year, twelve months with 20 % off. The weekly price comes from PayByPhone (quote, then history),
+# else the Paris resident rate.
+YEARLY_DISCOUNT = 0.20
+DEFAULT_WEEKLY_CENTS = int(PARIS_RESIDENT_WEEK["amount"] * 100)
+
+
+def plan_cents(weekly_cents, plan):
+    monthly = 2 * int(weekly_cents)
+    return monthly if plan == "monthly" else int(round(monthly * 12 * (1 - YEARLY_DISCOUNT)))
+
+
+def weekly_resident_cents(s, zone):
+    """What a week at the resident rate costs this account in its home zone, in cents (None if unknown).
+    Cars first; an account with only two-wheelers gets the two-wheeler rate."""
+    vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]
+    payments = normalize_accounts(s.call("get_payment_accounts") or {})
+    if not vehicles:
+        return None
+    two = [v for v in vehicles if TWO_WHEELS.search(str(v.get("type") or ""))]
+    vehicle = next((v for v in vehicles if v not in two), vehicles[0])
+    plate = vehicle["licensePlate"]
+    rates = s.call("get_rate_options", zone, plate) or []
+    wants_two = vehicle in two
+    rate = next((r for r in rates if RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type")))
+                 and bool(TWO_WHEELS.search("%s %s" % (r.get("name"), r.get("type")))) == wants_two
+                 and not r.get("parkingNotAllowedReason")), None)
+    if not rate:
+        return None
+    if payments:
+        try:
+            q = s.call("_create_quote", locationId=zone, ratePolicyId=str(rate["ratePolicyId"]), durationQuantity=7,
+                       durationTimeUnit="Days", licensePlate=plate, paymentAccountId=payments[0]["id"],
+                       operation="Start", parkingSessionId="")
+            if (q.get("cost") or {}).get("amount"):
+                return int(round(float(q["cost"]["amount"]) * 100))
+        except Exception as e:  # e.g. a ticket is running: fall back on the history
+            log.info("weekly price quote refused: %s", str(e)[:200])
+    body = Parking(location=zone, rate=str(rate["ratePolicyId"]), duration=7, unit="Days", plate=plate,
+                   paymentAccountId=payments[0]["id"] if payments else "")
+    cost, _ = known_price(s, body)
+    return int(round(float(cost["amount"]) * 100)) if cost and cost.get("amount") else None
+
+
+def account_pricing(s):
+    """The account's prices from its home zone; kept on the account for the e-mail links. None without a zone."""
+    zone = (find_home_zone(s) or {}).get("zone")
+    if not zone:
+        return None
+    weekly = weekly_resident_cents(s, zone)
+    if not weekly:
+        return None
+    account = load_account(s)
+    if account.get("weekly_cents") != weekly or account.get("price_zone") != zone:
+        account = save_account(s, {"weekly_cents": weekly, "price_zone": zone})
+        reprice(account, owner_id(s.username) if HOSTED and not s.demo else None)
+    return {"zone": zone, "weekly": weekly, "monthly": plan_cents(weekly, "monthly"),
+            "yearly": plan_cents(weekly, "yearly")}
+
 
 def fmt_qty(value):
     return int(value) if float(value).is_integer() else value
@@ -1696,7 +1756,7 @@ class CheckoutDone(BaseModel):
 
 
 ACTIVE_STATUSES = ("trialing", "active", "past_due")
-PLANS = {"monthly": (950, "month", "PaybyBot · Mensuel"), "yearly": (9120, "year", "PaybyBot · Annuel")}  # cents, TTC
+PLANS = {"monthly": ("month", "PaybyBot · Mensuel"), "yearly": ("year", "PaybyBot · Annuel")}  # price: plan_cents
 
 
 def stripe(method, path, **data):
@@ -1795,12 +1855,15 @@ def notify_blocked(details, state):
 def checkout_url(owner, account, plan, success_url):
     """A Stripe Checkout page for the plan; while the free month runs, the first charge waits for its end."""
     base = APP_URL.rstrip("/")
-    amount, interval, name = PLANS[plan]
+    interval, name = PLANS[plan]
+    weekly = int(account.get("weekly_cents") or DEFAULT_WEEKLY_CENTS)
+    amount = plan_cents(weekly, plan)
     data = {"mode": "subscription", "line_items[0][quantity]": 1,
             "line_items[0][price_data][currency]": "eur", "line_items[0][price_data][unit_amount]": amount,
             "line_items[0][price_data][recurring][interval]": interval,
             "line_items[0][price_data][product_data][name]": name,
-            "client_reference_id": owner, "metadata[plan]": plan, "success_url": success_url,
+            "client_reference_id": owner, "metadata[plan]": plan, "metadata[weekly_cents]": weekly,
+            "success_url": success_url,
             "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true",
             # PaybyBot's own look on Stripe's page, without changing the Studio Presto account branding.
             "branding_settings[display_name]": "PaybyBot",
@@ -1847,6 +1910,47 @@ def resume_renewals(owner):
         store("renewal_update", p_id=row["id"], p_patch={"next_check": utc_iso(datetime.now(timezone.utc))})
 
 
+def reprice(account, owner):
+    """The home zone's resident price changed (a move, a new city rate): the running subscription follows it from
+    its next billing date, without proration. No e-mail: the Stripe receipt shows the new amount."""
+    sub_id, weekly = account.get("stripe_subscription"), account.get("weekly_cents")
+    if not (owner and sub_id and weekly and os.environ.get("STRIPE_SECRET_KEY")):
+        return False
+    billed = account.get("billed_weekly_cents")
+    if billed and int(billed) == int(weekly):
+        return False
+    try:
+        sub = stripe("GET", "subscriptions/" + sub_id)
+        if sub.get("status") not in PAID_STATUSES + UNPAID_STATUSES:
+            return False
+        item = sub["items"]["data"][0]
+        plan = account.get("plan") or ("yearly" if item["price"]["recurring"]["interval"] == "year" else "monthly")
+        new = plan_cents(weekly, plan)
+        if billed is None and item["price"].get("unit_amount") == new:  # already right, just not recorded
+            save_account_by_owner(owner, {"billed_weekly_cents": int(weekly)})
+            return False
+        stripe("POST", "subscriptions/" + sub_id, **{
+            "items[0][id]": item["id"], "items[0][price_data][currency]": "eur",
+            "items[0][price_data][product]": item["price"]["product"],
+            "items[0][price_data][unit_amount]": new,
+            "items[0][price_data][recurring][interval]": item["price"]["recurring"]["interval"],
+            "proration_behavior": "none", "metadata[weekly_cents]": weekly})
+    except (HTTPException, KeyError, IndexError) as e:
+        log.warning("reprice failed: %s", str(e)[:200])
+        return False
+    save_account_by_owner(owner, {"billed_weekly_cents": int(weekly)})
+    log.info("subscription repriced (%s)", plan)
+    return True
+
+
+@app.get("/api/pricing")
+def pricing(pbb_session: str = Cookie(None)):
+    """The account's prices: twice its weekly resident ticket per month, 20 % off per year. No zone: zone None."""
+    s = current(pbb_session)
+    found = guarded(lambda: account_pricing(s))
+    return found or {"zone": None, "weekly": None, "monthly": None, "yearly": None}
+
+
 @app.post("/api/billing/checkout")
 def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie(None)):
     """Stripe Checkout for the monthly or yearly plan; nothing is charged before the free month ends."""
@@ -1855,6 +1959,8 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
         raise HTTPException(400, "Le paiement n'est pas disponible en mode démo.")
     if not os.environ.get("STRIPE_SECRET_KEY"):
         raise HTTPException(503, "Le paiement en ligne arrive très bientôt. Profitez de votre mois offert !")
+    if not guarded(lambda: account_pricing(s)):
+        raise HTTPException(400, "Choisissez d'abord votre arrondissement : le prix dépend de votre forfait résident.")
     account = guarded(lambda: load_account(s))
     url = checkout_url(owner_id(s.username), account, body.plan,
                        APP_URL.rstrip("/") + "/#/abonnement?session_id={CHECKOUT_SESSION_ID}")
@@ -1892,9 +1998,11 @@ def billing_unlocked(session_id: str = ""):
     owner = session.get("client_reference_id")
     if session.get("status") != "complete" or not owner:
         return RedirectResponse(home + "/#/tarifs", 303)
+    billed = (session.get("metadata") or {}).get("weekly_cents")
     guarded(lambda: save_account_by_owner(owner, {"plan": (session.get("metadata") or {}).get("plan"),
                                                   "stripe_customer": session.get("customer"),
-                                                  "stripe_subscription": session.get("subscription")}))
+                                                  "stripe_subscription": session.get("subscription"),
+                                                  "billed_weekly_cents": int(billed) if billed else None}))
     guarded(lambda: resume_renewals(owner))
     log.info("account unblocked from the e-mail link")
     return RedirectResponse(home + "/#/debloque", 303)
@@ -1908,8 +2016,10 @@ def billing_confirm(body: CheckoutDone, pbb_session: str = Cookie(None)):
     if session.get("client_reference_id") != owner_id(s.username) or session.get("status") != "complete":
         raise HTTPException(400, "Ce paiement n'a pas abouti.")
     plan = (session.get("metadata") or {}).get("plan")
+    billed = (session.get("metadata") or {}).get("weekly_cents")
     account = guarded(lambda: save_account(s, {"plan": plan, "stripe_customer": session.get("customer"),
-                                               "stripe_subscription": session.get("subscription")}))
+                                               "stripe_subscription": session.get("subscription"),
+                                               "billed_weekly_cents": int(billed) if billed else None}))
     if HOSTED and not s.demo:
         guarded(lambda: resume_renewals(owner_id(s.username)))
     log.info("subscription started (%s)", plan)
@@ -1947,6 +2057,11 @@ def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
     patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None}
     account = guarded(lambda: save_account(s, patch))
+    if patch.get("zone"):  # a move: the price follows the new zone's resident rate
+        try:
+            account_pricing(s)
+        except Exception as e:
+            log.info("pricing after a zone change failed: %s", str(e)[:200])
     return {"email": account.get("email") or "", "zone": account.get("zone") or None}
 
 
@@ -2031,7 +2146,11 @@ def resident_zone(pbb_session: str = Cookie(None)):
     PayByPhone, since only the home zone offers the resident rate. At most a few zones are checked.
     """
     s = current(pbb_session)
+    return guarded(lambda: find_home_zone(s))
 
+
+def find_home_zone(s):
+    """The home zone: set by the user, else guessed from PayByPhone's history (see resident_zone)."""
     def find():
         manual = load_account(s).get("zone")
         if manual:  # added by the user in "Mon compte"
@@ -2059,7 +2178,7 @@ def resident_zone(pbb_session: str = Cookie(None)):
                 return {"zone": zone}
         return {"zone": None}
 
-    return guarded(find)
+    return find()
 
 
 def update_own_renewal(s, ap_id, patch):

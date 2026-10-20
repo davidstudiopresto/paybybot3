@@ -35,15 +35,44 @@ class Billing(unittest.TestCase):
                 "customer": "cus_1", "subscription": "sub_1"}
 
     def test_checkout_waits_for_the_end_of_the_free_month(self):
-        r = web.billing_checkout(web.Checkout(plan="yearly"), None, "t")
+        self.s.account["weekly_cents"] = 900  # a 9,00 € resident week
+        with patch.object(web, "account_pricing", return_value={"weekly": 900}):
+            r = web.billing_checkout(web.Checkout(plan="yearly"), None, "t")
         self.assertEqual(r["url"], "https://checkout.stripe.com/x")
         data = self.calls[0][2]
         self.assertEqual((data["line_items[0][price_data][unit_amount]"],
-                          data["line_items[0][price_data][recurring][interval]"]), (9120, "year"))
+                          data["line_items[0][price_data][recurring][interval]"]), (17280, "year"))
         self.assertNotIn("subscription_data[trial_end]", data)  # no Stripe trial: the free month already runs
         self.assertEqual(data["subscription_data[proration_behavior]"], "none")
         trial_end = datetime.fromtimestamp(data["subscription_data[billing_cycle_anchor]"], timezone.utc)
         self.assertAlmostEqual((trial_end - datetime.now(timezone.utc)).days, 29, delta=1)
+
+    def test_price_is_twice_the_resident_week_and_20_percent_off_per_year(self):
+        self.assertEqual(web.plan_cents(900, "monthly"), 1800)
+        self.assertEqual(web.plan_cents(900, "yearly"), 17280)
+
+    def test_no_zone_no_checkout(self):
+        with patch.object(web, "account_pricing", return_value=None), self.assertRaises(HTTPException):
+            web.billing_checkout(web.Checkout(plan="monthly"), None, "t")
+
+    def test_a_move_reprices_from_the_next_billing_date(self):
+        account = {"stripe_subscription": "sub_1", "weekly_cents": 1050, "billed_weekly_cents": 900,
+                   "plan": "monthly", "email": "a@b.fr", "price_zone": "75015"}
+        sub = {"status": "active", "current_period_end": 1800000000,
+               "items": {"data": [{"id": "si_1", "price": {"product": "prod_1", "unit_amount": 1800,
+                                                           "recurring": {"interval": "month"}}}]}}
+        calls = []
+
+        def fake(method, path, **data):
+            calls.append((method, path, data))
+            return sub
+        with patch.object(web, "stripe", side_effect=fake), patch.object(web, "save_account_by_owner") as saved, \
+                patch.object(web, "send_email") as mail:
+            self.assertTrue(web.reprice(account, "o"))
+        mail.assert_not_called()  # no e-mail on a zone change
+        update = calls[-1][2]
+        self.assertEqual((update["items[0][price_data][unit_amount]"], update["proration_behavior"]), (2100, "none"))
+        saved.assert_called_with("o", {"billed_weekly_cents": 1050})
 
     def test_confirm_records_the_plan(self):
         self.owner = web.owner_id(self.s.username)

@@ -484,9 +484,15 @@ function Terms() {
             carte bancaire.
           </li>
           <li>
-            <strong>Offres :</strong> Mensuel à 9,50 € TTC par mois, ou Annuel à 91,20 € TTC par an. Le paiement se fait par
-            carte bancaire, via notre prestataire de paiement Stripe ; PaybyBot ne voit ni ne conserve votre numéro de
-            carte.
+            <strong>Offres et prix :</strong> le prix dépend du forfait résident hebdomadaire (7 jours) que <PayByPhone />{' '}
+            applique dans votre zone de résidence. Mensuel : deux fois ce forfait, TTC, par mois. Annuel : douze mois
+            avec 20 % de remise, TTC, par an. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte
+            bancaire, via notre prestataire de paiement Stripe ; PaybyBot ne voit ni ne conserve votre numéro de carte.
+          </li>
+          <li>
+            <strong>Changement de prix :</strong> si votre zone de résidence change (déménagement) ou si le tarif de votre
+            forfait résident évolue, le prix de votre abonnement suit cette règle à partir de la prochaine échéance, sans
+            effet sur la période déjà payée. Vous pouvez résilier à tout moment depuis « Mon compte ».
           </li>
           <li>
             <strong>Premier prélèvement :</strong> si vous souscrivez pendant votre mois offert, rien n’est prélevé avant

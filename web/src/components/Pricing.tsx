@@ -1,22 +1,51 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Check, Loader2, Lock, Sparkles, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
+import { ZoneField } from '@/components/Riverain'
 import { Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
-import { api } from '@/lib/api'
+import { api, forgetZoneLookup, type Pricing } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
 export type Plan = 'monthly' | 'yearly'
 
-const PLANS: { id: Plan; name: string; price: string; per: string; note: string; popular?: boolean }[] = [
-  { id: 'monthly', name: 'Mensuel', price: '9,50 €', per: '/ mois', note: 'Sans engagement' },
-  { id: 'yearly', name: 'Annuel', price: '91,20 €', per: '/ an', note: 'Soit 7,60 € par mois', popular: true },
+const PLANS: { id: Plan; name: string; popular?: boolean }[] = [
+  { id: 'monthly', name: 'Mensuel' },
+  { id: 'yearly', name: 'Annuel', popular: true },
 ]
+
+const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
+const EXAMPLE_WEEK = 900 // a 9,00 € resident week, for the public explanation
+
+/** What a plan shows: the account's own price when known, else the rule with an example. */
+function planText(id: Plan, pricing?: Pricing | null) {
+  const week = pricing?.weekly
+  if (week) {
+    return id === 'monthly'
+      ? { price: euros(2 * week), per: '/ mois', note: `2 × votre forfait résident de ${euros(week)}` }
+      : { price: euros(Math.round(24 * week * 0.8)), per: '/ an', note: `Soit ${euros(Math.round(2 * week * 0.8))} par mois` }
+  }
+  return id === 'monthly'
+    ? { price: '2 ×', per: 'votre forfait / mois', note: `Votre forfait résident hebdomadaire, deux fois par mois. Ex. : ${euros(2 * EXAMPLE_WEEK)} pour un forfait à ${euros(EXAMPLE_WEEK)}.` }
+    : { price: '-20 %', per: 'à l’année', note: `Le mensuel sur 12 mois, avec 20 % de moins. Ex. : ${euros(Math.round(24 * EXAMPLE_WEEK * 0.8))} par an.` }
+}
+
+/** The signed-in account's prices (null while loading). */
+function usePricing(enabled: boolean) {
+  const [pricing, setPricing] = useState<Pricing | null>(null)
+  const load = useCallback(() => {
+    if (!enabled) return
+    setPricing(null)
+    api.pricing().then(setPricing, () => setPricing({ zone: null, weekly: null, monthly: null, yearly: null }))
+  }, [enabled])
+  useEffect(load, [load])
+  return [pricing, load] as const
+}
 
 const INCLUDED = [
   'Renouvellement automatique du forfait résident',
@@ -28,6 +57,7 @@ const INCLUDED = [
 /** The two plans side by side; the yearly one is put forward. */
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
   const [busy, setBusy] = useState<Plan | null>(null)
+  const [pricing] = usePricing(signedIn)
 
   async function choose(plan: Plan) {
     if (!signedIn) {
@@ -46,7 +76,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {PLANS.map((p) => (
+      {PLANS.map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
         <div
           key={p.id}
           className={cn(
@@ -196,6 +226,18 @@ export function TrialBanner({
 function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
   const [plan, setPlan] = useState<Plan>('yearly')
   const [busy, setBusy] = useState(false)
+  const [pricing, reload] = usePricing(true)
+
+  // The price depends on the home zone: without one, the arrondissement is asked right here.
+  async function saveZone(zone: string) {
+    try {
+      await api.updateAccount({ zone })
+      forgetZoneLookup()
+      reload()
+    } catch (e) {
+      toast((e as Error).message)
+    }
+  }
 
   async function pay() {
     setBusy(true)
@@ -228,7 +270,16 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
               <DialogDescription className={ui.subtitle}>{text}</DialogDescription>
 
               <div role="radiogroup" aria-label="Offre" className="mt-8 space-y-3">
-                {[...PLANS].reverse().map((p) => (
+                {pricing && !pricing.weekly && (
+                  <div className="rounded-2xl border border-ink/10 p-4">
+                    <p className="mb-3 text-sm text-ink/60">
+                      Votre prix dépend de votre forfait résident : indiquez votre arrondissement.
+                    </p>
+                    <ZoneField zone="" fromHistory={false} onZone={saveZone} />
+                  </div>
+                )}
+                {!pricing && <div className="h-40 animate-pulse rounded-2xl bg-ink/[0.05]" />}
+                {pricing?.weekly != null && [...PLANS].reverse().map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
                   <button
                     key={p.id}
                     role="radio"
@@ -272,7 +323,7 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
                 ))}
               </ul>
 
-              <button onClick={pay} disabled={busy} className={cn('mt-8', ui.primary)}>
+              <button onClick={pay} disabled={busy || !pricing?.weekly} className={cn('mt-8', ui.primary)}>
                 {busy ? <Loader2 className="size-5 animate-spin" /> : 'Continuer vers le paiement'}
               </button>
               <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-sm text-ink/50">

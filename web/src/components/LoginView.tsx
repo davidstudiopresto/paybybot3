@@ -35,6 +35,9 @@ function Flag({ flag }: { flag: readonly string[] }) {
   )
 }
 
+/** PayByPhone's own page to reset its password (a code is sent to the phone number). */
+const PAYBYPHONE_PASSWORD_RESET = 'https://m.paybyphone.com/#/passwordReset'
+
 /** "06 12 34 56 78" + France -> "+33612345678"; a number typed with its + prefix is kept as is. */
 function phoneUsername(national: string, code: string) {
   const raw = national.trim()
@@ -252,17 +255,28 @@ export function LoginView({
               </button>
             </div>
 
-            {!signup && (
-              <label className="flex cursor-pointer items-center gap-3 pt-1 text-[0.95rem] text-ink/70">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="size-5 accent-[var(--eu)]"
-                />
-                Se souvenir de moi
-              </label>
-            )}
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-1">
+              {!signup && (
+                <label className="flex cursor-pointer items-center gap-3 text-[0.95rem] text-ink/70">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="size-5 accent-[var(--eu)]"
+                  />
+                  Se souvenir de moi
+                </label>
+              )}
+              {/* The password is PayByPhone's: only PayByPhone can reset it. */}
+              <a
+                href={PAYBYPHONE_PASSWORD_RESET}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn('ml-auto text-[0.95rem]', link)}
+              >
+                Mot de passe oublié ?
+              </a>
+            </div>
 
             {signup && (
               <div className={fieldBox}>

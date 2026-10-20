@@ -88,7 +88,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // The history lookup is slow-ish and asked twice at signup (loading screen, then setup): done once per login.
-let zoneLookup: Promise<{ zone: string | null }> | null = null
+let zoneLookup: Promise<{ zone: string | null; manual?: boolean }> | null = null
 export const forgetZoneLookup = () => {
   zoneLookup = null
 }
@@ -133,7 +133,7 @@ export const api = {
   deleteData: () => request('/api/me/data', { method: 'DELETE' }),
   overview: () => request<Overview>('/api/overview'),
   /** Home zone guessed from the PayByPhone history (null if none). */
-  residentZone: () => (zoneLookup ??= request<{ zone: string | null }>('/api/resident-zone').catch(() => ({ zone: null }))),
+  residentZone: () => (zoneLookup ??= request<{ zone: string | null; manual?: boolean }>('/api/resident-zone').catch(() => ({ zone: null }))),
   /** Address autocomplete, only to find the zone (relayed by PaybyBot, not stored). */
   searchAddress: (q: string) => post<{ label: string; postcode: string }[]>('/api/address', { q }),
   rates: (location: string, plate: string) =>

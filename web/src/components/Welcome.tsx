@@ -48,8 +48,15 @@ function Row({
 /** First sign-in: everything PaybyBot found in the PayByPhone account, so the user can check it is right. */
 export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onContinue: () => void }) {
   const [zone, setZone] = useState<string | null | undefined>(undefined)
+  const [manual, setManual] = useState(false)
   useEffect(() => {
-    api.residentZone().then((r) => setZone(r.zone), () => setZone(null))
+    api.residentZone().then(
+      (r) => {
+        setZone(r.zone)
+        setManual(!!r.manual)
+      },
+      () => setZone(null),
+    )
   }, [])
 
   const step = 140
@@ -117,7 +124,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                 <span className="flex flex-wrap items-baseline gap-x-3">
                   {arrondissement(zone) && <span className="font-semibold">{arrondissement(zone)}</span>}
                   <ZonePlate zone={zone} />
-                  <span className="text-sm text-ink/55">trouvée dans votre historique</span>
+                  <span className="text-sm text-ink/55">{manual ? 'indiquée par vous' : 'trouvée dans votre historique'}</span>
                 </span>
               ) : (
                 <span className="text-ink/60">Pas dans votre historique : vous indiquerez votre adresse à l’étape suivante.</span>

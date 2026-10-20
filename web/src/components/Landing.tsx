@@ -188,8 +188,9 @@ export function Landing({ hosted }: { hosted: boolean }) {
       <PublicTopBar />
 
       {/* Hero laid out like a product launch page: text left (573), video right (675), 64 apart at 1440. */}
-      <section className="rise mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:pt-16 lg:pr-[50px] lg:pl-[78px]">
-        <div className="grid items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
+      {/* On a computer it fills the window (under the 4rem top bar): « Comment ça marche » starts below the fold. */}
+      <section className="rise mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-12 lg:pr-[50px] lg:pl-[78px]">
+        <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="max-w-[40rem]">
             <h1 className={cn(ui.title, 'lg:text-[3.42rem] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
               Renouvellement automatique de votre{' '}

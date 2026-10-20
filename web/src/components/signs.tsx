@@ -30,6 +30,26 @@ export function Plate({ plate, size = 'md', className }: { plate: string; size?:
   )
 }
 
+/** PayByPhone's vehicle type in plain French: « Voiture », « Deux-roues », « Utilitaire »; null when unknown. */
+export function vehicleType(type?: string | null) {
+  if (!type) return null
+  if (/moto|motor|scooter|two|2\s*roues|deux|bike|cycle/i.test(type)) return 'Deux-roues'
+  if (/truck|van|utilit|commercial|lorry/i.test(type)) return 'Utilitaire'
+  if (/car|auto|voiture|passenger/i.test(type)) return 'Voiture'
+  return null
+}
+
+/** A plate with its vehicle type underneath, when PayByPhone gives it. */
+export function VehiclePlate({ plate, type }: { plate: string; type?: string | null }) {
+  const kind = vehicleType(type)
+  return (
+    <span className="inline-flex flex-col items-center gap-1">
+      <Plate plate={plate} size="sm" />
+      {kind && <span className="text-xs font-medium text-ink/55">{kind}</span>}
+    </span>
+  )
+}
+
 /** Paris resident zones are numbered like the postcode: 75017 -> « Paris 17e », 75001 -> « Paris 1er ». */
 export function arrondissement(zone: string) {
   const m = zone.match(/^75(0(\d{2})|116)$/)

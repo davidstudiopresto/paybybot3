@@ -3,7 +3,7 @@ import { Loader2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { ZoneField } from '@/components/Riverain'
-import { arrondissement, PayByPhone, Plate, ZonePlate } from '@/components/signs'
+import { arrondissement, PayByPhone, VehiclePlate, ZonePlate } from '@/components/signs'
 import { api, forgetZoneLookup, type Account, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -103,7 +103,7 @@ function AccountDialog({
             <dt className={label}>{data.vehicles.length > 1 ? 'Véhicules' : 'Véhicule'}</dt>
             <dd className="flex flex-wrap justify-end gap-2">
               {data.vehicles.length ? (
-                data.vehicles.map((v) => <Plate key={v.plate} plate={v.plate} size="sm" />)
+                data.vehicles.map((v) => <VehiclePlate key={v.plate} plate={v.plate} type={v.type} />)
               ) : (
                 <span className="text-ink/60">Aucun véhicule</span>
               )}

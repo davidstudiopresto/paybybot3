@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
-import { arrondissement, PayByPhone, Plate, Wordmark, ZonePlate } from '@/components/signs'
+import { arrondissement, PayByPhone, Plate, VehiclePlate, Wordmark, ZonePlate } from '@/components/signs'
 import { api, until, type Me, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -94,7 +94,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               {data.vehicles.length ? (
                 <span className="flex flex-wrap gap-2 pt-0.5">
                   {data.vehicles.map((v) => (
-                    <Plate key={v.plate} plate={v.plate} size="sm" />
+                    <VehiclePlate key={v.plate} plate={v.plate} type={v.type} />
                   ))}
                 </span>
               ) : (

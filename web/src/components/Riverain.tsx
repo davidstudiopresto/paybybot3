@@ -112,6 +112,14 @@ export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; 
 }
 
 const isResident = (r: Rate) => /r[ée]sid|riverain/i.test(`${r.name} ${r.type}`) && !r.parkingNotAllowedReason
+const isTwoWheels = (text: string) => /2\s*roues|deux[\s-]*roues|moto|scooter|two[\s-]*wheel/i.test(text)
+
+/** The resident rate for this vehicle: Paris has one for cars and one for motorbikes ("2 roues - Résident"). */
+function residentRateFor(rates: Rate[], vehicleType?: string) {
+  const residents = rates.filter(isResident)
+  const moto = isTwoWheels(vehicleType ?? '')
+  return residents.find((r) => isTwoWheels(`${r.name} ${r.type}`) === moto) ?? (moto ? residents[0] : undefined)
+}
 
 /** Prominent dashboard card: weekly resident renewal, set up in two clicks. */
 export function RiverainCard({
@@ -247,7 +255,7 @@ function RiverainDialog({
     const timer = setTimeout(async () => {
       try {
         const rates = await api.rates(zone, plate)
-        const resident = rates.find(isResident)
+        const resident = residentRateFor(rates, data.vehicles.find((v) => v.plate === plate)?.type)
         if (!resident) throw new Error("Aucun tarif résident pour ce véhicule dans cette zone. Vérifiez votre carte de stationnement résident dans l'application PayByPhone.")
         if (!resident.acceptedTimeUnits.includes('Days')) throw new Error("Le tarif résident de cette zone ne se paie pas à la journée.")
         const q = await weeklyPrice(resident)

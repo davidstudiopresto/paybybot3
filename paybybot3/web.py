@@ -104,7 +104,9 @@ class DemoBot:
     def get_rate_options(self, locationId, licensePlate):
         if not str(locationId).isdigit():
             return []
-        return [
+        return [  # listed first, like PayByPhone does in Paris: it must not be picked for a car
+            {"name": "2 roues - Résident", "type": "Resident", "ratePolicyId": "103", "maxStayStatus": None,
+             "acceptedTimeUnits": ["Days"], "parkingNotAllowedReason": None},
             {"name": "Résident", "type": "Resident", "ratePolicyId": "101", "maxStayStatus": None,
              "acceptedTimeUnits": ["Days"], "parkingNotAllowedReason": None},
             {"name": "Visiteur", "type": "Visitor", "ratePolicyId": "102", "maxStayStatus": None,
@@ -421,6 +423,7 @@ async def persist_session(request: Request, call_next):
 
 
 RESIDENT_RATE = re.compile(r"r[ée]sid|riverain", re.I)
+TWO_WHEELS = re.compile(r"2\s*roues|deux[\s-]*roues|moto|scooter|two[\s-]*wheel", re.I)
 
 
 def friendly_error(e):
@@ -1516,7 +1519,7 @@ def known_price(s, body):
     if span and re.fullmatch(r"75\d{3}", body.location.strip()):
         rates = s.call("get_rate_options", body.location.strip(), body.plate) or []
         if any(str(r.get("ratePolicyId")) == str(body.rate) and RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type")))
-               for r in rates):
+               and not TWO_WHEELS.search("%s %s" % (r.get("name"), r.get("type"))) for r in rates):  # car rate only
             return PARIS_RESIDENT_WEEK, "paris"
     return None, None
 

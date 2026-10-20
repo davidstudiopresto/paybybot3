@@ -3,6 +3,7 @@ import { ArrowRight, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { ZoneField } from '@/components/Riverain'
+import { withPayByPhone } from '@/components/signs'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 
@@ -151,7 +152,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
             {signup ? 'Inscription' : 'Connexion à PaybyBot'}
           </h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
-            {signup ? 'Avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.'}{' '}
+            {withPayByPhone(signup ? 'Avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.')}{' '}
             {hosted ? 'Mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}{' '}
             <a href="#/securite" target="_blank" rel="noopener" className={link}>
               En savoir plus
@@ -209,7 +210,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
             )}
             {accountExists && (
               <p role="alert" className="rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
-                {EXISTS}{' '}
+                {withPayByPhone(EXISTS)}{' '}
                 <a href="#/connexion" className="font-bold underline underline-offset-[3px]">
                   Se connecter
                 </a>
@@ -323,7 +324,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
 
           {error && !accountExists && (
             <p role="alert" className="mt-5 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
-              {error}
+              {withPayByPhone(error)}
               {noAccount && (
                 <>
                   {' '}
@@ -457,7 +458,7 @@ function CodeStep({
           />
           {error && (
             <p role="alert" className="mt-4 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
-              {error}
+              {withPayByPhone(error)}
             </p>
           )}
           <button

@@ -3,7 +3,7 @@ import { Check, Loader2, Mail, Pause, Play, Repeat } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
-import { Plate, ZonePlate } from '@/components/signs'
+import { Plate, ZonePlate, withPayByPhone } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
@@ -387,7 +387,7 @@ function RiverainDialog({
           </button>
           <p className="-mt-3 text-center text-sm text-ink/50">
             {hosted
-              ? "Fonctionne en ligne, même appareil éteint. Pour payer à votre place, PaybyBot garde de quoi se reconnecter à PayByPhone, chiffré, et l'efface dès que vous arrêtez."
+              ? withPayByPhone("Fonctionne en ligne, même appareil éteint. Pour payer à votre place, PaybyBot garde de quoi se reconnecter à PayByPhone, chiffré, et l'efface dès que vous arrêtez.")
               : 'Laissez PaybyBot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.'}
           </p>
         </div>

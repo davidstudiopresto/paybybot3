@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Check, CreditCard, Loader2, Minus, Plus, X } fro
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { NoPayment } from '@/components/NoPayment'
-import { Plate, ZonePlate } from '@/components/signs'
+import { Plate, ZonePlate, PayByPhone } from '@/components/signs'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
 import { api, ApiError, clock, money, unitLabel, type Money, type Overview, type Parking, type Rate, type Unit } from '@/lib/api'
@@ -179,7 +179,7 @@ export function PayWizard({
           <h1 className={cn('mt-6', ui.title)}>{demo ? 'Paiement simulé' : "C'est payé !"}</h1>
           {demo && (
             <p className="mt-3 rounded-xl bg-amber/25 px-4 py-2 font-bold text-ink">
-              Mode démo : rien n'a été payé ni envoyé à PayByPhone.
+              Mode démo : rien n'a été payé ni envoyé à <PayByPhone />.
             </p>
           )}
           <p className={ui.subtitle}>
@@ -229,7 +229,7 @@ export function PayWizard({
                 </Choice>
               ))}
               {!data.vehicles.length && (
-                <p className="text-muted-foreground">Aucun véhicule : ajoutez-en un dans l'application PayByPhone.</p>
+                <p className="text-muted-foreground">Aucun véhicule : ajoutez-en un dans l'application <PayByPhone />.</p>
               )}
             </div>
           </>
@@ -343,7 +343,7 @@ export function PayWizard({
         {step === 4 && (
           <>
             <h1 className={cn('mt-2', ui.title)}>Comment payer ?</h1>
-            <p className={ui.subtitle}>Les moyens de paiement enregistrés dans votre compte PayByPhone.</p>
+            <p className={ui.subtitle}>Les moyens de paiement enregistrés dans votre compte <PayByPhone />.</p>
             {!data.payments.length && (
               <div className="mt-8">
                 <NoPayment onRefresh={onRefresh} />
@@ -391,7 +391,7 @@ export function PayWizard({
 
         {busy && step === 5 && (
           <p className={cn('mt-6', ui.note)}>
-            Paiement envoyé. On attend que PayByPhone confirme le stationnement, cela peut prendre jusqu'à une minute.
+            Paiement envoyé. On attend que <PayByPhone /> confirme le stationnement, cela peut prendre jusqu'à une minute.
             Ne fermez pas cette page.
           </p>
         )}
@@ -422,7 +422,7 @@ export function PayWizard({
             <button onClick={pay} disabled={!canContinue || busy} className={ui.primary}>
               {busy ? (
                 <>
-                  <Loader2 className="size-5 animate-spin" /> Confirmation par PayByPhone…
+                  <Loader2 className="size-5 animate-spin" /> Confirmation par <PayByPhone />…
                 </>
               ) : (
                 <>Payer {quote ? money(quote.cost) : ''}</>

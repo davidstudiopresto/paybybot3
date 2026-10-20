@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CreditCard, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { PayByPhone } from '@/components/signs'
 
 /** Shown when the PayByPhone account has no saved payment method we can use. */
 export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Promise<void>; compact?: boolean }) {
@@ -21,11 +22,11 @@ export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Pro
         </span>
         <div>
           <p className={compact ? 'font-heading text-lg font-bold' : 'font-heading text-xl font-bold'}>
-            Aucune carte enregistrée sur PayByPhone
+            Aucune carte enregistrée sur <PayByPhone />
           </p>
           <p className="mt-1 text-muted-foreground">
-            Pour payer d'ici, ajoutez d'abord une carte bancaire à votre compte PayByPhone : dans l'application, menu{' '}
-            <strong className="text-ink">Compte → Moyens de paiement</strong>, ou sur le site PayByPhone.
+            Pour payer d'ici, ajoutez d'abord une carte bancaire à votre compte <PayByPhone /> : dans l'application, menu{' '}
+            <strong className="text-ink">Compte → Moyens de paiement</strong>, ou sur le site <PayByPhone />.
           </p>
           {!compact && (
             <p className="mt-2 text-sm text-muted-foreground">
@@ -43,7 +44,7 @@ export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Pro
           className="h-12 rounded-xl border-ink/20 bg-white px-5"
           render={<a href="https://m.paybyphone.com" target="_blank" rel="noreferrer" />}
         >
-          Ouvrir PayByPhone <ExternalLink className="size-4" />
+          Ouvrir <PayByPhone /> <ExternalLink className="size-4" />
         </Button>
       </div>
     </div>

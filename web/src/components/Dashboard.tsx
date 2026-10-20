@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LogOut, Repeat } from 'lucide-react'
-import { Plate, ZonePlate } from '@/components/signs'
+import { Plate, ZonePlate, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
@@ -146,7 +146,7 @@ export function Dashboard({
         </h1>
         <p className="mt-3 text-[1.05rem] text-ink/60">
           {!data
-            ? 'Chargement de votre compte PayByPhone.'
+            ? withPayByPhone('Chargement de votre compte PayByPhone.')
             : sessions.length
               ? sessions.length > 1
                 ? `${sessions.length} tickets en cours.`

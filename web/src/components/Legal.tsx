@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Check, Mail, X } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
+import { PayByPhone, withPayByPhone } from '@/components/signs'
 
 /** Who publishes paybybot. Shown in the legal pages. */
 export const PUBLISHER = {
@@ -43,7 +44,7 @@ export const Mailto = () => (
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-10">
-      <h2 className="font-heading text-xl font-bold tracking-tight">{title}</h2>
+      <h2 className="font-heading text-xl font-bold tracking-tight">{withPayByPhone(title)}</h2>
       <div className="mt-3 space-y-3 text-[1.05rem] leading-relaxed text-ink/85 [&_li]:ml-5 [&_li]:list-disc [&_li]:pl-1 [&_strong]:text-ink [&_ul]:space-y-1.5">
         {children}
       </div>
@@ -70,7 +71,7 @@ function DataTable({ rows }: { rows: [string, string, string, string][] }) {
             <tr key={r[0]} className="align-top">
               {r.map((c, i) => (
                 <td key={i} className={`border-b border-border px-2 py-2.5 ${i === 0 ? 'font-bold text-ink' : ''}`}>
-                  {c}
+                  {withPayByPhone(c)}
                 </td>
               ))}
             </tr>
@@ -87,15 +88,15 @@ export function SecurityDetails() {
     <>
       <Section title="Comment ça marche">
         <p>
-          Quand vous vous connectez, votre identifiant et votre mot de passe sont transmis à PayByPhone, de façon chiffrée
-          (HTTPS), le temps de la connexion. PayByPhone renvoie un <strong>jeton d’accès</strong> : c’est lui, et non votre
+          Quand vous vous connectez, votre identifiant et votre mot de passe sont transmis à <PayByPhone />, de façon chiffrée
+          (HTTPS), le temps de la connexion. <PayByPhone /> renvoie un <strong>jeton d’accès</strong> : c’est lui, et non votre
           mot de passe, qui permet ensuite d’agir sur votre compte. Le mot de passe n’est écrit nulle part : ni base de
           données, ni fichier, ni journal.
         </p>
         <p>
-          Pour payer, PaybyBot demande à PayByPhone de prendre le ticket avec la carte enregistrée dans votre compte
-          PayByPhone. Le paiement est fait par PayByPhone, au même tarif que dans son application. Le ticket apparaît dans
-          votre application PayByPhone comme si vous l’aviez pris vous-même.
+          Pour payer, PaybyBot demande à <PayByPhone /> de prendre le ticket avec la carte enregistrée dans votre compte
+          <PayByPhone />. Le paiement est fait par <PayByPhone />, au même tarif que dans son application. Le ticket apparaît dans
+          votre application <PayByPhone /> comme si vous l’aviez pris vous-même.
         </p>
       </Section>
 
@@ -114,7 +115,7 @@ export function SecurityDetails() {
           ]}
         />
         <p>
-          Vos véhicules, vos tickets et vos moyens de paiement ne sont pas copiés : ils sont lus chez PayByPhone au moment
+          Vos véhicules, vos tickets et vos moyens de paiement ne sont pas copiés : ils sont lus chez <PayByPhone /> au moment
           où vous ouvrez PaybyBot, pour les afficher.
         </p>
         <p>
@@ -131,7 +132,7 @@ export function SecurityDetails() {
           <li>Nombre de tentatives de connexion limité, pour empêcher de deviner des mots de passe.</li>
           <li>Requêtes venant d’un autre site refusées, et PaybyBot ne peut pas être affiché dans la page d’un autre site.</li>
           <li>
-            Renouvellement automatique prudent : si PayByPhone ne confirme pas un paiement, il se met en pause au lieu de
+            Renouvellement automatique prudent : si <PayByPhone /> ne confirme pas un paiement, il se met en pause au lieu de
             réessayer, pour ne jamais payer deux fois.
           </li>
           <li>En cas d’incident, une seule action rend inutilisables d’un coup toutes les connexions et tous les jetons gardés.</li>
@@ -140,7 +141,7 @@ export function SecurityDetails() {
 
       <Section title="Garder la main">
         <ul>
-          <li>Tous vos tickets restent visibles et gérables dans l’application PayByPhone.</li>
+          <li>Tous vos tickets restent visibles et gérables dans l’application <PayByPhone />.</li>
           <li>Le lien « Arrêter » sur la carte riverain supprime le renouvellement et le jeton gardé.</li>
           <li>La « Pause vacances » suspend les paiements entre deux dates, sans rien supprimer.</li>
           <li>
@@ -148,7 +149,7 @@ export function SecurityDetails() {
             ne contiennent aucun suivi d’ouverture ni de clic.
           </li>
           <li>
-            Changer votre mot de passe PayByPhone met fin à l’accès de PaybyBot : il faudra vous reconnecter pour l’utiliser
+            Changer votre mot de passe <PayByPhone /> met fin à l’accès de PaybyBot : il faudra vous reconnecter pour l’utiliser
             à nouveau.
           </li>
           <li>
@@ -187,7 +188,7 @@ function Security() {
             <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-eu text-white">
               {yes ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
             </span>
-            {text as string}
+            {withPayByPhone(text as string)}
           </p>
         ))}
       </div>
@@ -218,17 +219,17 @@ function Privacy() {
       <Section title="2. Données traitées">
         <ul>
           <li>
-            <strong>Connexion :</strong> votre identifiant PayByPhone (téléphone ou e-mail) et votre mot de passe,
-            transmis à PayByPhone pour vous connecter. Le mot de passe n’est pas conservé. Les jetons de connexion renvoyés
-            par PayByPhone sont gardés chiffrés dans un cookie de votre navigateur.
+            <strong>Connexion :</strong> votre identifiant <PayByPhone /> (téléphone ou e-mail) et votre mot de passe,
+            transmis à <PayByPhone /> pour vous connecter. Le mot de passe n’est pas conservé. Les jetons de connexion renvoyés
+            par <PayByPhone /> sont gardés chiffrés dans un cookie de votre navigateur.
           </li>
           <li>
-            <strong>Données de votre compte PayByPhone :</strong> véhicules, tickets en cours, moyens de paiement (masqués,
+            <strong>Données de votre compte <PayByPhone /> :</strong> véhicules, tickets en cours, moyens de paiement (masqués,
             4 derniers chiffres), tarifs. Ils sont lus à la demande pour être affichés et ne sont pas conservés.
           </li>
           <li>
             <strong>Paiements et prolongations :</strong> plaque, zone, tarif, durée et moyen de paiement choisis, transmis à
-            PayByPhone pour prendre le ticket.
+            <PayByPhone /> pour prendre le ticket.
           </li>
           <li>
             <strong>Compte PaybyBot :</strong> votre e-mail, vérifié par un code à l’inscription, et votre zone de
@@ -237,7 +238,7 @@ function Privacy() {
             pas conservée.
           </li>
           <li>
-            <strong>Renouvellement riverain (si vous l’activez) :</strong> un jeton de reconnexion PayByPhone, la plaque,
+            <strong>Renouvellement riverain (si vous l’activez) :</strong> un jeton de reconnexion <PayByPhone />, la plaque,
             la zone, le tarif, la durée et le moyen de paiement choisis, tous chiffrés ; une empreinte de votre identifiant ;
             les dates des dernières vérifications et du dernier paiement, les dates de pause éventuelles, et le dernier
             message d’erreur éventuel, et l’e-mail des confirmations, chiffré lui aussi.
@@ -278,7 +279,7 @@ function Privacy() {
       <Section title="4. Destinataires et sous-traitants">
         <ul>
           <li>
-            <strong>PayByPhone</strong>, qui exploite votre compte et réalise les paiements, selon ses propres conditions et
+            <strong><PayByPhone /></strong>, qui exploite votre compte et réalise les paiements, selon ses propres conditions et
             sa propre politique de confidentialité.
           </li>
           <li>
@@ -378,13 +379,13 @@ function Terms() {
   return (
     <>
       <p className="text-lg text-muted-foreground">
-        Ces conditions encadrent l’utilisation de PaybyBot. En vous connectant avec votre compte PayByPhone, vous les
+        Ces conditions encadrent l’utilisation de PaybyBot. En vous connectant avec votre compte <PayByPhone />, vous les
         acceptez.
       </p>
 
       <Section title="1. Le service">
         <p>
-          PaybyBot, service appartenant à {PUBLISHER.name}, est une interface qui permet de piloter son propre compte PayByPhone :
+          PaybyBot, service appartenant à {PUBLISHER.name}, est une interface qui permet de piloter son propre compte <PayByPhone /> :
           payer un stationnement, prolonger un ticket en cours et, si vous l’activez, renouveler automatiquement un forfait
           résident chaque semaine. Le service est payant après un mois offert (voir « Abonnement et paiement »).
         </p>
@@ -392,28 +393,28 @@ function Terms() {
 
       <Section title="2. Indépendance vis-à-vis de PayByPhone">
         <p>
-          PaybyBot est un service indépendant, non affilié à PayByPhone, ni approuvé ou soutenu par PayByPhone. Les noms et
+          PaybyBot est un service indépendant, non affilié à <PayByPhone />, ni approuvé ou soutenu par <PayByPhone />. Les noms et
           marques cités appartiennent à leurs propriétaires. Votre compte, vos tickets et vos paiements restent soumis aux
-          conditions de PayByPhone, que vous acceptez directement auprès de PayByPhone.
+          conditions de <PayByPhone />, que vous acceptez directement auprès de <PayByPhone />.
         </p>
       </Section>
 
       <Section title="3. Mandat">
         <p>
-          En utilisant PaybyBot, vous l’autorisez à transmettre en votre nom à PayByPhone les demandes que vous faites
+          En utilisant PaybyBot, vous l’autorisez à transmettre en votre nom à <PayByPhone /> les demandes que vous faites
           (paiement, prolongation) et, si vous activez le renouvellement riverain, à prendre automatiquement un nouveau
           ticket à l’expiration du précédent, avec le véhicule, la zone, le tarif, la durée et le moyen de paiement que vous
           avez choisis, jusqu’à ce que vous l’arrêtiez.
         </p>
         <p>
-          Les tickets sont achetés par vous, depuis votre compte PayByPhone, au tarif de PayByPhone. PaybyBot n’encaisse pas
+          Les tickets sont achetés par vous, depuis votre compte <PayByPhone />, au tarif de <PayByPhone />. PaybyBot n’encaisse pas
           le prix des tickets : seul l’abonnement à PaybyBot est facturé (voir « Abonnement et paiement »).
         </p>
       </Section>
 
       <Section title="4. Conditions d’accès">
         <ul>
-          <li>Avoir un compte PayByPhone, avec un véhicule et un moyen de paiement enregistrés.</li>
+          <li>Avoir un compte <PayByPhone />, avec un véhicule et un moyen de paiement enregistrés.</li>
           <li>N’utiliser que son propre compte, ou un compte dont on a l’accord du titulaire.</li>
           <li>Être majeur ou disposer de l’accord de son représentant légal.</li>
         </ul>
@@ -425,7 +426,7 @@ function Terms() {
             Vérifier que la zone, le tarif et la durée correspondent à votre stationnement et à la signalisation sur place.
           </li>
           <li>Disposer des droits nécessaires aux tarifs spéciaux, comme le tarif résident, et les tenir à jour.</li>
-          <li>Garder vos identifiants PayByPhone confidentiels.</li>
+          <li>Garder vos identifiants <PayByPhone /> confidentiels.</li>
           <li>Ne pas perturber le service, ni tenter d’y accéder de façon non autorisée ou de l’utiliser de façon abusive.</li>
         </ul>
       </Section>
@@ -443,9 +444,9 @@ function Terms() {
           stationnement.
         </p>
         <p>
-          Il peut ne pas aboutir, par exemple si votre connexion PayByPhone a expiré, si votre carte est refusée, si votre
-          droit au tarif résident a pris fin ou si PayByPhone modifie son service. Dans ces cas, PaybyBot l’indique sur votre
-          tableau de bord. Si un paiement n’est pas confirmé par PayByPhone, le renouvellement se met en pause pour éviter
+          Il peut ne pas aboutir, par exemple si votre connexion <PayByPhone /> a expiré, si votre carte est refusée, si votre
+          droit au tarif résident a pris fin ou si <PayByPhone /> modifie son service. Dans ces cas, PaybyBot l’indique sur votre
+          tableau de bord. Si un paiement n’est pas confirmé par <PayByPhone />, le renouvellement se met en pause pour éviter
           un double paiement.
         </p>
       </Section>
@@ -453,11 +454,11 @@ function Terms() {
       <Section title="7. Disponibilité et responsabilité">
         <p>
           Le service est fourni en l’état, sans garantie de disponibilité ni de résultat. Il dépend du
-          fonctionnement de PayByPhone, qui peut évoluer à tout moment, et peut être interrompu ou arrêté.
+          fonctionnement de <PayByPhone />, qui peut évoluer à tout moment, et peut être interrompu ou arrêté.
         </p>
         <p>
           Dans les limites permises par la loi, PaybyBot et son propriétaire ne sont pas responsables des amendes ou forfaits
-          post-stationnement, des paiements refusés ou non réalisés, ni des indisponibilités de PayByPhone ou de PaybyBot.
+          post-stationnement, des paiements refusés ou non réalisés, ni des indisponibilités de <PayByPhone /> ou de PaybyBot.
           Cette limitation ne s’applique pas en cas de faute lourde ou intentionnelle.
         </p>
       </Section>
@@ -560,8 +561,8 @@ function Notice() {
       </Section>
       <Section title="Propriété intellectuelle">
         <p>
-          Le code de PaybyBot est publié sous licence MIT. PayByPhone est une marque de son propriétaire ; PaybyBot n’est pas
-          affilié à PayByPhone.
+          Le code de PaybyBot est publié sous licence MIT. <PayByPhone /> est une marque de son propriétaire ; PaybyBot n’est pas
+          affilié à <PayByPhone />.
         </p>
       </Section>
     </>

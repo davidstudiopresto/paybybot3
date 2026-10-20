@@ -3,7 +3,7 @@ import { Loader2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { ZoneField } from '@/components/Riverain'
-import { Plate, ZonePlate } from '@/components/signs'
+import { Plate, ZonePlate, PayByPhone } from '@/components/signs'
 import { api, forgetZoneLookup, type Account, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -94,7 +94,7 @@ function AccountDialog({
         <div className="px-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Mon compte</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">
-            Ce que PaybyBot lit dans votre compte PayByPhone.
+            Ce que PaybyBot lit dans votre compte <PayByPhone />.
           </DialogDescription>
         </div>
 
@@ -180,7 +180,7 @@ function AccountDialog({
         </dl>
 
         <p className="px-6 pt-4 text-sm text-ink/50">
-          Les véhicules viennent de PayByPhone : modifiez-les dans son application.
+          Les véhicules viennent de <PayByPhone /> : modifiez-les dans son application.
         </p>
 
         <div className={cn('px-6 pb-7', demo ? 'pt-2' : 'pt-6')}>
@@ -222,7 +222,7 @@ function DeleteConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDelete
         <div className="p-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Supprimer votre compte ?</DialogTitle>
           <DialogDescription className="mt-2 leading-relaxed text-ink/65">
-            Tout ce que PaybyBot garde est effacé, et votre compte PayByPhone n’est pas touché. Vous recevrez une
+            Tout ce que PaybyBot garde est effacé, et votre compte <PayByPhone /> n’est pas touché. Vous recevrez une
             confirmation par e-mail.
           </DialogDescription>
           <p role="note" className="mt-4 rounded-xl bg-amber/20 px-4 py-3 text-sm leading-relaxed text-ink">

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /** French licence plate: white field, blue EU band with the country letter. */
@@ -122,4 +123,18 @@ export function ActionTile({
       </span>
     </button>
   )
+}
+
+/** PayByPhone's name as its logo writes it: « By » in its green. */
+export function PayByPhone() {
+  return (
+    <span className="whitespace-nowrap">
+      Pay<span className="text-[#64be38]">By</span>Phone
+    </span>
+  )
+}
+
+/** A text with each « PayByPhone » shown as above. */
+export function withPayByPhone(text: string): ReactNode {
+  return text.split('PayByPhone').flatMap((part, i) => (i ? [<PayByPhone key={i} />, part] : [part]))
 }

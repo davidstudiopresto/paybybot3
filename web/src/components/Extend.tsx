@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
 import { loadLast, PRESETS } from '@/components/PayWizard'
-import { Plate, ZonePlate } from '@/components/signs'
+import { Plate, ZonePlate, PayByPhone } from '@/components/signs'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
 import { api, ApiError, clock, money, until, unitLabel, type Money, type Overview, type Session, type Unit } from '@/lib/api'
@@ -197,7 +197,7 @@ export function ExtendDialog({
             <button onClick={extend} disabled={!quote || saving || !payment} className={ui.primary}>
               {saving ? (
                 <>
-                  <Loader2 className="size-5 animate-spin" /> Confirmation par PayByPhone…
+                  <Loader2 className="size-5 animate-spin" /> Confirmation par <PayByPhone />…
                 </>
               ) : (
                 <>

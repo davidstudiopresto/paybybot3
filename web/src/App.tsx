@@ -10,7 +10,7 @@ import { AdminPage } from '@/components/Admin'
 import { PricingPage } from '@/components/Pricing'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { NotFoundPage } from '@/components/NotFound'
-import { Wordmark } from '@/components/signs'
+import { Wordmark, PayByPhone } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
 type Route = 'faq' | 'tarifs' | 'connexion' | 'inscription' | 'demo' | 'admin' | null
@@ -126,7 +126,7 @@ export default function App() {
             <span className="animate-pulse">
             <Wordmark />
           </span>
-            <p className="max-w-64 text-lg text-ink/70">Récupération de vos paramètres PayByPhone…</p>
+            <p className="max-w-64 text-lg text-ink/70">Récupération de vos paramètres <PayByPhone />…</p>
           </div>
         </div>
       ) : (

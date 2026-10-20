@@ -8,6 +8,7 @@ import { PlanCards } from '@/components/Pricing'
 import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
+import { PayByPhone, withPayByPhone } from '@/components/signs'
 
 
 /** The 26-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
@@ -127,7 +128,7 @@ function Security() {
         Vos données, protégées.
       </h2>
       <p className="mx-auto mt-4 max-w-[36rem] text-center text-[1.05rem] text-ink/60 lg:text-lg">
-        PaybyBot agit sur votre compte PayByPhone sans jamais garder votre mot de passe ni votre carte.
+        PaybyBot agit sur votre compte <PayByPhone /> sans jamais garder votre mot de passe ni votre carte.
       </p>
       <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-ink/10 bg-ink/10 sm:grid-cols-2 lg:grid-cols-3">
         {GUARANTEES.map(([Icon, title, text]) => (
@@ -136,7 +137,7 @@ function Security() {
               <Icon className="size-5" />
             </span>
             <strong className="mt-4 block text-lg font-semibold text-ink">{title}</strong>
-            <span className="mt-1 block text-ink/60">{text}</span>
+            <span className="mt-1 block text-ink/60">{withPayByPhone(text)}</span>
           </li>
         ))}
       </ul>
@@ -203,7 +204,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
               </span>
             </h1>
             <p className={cn(ui.subtitle, 'lg:mt-10 lg:max-w-[32rem] lg:text-[clamp(1rem,min(1.1vw,2vh),1.2rem)] lg:leading-[1.7]')}>
-              Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.
+              Votre forfait résident <PayByPhone /> est repayé à chaque échéance. Plus d'oubli, plus d'amende.
             </p>
             <a
               ref={cta}
@@ -244,8 +245,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
                   {i + 1}
                 </span>
                 <span>
-                  <strong className="block text-ink lg:text-lg">{title}</strong>
-                  <span className="text-ink/60">{text}</span>
+                  <strong className="block text-ink lg:text-lg">{withPayByPhone(title)}</strong>
+                  <span className="text-ink/60">{withPayByPhone(text)}</span>
                 </span>
               </li>
             ))}
@@ -306,7 +307,7 @@ const QUESTIONS: [string, ReactNode][] = [
   [
     'Quelles informations me demandez-vous ?',
     <>
-      Rien de ce que PayByPhone sait déjà : votre numéro, vos véhicules et votre carte viennent de votre compte. On vous
+      Rien de ce que <PayByPhone /> sait déjà : votre numéro, vos véhicules et votre carte viennent de votre compte. On vous
       demande seulement votre e-mail, pour les confirmations, et votre adresse de résidence, pour trouver votre zone :
       l'adresse n'est pas conservée, seule la zone l'est.
     </>,
@@ -314,7 +315,7 @@ const QUESTIONS: [string, ReactNode][] = [
   [
     'Pourquoi mes identifiants PayByPhone ?',
     <>
-      Pour payer à votre place, PaybyBot passe par votre compte PayByPhone, comme l'application. Votre mot de passe
+      Pour payer à votre place, PaybyBot passe par votre compte <PayByPhone />, comme l'application. Votre mot de passe
       n'est jamais enregistré : seule une clé de reconnexion est gardée, chiffrée, et effacée dès que vous arrêtez.{' '}
       <a href="#/securite">Sécurité et données</a>
     </>,
@@ -339,7 +340,7 @@ const QUESTIONS: [string, ReactNode][] = [
   ],
   [
     'Est-ce un service officiel de PayByPhone ?',
-    <>Non. PaybyBot est un service indépendant, édité par Studio Presto, qui utilise votre compte PayByPhone.</>,
+    <>Non. PaybyBot est un service indépendant, édité par Studio Presto, qui utilise votre compte <PayByPhone />.</>,
   ],
 ]
 
@@ -361,7 +362,7 @@ function Faq({ className }: { className?: string }) {
         <AccordionItem key={q} value={q} className="border-b border-ink/12 not-last:border-b">
           <AccordionTrigger className="group/q items-center gap-6 rounded-none py-6 text-[1.05rem] font-normal text-ink hover:no-underline focus-visible:ring-0 sm:text-[1.15rem] **:data-[slot=accordion-trigger-icon]:hidden">
             <span className="underline-offset-[6px] decoration-ink/60 group-hover/q:underline group-aria-expanded/accordion-trigger:underline">
-              {q}
+              {withPayByPhone(q)}
             </span>
             <Plus
               aria-hidden

@@ -29,6 +29,11 @@ class Account(unittest.TestCase):
         start = datetime.fromisoformat(self.s.account["trial_start"])
         self.assertEqual((datetime.fromisoformat(account["trialEnd"]) - start).days, 30)
 
+    def test_main_vehicle_is_kept(self):
+        r = web.update_account(web.AccountPatch(mainPlate="AB-123-CD"), "t")
+        self.assertEqual(r["mainPlate"], "AB-123-CD")
+        self.assertEqual(self.s.account["main_plate"], "AB-123-CD")
+
     def test_deleting_sends_a_confirmation_and_erases(self):
         web.update_account(web.AccountPatch(email="a@b.fr"), "t")
         with patch.object(web, "send_email") as send:

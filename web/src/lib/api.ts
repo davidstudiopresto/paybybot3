@@ -56,10 +56,18 @@ export type Account = {
   zone: string | null
   trialEnd?: string | null
   plan?: string | null
+  /** The vehicle shown first and preselected (a plate from PayByPhone), chosen by the user. */
+  mainPlate?: string | null
   /** Renewals stop while blocked: 'unpaid' (Stripe could not charge) or 'trialOver' (no subscription). */
   blocked?: 'unpaid' | 'trialOver' | null
 }
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
+
+/** The main vehicle: the one chosen if PayByPhone still has it, else the first one. */
+export function mainPlateOf(account: Pick<Account, 'mainPlate'> | null | undefined, vehicles: Vehicle[]) {
+  const chosen = account?.mainPlate
+  return (chosen && vehicles.some((v) => v.plate === chosen) ? chosen : vehicles[0]?.plate) ?? null
+}
 
 export class ApiError extends Error {
   status: number

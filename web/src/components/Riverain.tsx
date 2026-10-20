@@ -426,7 +426,16 @@ const ARRONDISSEMENTS = Array.from({ length: 20 }, (_, i) => ({
   zone: `750${String(i + 1).padStart(2, '0')}`,
 }))
 
-/** The home zone: shown when known (history, account), else picked among the 20 arrondissements. */
+/** « 17 », « 17e », « Paris 17 » or « 75017 » -> the matching arrondissements, as they are typed. */
+function matchArrondissements(query: string) {
+  const digits = query.replace(/\D/g, '')
+  if (!digits) return []
+  if (digits.startsWith('75')) return ARRONDISSEMENTS.filter((a) => a.zone.startsWith(digits)).slice(0, 6)
+  const n = digits.replace(/^0+/, '')
+  return n ? ARRONDISSEMENTS.filter((a) => String(Number(a.zone.slice(3))).startsWith(n)).slice(0, 6) : []
+}
+
+/** The home zone: shown when known (history, account), else typed: suggestions appear as you type. */
 export function ZoneField({
   zone,
   fromHistory,
@@ -437,7 +446,15 @@ export function ZoneField({
   onZone: (zone: string) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const [query, setQuery] = useState('')
   const open = editing || !zone
+  const matches = matchArrondissements(query)
+
+  function choose(z: string) {
+    onZone(z)
+    setQuery('')
+    setEditing(false)
+  }
 
   if (!open) {
     return (
@@ -459,29 +476,53 @@ export function ZoneField({
 
   return (
     <div>
-      <p id="riverain-arrondissement" className={ui.label}>
+      <label htmlFor="riverain-arrondissement" className={ui.label}>
         Votre arrondissement de résidence
-      </p>
-      <div role="radiogroup" aria-labelledby="riverain-arrondissement" className="grid grid-cols-5 gap-2">
-        {ARRONDISSEMENTS.map((a) => (
-          <button
-            key={a.zone}
-            role="radio"
-            aria-checked={a.zone === zone}
-            aria-label={`Paris ${a.label}`}
-            onClick={() => {
-              onZone(a.zone)
-              setEditing(false)
-            }}
-            className={cn(
-              'h-11 rounded-xl border text-[0.95rem] font-semibold transition',
-              a.zone === zone ? 'border-eu bg-eu/[0.06] text-eu ring-1 ring-eu' : 'border-ink/15 text-ink hover:border-ink/40',
-            )}
-          >
-            {a.label}
-          </button>
-        ))}
-      </div>
+      </label>
+      <input
+        id="riverain-arrondissement"
+        role="combobox"
+        aria-expanded={matches.length > 0}
+        aria-controls="riverain-arrondissements"
+        autoComplete="off"
+        inputMode="numeric"
+        placeholder="Ex. : 17 ou 75017"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && matches[0]) {
+            e.preventDefault()
+            choose(matches[0].zone)
+          }
+        }}
+        autoFocus
+        className={cn(ui.field, 'h-12 text-base')}
+      />
+      {matches.length > 0 && (
+        <ul
+          id="riverain-arrondissements"
+          role="listbox"
+          aria-label="Arrondissements"
+          className="mt-2 overflow-hidden rounded-xl border border-ink/15"
+        >
+          {matches.map((a) => (
+            <li key={a.zone}>
+              <button
+                role="option"
+                aria-selected={false}
+                onClick={() => choose(a.zone)}
+                className="flex w-full items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 text-left last:border-b-0 hover:bg-muted"
+              >
+                <span className="font-semibold text-ink">Paris {a.label}</span>
+                <span className="text-sm font-bold text-ink/50 tabular-nums">{a.zone}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {query.trim() && !matches.length && (
+        <p className="mt-2 text-sm text-ink/55">Tapez un arrondissement de Paris, de 1 à 20.</p>
+      )}
       {zone && (
         <button onClick={() => setEditing(false)} className={cn('mt-2 text-sm', ui.link)}>
           Garder {arrondissement(zone) ?? `la zone ${zone}`}

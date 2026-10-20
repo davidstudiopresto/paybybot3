@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
-import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pause, Play, Plus, Power, X } from 'lucide-react'
+import { ArrowRight, ChevronDown, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pause, Play, Plus, Power, X } from 'lucide-react'
 import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
@@ -188,18 +188,19 @@ export function Landing({ hosted }: { hosted: boolean }) {
       <PublicTopBar />
 
       {/* Hero laid out like a product launch page: text left (573), video right (675), 64 apart at 1440. */}
-      {/* On a computer it fills the window (under the 4rem top bar): « Comment ça marche » starts below the fold. */}
-      <section className="rise mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-12 lg:pr-[50px] lg:pl-[78px]">
+      {/* On a computer it fills the window (under the 4rem top bar): « Comment ça marche » starts below the fold,
+          the title and video grow with the screen, and an arrow at the bottom invites to scroll. */}
+      <section className="rise relative mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:max-w-[min(110rem,calc((100dvh-4rem)*1.9))] lg:items-center lg:py-20 lg:pr-[50px] lg:pl-[78px]">
         <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="max-w-[40rem]">
-            <h1 className={cn(ui.title, 'lg:text-[3.42rem] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
+            <h1 className={cn(ui.title, 'lg:text-[clamp(3.42rem,min(4.1vw,7.5vh),4.75rem)] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
               Renouvellement automatique de votre{' '}
               <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] box-decoration-clone bg-clip-text text-transparent">
-                ticket de stationnement
+                forfait de stationnement
               </span>
               .
             </h1>
-            <p className={cn(ui.subtitle, 'lg:mt-6 lg:max-w-[30rem] lg:text-base lg:leading-[1.65]')}>
+            <p className={cn(ui.subtitle, 'lg:mt-6 lg:max-w-[32rem] lg:text-[clamp(1rem,min(1.1vw,2vh),1.2rem)] lg:leading-[1.65]')}>
               Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.
             </p>
             <a
@@ -218,11 +219,19 @@ export function Landing({ hosted }: { hosted: boolean }) {
           </div>
           <DemoVideo />
         </div>
+        <button
+          type="button"
+          onClick={() => document.getElementById('comment')?.scrollIntoView({ behavior: 'smooth' })}
+          className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1 text-sm font-medium text-ink/45 transition hover:text-eu lg:flex"
+        >
+          Comment ça marche
+          <ChevronDown className="size-5 motion-safe:animate-[nudge_1.8s_ease-in-out_infinite]" />
+        </button>
       </section>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24 sm:px-8">
 
-        <section className="mt-24 lg:mt-36">
+        <section id="comment" className="mt-24 scroll-mt-20 lg:mt-36">
           <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
             Comment ça marche.
           </h2>

@@ -153,6 +153,9 @@
 
 @keyframes blink { 50% { opacity: .35; } }
 
+/* Home: the arrow under the hero moves down a little, inviting to scroll. */
+@keyframes nudge { 50% { transform: translateY(4px); } }
+
 /* Testimonials: one row scrolling forever (the list is rendered twice, so -50% loops seamlessly). */
 @keyframes marquee { to { transform: translateX(-50%); } }
 .marquee { animation: marquee 50s linear infinite; }

@@ -3,7 +3,7 @@ import { Loader2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { ZoneField } from '@/components/Riverain'
-import { Plate, ZonePlate, PayByPhone } from '@/components/signs'
+import { arrondissement, PayByPhone, Plate, ZonePlate } from '@/components/signs'
 import { api, forgetZoneLookup, type Account, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -118,6 +118,7 @@ function AccountDialog({
                   <Loader2 className="size-4 animate-spin text-ink/40" />
                 ) : editingZone ? null : zone ? (
                   <span className="flex items-center gap-3">
+                    {arrondissement(zone) && <span className="text-sm font-semibold text-ink">{arrondissement(zone)}</span>}
                     <ZonePlate zone={zone} />
                     <button onClick={() => setEditingZone(true)} className={cn('text-sm', ui.link)}>
                       Changer

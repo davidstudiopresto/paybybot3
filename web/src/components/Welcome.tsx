@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
-import { PayByPhone, Plate, Wordmark, ZonePlate } from '@/components/signs'
+import { arrondissement, PayByPhone, Plate, Wordmark, ZonePlate } from '@/components/signs'
 import { api, until, type Me, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -115,6 +115,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                 <span className="inline-block h-5 w-24 animate-pulse rounded bg-ink/10" />
               ) : zone ? (
                 <span className="flex flex-wrap items-baseline gap-x-3">
+                  {arrondissement(zone) && <span className="font-semibold">{arrondissement(zone)}</span>}
                   <ZonePlate zone={zone} />
                   <span className="text-sm text-ink/55">trouvée dans votre historique</span>
                 </span>

@@ -30,6 +30,14 @@ export function Plate({ plate, size = 'md', className }: { plate: string; size?:
   )
 }
 
+/** Paris resident zones are numbered like the postcode: 75017 -> « Paris 17e », 75001 -> « Paris 1er ». */
+export function arrondissement(zone: string) {
+  const m = zone.match(/^75(0(\d{2})|116)$/)
+  if (!m) return null
+  const n = m[1] === '116' ? 16 : Number(m[2])
+  return n >= 1 && n <= 20 ? `Paris ${n === 1 ? '1er' : `${n}e`}` : null
+}
+
 /** Parking zone, shown as a quiet label next to the plate. */
 export function ZonePlate({ zone, className }: { zone: string; className?: string }) {
   return (

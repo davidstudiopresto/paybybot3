@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 
-/** Cloudflare Turnstile: an invisible human check before sign-up and logins, online only (the server says if it is on). */
+/** Cloudflare Turnstile: a human check before sign-up and logins, online only (the server says if it is on). */
 type Turnstile = {
   render: (el: HTMLElement, options: Record<string, unknown>) => string
   reset: (id: string) => void
@@ -34,7 +34,7 @@ const UNAVAILABLE = "La vérification anti-robot n'a pas abouti. Rechargez la pa
 const failure = (code: string | null) => (code ? `${UNAVAILABLE} (code ${code})` : UNAVAILABLE)
 
 /**
- * `box` goes on an empty element in the form: it stays empty unless Cloudflare needs a click.
+ * `box` goes on an empty element in the form: Cloudflare's box shows there (a click is asked only when in doubt).
  * `token()` gives a fresh single-use token ("" when the check is off) and readies the next one.
  */
 export function useTurnstile() {
@@ -62,7 +62,7 @@ export function useTurnstile() {
         if (cancelled || !box.current) return
         const id = t.render(box.current, {
           sitekey: key,
-          appearance: 'interaction-only', // visible only when Cloudflare needs a click, or on failure
+          appearance: 'always', // the Cloudflare box stays visible: visitors see they are checked
           theme: 'light',
           language: 'fr',
           size: 'flexible',

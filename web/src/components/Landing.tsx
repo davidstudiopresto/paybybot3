@@ -14,13 +14,13 @@ const TRUST = [
   [Power, 'Sans engagement'],
 ] as const
 
-/** The 18-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
+/** The 23-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
 function DemoVideo() {
   const ref = useRef<HTMLVideoElement>(null)
   const [mobile] = useState(() => window.matchMedia('(max-width: 639px)').matches)
   const [still] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [playing, setPlaying] = useState(!still)
-  const src = mobile ? '/video/paybybot-18s-mobile' : '/video/paybybot-18s'
+  const src = mobile ? '/video/paybybot-23s-mobile' : '/video/paybybot-23s'
 
   useEffect(() => {
     const v = ref.current
@@ -54,8 +54,8 @@ function DemoVideo() {
         loop
         playsInline
         preload="metadata"
-        aria-label="Vidéo de 18 secondes : activer le renouvellement automatique dans PaybyBot"
-        className="block aspect-[4/5] w-full rounded-3xl bg-[#0b1024] object-cover shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)] sm:aspect-video"
+        aria-label="Vidéo de 23 secondes : activer le renouvellement automatique dans PaybyBot"
+        className="block aspect-[4/5] w-full rounded-[20px] bg-[#0b1024] object-cover shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)] sm:aspect-video"
       />
       <button
         onClick={toggle}
@@ -66,9 +66,9 @@ function DemoVideo() {
       </button>
       <button
         onClick={restart}
-        className="absolute bottom-4 left-4 inline-flex h-10 items-center gap-2.5 rounded-full border border-white/20 bg-black/40 px-4 text-sm font-semibold text-white backdrop-blur transition hover:bg-black/60"
+        className="absolute bottom-4 left-4 inline-flex h-11 items-center gap-2.5 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-5 text-[0.95rem] font-semibold text-white shadow-lg transition hover:brightness-110 sm:bottom-6 sm:left-6"
       >
-        <Play className="size-4 fill-white" /> Découvrir PaybyBot · 18 s
+        <Play className="size-4 fill-white" /> Découvrir PaybyBot · 23 s
       </button>
     </div>
   )
@@ -155,23 +155,30 @@ export function Landing({ hosted }: { hosted: boolean }) {
     <div className="flex min-h-dvh flex-col bg-white">
       <PublicTopBar />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-[10vh] pb-24 sm:px-8 lg:pt-[14vh]">
-        <section className="rise grid items-center gap-12 lg:grid-cols-[1fr_1.15fr] lg:gap-14">
+      {/* Hero laid out like a product launch page: kicker on top, text left (573), video right (675), 64 apart at 1440. */}
+      <section className="rise mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:pt-16 lg:pr-[50px] lg:pl-[78px]">
+        <p className="text-center text-[13px] font-semibold tracking-[0.25em] text-eu uppercase">Stationnement résident automatisé</p>
+        <div className="mt-8 grid items-center gap-12 lg:mt-6 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="max-w-[40rem]">
-            <h1 className={cn(ui.title, 'lg:text-[3.3rem] lg:leading-[1.05]')}>Renouvellement automatique de votre ticket de stationnement.</h1>
-            <p className={cn(ui.subtitle, 'lg:mt-5 lg:text-xl')}>
+            <h1 className={cn(ui.title, 'lg:text-[3.42rem] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
+              Renouvellement automatique de votre ticket de stationnement.
+            </h1>
+            <p className={cn(ui.subtitle, 'lg:mt-6 lg:max-w-[30rem] lg:text-base lg:leading-[1.65]')}>
               Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.
             </p>
-            <a href="#/inscription" className={cn('mt-9 lg:max-w-sm', ui.primary)}>
+            <a
+              href="#/inscription"
+              className={cn('mt-9 lg:mt-7 lg:h-12 lg:w-fit lg:rounded-full lg:px-8 lg:text-base', ui.primary)}
+            >
               Essayer gratuitement <ArrowRight className="size-5" />
             </a>
-            <p className="mt-4 text-center text-sm text-ink/50 lg:max-w-sm">
+            <p className="mt-4 text-center text-sm text-ink/50 lg:text-left">
               Déjà inscrit ?{' '}
               <a href="#/connexion" className={ui.link}>
                 Se connecter
               </a>
             </p>
-            <ul className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink/55 lg:justify-start">
+            <ul className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink/55 lg:mt-6 lg:justify-start">
               {TRUST.map(([Icon, text]) => (
                 <li key={text} className="flex items-center gap-1.5">
                   <Icon className="size-4 text-eu" /> {text}
@@ -180,7 +187,10 @@ export function Landing({ hosted }: { hosted: boolean }) {
             </ul>
           </div>
           <DemoVideo />
-        </section>
+        </div>
+      </section>
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24 sm:px-8">
 
         <section className="mt-24 lg:mt-36">
           <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">

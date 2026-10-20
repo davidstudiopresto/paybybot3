@@ -55,7 +55,13 @@ export function ParkingSign({ className }: { className?: string }) {
 }
 
 export function Wordmark() {
-  return <span className="font-heading text-[1.4rem] leading-none font-semibold tracking-[-0.025em] text-ink">PaybyBot</span>
+  return (
+    <span className="font-heading text-[1.4rem] leading-none font-semibold tracking-[-0.025em] text-ink">
+      Pay
+      <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">by</span>
+      Bot
+    </span>
+  )
 }
 
 /** Large dashboard action, used side by side so the main actions share one size. */

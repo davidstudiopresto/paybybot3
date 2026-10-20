@@ -1872,6 +1872,9 @@ def checkout_url(owner, account, plan, success_url):
             "client_reference_id": owner, "metadata[plan]": plan, "metadata[weekly_cents]": weekly,
             "success_url": success_url,
             "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true",
+            # A simple page: euros only (no currency switch) and cards only (Apple Pay / Google Pay included,
+            # no Klarna or Revolut Pay).
+            "adaptive_pricing[enabled]": "false", "payment_method_types[0]": "card",
             # PaybyBot's own look on Stripe's page, without changing the Studio Presto account branding.
             "branding_settings[display_name]": "PaybyBot",
             "branding_settings[logo][type]": "url", "branding_settings[logo][url]": base + "/brand/paybybot-logo.png",

@@ -199,7 +199,7 @@ function RiverainDialog({
   const [zoneFromHistory, setZoneFromHistory] = useState(false)
   const [payment, setPayment] = useState('')
   const [rate, setRate] = useState<Rate | null>(null)
-  const [quote, setQuote] = useState<{ cost: Money } | null>(null)
+  const [quote, setQuote] = useState<{ cost: Money | null } | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -250,7 +250,7 @@ function RiverainDialog({
         const resident = rates.find(isResident)
         if (!resident) throw new Error("Aucun tarif résident pour ce véhicule dans cette zone. Vérifiez votre carte de stationnement résident dans l'application PayByPhone.")
         if (!resident.acceptedTimeUnits.includes('Days')) throw new Error("Le tarif résident de cette zone ne se paie pas à la journée.")
-        const q = await api.quote(parking(resident))
+        const q = await weeklyPrice(resident)
         if (!cancelled) {
           setRate(resident)
           setQuote(q)
@@ -273,6 +273,22 @@ function RiverainDialog({
 
   function parking(r: Rate): Parking {
     return { location: zone, rate: r.ratePolicyId, duration: WEEK_DAYS, unit: 'Days', plate, paymentAccountId: payment }
+  }
+
+  /** Price of a week. With a ticket already running, PayByPhone refuses a new one: the week is priced as an
+   *  extension of it instead, and if that is refused too the renewal can still be activated, price unknown. */
+  async function weeklyPrice(r: Rate): Promise<{ cost: Money | null }> {
+    try {
+      return await api.quote(parking(r))
+    } catch (e) {
+      const running = data.sessions.find((s) => s.plate === plate && new Date(s.expire).getTime() > Date.now())
+      if (!running) throw e
+      try {
+        return await api.quote({ ...parking(r), sessionId: running.id })
+      } catch {
+        return { cost: null }
+      }
+    }
   }
 
   async function activate() {
@@ -374,7 +390,11 @@ function RiverainDialog({
                 </li>
                 <li className="flex items-baseline justify-between pt-2">
                   <span className="text-muted-foreground">Chaque semaine</span>
-                  <span className="font-heading text-3xl font-bold">{money(quote.cost)}</span>
+                  {quote.cost ? (
+                    <span className="font-heading text-3xl font-bold">{money(quote.cost)}</span>
+                  ) : (
+                    <span className="text-right text-sm text-muted-foreground">Prix PayByPhone du tarif résident</span>
+                  )}
                 </li>
               </ul>
             ) : (
@@ -383,7 +403,7 @@ function RiverainDialog({
           </div>
 
           <button onClick={activate} disabled={!rate || !quote || saving} className={ui.primary}>
-            {saving ? <Loader2 className="size-5 animate-spin" /> : <>Activer {quote ? `· ${money(quote.cost)} par semaine` : ''}</>}
+            {saving ? <Loader2 className="size-5 animate-spin" /> : <>Activer {quote?.cost ? `· ${money(quote.cost)} par semaine` : ''}</>}
           </button>
           <p className="-mt-3 text-center text-sm text-ink/50">
             {hosted

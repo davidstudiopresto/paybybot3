@@ -1132,8 +1132,6 @@ def login(body: Login, request: Request, response: Response):
             log.warning("could not save the account e-mail: %s", e)
     set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
-    if not demo:
-        log_profile_queries(session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -1317,17 +1315,6 @@ def token_claims(session):
         return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
     except Exception:
         return {}
-
-
-def log_profile_queries(session):
-    """Temporary: which PayByPhone queries could give the account holder's name (query names only)."""
-    try:
-        schema = session.bot._graphql("query { __schema { queryType { fields { name } } } }")
-        names = [f["name"] for f in schema["__schema"]["queryType"]["fields"]]
-        log.info("PayByPhone profile-like queries: %s",
-                 [n for n in names if re.search(r"member|profile|user|account|customer|person|me$", n, re.I)])
-    except Exception as e:
-        log.info("PayByPhone schema not readable: %s", str(e)[:150])
 
 
 def first_name(session):

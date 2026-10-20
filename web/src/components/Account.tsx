@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { ZoneField } from '@/components/Riverain'
 import { arrondissement, PayByPhone, Plate, ZonePlate } from '@/components/signs'
-import { api, forgetZoneLookup, mainPlateOf, type Account, type Overview } from '@/lib/api'
+import { api, forgetZoneLookup, type Account, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -12,12 +12,10 @@ import { ui } from '@/lib/styles'
 export function AccountButton({
   data,
   onDeleted,
-  onMainPlate,
   demo = false,
 }: {
   data: Overview | null
   onDeleted: () => void
-  onMainPlate?: (plate: string) => void
   demo?: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -26,9 +24,7 @@ export function AccountButton({
       <button onClick={() => setOpen(true)} disabled={!data} className={cn(ui.pillGray, 'gap-2')}>
         <UserRound className="size-4" /> Mon compte
       </button>
-      {open && data && (
-        <AccountDialog data={data} onClose={() => setOpen(false)} onDeleted={onDeleted} onMainPlate={onMainPlate} demo={demo} />
-      )}
+      {open && data && <AccountDialog data={data} onClose={() => setOpen(false)} onDeleted={onDeleted} demo={demo} />}
     </>
   )
 }
@@ -37,13 +33,11 @@ function AccountDialog({
   data,
   onClose,
   onDeleted,
-  onMainPlate,
   demo,
 }: {
   data: Overview
   onClose: () => void
   onDeleted: () => void
-  onMainPlate?: (plate: string) => void
   demo: boolean
 }) {
   const [zone, setZone] = useState<string | null | undefined>(undefined)
@@ -51,18 +45,6 @@ function AccountDialog({
   const [editingZone, setEditingZone] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [account, setAccount] = useState<Account | null | undefined>(undefined)
-  const main = mainPlateOf(account, data.vehicles)
-
-  async function chooseMain(plate: string) {
-    setAccount((a) => (a ? { ...a, mainPlate: plate } : a))
-    onMainPlate?.(plate)
-    try {
-      await api.updateAccount({ mainPlate: plate })
-      toast.success('Véhicule principal enregistré.')
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
-  }
 
   async function openPortal() {
     try {
@@ -119,29 +101,9 @@ function AccountDialog({
         <dl className="mx-6 mt-5 divide-y divide-ink/10 border-y border-ink/10">
           <div className={row}>
             <dt className={label}>{data.vehicles.length > 1 ? 'Véhicules' : 'Véhicule'}</dt>
-            <dd className="flex flex-col items-end gap-2">
-              {data.vehicles.length > 1 ? (
-                <>
-                  <span role="radiogroup" aria-label="Véhicule principal" className="flex flex-wrap justify-end gap-2">
-                    {data.vehicles.map((v) => (
-                      <button
-                        key={v.plate}
-                        role="radio"
-                        aria-checked={v.plate === main}
-                        onClick={() => chooseMain(v.plate)}
-                        className={cn(
-                          'rounded-xl border-2 p-1.5 transition',
-                          v.plate === main ? 'border-eu bg-eu/[0.05]' : 'border-transparent hover:border-ink/15',
-                        )}
-                      >
-                        <Plate plate={v.plate} size="sm" />
-                      </button>
-                    ))}
-                  </span>
-                  <span className="text-sm text-ink/55">Touchez une plaque pour en faire votre véhicule principal.</span>
-                </>
-              ) : data.vehicles.length ? (
-                <Plate plate={data.vehicles[0].plate} size="sm" />
+            <dd className="flex flex-wrap justify-end gap-2">
+              {data.vehicles.length ? (
+                data.vehicles.map((v) => <Plate key={v.plate} plate={v.plate} size="sm" />)
               ) : (
                 <span className="text-ink/60">Aucun véhicule</span>
               )}

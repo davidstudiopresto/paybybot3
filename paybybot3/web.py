@@ -846,7 +846,7 @@ def with_details(row):
     return {**row, **json.loads(_fernet("renewal").decrypt(row["data"].encode()))}
 
 
-ACCOUNT_FIELDS = ("email", "zone", "main_plate", "trial_start", "plan", "stripe_customer", "stripe_subscription")
+ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -1095,7 +1095,6 @@ class Login(BaseModel):
 class AccountPatch(BaseModel):
     email: str | None = Field(default=None, max_length=254, pattern=EMAIL_PATTERN)
     zone: str | None = Field(default=None, pattern=r"^$|^\w{3,10}$")
-    mainPlate: str | None = Field(default=None, pattern=r"^[A-Za-z0-9-]{0,20}$")  # the user's main vehicle
 
 
 class Parking(BaseModel):
@@ -1682,7 +1681,6 @@ def get_account(pbb_session: str = Cookie(None)):
     start = parse_dt(account.get("trial_start"))
     state = billing_state(account, owner_id(s.username)) if HOSTED and not s.demo else "ok"
     return {"email": account.get("email") or "", "zone": account.get("zone") or None,
-            "mainPlate": account.get("main_plate") or None,
             "trialEnd": (start + timedelta(days=TRIAL_DAYS)).isoformat() if start else None,
             "plan": subscription_plan(account),
             # Renewals stop while blocked: 'unpaid' (Stripe could not charge) or 'trialOver' (no subscription).
@@ -1947,11 +1945,9 @@ def billing_portal(pbb_session: str = Cookie(None)):
 @app.put("/api/account")
 def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
-    names = {"mainPlate": "main_plate"}
-    patch = {names.get(k, k): v.strip() for k, v in body.model_dump().items() if v is not None}
+    patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None}
     account = guarded(lambda: save_account(s, patch))
-    return {"email": account.get("email") or "", "zone": account.get("zone") or None,
-            "mainPlate": account.get("main_plate") or None}
+    return {"email": account.get("email") or "", "zone": account.get("zone") or None}
 
 
 def is_admin(s):

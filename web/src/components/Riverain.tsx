@@ -7,7 +7,7 @@ import { arrondissement, Plate, withPayByPhone, ZonePlate } from '@/components/s
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, clock, mainPlateOf, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, clock, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
 const WEEK_DAYS = 7
@@ -213,14 +213,6 @@ function RiverainDialog({
     const covered = new Set(data.autopilots.filter(isWeekly).map((a) => a.plate))
     const plates = data.vehicles.map((v) => v.plate)
     setPlate(plates.find((p) => p === last.plate && !covered.has(p)) ?? plates.find((p) => !covered.has(p)) ?? plates[0] ?? '')
-    // The main vehicle (chosen in « Mon compte » or at sign-up) comes first when it is not renewed already.
-    api.account().then(
-      (a) => {
-        const main = mainPlateOf(a, data.vehicles)
-        if (main && !covered.has(main)) setPlate(main)
-      },
-      () => {},
-    )
     // The home zone: the one where PayByPhone offers this account the resident rate. The last one-off
     // payment's zone is not used, it is rarely the home one.
     setZone('')

@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
 import { ManageRenewal, RenewalNote, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
-import { api, mainPlateOf, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
+import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -105,7 +105,6 @@ export function Dashboard({
     confirm.then(() => api.account().then(setAccount, () => {}))
   }, [])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
-  const main = data ? mainPlateOf(account, data.vehicles) : null
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
 
   // Fresh data when coming back to the tab (it also refreshes every minute).
@@ -124,27 +123,14 @@ export function Dashboard({
             Démo
           </span>
         )}
-        <AccountButton
-          data={data}
-          onDeleted={onDeleted ?? onLogout}
-          onMainPlate={(plate) => setAccount((a) => (a ? { ...a, mainPlate: plate } : a))}
-          demo={me.demo}
-        />
+        <AccountButton data={data} onDeleted={onDeleted ?? onLogout} demo={me.demo} />
         <button onClick={onLogout} aria-label="Déconnexion" title="Déconnexion" className={cn(ui.pillGray, 'gap-2')}>
           <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>
         </button>
       </TopBar>
 
       <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-12 pb-16">
-        <div className="rise flex items-start justify-between gap-4">
-          <p className="text-lg text-ink/60">{me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}</p>
-          {main && (
-            <span className="flex flex-col items-end gap-1" title="Votre véhicule principal">
-              <Plate plate={main} />
-              <span className="text-xs text-ink/45">Véhicule principal</span>
-            </span>
-          )}
-        </div>
+        <p className="rise text-lg text-ink/60">{me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}</p>
         <h1 className="rise mt-1 font-heading text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.035em]">
           {!data ? '…' : sessions.length ? 'Vous êtes en règle.' : 'Aucun ticket en cours.'}
         </h1>

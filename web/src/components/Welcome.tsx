@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ArrowRight, Car, Check, CreditCard, Loader2, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
+import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
 import { arrondissement, PayByPhone, Plate, Wordmark, ZonePlate } from '@/components/signs'
-import { api, mainPlateOf, until, type Me, type Overview } from '@/lib/api'
+import { api, until, type Me, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -49,15 +49,6 @@ function Row({
 export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onContinue: () => void }) {
   const [zone, setZone] = useState<string | null | undefined>(undefined)
   const [manual, setManual] = useState(false)
-  const [main, setMain] = useState<string | null>(() => mainPlateOf(null, data.vehicles))
-  const [saving, setSaving] = useState(false)
-
-  // The main vehicle is kept on the account: shown on the dashboard, preselected for the renewal.
-  async function confirm() {
-    setSaving(true)
-    if (main) await api.updateAccount({ mainPlate: main }).catch(() => {})
-    onContinue()
-  }
   useEffect(() => {
     api.residentZone().then(
       (r) => {
@@ -100,29 +91,11 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               delay={next()}
               found={data.vehicles.length > 0}
             >
-              {data.vehicles.length > 1 ? (
-                <>
-                  <span className="block text-sm font-semibold text-ink">Choisissez votre véhicule principal :</span>
-                  <span role="radiogroup" aria-label="Véhicule principal" className="mt-2 flex flex-wrap gap-2">
-                    {data.vehicles.map((v) => (
-                      <button
-                        key={v.plate}
-                        role="radio"
-                        aria-checked={v.plate === main}
-                        onClick={() => setMain(v.plate)}
-                        className={cn(
-                          'rounded-xl border-2 p-1.5 transition',
-                          v.plate === main ? 'border-eu bg-eu/[0.05]' : 'border-ink/10 hover:border-ink/25',
-                        )}
-                      >
-                        <Plate plate={v.plate} size="sm" />
-                      </button>
-                    ))}
-                  </span>
-                </>
-              ) : data.vehicles.length ? (
+              {data.vehicles.length ? (
                 <span className="flex flex-wrap gap-2 pt-0.5">
-                  <Plate plate={data.vehicles[0].plate} size="sm" />
+                  {data.vehicles.map((v) => (
+                    <Plate key={v.plate} plate={v.plate} size="sm" />
+                  ))}
                 </span>
               ) : (
                 <span className="text-ink/60">Aucun véhicule : ajoutez-le dans l’application PayByPhone.</span>
@@ -174,13 +147,8 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             ou une carte à changer ? Faites-le dans l’application <PayByPhone /> : PaybyBot suit automatiquement.
           </p>
 
-          <button
-            onClick={confirm}
-            disabled={saving}
-            className={cn('rise mt-8', ui.primary)}
-            style={{ animationDelay: `${next()}ms` }}
-          >
-            {saving ? <Loader2 className="size-5 animate-spin" /> : <>C’est bien moi, continuer <ArrowRight className="size-5" /></>}
+          <button onClick={onContinue} className={cn('rise mt-8', ui.primary)} style={{ animationDelay: `${next()}ms` }}>
+            C’est bien moi, continuer <ArrowRight className="size-5" />
           </button>
         </div>
       </div>

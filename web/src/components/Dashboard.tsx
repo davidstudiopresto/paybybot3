@@ -115,7 +115,7 @@ export function Dashboard({
             Démo
           </span>
         )}
-        <AccountButton data={data} onDeleted={onDeleted ?? onLogout} />
+        <AccountButton data={data} onDeleted={onDeleted ?? onLogout} demo={me.demo} />
         <button onClick={onLogout} aria-label="Déconnexion" title="Déconnexion" className={cn(ui.pillGray, 'gap-2')}>
           <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>
         </button>

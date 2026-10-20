@@ -9,27 +9,51 @@ import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
 /** "Mon compte" in the top bar: what PaybyBot reads from the PayByPhone account, the home zone and e-mail. */
-export function AccountButton({ data, onDeleted }: { data: Overview | null; onDeleted: () => void }) {
+export function AccountButton({
+  data,
+  onDeleted,
+  demo = false,
+}: {
+  data: Overview | null
+  onDeleted: () => void
+  demo?: boolean
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <button onClick={() => setOpen(true)} disabled={!data} className={cn(ui.pillGray, 'gap-2')}>
         <UserRound className="size-4" /> Mon compte
       </button>
-      {open && data && <AccountDialog data={data} onClose={() => setOpen(false)} onDeleted={onDeleted} />}
+      {open && data && <AccountDialog data={data} onClose={() => setOpen(false)} onDeleted={onDeleted} demo={demo} />}
     </>
   )
 }
 
-function AccountDialog({ data, onClose, onDeleted }: { data: Overview; onClose: () => void; onDeleted: () => void }) {
+function AccountDialog({
+  data,
+  onClose,
+  onDeleted,
+  demo,
+}: {
+  data: Overview
+  onClose: () => void
+  onDeleted: () => void
+  demo: boolean
+}) {
   const [zone, setZone] = useState<string | null | undefined>(undefined)
   const [email, setEmail] = useState<string | undefined>(undefined)
   const [editingZone, setEditingZone] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    api.residentZone().then((r) => setZone(r.zone), () => setZone(null))
-    api.account().then((a) => setEmail(a.email), () => setEmail(''))
+    api.residentZone().then(
+      (r) => setZone(r.zone),
+      () => setZone(null),
+    )
+    api.account().then(
+      (a) => setEmail(a.email),
+      () => setEmail(''),
+    )
   }, [])
 
   async function saveZone(z: string) {
@@ -55,7 +79,9 @@ function AccountDialog({ data, onClose, onDeleted }: { data: Overview; onClose: 
       <DialogContent className={ui.dialog}>
         <div className="px-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Mon compte</DialogTitle>
-          <DialogDescription className="mt-1 text-ink/60">Ce que PaybyBot lit dans votre compte PayByPhone.</DialogDescription>
+          <DialogDescription className="mt-1 text-ink/60">
+            Ce que PaybyBot lit dans votre compte PayByPhone.
+          </DialogDescription>
         </div>
 
         <dl className="mx-6 mt-5 divide-y divide-ink/10 border-y border-ink/10">
@@ -117,7 +143,8 @@ function AccountDialog({ data, onClose, onDeleted }: { data: Overview; onClose: 
                   </span>
                   {others.length > 0 && (
                     <span className="mt-1 block text-xs text-ink/45">
-                      + {others.length} autre{others.length > 1 ? 's' : ''} moyen{others.length > 1 ? 's' : ''} de paiement
+                      + {others.length} autre{others.length > 1 ? 's' : ''} moyen{others.length > 1 ? 's' : ''} de
+                      paiement
                     </span>
                   )}
                 </>
@@ -132,13 +159,15 @@ function AccountDialog({ data, onClose, onDeleted }: { data: Overview; onClose: 
           Véhicules et carte viennent de PayByPhone : modifiez-les dans son application.
         </p>
 
-        <div className="px-6 pt-6 pb-7">
-          <button
-            onClick={() => setDeleting(true)}
-            className="inline-flex h-10 items-center rounded-full border border-destructive/30 px-4 text-sm font-semibold text-destructive transition hover:bg-destructive/5"
-          >
-            Supprimer mon compte
-          </button>
+        <div className={cn('px-6 pb-7', demo ? 'pt-2' : 'pt-6')}>
+          {!demo && (
+            <button
+              onClick={() => setDeleting(true)}
+              className="inline-flex h-10 items-center rounded-full border border-destructive/30 px-4 text-sm font-semibold text-destructive transition hover:bg-destructive/5"
+            >
+              Supprimer mon compte
+            </button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -153,7 +182,9 @@ function DeleteConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDelete
     setBusy(true)
     try {
       await api.deleteData()
-      toast.success('Votre compte PaybyBot est supprimé.', { description: 'Une confirmation vous est envoyée par e-mail.' })
+      toast.success('Votre compte PaybyBot est supprimé.', {
+        description: 'Une confirmation vous est envoyée par e-mail.',
+      })
       onDeleted() // straight back to the home page, without reloading
     } catch (e) {
       toast.error((e as Error).message)

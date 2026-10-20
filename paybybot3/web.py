@@ -508,20 +508,28 @@ def pay_and_confirm(session, location, rate, duration, unit, plate, paymentAccou
     except Exception as e:
         log.warning("pay: PayByPhone refused: %s", str(e)[:1000])
         raise
-    log.info("pay: PayByPhone answered quoteId=%s parkingSessionId=%s jobId=%s jobStatus=%s cost=%s",
+    log.info("pay: PayByPhone answered quoteId=%s parkingSessionId=%s jobId=%s jobStatus=%s cost=%s stages=%s",
              result.get("quoteId"), result.get("parkingSessionId"), result.get("jobId"), result.get("jobStatus"),
-             result.get("cost"))
+             result.get("cost"), result.get("jobStages"))
     session.attempts.append({"at": datetime.now(timezone.utc).isoformat(), "location": location, "plate": plate,
                              **{k: result.get(k) for k in ("quoteId", "parkingSessionId", "jobId", "jobStatus")}})
+    def visible():
+        """The new ticket: by its session id, else this car in this zone (plates compared as written alike)."""
+        sessions = session.call("get_parking_sessions") or []
+        mine = [x for x in sessions if result.get("parkingSessionId")
+                and x.get("parkingSessionId") == result.get("parkingSessionId")]
+        return mine or [x for x in sessions if same_plate((x.get("vehicle") or {}).get("licensePlate"), plate)
+                        and str(x.get("locationId")) == str(location)]
+
     for i in range(attempts):
-        found = session.call("get_parking_sessions", licensePlate=plate, locationId=location)
+        found = visible()
         if found:
             log.info("pay: confirmed after %s check(s)", i + 1)
             return result, found
         if not session.demo:
             time.sleep(delay)
-    log.warning("pay: no session visible for zone=%s after %ss (jobStatus=%s)", location, attempts * delay,
-                result.get("jobStatus"))
+    log.warning("pay: no session visible for zone=%s after %ss (jobStatus=%s stages=%s)", location, attempts * delay,
+                result.get("jobStatus"), result.get("jobStages"))
     session.unconfirmed[(plate, location)] = time.time()
     log_diagnosis(session)
     raise Unconfirmed(UNCONFIRMED)
@@ -1847,6 +1855,9 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
             log.warning("account e-mail unreadable: %s", e)
     days = sorted(set(body.days)) if body.days else None
     start = (body.start or schedule.DEFAULT_START) if days else None
+    # One renewal per vehicle: two would each pay for the same car.
+    if plate_key(body.plate) in guarded(lambda: renewed_plates(s)):
+        raise HTTPException(409, "Ce véhicule a déjà un renouvellement automatique.")
     if HOSTED and not s.demo:
         refresh = getattr(s.bot, "refresh_token", None)
         if not refresh:

@@ -558,4 +558,11 @@ class Bot:
             "expireTime": session.get("expireTime"),
             "jobId": jobId,
             "jobStatus": job.get("status") if job else None,
+            # Where a payment still in progress is stuck (statuses and codes only, no card data).
+            "jobStages": [
+                {"stage": cg.get("stage"), "status": cg.get("status"),
+                 "items": [li.get("status") for li in cg.get("lineItems") or []],
+                 "codes": [d.get("code") for d in (cg.get("executionDetails") or [])]}
+                for cg in (job or {}).get("captureGroups") or []
+            ],
         }

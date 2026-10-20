@@ -27,7 +27,31 @@
     <script type="application/ld+json">[{"@context": "https://schema.org", "@type": "Organization", "name": "PaybyBot", "url": "https://paybybot.fr/", "logo": "https://paybybot.fr/icon-512.png", "email": "contact@paybybot.fr", "parentOrganization": {"@type": "Organization", "name": "Studio Presto"}}, {"@context": "https://schema.org", "@type": "WebApplication", "name": "PaybyBot", "url": "https://paybybot.fr/", "applicationCategory": "UtilitiesApplication", "operatingSystem": "Web", "inLanguage": "fr", "description": "Renouvellement automatique du forfait résident PayByPhone à chaque échéance. Plus d'oubli, plus d'amende.", "offers": [{"@type": "Offer", "name": "Mensuel", "price": "9.50", "priceCurrency": "EUR", "category": "subscription"}, {"@type": "Offer", "name": "Annuel", "price": "91.20", "priceCurrency": "EUR", "category": "subscription"}]}, {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Quelles informations me demandez-vous ?", "acceptedAnswer": {"@type": "Answer", "text": "Rien de ce que PayByPhone sait déjà : votre numéro, vos véhicules et votre carte viennent de votre compte. On vous demande seulement votre e-mail, pour les confirmations, et votre adresse de résidence, pour trouver votre zone : l'adresse n'est pas conservée, seule la zone l'est."}}, {"@type": "Question", "name": "Pourquoi mes identifiants PayByPhone ?", "acceptedAnswer": {"@type": "Answer", "text": "Pour payer à votre place, PaybyBot passe par votre compte PayByPhone, comme l'application. Votre mot de passe n'est jamais enregistré : seule une clé de reconnexion est gardée, chiffrée, et effacée dès que vous arrêtez."}}, {"@type": "Question", "name": "Et si je pars en vacances ?", "acceptedAnswer": {"@type": "Answer", "text": "Mettez le renouvellement en pause entre deux dates : aucun forfait n'est payé, il reprend tout seul au retour."}}, {"@type": "Question", "name": "Comment arrêter ?", "acceptedAnswer": {"@type": "Answer", "text": "Depuis le tableau de bord, « Gérer » puis « Arrêter le renouvellement ». Le ticket en cours reste valable jusqu'à sa fin, et ce qui était gardé pour ce renouvellement est effacé."}}, {"@type": "Question", "name": "Et si un paiement échoue ?", "acceptedAnswer": {"@type": "Answer", "text": "Vous recevez un e-mail (si vous en avez donné un) et le tableau de bord vous le signale. Dans le doute, PaybyBot ne repaie jamais à l'aveugle : vous ne payez pas deux fois."}}, {"@type": "Question", "name": "Est-ce un service officiel de PayByPhone ?", "acceptedAnswer": {"@type": "Answer", "text": "Non. PaybyBot est un service indépendant, édité par Studio Presto, qui utilise votre compte PayByPhone."}}]}]</script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Shown until the app starts (React replaces it). If the app never starts, a way out appears after a few
+         seconds: CSS only, scripts other than ours are not allowed by the security policy. -->
+    <style>
+      .boot{min-height:100dvh;display:grid;place-items:center;background:#fff;font-family:system-ui,sans-serif;color:#111;text-align:center;padding:0 24px}
+      .boot b{font-size:22px;letter-spacing:-.02em}.boot b i{font-style:normal;color:#1d4ea3}
+      .boot-bar{display:block;width:144px;height:3px;margin:20px auto 0;border-radius:9px;overflow:hidden;background:#e6ecf6;position:relative}
+      .boot-bar:after{content:"";position:absolute;inset:0 auto 0 0;width:40%;background:#1d4ea3;border-radius:9px;animation:boot-slide 1.1s ease-in-out infinite}
+      .boot-late{opacity:0;visibility:hidden;margin-top:28px;animation:boot-show 0s 10s forwards}
+      .boot-late p{margin:0 0 16px;color:#555;font-size:17px}
+      .boot-late a{display:inline-block;padding:14px 28px;border-radius:12px;background:#1d4ea3;color:#fff;font-weight:700;text-decoration:none}
+      @keyframes boot-slide{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+      @keyframes boot-show{to{opacity:1;visibility:visible}}
+    </style>
+    <div id="root">
+      <div class="boot">
+        <div>
+          <b>Pay<i>by</i>Bot</b>
+          <span class="boot-bar"></span>
+          <div class="boot-late">
+            <p>Le chargement prend plus de temps que prévu.</p>
+            <a href="/">Réessayer</a>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

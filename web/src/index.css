@@ -165,3 +165,30 @@
 @media (prefers-reduced-motion: reduce) {
   .rise, .blink, .marquee { animation: none; }
 }
+
+/* Indeterminate progress line under the logo while loading. */
+.loading-bar {
+  position: relative;
+  display: block;
+  width: 9rem;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--eu) 12%, transparent);
+}
+.loading-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--eu);
+  animation: loading-slide 1.1s ease-in-out infinite;
+}
+@keyframes loading-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar::after { animation: none; width: 100%; opacity: 0.5; }
+}

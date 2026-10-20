@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Loading } from '@/components/Loading'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import { Dashboard } from '@/components/Dashboard'
@@ -10,7 +11,7 @@ import { AdminPage } from '@/components/Admin'
 import { PricingPage } from '@/components/Pricing'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { NotFoundPage } from '@/components/NotFound'
-import { Wordmark, PayByPhone } from '@/components/signs'
+import { PayByPhone } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
 type Route = 'faq' | 'tarifs' | 'connexion' | 'inscription' | 'demo' | 'admin' | null
@@ -24,6 +25,8 @@ function routeFromHash(hash: string): Route {
 
 export default function App() {
   const [me, setMe] = useState<Me | null | undefined>(undefined)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const shown = useRef(false) // the dashboard is on screen: errors are toasts, not the loading screen
   const [data, setData] = useState<Overview | null>(null)
   const [paying, setPaying] = useState(false)
   const [hosted, setHosted] = useState(false)
@@ -90,12 +93,22 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    shown.current = !!data
+  }, [data])
+
   const refresh = useCallback(async () => {
     try {
       setData(await api.overview())
+      setLoadError(null)
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setMe(null)
-      else toast.error((e as Error).message)
+      else {
+        // Nothing shown yet: the loading screen says it and offers to retry; otherwise a toast is enough.
+        const message = (e as Error).message || 'Impossible de charger votre compte.'
+        setLoadError(message)
+        if (shown.current) toast.error(message)
+      }
     }
   }, [])
 
@@ -122,11 +135,7 @@ export default function App() {
       ) : legal ? (
         legal === 'securite' ? <SecurityPage hosted={hosted} signedIn={!!me} /> : <LegalView page={legal} hosted={hosted} signedIn={!!me} />
       ) : me === undefined ? (
-        <div className="grid min-h-dvh place-items-center">
-          <span className="animate-pulse">
-            <Wordmark />
-          </span>
-        </div>
+        <Loading />
       ) : route === 'admin' ? (
         <AdminPage signedIn={!!me} />
       ) : route === 'tarifs' ? (
@@ -154,15 +163,16 @@ export default function App() {
         ) : (
           <Landing hosted={hosted} />
         )
-      ) : onboarding && (!data || !zoneReady) ? (
-        <div className="grid min-h-dvh place-items-center bg-white px-6">
-          <div className="rise flex flex-col items-center gap-6 text-center">
-            <span className="animate-pulse">
-            <Wordmark />
-          </span>
-            <p className="max-w-64 text-lg text-ink/70">Récupération de vos paramètres <PayByPhone />…</p>
-          </div>
-        </div>
+      ) : (onboarding && (!data || !zoneReady)) || !data ? (
+        <Loading
+          label={onboarding ? <>Récupération de vos paramètres <PayByPhone />…</> : <>Chargement de votre compte <PayByPhone />…</>}
+          error={loadError}
+          onLogout={logout}
+          onRetry={() => {
+            setLoadError(null)
+            refresh()
+          }}
+        />
       ) : (
         <>
           <Dashboard

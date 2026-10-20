@@ -1,32 +1,17 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { withPayByPhone } from '@/components/signs'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 
-/** Countries where PayByPhone is used, with their calling code and flag stripes. */
+/** PaybyBot is for Paris residents: French numbers only (calling code and flag stripes). */
 const COUNTRIES = [
   { id: 'FR', name: 'France', code: '33', placeholder: '6 12 34 56 78', flag: ['v', '#0055a4', '#ffffff', '#ef4135'] },
-  { id: 'BE', name: 'Belgique', code: '32', placeholder: '470 12 34 56', flag: ['v', '#000000', '#fdda24', '#ef3340'] },
-  { id: 'CH', name: 'Suisse', code: '41', placeholder: '78 123 45 67', flag: ['ch'] },
-  { id: 'LU', name: 'Luxembourg', code: '352', placeholder: '621 123 456', flag: ['h', '#ed2939', '#ffffff', '#00a1de'] },
-  { id: 'DE', name: 'Allemagne', code: '49', placeholder: '1512 3456789', flag: ['h', '#000000', '#dd0000', '#ffce00'] },
-  { id: 'IT', name: 'Italie', code: '39', placeholder: '312 345 6789', flag: ['v', '#009246', '#ffffff', '#ce2b37'] },
-  { id: 'NL', name: 'Pays-Bas', code: '31', placeholder: '6 12345678', flag: ['h', '#ae1c28', '#ffffff', '#21468b'] },
 ] as const
 
 function Flag({ flag }: { flag: readonly string[] }) {
-  if (flag[0] === 'ch') {
-    return (
-      <svg viewBox="0 0 30 20" className="h-4 w-6 rounded-[3px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)]" aria-hidden>
-        <rect width="30" height="20" fill="#da291c" />
-        <rect x="13" y="4" width="4" height="12" fill="#fff" />
-        <rect x="9" y="8" width="12" height="4" fill="#fff" />
-      </svg>
-    )
-  }
   const [dir, a, b, c] = flag
   return (
     <svg viewBox="0 0 30 20" className="h-4 w-6 rounded-[3px] shadow-[0_0_0_1px_rgb(0_0_0/0.08)]" aria-hidden>
@@ -59,7 +44,7 @@ const fieldBox =
 
 export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: Me) => void; hosted: boolean; signup?: boolean }) {
   const mode = 'phone' as 'phone' | 'email' // login by phone number only
-  const [country, setCountry] = useState<(typeof COUNTRIES)[number]['id']>('FR')
+  const country = 'FR'
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -160,23 +145,10 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
           <div className="mt-9 space-y-3">
             {mode === 'phone' ? (
               <div className={fieldBox}>
-                <label className="relative flex h-full shrink-0 items-center gap-1.5 border-r border-ink/10 pr-3 pl-4">
-                  <span className="sr-only">Pays</span>
+                <span className="flex h-full shrink-0 items-center border-r border-ink/10 pr-3 pl-4" title="Numéro français">
+                  <span className="sr-only">France</span>
                   <Flag flag={selected.flag} />
-                  <ChevronDown className="size-4 text-ink/40" />
-                  <select
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value as typeof country)}
-                    className="absolute inset-0 cursor-pointer opacity-0"
-                    aria-label="Pays du numéro"
-                  >
-                    {COUNTRIES.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} (+{c.code})
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                </span>
                 <span className="pl-3 text-lg text-ink/45 tabular-nums">+{selected.code}</span>
                 <input
                   id="username"

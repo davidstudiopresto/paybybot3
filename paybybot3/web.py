@@ -1314,7 +1314,10 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
             except Exception as e:
                 log.warning("could not refresh stored renewals: %s", e)
     else:
-        token = seal(session)
+        try:
+            token = seal(session)
+        except Exception:  # nothing to seal it with: a plain token, lost on restart
+            token = secrets.token_urlsafe(32)
         SESSIONS[token] = session
         PENDING.pop(pbb_pending or "", None)
     set_session_cookie(response, token, True)

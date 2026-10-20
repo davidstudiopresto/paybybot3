@@ -141,7 +141,7 @@ export const api = {
   lastRate: (location: string, plate: string) =>
     request<{ rate: string | null; inZone: boolean }>(`/api/last-rate?${new URLSearchParams({ location, plate })}`),
   quote: (p: Parking & { sessionId?: string; renewal?: boolean }) =>
-    post<{ cost: Money; start: string; expire: string; afterCurrent?: boolean; currentExpire?: string | null }>('/api/quote', p),
+    post<{ cost: Money; start: string; expire: string; afterCurrent?: boolean; currentExpire?: string | null; priceSource?: 'history' | 'paris' | null }>('/api/quote', p),
   extend: (p: Parking & { sessionId: string }) => post<{ ok: true; expire: string; cost: Money }>('/api/extend', p),
   pay: (p: Parking) => post<{ ok: true; expire: string; cost: Money }>('/api/pay', p),
   addAutopilot: (p: Parking & { label: string; email?: string }) => post<Autopilot>('/api/autopilots', p),

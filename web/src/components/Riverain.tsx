@@ -199,7 +199,7 @@ function RiverainDialog({
   const [zoneFromHistory, setZoneFromHistory] = useState(false)
   const [payment, setPayment] = useState('')
   const [rate, setRate] = useState<Rate | null>(null)
-  const [quote, setQuote] = useState<{ cost: Money | null; afterCurrent?: boolean; currentExpire?: string | null } | null>(null)
+  const [quote, setQuote] = useState<{ cost: Money | null; afterCurrent?: boolean; currentExpire?: string | null; priceSource?: 'history' | 'paris' | null } | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -384,7 +384,14 @@ function RiverainDialog({
                     : 'Première semaine payée tout de suite'}
                 </li>
                 <li className="flex items-baseline justify-between pt-2">
-                  <span className="text-muted-foreground">Chaque semaine</span>
+                  <span className="text-muted-foreground">
+                    Chaque semaine
+                    {quote.cost && quote.priceSource && (
+                      <span className="block text-xs">
+                        {quote.priceSource === 'history' ? 'Prix de votre dernière semaine' : 'Tarif résident parisien'}
+                      </span>
+                    )}
+                  </span>
                   {quote.cost ? (
                     <span className="font-heading text-3xl font-bold">{money(quote.cost)}</span>
                   ) : (

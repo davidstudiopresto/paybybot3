@@ -1484,11 +1484,44 @@ def quote(body: QuoteRequest, pbb_session: str = Cookie(None)):
         for x in running:
             try:
                 return {**ask("Extend", x.get("parkingSessionId")), "afterCurrent": True, "currentExpire": until}
-            except Exception as e:
+            except Exception as e:  # e.g. a visitor ticket cannot be extended at the resident rate
                 log.info("renewal price as an extension refused: %s", str(e)[:200])
-        return {"cost": None, "start": None, "expire": None, "afterCurrent": True, "currentExpire": until}
+        cost, source = known_price(s, body)
+        return {"cost": cost, "priceSource": source, "start": None, "expire": None, "afterCurrent": True,
+                "currentExpire": until}
 
     return guarded(run)
+
+
+# Paris resident rate (tarif résidentiel), used only when PayByPhone cannot quote the week right now.
+PARIS_RESIDENT_WEEK = {"amount": 9.0, "currency": "EUR"}
+
+
+def known_price(s, body):
+    """Price of the stay when PayByPhone refuses to quote it (a ticket is running): what this car paid for the
+    same stay at the same rate, from PayByPhone's history, else the Paris resident rate. (cost, source)."""
+    span = WEEK if body.unit == "Days" and float(body.duration) == 7 else None
+    try:
+        history = s.call("get_past_sessions", limit=30) + s.call("get_parking_sessions")
+    except Exception as e:
+        log.info("history unavailable for the price: %s", str(e)[:200])
+        history = []
+    for x in history:
+        start, end = parse_dt(x.get("startTime")), parse_dt(x.get("expireTime"))
+        if (span and start and end and abs((end - start) - span) < timedelta(hours=2)
+                and same_plate((x.get("vehicle") or {}).get("licensePlate"), body.plate)
+                and str((x.get("ratePolicy") or {}).get("ratePolicyId")) == str(body.rate)
+                and (x.get("totalCost") or {}).get("amount")):
+            return x["totalCost"], "history"
+    if span and re.fullmatch(r"75\d{3}", body.location.strip()):
+        rates = s.call("get_rate_options", body.location.strip(), body.plate) or []
+        if any(str(r.get("ratePolicyId")) == str(body.rate) and RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type")))
+               for r in rates):
+            return PARIS_RESIDENT_WEEK, "paris"
+    return None, None
+
+
+WEEK = timedelta(days=7)
 
 
 def fmt_qty(value):

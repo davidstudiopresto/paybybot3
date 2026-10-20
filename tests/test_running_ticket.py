@@ -59,6 +59,25 @@ class RunningTicket(unittest.TestCase):
         self.assertIsNone(patch_["last_error"])
         mail.assert_not_called()
 
+    def test_week_price_from_history_then_paris_rate(self):
+        now = datetime.now(timezone.utc)
+        week = {"vehicle": {"licensePlate": "FT-630-FH"}, "ratePolicy": {"ratePolicyId": "101"},
+                "startTime": now - timedelta(days=20), "expireTime": now - timedelta(days=13),
+                "totalCost": {"amount": 9.5, "currency": "EUR"}}
+        resident = [{"ratePolicyId": "101", "name": "Résident", "type": "Resident"}]
+        body = web.QuoteRequest(location="75005", rate="101", duration=7, unit="Days", plate="FT630FH",
+                                paymentAccountId="c", renewal=True)
+
+        def session(history):
+            s = MagicMock()
+            s.call.side_effect = lambda name, *a, **k: {"get_past_sessions": history, "get_parking_sessions": [],
+                                                        "get_rate_options": resident}[name]
+            return s
+
+        self.assertEqual(web.known_price(session([week]), body), ({"amount": 9.5, "currency": "EUR"}, "history"))
+        self.assertEqual(web.known_price(session([]), body), (web.PARIS_RESIDENT_WEEK, "paris"))
+        self.assertEqual(web.known_price(session([]), body.model_copy(update={"location": "69001"})), (None, None))
+
 
 if __name__ == "__main__":
     unittest.main()

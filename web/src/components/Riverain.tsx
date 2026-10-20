@@ -493,7 +493,7 @@ export function ZoneField({
                 }}
                 className="flex w-full items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 text-left last:border-b-0 hover:bg-muted"
               >
-                <span className="truncate">{r.label}</span>
+                <span className="min-w-0 truncate">{r.label}</span>
                 <span className="shrink-0 text-sm font-bold text-ink/50">{r.postcode}</span>
               </button>
             </li>

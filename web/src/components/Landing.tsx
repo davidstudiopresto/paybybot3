@@ -194,12 +194,13 @@ export function Landing({ hosted }: { hosted: boolean }) {
         <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="@container max-w-[40rem] lg:max-w-none">
             {/* Sized to its column (cqw), so « forfait de stationnement. » keeps to one line. */}
-            <h1 className={cn(ui.title, 'lg:text-[clamp(2.75rem,min(9.1cqw,7.5vh),4.75rem)] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
-              Renouvellement automatique de votre{' '}
-              <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] box-decoration-clone bg-clip-text text-transparent">
-                forfait de stationnement
+            {/* Like a launch page: the problem in black, then « on s'en occupe » in the logo's blue, a size smaller. */}
+            <h1 className={cn(ui.title, 'font-medium lg:text-[clamp(2.75rem,min(9.1cqw,7.5vh),4.75rem)] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
+              <span className="lg:block">Oubliez le renouvellement</span>{' '}
+              <span className="lg:block">de votre forfait</span>
+              <span className="mt-[0.33em] block w-fit bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] box-decoration-clone bg-clip-text text-[0.83em] leading-[1.17] text-transparent">
+                PaybyBot s'en <span className="lg:block">occupe pour vous</span>
               </span>
-              .
             </h1>
             <p className={cn(ui.subtitle, 'lg:mt-6 lg:max-w-[32rem] lg:text-[clamp(1rem,min(1.1vw,2vh),1.2rem)] lg:leading-[1.65]')}>
               Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.

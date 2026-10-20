@@ -87,14 +87,13 @@ export function Dashboard({
   me,
   data,
   onRefresh,
-  onPay,
   onLogout,
   onDeleted,
 }: {
   me: Me
   data: Overview | null
   onRefresh: () => Promise<void>
-  onPay: () => void
+  onPay?: () => void
   onLogout: () => void
   onDeleted?: () => void
 }) {
@@ -162,28 +161,10 @@ export function Dashboard({
           </div>
         )}
 
-        {renewing ? (
-          // The renewal is the point of the app: once it runs, a one-off payment is a quiet secondary action.
-          <div className="mt-6 flex flex-col items-start gap-3">
-            <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
-            <button onClick={onPay} className={ui.primaryGray}>
-              Payer un stationnement ponctuel
-            </button>
-          </div>
-        ) : (
-          // No renewal yet: setting it up is the main action, a one-off payment comes second.
-          <div className="mt-10 border-t border-border pt-8">
-            <RiverainCard
-              data={data}
-              onChanged={onRefresh}
-              hosted={!!me.hosted}
-              demo={me.demo}
-            />
-            <button onClick={onPay} disabled={!data} className={cn(ui.primaryGray, 'mt-3')}>
-              Payer un stationnement ponctuel
-            </button>
-          </div>
-        )}
+        {/* The renewal is the one action of the app: no one-off payment button. */}
+        <div className={renewing ? 'mt-6' : 'mt-10 border-t border-border pt-8'}>
+          <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
+        </div>
       </main>
 
       <HostedFooter className="px-6 pb-8" hosted={!!me.hosted} />

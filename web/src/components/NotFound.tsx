@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react'
+import { Component, useEffect, type ReactNode } from 'react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { Wordmark } from '@/components/signs'
@@ -20,6 +20,12 @@ function Page({ code, title, text, action }: { code: string; title: string; text
 
 /** Any path other than the home page (the app itself lives behind #/ routes). */
 export function NotFoundPage({ hosted }: { hosted: boolean }) {
+  // The top bar and footer link to #/ routes: follow them from the home page, not from the broken path.
+  useEffect(() => {
+    const go = () => window.location.replace('/' + window.location.hash)
+    window.addEventListener('hashchange', go)
+    return () => window.removeEventListener('hashchange', go)
+  }, [])
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <PublicTopBar />

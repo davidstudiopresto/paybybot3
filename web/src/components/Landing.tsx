@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pause, Play, Plus, Power, ShieldCheck } from 'lucide-react'
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
+import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pause, Play, Plus, Power, ShieldCheck, X } from 'lucide-react'
+import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -27,11 +29,16 @@ function DemoVideo() {
     if (v && !still) v.play().catch(() => setPlaying(false))
   }, [still])
 
-  function restart() {
-    const v = ref.current
-    if (!v) return
-    v.currentTime = 0
-    v.play().then(() => setPlaying(true), () => {})
+  const [full, setFull] = useState(false)
+
+  function openFull() {
+    ref.current?.pause() // one video at a time; the small one resumes on close
+    setFull(true)
+  }
+
+  function closeFull() {
+    setFull(false)
+    if (playing) ref.current?.play().catch(() => {})
   }
 
   function toggle() {
@@ -65,12 +72,41 @@ function DemoVideo() {
         {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
       </button>
       <button
-        onClick={restart}
+        onClick={openFull}
         className="absolute bottom-4 left-4 inline-flex h-11 items-center gap-2.5 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-5 text-[0.95rem] font-semibold text-white shadow-lg transition hover:brightness-110 sm:bottom-6 sm:left-6"
       >
         <Play className="size-4 fill-white" /> Découvrir PaybyBot · 23 s
       </button>
+      {full && <FullVideo src={src} onClose={closeFull} />}
     </div>
+  )
+}
+
+/** The same video, large, over a dimmed page; Échap or the cross closes it. */
+function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogPortal>
+        <DialogOverlay className="bg-[#0b1024]/70 supports-backdrop-filter:backdrop-blur-md" />
+        <DialogPrimitive.Popup className="fixed inset-0 z-50 grid place-items-center p-4 outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 sm:p-10">
+          <DialogTitle className="sr-only">Découvrir PaybyBot</DialogTitle>
+          <video
+            src={src + '.mp4'}
+            poster={src + '.jpg'}
+            autoPlay
+            controls
+            playsInline
+            className="max-h-[calc(100dvh-6rem)] w-full max-w-[min(100%,1530px)] rounded-[24px] bg-[#0b1024] shadow-2xl sm:w-[76vw]"
+          />
+          <DialogClose
+            aria-label="Fermer la vidéo"
+            className="fixed top-4 right-4 grid size-11 place-items-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur transition hover:bg-black/80 sm:top-6 sm:right-8"
+          >
+            <X className="size-5" />
+          </DialogClose>
+        </DialogPrimitive.Popup>
+      </DialogPortal>
+    </Dialog>
   )
 }
 

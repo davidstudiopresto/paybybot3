@@ -14,18 +14,25 @@ const TRUST = [
   [Power, 'Sans engagement'],
 ] as const
 
-/** The 15-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
+/** The 18-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
 function DemoVideo() {
   const ref = useRef<HTMLVideoElement>(null)
   const [mobile] = useState(() => window.matchMedia('(max-width: 639px)').matches)
   const [still] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [playing, setPlaying] = useState(!still)
-  const src = mobile ? '/video/paybybot-15s-mobile' : '/video/paybybot-15s'
+  const src = mobile ? '/video/paybybot-18s-mobile' : '/video/paybybot-18s'
 
   useEffect(() => {
     const v = ref.current
     if (v && !still) v.play().catch(() => setPlaying(false))
   }, [still])
+
+  function restart() {
+    const v = ref.current
+    if (!v) return
+    v.currentTime = 0
+    v.play().then(() => setPlaying(true), () => {})
+  }
 
   function toggle() {
     const v = ref.current
@@ -38,8 +45,7 @@ function DemoVideo() {
   }
 
   return (
-    <div className="relative mx-auto mt-14 max-w-5xl lg:mt-20">
-      <div className="absolute -inset-3 -z-10 rounded-[2rem] bg-eu/[0.06] sm:-inset-5" />
+    <div className="relative w-full">
       <video
         ref={ref}
         src={src + '.mp4'}
@@ -48,15 +54,21 @@ function DemoVideo() {
         loop
         playsInline
         preload="metadata"
-        aria-label="Vidéo de 15 secondes : activer le renouvellement automatique dans PaybyBot"
-        className="block aspect-[4/5] w-full rounded-2xl border border-ink/10 bg-[#0b1024] object-cover shadow-[0_30px_70px_-30px_rgb(30_42_94/0.45)] sm:aspect-video"
+        aria-label="Vidéo de 18 secondes : activer le renouvellement automatique dans PaybyBot"
+        className="block aspect-[4/5] w-full rounded-3xl bg-[#0b1024] object-cover shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)] sm:aspect-video"
       />
       <button
         onClick={toggle}
         aria-label={playing ? 'Mettre la vidéo en pause' : 'Lire la vidéo'}
-        className="absolute bottom-4 left-4 inline-flex h-9 items-center gap-2 rounded-full bg-white/90 px-3.5 text-sm font-semibold text-ink shadow backdrop-blur transition hover:bg-white"
+        className="absolute top-4 right-4 grid size-10 place-items-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur transition hover:bg-black/60"
       >
-        {playing ? <Pause className="size-4" /> : <Play className="size-4" />} {playing ? 'Pause' : 'Voir PaybyBot · 15 s'}
+        {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+      </button>
+      <button
+        onClick={restart}
+        className="absolute bottom-4 left-4 inline-flex h-10 items-center gap-2.5 rounded-full border border-white/20 bg-black/40 px-4 text-sm font-semibold text-white backdrop-blur transition hover:bg-black/60"
+      >
+        <Play className="size-4 fill-white" /> Découvrir PaybyBot · 18 s
       </button>
     </div>
   )
@@ -144,22 +156,22 @@ export function Landing({ hosted }: { hosted: boolean }) {
       <PublicTopBar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-[10vh] pb-24 sm:px-8 lg:pt-[14vh]">
-        <section className="rise">
-          <div className="mx-auto max-w-[46rem] text-center">
-            <h1 className={cn(ui.title, 'lg:text-[3.6rem] lg:leading-[1.04]')}>Renouvellement automatique de votre ticket de stationnement.</h1>
+        <section className="rise grid items-center gap-12 lg:grid-cols-[1fr_1.15fr] lg:gap-14">
+          <div className="max-w-[40rem]">
+            <h1 className={cn(ui.title, 'lg:text-[3.3rem] lg:leading-[1.05]')}>Renouvellement automatique de votre ticket de stationnement.</h1>
             <p className={cn(ui.subtitle, 'lg:mt-5 lg:text-xl')}>
               Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.
             </p>
-            <a href="#/inscription" className={cn('mx-auto mt-9 max-w-sm', ui.primary)}>
+            <a href="#/inscription" className={cn('mt-9 lg:max-w-sm', ui.primary)}>
               Essayer gratuitement <ArrowRight className="size-5" />
             </a>
-            <p className="mt-4 text-center text-sm text-ink/50">
+            <p className="mt-4 text-center text-sm text-ink/50 lg:max-w-sm">
               Déjà inscrit ?{' '}
               <a href="#/connexion" className={ui.link}>
                 Se connecter
               </a>
             </p>
-            <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-ink/55">
+            <ul className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink/55 lg:max-w-sm lg:justify-between lg:gap-x-0">
               {TRUST.map(([Icon, text]) => (
                 <li key={text} className="flex items-center gap-1.5">
                   <Icon className="size-4 text-eu" /> {text}

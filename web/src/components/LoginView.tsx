@@ -59,7 +59,7 @@ export function LoginView({
   signup?: boolean
   title?: ReactNode // instead of « Inscription » / « Connexion à PaybyBot » (the Tarifs page asks to sign up)
 }) {
-  const mode = 'phone' as 'phone' | 'email' // login by phone number only
+  const [mode, setMode] = useState<'phone' | 'email'>('phone') // PayByPhone identifier: phone number by default
   const country = 'FR'
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -187,6 +187,31 @@ export function LoginView({
           </p>
 
           <div className="mt-9 space-y-3">
+            <div role="radiogroup" aria-label="Identifiant PayByPhone" className="flex rounded-xl bg-ink/[0.05] p-1">
+              {(
+                [
+                  ['phone', 'Téléphone'],
+                  ['email', 'E-mail'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={mode === id}
+                  onClick={() => {
+                    setMode(id)
+                    setError(null)
+                  }}
+                  className={cn(
+                    'h-10 flex-1 rounded-lg text-[0.95rem] font-semibold transition',
+                    mode === id ? 'bg-white text-ink shadow-[0_1px_3px_rgb(11_16_36/0.12)]' : 'text-ink/55 hover:text-ink',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             {mode === 'phone' ? (
               <div className={fieldBox}>
                 <span className="flex h-full shrink-0 items-center border-r border-ink/10 pr-3 pl-4" title="Numéro français">
@@ -214,9 +239,14 @@ export function LoginView({
                   type="email"
                   inputMode="email"
                   autoComplete="username"
-                  placeholder="Adresse e-mail"
+                  placeholder="E-mail du compte PayByPhone"
+                  aria-label="E-mail du compte PayByPhone"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    // At sign-up, the same address is the contact e-mail unless another one is typed.
+                    if (signup && (!signupEmail || signupEmail === email)) setSignupEmail(e.target.value)
+                    setEmail(e.target.value)
+                  }}
                   required
                   className="h-full min-w-0 flex-1 bg-transparent px-4 text-lg text-ink outline-none placeholder:text-ink/30"
                 />

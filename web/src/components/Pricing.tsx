@@ -20,19 +20,18 @@ const PLANS: { id: Plan; name: string; popular?: boolean }[] = [
 ]
 
 const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
-const EXAMPLE_WEEK = 900 // a 9,00 € resident week, for the public explanation
 
 /** What a plan shows: the account's own price when known, else the rule with an example. */
 function planText(id: Plan, pricing?: Pricing | null) {
   const week = pricing?.weekly
   if (week) {
     return id === 'monthly'
-      ? { price: euros(2 * week), per: '/ mois', note: `2 × votre forfait résident de ${euros(week)}` }
+      ? { price: euros(2 * week), per: '/ mois', note: 'Sans engagement' }
       : { price: euros(Math.round(24 * week * 0.8)), per: '/ an', note: `Soit ${euros(Math.round(2 * week * 0.8))} par mois` }
   }
   return id === 'monthly'
-    ? { price: '2 ×', per: 'votre forfait / mois', note: `Votre forfait résident hebdomadaire, deux fois par mois. Ex. : ${euros(2 * EXAMPLE_WEEK)} pour un forfait à ${euros(EXAMPLE_WEEK)}.` }
-    : { price: '-20 %', per: 'à l’année', note: `Le mensuel sur 12 mois, avec 20 % de moins. Ex. : ${euros(Math.round(24 * EXAMPLE_WEEK * 0.8))} par an.` }
+    ? { price: 'Par mois', per: '', note: 'Prix selon votre véhicule et votre zone de résidence, affiché avant tout paiement. Sans engagement.' }
+    : { price: '-20 %', per: 'à l’année', note: 'Payé une fois par an, 20 % de moins que le mensuel.' }
 }
 
 /** The signed-in account's prices (null while loading). */
@@ -280,7 +279,7 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
                 {pricing && !pricing.weekly && !locked && (
                   <div className="rounded-2xl border border-ink/10 p-4">
                     <p className="mb-3 text-sm text-ink/60">
-                      Votre prix dépend de votre forfait résident : indiquez votre arrondissement.
+                      Votre prix dépend de votre zone de résidence : indiquez votre arrondissement.
                     </p>
                     <ZoneField zone="" fromHistory={false} onZone={saveZone} />
                   </div>

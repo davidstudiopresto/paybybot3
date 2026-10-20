@@ -427,10 +427,8 @@ export function NoResidentStatus({ zone, className }: { zone: string | null; cla
     <div role="status" className={cn('rounded-2xl border border-amber/60 bg-amber/10 p-4 text-left', className)}>
       <p className="font-semibold text-ink">Statut résident non activé sur {withPayByPhone('PayByPhone')}</p>
       <p className="mt-1 text-sm leading-relaxed text-ink/70">
-        {withPayByPhone('PayByPhone')} ne propose pas le tarif résident à vos véhicules
-        {where ? ` (${where})` : ''}. Activez votre statut résident (carte de stationnement résident) dans
-        l’application {withPayByPhone('PayByPhone')}, puis revenez : le renouvellement et l’abonnement seront
-        disponibles. Mauvais arrondissement ? Changez-le dans « Mon compte ».
+        Pas de tarif résident pour vos véhicules{where ? ` (${where})` : ''}. Activez-le dans l’application{' '}
+        {withPayByPhone('PayByPhone')}, puis revenez.
       </p>
     </div>
   )

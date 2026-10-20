@@ -484,14 +484,14 @@ function Terms() {
             carte bancaire.
           </li>
           <li>
-            <strong>Offres et prix :</strong> le prix dépend du forfait résident hebdomadaire (7 jours) que <PayByPhone />{' '}
-            applique dans votre zone de résidence. Mensuel : deux fois ce forfait, TTC, par mois. Annuel : douze mois
-            avec 20 % de remise, TTC, par an. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte
+            <strong>Offres et prix :</strong> Mensuel ou Annuel, TTC. Le prix dépend du type de véhicule et de la zone de
+            résidence ; l’offre annuelle coûte 20 % de moins que douze mois de l’offre mensuelle. Le prix exact est
+            affiché avant tout paiement. Le paiement se fait par carte
             bancaire, via notre prestataire de paiement Stripe ; PaybyBot ne voit ni ne conserve votre numéro de carte.
           </li>
           <li>
-            <strong>Changement de prix :</strong> si votre zone de résidence change (déménagement) ou si le tarif de votre
-            forfait résident évolue, le prix de votre abonnement suit cette règle à partir de la prochaine échéance, sans
+            <strong>Changement de prix :</strong> si votre zone de résidence ou votre véhicule change, ou si le tarif
+            résident de votre zone évolue, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
             effet sur la période déjà payée. Vous pouvez résilier à tout moment depuis « Mon compte ».
           </li>
           <li>

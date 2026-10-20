@@ -1987,7 +1987,7 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
         if guarded(lambda: resident_status(s))["resident"] is False:
             raise HTTPException(400, "Votre statut résident n'est pas activé sur PayByPhone : l'abonnement n'est pas "
                                      "disponible pour l'instant.")
-        raise HTTPException(400, "Choisissez d'abord votre arrondissement : le prix dépend de votre forfait résident.")
+        raise HTTPException(400, "Choisissez d'abord votre arrondissement : le prix dépend de votre zone de résidence.")
     account = guarded(lambda: load_account(s))
     url = checkout_url(owner_id(s.username), account, body.plan,
                        APP_URL.rstrip("/") + "/#/abonnement?session_id={CHECKOUT_SESSION_ID}")

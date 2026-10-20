@@ -123,7 +123,7 @@ export function Dashboard({
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       {/* No resident rate on PayByPhone: PaybyBot is not usable, the page stays blurred behind the notice. */}
-      {resident?.resident === false && !me.demo && <ResidentGate zone={resident.zone} onChecked={setResident} />}
+      {resident?.resident === false && !me.demo && <ResidentGate zone={resident.zone} vehicles={data?.vehicles.length} onChecked={setResident} />}
       <TrialBanner trialEnd={account?.trialEnd ?? null} plan={account?.plan ?? null} blocked={account?.blocked ?? null} />
       <TopBar>
         {me.demo && (

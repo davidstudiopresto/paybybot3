@@ -746,7 +746,15 @@ export type ResidentStatus = { zone: string | null; resident: boolean | null }
  * No resident rate on PayByPhone: PaybyBot cannot be used. Full screen over the blurred page, with a way to check
  * again once the rate is granted, to correct the arrondissement, or to leave.
  */
-export function ResidentGate({ zone, onChecked }: { zone: string | null; onChecked: (status: ResidentStatus) => void }) {
+export function ResidentGate({
+  zone,
+  vehicles,
+  onChecked,
+}: {
+  zone: string | null
+  vehicles?: number
+  onChecked: (status: ResidentStatus) => void
+}) {
   const [checking, setChecking] = useState(false)
 
   async function check() {
@@ -768,7 +776,7 @@ export function ResidentGate({ zone, onChecked }: { zone: string | null; onCheck
   }
 
   return (
-    <ResidentRequired zone={zone}>
+    <ResidentRequired zone={zone} vehicles={vehicles}>
       <button onClick={check} disabled={checking} className={cn('mt-7', ui.primary)}>
         {checking ? <Loader2 className="size-5 animate-spin" /> : 'J’ai le tarif résident, vérifier à nouveau'}
       </button>
@@ -782,7 +790,15 @@ export function ResidentGate({ zone, onChecked }: { zone: string | null; onCheck
 }
 
 /** Full screen over the blurred page: PaybyBot needs a vehicle with the resident rate; what to do, then the actions. */
-export function ResidentRequired({ zone = null, children }: { zone?: string | null; children: ReactNode }) {
+export function ResidentRequired({
+  zone = null,
+  vehicles = 2,
+  children,
+}: {
+  zone?: string | null
+  vehicles?: number // one: « votre véhicule », else the plural
+  children: ReactNode
+}) {
   const where = zone ? arrondissement(zone) ?? `la zone ${zone}` : null
   return (
     <div
@@ -797,9 +813,11 @@ export function ResidentRequired({ zone = null, children }: { zone?: string | nu
           Stationnement résident requis
         </h2>
         <p className="mt-3 leading-relaxed text-ink/70">
-          Pour accéder aux services PaybyBot, au moins un de vos véhicules doit bénéficier du tarif résident sur votre
-          compte {withPayByPhone('PayByPhone')}
-          {where ? ` (${where})` : ''}. Ce n’est le cas d’aucun d’entre eux pour le moment.
+          Pour accéder aux services PaybyBot,{' '}
+          {vehicles === 1 ? 'votre véhicule doit' : 'au moins un de vos véhicules doit'} bénéficier du tarif résident sur
+          votre compte {withPayByPhone('PayByPhone')}
+          {where ? ` (${where})` : ''}.{' '}
+          {vehicles === 1 ? 'Ce n’est pas le cas pour le moment.' : 'Ce n’est le cas d’aucun d’entre eux pour le moment.'}
         </p>
         <ol className="mt-5 space-y-2.5 text-[0.95rem] leading-relaxed text-ink/80">
           {[

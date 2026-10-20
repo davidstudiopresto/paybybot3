@@ -68,7 +68,7 @@ export function LoginView({
   const [error, setError] = useState<string | null>(null)
   const [accountExists, setAccountExists] = useState(false)
   const [noAccount, setNoAccount] = useState(false)
-  const [noResident, setNoResident] = useState(false) // sign-up refused: no vehicle with the resident rate
+  const [noResident, setNoResident] = useState<number | null>(null) // sign-up refused: how many vehicles the account has
   const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
   const human = useTurnstile()
@@ -122,7 +122,7 @@ export function LoginView({
       else onLogin(result)
     } catch (e) {
       if (e instanceof ApiError && e.status === 412) {
-        setNoResident(true)
+        setNoResident(typeof e.data.vehicles === 'number' ? e.data.vehicles : 2)
         return
       }
       setError((e as Error).message)
@@ -139,11 +139,11 @@ export function LoginView({
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
-      {noResident && (
-        <ResidentRequired>
+      {noResident !== null && (
+        <ResidentRequired vehicles={noResident}>
           <button
             onClick={() => {
-              setNoResident(false)
+              setNoResident(null)
               submit()
             }}
             className={cn('mt-7', ui.primary)}
@@ -151,7 +151,7 @@ export function LoginView({
             J’ai le tarif résident, réessayer
           </button>
           <p className="mt-5 text-center text-sm">
-            <a href="#/" onClick={() => setNoResident(false)} className={link}>
+            <a href="#/" onClick={() => setNoResident(null)} className={link}>
               Retour à l’accueil
             </a>
           </p>

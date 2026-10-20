@@ -1213,7 +1213,10 @@ def login(body: Login, request: Request, response: Response):
         zone = guarded(lambda: resident_home_zone(session))  # from PayByPhone only, never typed
         if not zone:
             log.info("sign-up refused: no resident vehicle for %s", masked)
-            raise HTTPException(412, "Aucun de vos véhicules ne bénéficie du tarif résident sur PayByPhone.")
+            count = len([v for v in guarded(lambda: session.call("get_vehicles")) or [] if not v.get("archived")])
+            raise HTTPException(412, {"message": ("Votre véhicule ne bénéficie" if count == 1 else
+                                                  "Aucun de vos véhicules ne bénéficie")
+                                                 + " du tarif résident sur PayByPhone.", "vehicles": count})
         return start_verification(response, session, body.email.strip(), zone)
     if HOSTED:
         token = seal(session)

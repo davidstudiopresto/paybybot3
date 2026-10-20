@@ -85,9 +85,11 @@ export type PricedVehicle = {
 
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  data: Record<string, unknown> // details sent with the error (e.g. how many vehicles)
+  constructor(status: number, message: string, data: Record<string, unknown> = {}) {
     super(message)
     this.status = status
+    this.data = data
   }
 }
 
@@ -104,7 +106,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, typeof body.detail === 'string' ? body.detail : 'Erreur inattendue.')
+    const detail = body.detail
+    if (detail && typeof detail === 'object' && typeof detail.message === 'string') throw new ApiError(res.status, detail.message, detail)
+    throw new ApiError(res.status, typeof detail === 'string' ? detail : 'Erreur inattendue.')
   }
   return res.json()
 }

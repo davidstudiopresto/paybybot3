@@ -718,6 +718,19 @@ def rule_text(rule):
     return "%s, ticket de %s pris à %s" % (when, duration_text(rule.get("duration"), rule.get("unit")), start)
 
 
+def same_plate(a, b):
+    return re.sub(r"[^0-9A-Z]", "", (a or "").upper()) == re.sub(r"[^0-9A-Z]", "", (b or "").upper())
+
+
+def running_for(session, plate):
+    """Tickets running now for this car, in any zone: PayByPhone refuses a second one at the same time
+    (VehicleAlreadyParked), so a renewal waits for the end of whichever is running."""
+    now = datetime.now(timezone.utc)
+    return [x for x in session.call("get_parking_sessions")
+            if same_plate((x.get("vehicle") or {}).get("licensePlate"), plate)
+            and (parse_dt(x.get("expireTime")) or now) > now]
+
+
 def covered_until(active):
     return max((x["expireTime"] for x in active), default=None)
 
@@ -734,7 +747,7 @@ def run_autopilot(session, ap, now=None):
     elif paused_now(ap.get("pausedFrom"), ap.get("pausedUntil")):
         ap["lastCheck"] = now.isoformat()
         return
-    active = session.call("get_parking_sessions", licensePlate=ap["plate"], locationId=ap["location"])
+    active = running_for(session, ap["plate"])
     ap["lastCheck"] = datetime.now(timezone.utc).isoformat()
     if rule and active:
         due, _ = schedule.decide(rule, now, ap.get("pausedFrom"), ap.get("pausedUntil"), ap.get("lastPayment"),
@@ -989,7 +1002,7 @@ def process_renewal(row, refresh_token=None):
     outcome = "error"
     result, expire = None, None
     try:
-        active = session.call("get_parking_sessions", licensePlate=row["plate"], locationId=row["location"])
+        active = running_for(session, row["plate"])
         if active:
             expire = covered_until(active)
             next_check = expire + timedelta(seconds=30)
@@ -1010,7 +1023,11 @@ def process_renewal(row, refresh_token=None):
         patch.update(enabled=False, last_error=UNCONFIRMED + " Renouvellement suspendu.")
         outcome = "unconfirmed"
     except Exception as e:
-        patch.update(last_error=friendly_error(e), next_check=utc_iso(now + timedelta(minutes=30)))
+        if "VehicleAlreadyParked" in str(e):  # a ticket PayByPhone knows of but did not list: wait, not an error
+            patch.update(last_error=None, next_check=utc_iso(now + timedelta(minutes=30)))
+            outcome = "active"
+        else:
+            patch.update(last_error=friendly_error(e), next_check=utc_iso(now + timedelta(minutes=30)))
     log.info("renewal %s zone=%s plate=%s: %s", row["id"], row["location"], row["plate"][:2] + "***", outcome)
     store("renewal_update", p_id=row["id"], p_patch=patch)
     if outcome == "paid":
@@ -1410,20 +1427,40 @@ def last_rate(location: str, plate: str, pbb_session: str = Cookie(None)):
 
 class QuoteRequest(Parking):
     sessionId: str = Field(default="", max_length=80)  # set to price an extension of this session
+    renewal: bool = False  # pricing a renewal: a ticket already running must not block it
 
 
 @app.post("/api/quote")
 def quote(body: QuoteRequest, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
 
-    def run():
+    def ask(operation, session_id):
         q = s.call("_create_quote", locationId=body.location, ratePolicyId=body.rate,
                    durationQuantity=fmt_qty(body.duration), durationTimeUnit=body.unit,
                    licensePlate=body.plate, paymentAccountId=body.paymentAccountId,
-                   operation="Extend" if body.sessionId else "Start", parkingSessionId=body.sessionId)
+                   operation=operation, parkingSessionId=session_id)
         details = q.get("details") or {}
         return {"cost": q.get("cost"), "start": iso(details.get("parkingStartTime")),
                 "expire": iso(details.get("parkingExpiryTime"))}
+
+    def run():
+        if body.sessionId:
+            return ask("Extend", body.sessionId)
+        try:
+            return ask("Start", "")
+        except Exception as e:
+            if not (body.renewal and "VehicleAlreadyParked" in str(e)):
+                raise
+        # A ticket is running: the renewal starts when it ends. Its price is that of the same stay added to
+        # the running ticket when PayByPhone quotes it, otherwise unknown until the first renewal.
+        running = running_for(s, body.plate)
+        until = iso(covered_until(running)) if running else None
+        for x in running:
+            try:
+                return {**ask("Extend", x.get("parkingSessionId")), "afterCurrent": True, "currentExpire": until}
+            except Exception as e:
+                log.info("renewal price as an extension refused: %s", str(e)[:200])
+        return {"cost": None, "start": None, "expire": None, "afterCurrent": True, "currentExpire": until}
 
     return guarded(run)
 
@@ -1551,7 +1588,7 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
             outcome = process_renewal(row, refresh_token=refresh)  # pay now if it is due and nothing is active
             stored = next((r for r in store("renewal_list", p_owner=owner_id(s.username)) if r["id"] == row["id"]), row)
             if outcome in ("paid", "active", "waiting"):
-                active = s.call("get_parking_sessions", licensePlate=body.plate, locationId=body.location)
+                active = running_for(s, body.plate)
                 rule = rule_of(details)
                 notify(details, "activated", expire=covered_until(active) if active else None,
                        next=schedule.next_ticket(rule, datetime.now(timezone.utc)) if rule else None)

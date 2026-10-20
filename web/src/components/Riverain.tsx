@@ -7,7 +7,7 @@ import { Plate, ZonePlate, withPayByPhone } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, clock, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
 const WEEK_DAYS = 7
@@ -199,7 +199,7 @@ function RiverainDialog({
   const [zoneFromHistory, setZoneFromHistory] = useState(false)
   const [payment, setPayment] = useState('')
   const [rate, setRate] = useState<Rate | null>(null)
-  const [quote, setQuote] = useState<{ cost: Money | null } | null>(null)
+  const [quote, setQuote] = useState<{ cost: Money | null; afterCurrent?: boolean; currentExpire?: string | null } | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -275,20 +275,10 @@ function RiverainDialog({
     return { location: zone, rate: r.ratePolicyId, duration: WEEK_DAYS, unit: 'Days', plate, paymentAccountId: payment }
   }
 
-  /** Price of a week. With a ticket already running, PayByPhone refuses a new one: the week is priced as an
-   *  extension of it instead, and if that is refused too the renewal can still be activated, price unknown. */
-  async function weeklyPrice(r: Rate): Promise<{ cost: Money | null }> {
-    try {
-      return await api.quote(parking(r))
-    } catch (e) {
-      const running = data.sessions.find((s) => s.plate === plate && new Date(s.expire).getTime() > Date.now())
-      if (!running) throw e
-      try {
-        return await api.quote({ ...parking(r), sessionId: running.id })
-      } catch {
-        return { cost: null }
-      }
-    }
+  /** Price of a week. With a ticket already running, the server prices it as an extension of that ticket
+   *  (or leaves it unknown): the renewal can be activated ahead and starts when that ticket ends. */
+  function weeklyPrice(r: Rate) {
+    return api.quote({ ...parking(r), renewal: true })
   }
 
   async function activate() {
@@ -299,7 +289,7 @@ function RiverainDialog({
       await api.addAutopilot({ ...p, label: WEEKLY_LABEL }) // confirmations go to the account e-mail
       saveLast(p)
       toast.success('Renouvellement hebdomadaire activé.', {
-        description: data.sessions.some((s) => s.plate === plate && s.location === zone)
+        description: hasCurrent
           ? 'Il prendra le relais à la fin de votre ticket actuel.'
           : 'La première semaine est en cours de paiement.',
       })
@@ -313,7 +303,8 @@ function RiverainDialog({
     }
   }
 
-  const hasCurrent = data.sessions.some((s) => s.plate === plate && s.location === zone)
+  const samePlate = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCase() === b.replace(/[^0-9a-z]/gi, '').toUpperCase()
+  const hasCurrent = !!quote?.afterCurrent || data.sessions.some((s) => samePlate(s.plate, plate) && new Date(s.expire).getTime() > Date.now())
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -386,7 +377,11 @@ function RiverainDialog({
                 </li>
                 <li className="flex items-center gap-2">
                   <Repeat className="size-4" />
-                  {hasCurrent ? 'Prend le relais à la fin du ticket en cours' : 'Première semaine payée tout de suite'}
+                  {hasCurrent
+                    ? quote?.currentExpire
+                      ? `Prend le relais à la fin du ticket en cours, ${clock(quote.currentExpire)}`
+                      : 'Prend le relais à la fin du ticket en cours'
+                    : 'Première semaine payée tout de suite'}
                 </li>
                 <li className="flex items-baseline justify-between pt-2">
                   <span className="text-muted-foreground">Chaque semaine</span>

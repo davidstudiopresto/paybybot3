@@ -512,8 +512,9 @@ function Terms() {
             de ce délai, le montant correspondant au service déjà fourni reste dû ; le reste vous est remboursé.
           </li>
           <li>
-            <strong>Sans abonnement</strong> à la fin du mois offert, PaybyBot peut suspendre le renouvellement
-            automatique de vos forfaits ; vous en êtes prévenu par e-mail.
+            <strong>Sans abonnement</strong> à la fin du mois offert, ou si un paiement de l’abonnement échoue, votre
+            compte est bloqué : le ticket en cours reste valable, mais le renouvellement suivant n’est pas payé. Vous en
+            êtes prévenu par e-mail, et le renouvellement reprend dès que le paiement est fait.
           </li>
         </ul>
       </Section>

@@ -113,8 +113,56 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
 }
 
 /** Dashboard banner: days left in the free month; a click opens the plans. */
-export function TrialBanner({ trialEnd, plan }: { trialEnd: string | null; plan: string | null }) {
+export function TrialBanner({
+  trialEnd,
+  plan,
+  blocked = null,
+}: {
+  trialEnd: string | null
+  plan: string | null
+  blocked?: 'unpaid' | 'trialOver' | null
+}) {
   const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  // Failed charge: straight to the invoice to pay. No subscription: choose a plan.
+  async function unlock() {
+    if (blocked !== 'unpaid') return setOpen(true)
+    setBusy(true)
+    try {
+      window.location.assign((await api.unlock()).url)
+    } catch (e) {
+      toast((e as Error).message)
+      setBusy(false)
+    }
+  }
+
+  if (blocked) {
+    return (
+      <>
+        <div
+          role="alert"
+          className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-[linear-gradient(90deg,#5c0f12_0%,#9b1c1f_100%)] px-4 py-2.5 text-sm text-white"
+        >
+          <span className="font-semibold">
+            {blocked === 'unpaid' ? 'Paiement refusé : compte bloqué.' : 'Mois offert terminé : compte bloqué.'}{' '}
+            <span className="font-normal text-white/80">Le prochain renouvellement ne sera pas payé.</span>
+          </span>
+          <button
+            onClick={unlock}
+            disabled={busy}
+            className="inline-flex items-center rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-white/90 disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : 'Débloquer mon compte'}
+          </button>
+        </div>
+        {open && (
+          <PlansDialog onClose={() => setOpen(false)} text="Le renouvellement reprend dès que le paiement est fait." />
+        )}
+      </>
+    )
+  }
+
   if (plan || !trialEnd) return null
   const left = Math.ceil((new Date(trialEnd).getTime() - Date.now()) / 86_400_000)
   const ending = left <= 5
@@ -136,17 +184,19 @@ export function TrialBanner({ trialEnd, plan }: { trialEnd: string | null; plan:
           Choisir mon offre
         </button>
       </div>
-      {open && (
-        <Dialog open onOpenChange={(o) => !o && setOpen(false)}>
-          <DialogContent className="max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl bg-white p-6 sm:max-w-2xl sm:p-8">
-            <DialogTitle className={ui.dialogTitle}>Choisir mon offre</DialogTitle>
-            <DialogDescription className="mt-1 mb-8 text-ink/60">
-              Sans engagement.
-            </DialogDescription>
-            <PlanCards signedIn />
-          </DialogContent>
-        </Dialog>
-      )}
+      {open && <PlansDialog onClose={() => setOpen(false)} text="Sans engagement." />}
     </>
+  )
+}
+
+function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl bg-white p-6 sm:max-w-2xl sm:p-8">
+        <DialogTitle className={ui.dialogTitle}>Choisir mon offre</DialogTitle>
+        <DialogDescription className="mt-1 mb-8 text-ink/60">{text}</DialogDescription>
+        <PlanCards signedIn />
+      </DialogContent>
+    </Dialog>
   )
 }

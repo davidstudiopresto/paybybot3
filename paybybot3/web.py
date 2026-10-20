@@ -32,7 +32,7 @@ from pathlib import Path
 
 import requests
 from fastapi import Cookie, FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Annotated
@@ -822,6 +822,18 @@ def has_account(s):
     return bool(HOSTED and not s.demo and store("renewal_list", p_owner=owner_id(s.username)))
 
 
+def account_by_owner(owner):
+    """The stored account of an owner id, without a session (scheduler, e-mail links)."""
+    data = store("account_get", p_owner=owner)
+    return json.loads(_fernet("account").decrypt(data.encode())) if data else {}
+
+
+def save_account_by_owner(owner, patch):
+    account = {**account_by_owner(owner), **{k: v for k, v in patch.items() if k in ACCOUNT_FIELDS}}
+    store("account_save", p_owner=owner, p_data=_fernet("account").encrypt(json.dumps(account).encode()).decode())
+    return account
+
+
 def save_account(s, patch):
     account = {**load_account(s), **{k: v for k, v in patch.items() if k in ACCOUNT_FIELDS}}
     if HOSTED and not s.demo:
@@ -945,6 +957,16 @@ def process_renewal(row, refresh_token=None):
         resume = parse_dt(row.get("paused_until")) or now + timedelta(hours=12)
         store("renewal_update", p_id=row["id"], p_patch={"next_check": utc_iso(resume)})
         return "paused"
+    if row.get("owner") and not refresh_token:
+        state = guarded_state(row["owner"])
+        if state in BLOCKED_STATES:
+            # Unpaid: the ticket running now stays valid, the next one is not paid. Checked again every
+            # 2 hours, so the renewal resumes on its own once the subscription is paid.
+            store("renewal_update", p_id=row["id"],
+                  p_patch={"last_error": BLOCKED, "next_check": utc_iso(now + timedelta(hours=2))})
+            if previous_error != BLOCKED:
+                notify_blocked(row, state)
+            return "blocked"
     try:
         refresh = refresh_token or decrypt_credential(row["credential"])
         bot = Bot.from_refresh_token(refresh)
@@ -1512,6 +1534,9 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
         refresh = getattr(s.bot, "refresh_token", None)
         if not refresh:
             raise HTTPException(401, "Reconnectez-vous pour activer le renouvellement automatique.")
+        if billing_state(guarded(lambda: load_account(s)), owner_id(s.username)) in BLOCKED_STATES:
+            raise HTTPException(402, "Compte bloqué : débloquez-le (bandeau en haut de page) pour activer un "
+                                     "renouvellement.")
 
         def save():
             row = store("renewal_save", p_row={
@@ -1554,9 +1579,12 @@ def get_account(pbb_session: str = Cookie(None)):
 
     account = guarded(load)
     start = parse_dt(account.get("trial_start"))
+    state = billing_state(account, owner_id(s.username)) if HOSTED and not s.demo else "ok"
     return {"email": account.get("email") or "", "zone": account.get("zone") or None,
             "trialEnd": (start + timedelta(days=TRIAL_DAYS)).isoformat() if start else None,
-            "plan": subscription_plan(account)}
+            "plan": subscription_plan(account),
+            # Renewals stop while blocked: 'unpaid' (Stripe could not charge) or 'trialOver' (no subscription).
+            "blocked": {"unpaid": "unpaid", "trial_over": "trialOver"}.get(state)}
 
 
 class Checkout(BaseModel):
@@ -1596,23 +1624,83 @@ def subscription_plan(account):
     return account.get("plan") if sub.get("status") in ACTIVE_STATUSES else None
 
 
-@app.post("/api/billing/checkout")
-def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie(None)):
-    """Stripe Checkout for the monthly or yearly plan; nothing is charged before the free month ends."""
-    s = current(pbb_session)
-    if s.demo:
-        raise HTTPException(400, "Le paiement n'est pas disponible en mode démo.")
-    if not os.environ.get("STRIPE_SECRET_KEY"):
-        raise HTTPException(503, "Le paiement en ligne arrive très bientôt. Profitez de votre mois offert !")
-    account = guarded(lambda: load_account(s))
+PAID_STATUSES = ("trialing", "active")
+UNPAID_STATUSES = ("past_due", "unpaid", "incomplete")
+BLOCKED_STATES = ("unpaid", "trial_over")
+BLOCKED = ("Compte bloqué : l'abonnement PaybyBot n'est pas réglé. Le ticket en cours reste valable, le suivant "
+           "ne sera pas payé.")
+UNLOCK_TTL = 30 * 86400  # how long the "Débloquer mon compte" link of an e-mail works
+
+
+def admin_owners():
+    admins = [x.strip() for x in os.environ.get("PAYBYBOT_ADMINS", "").split(",") if x.strip()]
+    return {owner_id(c) for a in admins for c in login_candidates(a)}
+
+
+def billing_state(account, owner=None):
+    """'ok' (subscribed), 'trial' (free month running), or a blocked state: 'unpaid' (Stripe could not charge)
+    or 'trial_over' (free month ended without a subscription)."""
+    if not account or (owner and owner in admin_owners()):
+        return "ok"  # the site owner, and renewals stored before accounts existed
+    sub_id = account.get("stripe_subscription")
+    if sub_id and os.environ.get("STRIPE_SECRET_KEY"):
+        try:
+            status = stripe("GET", "subscriptions/" + sub_id).get("status")
+        except HTTPException:
+            status = "active" if account.get("plan") else None  # Stripe unreachable: trust the last known plan
+        if status in PAID_STATUSES:
+            return "ok"
+        if status in UNPAID_STATUSES:
+            return "unpaid"
+    start = parse_dt(account.get("trial_start"))
+    if not start or start + timedelta(days=TRIAL_DAYS) > datetime.now(timezone.utc):
+        return "trial"  # no start yet: the free month begins when the account is first opened
+    return "trial_over"
+
+
+def guarded_state(owner):
+    """billing_state for the scheduler: never blocks a renewal because a lookup failed."""
+    try:
+        return billing_state(account_by_owner(owner), owner)
+    except Exception as e:
+        log.warning("billing state unavailable: %s", str(e)[:200])
+        return "ok"
+
+
+def unlock_link(owner):
+    """Signed link of the e-mail: straight to the right Stripe page, without logging in."""
+    token = _fernet("unlock").encrypt(owner.encode()).decode()
+    return APP_URL.rstrip("/") + "/api/billing/unlock?t=" + token
+
+
+def notify_blocked(details, state):
+    """One e-mail when a renewal is blocked for lack of payment, with the way out."""
+    to = account_by_owner(details["owner"]).get("email") or details.get("email")
+    if not to:
+        return
+    car = "%s, zone %s" % (plate_text(details.get("plate")), details.get("location"))
+    first = ("Le dernier paiement de votre abonnement PaybyBot n'a pas abouti : votre compte est bloqué."
+             if state == "unpaid" else
+             "Votre mois offert est terminé et aucun abonnement n'a été souscrit : votre compte est bloqué.")
+    send_email(to, "Compte PaybyBot bloqué · paiement requis",
+               "Paiement refusé : compte bloqué" if state == "unpaid" else "Votre compte est bloqué",
+               [first,
+                "Votre ticket en cours reste valable jusqu'à sa fin, mais le renouvellement suivant pour %s "
+                "n'aura pas lieu." % car,
+                "Débloquez votre compte : le renouvellement reprend tout seul dès que le paiement est fait."],
+               ("Débloquer mon compte", unlock_link(details["owner"])),
+               footer="Vous recevez cet e-mail parce que vous avez un renouvellement automatique sur PaybyBot.")
+
+
+def checkout_url(owner, account, plan, success_url):
+    """A Stripe Checkout page for the plan; while the free month runs, the first charge waits for its end."""
     base = APP_URL.rstrip("/")
-    amount, interval, name = PLANS[body.plan]
+    amount, interval, name = PLANS[plan]
     data = {"mode": "subscription", "line_items[0][quantity]": 1,
             "line_items[0][price_data][currency]": "eur", "line_items[0][price_data][unit_amount]": amount,
             "line_items[0][price_data][recurring][interval]": interval,
             "line_items[0][price_data][product_data][name]": name,
-            "client_reference_id": owner_id(s.username), "metadata[plan]": body.plan,
-            "success_url": base + "/#/abonnement?session_id={CHECKOUT_SESSION_ID}",
+            "client_reference_id": owner, "metadata[plan]": plan, "success_url": success_url,
             "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true",
             # PaybyBot's own look on Stripe's page, without changing the Studio Presto account branding.
             "branding_settings[display_name]": "PaybyBot",
@@ -1635,8 +1723,81 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
         day = trial_end.astimezone(PARIS)
         data["custom_text[submit][message]"] = (
             "Rien n'est prélevé avant la fin de votre mois offert, le %d %s." % (day.day, months[day.month - 1]))
-    session = stripe("POST", "checkout/sessions", **data)
-    return {"url": session["url"]}
+    return stripe("POST", "checkout/sessions", **data)["url"]
+
+
+def unlock_url(owner, account, plan="monthly"):
+    """Where to pay to unblock: the open invoice when Stripe failed to charge, else a new subscription."""
+    sub_id = account.get("stripe_subscription")
+    if sub_id:
+        sub = stripe("GET", "subscriptions/" + sub_id)
+        if sub.get("status") in UNPAID_STATUSES:
+            invoice = stripe("GET", "invoices/" + sub["latest_invoice"]) if sub.get("latest_invoice") else {}
+            if invoice.get("status") == "open" and invoice.get("hosted_invoice_url"):
+                return invoice["hosted_invoice_url"]
+            return stripe("POST", "billing_portal/sessions", customer=account["stripe_customer"],
+                          return_url=APP_URL.rstrip("/") + "/", configuration=portal_configuration())["url"]
+    return checkout_url(owner, account, plan,
+                        APP_URL.rstrip("/") + "/api/billing/unlocked?session_id={CHECKOUT_SESSION_ID}")
+
+
+def resume_renewals(owner):
+    """Paid again: check the owner's renewals now instead of waiting for the next look."""
+    for row in store("renewal_list", p_owner=owner):
+        store("renewal_update", p_id=row["id"], p_patch={"next_check": utc_iso(datetime.now(timezone.utc))})
+
+
+@app.post("/api/billing/checkout")
+def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie(None)):
+    """Stripe Checkout for the monthly or yearly plan; nothing is charged before the free month ends."""
+    s = current(pbb_session)
+    if s.demo:
+        raise HTTPException(400, "Le paiement n'est pas disponible en mode démo.")
+    if not os.environ.get("STRIPE_SECRET_KEY"):
+        raise HTTPException(503, "Le paiement en ligne arrive très bientôt. Profitez de votre mois offert !")
+    account = guarded(lambda: load_account(s))
+    url = checkout_url(owner_id(s.username), account, body.plan,
+                       APP_URL.rstrip("/") + "/#/abonnement?session_id={CHECKOUT_SESSION_ID}")
+    return {"url": url}
+
+
+@app.get("/api/billing/unlock")
+def billing_unlock(t: str = "", plan: str = "monthly"):
+    """« Débloquer mon compte » from the e-mail: the signed link leads straight to Stripe."""
+    try:
+        owner = _fernet("unlock").decrypt(t.encode(), ttl=UNLOCK_TTL).decode()
+    except Exception:
+        return RedirectResponse(APP_URL.rstrip("/") + "/#/tarifs", 303)
+    account = guarded(lambda: account_by_owner(owner))
+    return RedirectResponse(unlock_url(owner, account, plan if plan in PLANS else "monthly"), 303)
+
+
+@app.post("/api/billing/unlock")
+def billing_unlock_signed_in(pbb_session: str = Cookie(None)):
+    """The dashboard's « Débloquer mon compte » when Stripe failed to charge."""
+    s = current(pbb_session)
+    if s.demo:
+        raise HTTPException(400, "Le paiement n'est pas disponible en mode démo.")
+    owner = owner_id(s.username)
+    return {"url": unlock_url(owner, guarded(lambda: load_account(s)))}
+
+
+@app.get("/api/billing/unlocked")
+def billing_unlocked(session_id: str = ""):
+    """Back from the e-mail's Checkout (maybe signed out): record the subscription and resume at once."""
+    home = APP_URL.rstrip("/")
+    if not re.fullmatch(r"cs_[A-Za-z0-9_]{10,200}", session_id):
+        return RedirectResponse(home + "/", 303)
+    session = stripe("GET", "checkout/sessions/" + session_id)
+    owner = session.get("client_reference_id")
+    if session.get("status") != "complete" or not owner:
+        return RedirectResponse(home + "/#/tarifs", 303)
+    guarded(lambda: save_account_by_owner(owner, {"plan": (session.get("metadata") or {}).get("plan"),
+                                                  "stripe_customer": session.get("customer"),
+                                                  "stripe_subscription": session.get("subscription")}))
+    guarded(lambda: resume_renewals(owner))
+    log.info("account unblocked from the e-mail link")
+    return RedirectResponse(home + "/#/debloque", 303)
 
 
 @app.post("/api/billing/confirm")
@@ -1649,6 +1810,8 @@ def billing_confirm(body: CheckoutDone, pbb_session: str = Cookie(None)):
     plan = (session.get("metadata") or {}).get("plan")
     account = guarded(lambda: save_account(s, {"plan": plan, "stripe_customer": session.get("customer"),
                                                "stripe_subscription": session.get("subscription")}))
+    if HOSTED and not s.demo:
+        guarded(lambda: resume_renewals(owner_id(s.username)))
     log.info("subscription started (%s)", plan)
     return {"plan": account.get("plan")}
 

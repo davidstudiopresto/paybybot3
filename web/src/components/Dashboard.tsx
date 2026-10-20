@@ -126,7 +126,7 @@ export function Dashboard({
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
-      <TrialBanner trialEnd={account?.trialEnd ?? null} plan={account?.plan ?? null} />
+      <TrialBanner trialEnd={account?.trialEnd ?? null} plan={account?.plan ?? null} blocked={account?.blocked ?? null} />
       <TopBar>
         {me.demo && (
           <span className="inline-flex h-9 items-center rounded-full bg-amber/25 px-3 text-sm font-semibold text-ink sm:h-10 sm:px-4 sm:text-[0.95rem]">

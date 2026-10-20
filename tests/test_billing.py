@@ -57,5 +57,84 @@ class Billing(unittest.TestCase):
         self.assertNotIn("plan", self.s.account)
 
 
+class Blocking(unittest.TestCase):
+    """No payment, no renewal: the running ticket stays, the next one is not paid."""
+
+    def setUp(self):
+        self.env = patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test_x", "PAYBYBOT_SECRET": "t",
+                                           "PAYBYBOT_ADMINS": ""})
+        self.env.start()
+        self.status = "active"
+
+    def tearDown(self):
+        self.env.stop()
+
+    def fake_stripe(self, method, path, **data):
+        if path.startswith("subscriptions/"):
+            return {"status": self.status, "latest_invoice": "in_1"}
+        if path.startswith("invoices/"):
+            return {"status": "open", "hosted_invoice_url": "https://invoice.stripe.com/i/1"}
+        if path == "checkout/sessions":
+            return {"url": "https://checkout.stripe.com/x"}
+        return {}
+
+    def state(self, account, owner="o"):
+        with patch.object(web, "stripe", side_effect=self.fake_stripe):
+            return web.billing_state(account, owner)
+
+    def test_states(self):
+        now = datetime.now(timezone.utc)
+        running = {"trial_start": now.isoformat()}
+        over = {"trial_start": (now - timedelta(days=31)).isoformat()}
+        self.assertEqual(self.state(running), "trial")
+        self.assertEqual(self.state(over), "trial_over")
+        self.assertEqual(self.state({**over, "stripe_subscription": "sub_1"}), "ok")
+        self.status = "past_due"
+        self.assertEqual(self.state({**over, "stripe_subscription": "sub_1"}), "unpaid")
+        self.status = "canceled"
+        self.assertEqual(self.state({**over, "stripe_subscription": "sub_1"}), "trial_over")
+        self.assertEqual(self.state({}), "ok")  # renewals stored before accounts existed
+
+    def test_the_site_owner_is_never_blocked(self):
+        over = {"trial_start": (datetime.now(timezone.utc) - timedelta(days=31)).isoformat()}
+        with patch.dict(os.environ, {"PAYBYBOT_ADMINS": "0612345678"}):
+            self.assertEqual(self.state(over, web.owner_id("+33612345678")), "ok")
+
+    def run_renewal(self, previous_error=None):
+        row = {"id": "r1", "owner": "o", "plate": "AB123CD", "location": "75017", "last_error": previous_error}
+        stored = []
+        with patch.object(web, "with_details", side_effect=lambda r: r), \
+                patch.object(web, "guarded_state", return_value="trial_over"), \
+                patch.object(web, "store", side_effect=lambda *a, **k: stored.append(k)), \
+                patch.object(web, "notify_blocked") as mail, \
+                patch.object(web.Bot, "from_refresh_token") as login:
+            outcome = web.process_renewal(row)
+        login.assert_not_called()  # no PayByPhone login, nothing paid
+        return outcome, stored, mail
+
+    def test_a_blocked_renewal_is_not_paid_and_mailed_once(self):
+        outcome, stored, mail = self.run_renewal()
+        self.assertEqual(outcome, "blocked")
+        self.assertEqual(stored[0]["p_patch"]["last_error"], web.BLOCKED)
+        mail.assert_called_once()
+        _, _, mail = self.run_renewal(previous_error=web.BLOCKED)
+        mail.assert_not_called()
+
+    def test_the_email_link_leads_to_stripe(self):
+        over = {"trial_start": (datetime.now(timezone.utc) - timedelta(days=31)).isoformat()}
+        link = web.unlock_link("o")
+        token = link.split("t=", 1)[1]
+        with patch.object(web, "stripe", side_effect=self.fake_stripe), \
+                patch.object(web, "account_by_owner", return_value=over):
+            r = web.billing_unlock(t=token)
+            self.assertEqual(r.headers["location"], "https://checkout.stripe.com/x")
+            self.status = "past_due"
+            with patch.object(web, "account_by_owner", return_value={**over, "stripe_subscription": "sub_1"}):
+                r = web.billing_unlock(t=token)
+            self.assertEqual(r.headers["location"], "https://invoice.stripe.com/i/1")
+            r = web.billing_unlock(t="forged")
+        self.assertTrue(r.headers["location"].endswith("/#/tarifs"))
+
+
 if __name__ == "__main__":
     unittest.main()

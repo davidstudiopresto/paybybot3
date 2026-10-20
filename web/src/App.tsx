@@ -51,6 +51,13 @@ export default function App() {
     if (me === null) api.login('demo', 'demo').then((m) => setMe(m as Me), (e) => toast.error((e as Error).message))
   }, [route, me])
 
+  // Back from the e-mail's « Débloquer mon compte » once Stripe has taken the payment.
+  useEffect(() => {
+    if (window.location.hash !== '#/debloque') return
+    history.replaceState(null, '', window.location.pathname)
+    toast.success('Compte débloqué : le renouvellement reprend.')
+  }, [])
+
   useEffect(() => {
     api.me().then(setMe, () => setMe(null))
     api.config().then((c) => setHosted(c.hosted), () => {})

@@ -51,7 +51,14 @@ export type SignupPending = { pending: true; email: string }
 export const isPending = (x: Me | SignupPending): x is SignupPending => 'pending' in x
 
 /** The PaybyBot account: e-mail given at sign-up, home zone added by hand. */
-export type Account = { email: string; zone: string | null; trialEnd?: string | null; plan?: string | null }
+export type Account = {
+  email: string
+  zone: string | null
+  trialEnd?: string | null
+  plan?: string | null
+  /** Renewals stop while blocked: 'unpaid' (Stripe could not charge) or 'trialOver' (no subscription). */
+  blocked?: 'unpaid' | 'trialOver' | null
+}
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
 
 export class ApiError extends Error {
@@ -115,6 +122,7 @@ export const api = {
   checkout: (plan: 'monthly' | 'yearly') => post<{ url: string }>('/api/billing/checkout', { plan }),
   confirmCheckout: (session_id: string) => post<{ plan: string }>('/api/billing/confirm', { session_id }),
   billingPortal: () => post<{ url: string }>('/api/billing/portal'),
+  unlock: () => post<{ url: string }>('/api/billing/unlock'),
   adminLogin: (email: string, password: string, turnstile = '') =>
     post('/api/admin/login', { email, password, turnstile }),
   adminLogout: () => post('/api/admin/logout'),

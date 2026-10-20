@@ -17,7 +17,7 @@ function DemoVideo() {
   const [mobile] = useState(() => window.matchMedia('(max-width: 639px)').matches)
   const [still] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [playing, setPlaying] = useState(!still)
-  const src = mobile ? '/video/paybybot-17s-mobile' : '/video/paybybot-17s'
+  const src = mobile ? '/video/paybybot-17s-v2-mobile' : '/video/paybybot-17s-v2'
 
   useEffect(() => {
     const v = ref.current

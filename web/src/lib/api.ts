@@ -51,7 +51,7 @@ export type SignupPending = { pending: true; email: string }
 export const isPending = (x: Me | SignupPending): x is SignupPending => 'pending' in x
 
 /** The PaybyBot account: e-mail given at sign-up, home zone added by hand. */
-export type Account = { email: string; zone: string | null }
+export type Account = { email: string; zone: string | null; trialEnd?: string | null; plan?: string | null }
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
 
 export class ApiError extends Error {
@@ -104,6 +104,7 @@ export const api = {
   updateAccount: (patch: Partial<Account>) =>
     request<Account>('/api/account', { method: 'PUT', body: JSON.stringify(patch) }),
   logout: () => post('/api/logout'),
+  checkout: (plan: 'monthly' | 'yearly') => post<{ url: string }>('/api/billing/checkout', { plan }),
   adminLogin: (email: string, password: string) => post('/api/admin/login', { email, password }),
   adminLogout: () => post('/api/admin/logout'),
   adminStats: () => request<import('@/components/Admin').AdminStats>('/api/admin/stats'),

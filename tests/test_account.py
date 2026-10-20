@@ -18,8 +18,16 @@ class Account(unittest.TestCase):
 
     def test_manual_zone_comes_first(self):
         web.update_account(web.AccountPatch(zone="75017"), "t")
-        self.assertEqual(web.get_account("t"), {"email": "", "zone": "75017"})
+        account = web.get_account("t")
+        self.assertEqual((account["email"], account["zone"], account["plan"]), ("", "75017", None))
         self.assertEqual(web.resident_zone("t"), {"zone": "75017", "manual": True})
+
+    def test_free_month_lasts_30_days(self):
+        from datetime import datetime
+        web.update_account(web.AccountPatch(email="a@b.fr"), "t")
+        account = web.get_account("t")
+        start = datetime.fromisoformat(self.s.account["trial_start"])
+        self.assertEqual((datetime.fromisoformat(account["trialEnd"]) - start).days, 30)
 
     def test_deleting_sends_a_confirmation_and_erases(self):
         web.update_account(web.AccountPatch(email="a@b.fr"), "t")
@@ -59,7 +67,8 @@ class Account(unittest.TestCase):
         self.assertEqual(result["email"], "c•••@d.fr")
         self.assertEqual(fresh.account, {})  # nothing created before the code
         web.verify_signup(web.CodeCheck(code=code[:3] + " " + code[3:]), Response(), token)
-        self.assertEqual(fresh.account, {"email": "c@d.fr", "zone": "75017"})
+        self.assertEqual({k: fresh.account[k] for k in ("email", "zone")}, {"email": "c@d.fr", "zone": "75017"})
+        self.assertIn("trial_start", fresh.account)  # the free month starts at sign-up
 
     def test_wrong_code_then_too_many_tries(self):
         _, _, code, token = self.sign_up()

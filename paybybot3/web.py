@@ -778,7 +778,8 @@ def with_details(row):
     return {**row, **json.loads(_fernet("renewal").decrypt(row["data"].encode()))}
 
 
-ACCOUNT_FIELDS = ("email", "zone")
+ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan")
+TRIAL_DAYS = 30  # one free month for every new account
 
 
 def load_account(s):
@@ -1180,7 +1181,8 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
     code = re.sub(r"\D", "", body.code)
     if not hmac.compare_digest(code_hash(code, pending["email"]), pending["h"]):
         raise HTTPException(400, "Code incorrect. Vérifiez l'e-mail reçu.")
-    save_account(session, {"email": pending["email"], "zone": pending["zone"]})
+    save_account(session, {"email": pending["email"], "zone": pending["zone"],
+                           "trial_start": datetime.now(timezone.utc).isoformat()})
     if HOSTED:
         token = seal(session)
         refresh = getattr(session.bot, "refresh_token", None)
@@ -1487,8 +1489,32 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
 @app.get("/api/account")
 def get_account(pbb_session: str = Cookie(None)):
     s = current(pbb_session)
-    account = guarded(lambda: load_account(s))
-    return {"email": account.get("email") or "", "zone": account.get("zone") or None}
+
+    def load():
+        account = load_account(s)
+        if (account or s.demo) and not account.get("trial_start"):
+            # Accounts made before the free month existed (and the demo) start theirs now.
+            account = save_account(s, {"trial_start": datetime.now(timezone.utc).isoformat()})
+        return account
+
+    account = guarded(load)
+    start = parse_dt(account.get("trial_start"))
+    return {"email": account.get("email") or "", "zone": account.get("zone") or None,
+            "trialEnd": (start + timedelta(days=TRIAL_DAYS)).isoformat() if start else None,
+            "plan": account.get("plan") or None}
+
+
+class Checkout(BaseModel):
+    plan: str = Field(pattern="^(monthly|yearly)$")
+
+
+@app.post("/api/billing/checkout")
+def billing_checkout(body: Checkout, pbb_session: str = Cookie(None)):
+    """Stripe Checkout for the monthly or yearly plan; nothing is charged before the free month ends."""
+    current(pbb_session)
+    if not os.environ.get("STRIPE_SECRET_KEY"):
+        raise HTTPException(503, "Le paiement en ligne arrive très bientôt. Profitez de votre mois offert !")
+    raise HTTPException(503, "Le paiement en ligne arrive très bientôt.")
 
 
 @app.put("/api/account")

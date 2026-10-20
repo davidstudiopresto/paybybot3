@@ -3,12 +3,13 @@ import { LogOut, Repeat } from 'lucide-react'
 import { Plate, ZonePlate } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { AccountButton } from '@/components/Account'
+import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { ExtendDialog } from '@/components/Extend'
 import { HostedFooter } from '@/components/Footer'
 import { ManageRenewal, RenewalNote, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
-import { money, remaining, until, type Me, type Overview, type Session } from '@/lib/api'
+import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -97,6 +98,10 @@ export function Dashboard({
   onDeleted?: () => void
 }) {
   const now = useNow()
+  const [account, setAccount] = useState<Account | null>(null)
+  useEffect(() => {
+    api.account().then(setAccount, () => {})
+  }, [])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
 
@@ -120,6 +125,7 @@ export function Dashboard({
           <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>
         </button>
       </TopBar>
+      <TrialBanner trialEnd={account?.trialEnd ?? null} plan={account?.plan ?? null} />
 
       <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-12 pb-16">
         <p className="rise text-lg text-ink/60">{me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}</p>

@@ -23,6 +23,9 @@ const navLink = 'hidden px-2 text-[0.95rem] font-medium text-ink/70 transition h
 export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
   return (
     <TopBar>
+      <a href="#/tarifs" className={navLink}>
+        Tarifs
+      </a>
       <a href="#/faq" className={navLink}>
         FAQ
       </a>

@@ -47,6 +47,7 @@ COOKIE = "pbb_session"
 HOSTED = os.environ.get("PAYBYBOT_HOSTED") == "1"
 SESSION_IDLE = 12 * 3600  # an unused login cookie expires after 12 hours...
 SESSION_MAX = 24 * 3600  # ...and any login after 24 hours
+REMEMBER = 30 * 24 * 3600  # "Se souvenir de moi": 30 days
 LOGIN_LIMITS = (("ip", 10), ("user", 5))  # attempts per 15 minutes, per device and per account
 PARIS = ZoneInfo("Europe/Paris")
 MAIL_FROM = os.environ.get("PAYBYBOT_MAIL_FROM", "PaybyBot <paybybot@studiopresto.fr>")
@@ -225,6 +226,7 @@ class UserSession:
     def to_state(self):
         """What the hosted mode keeps in the encrypted cookie: never the password."""
         state = {"u": self.username, "d": self.demo, "iat": getattr(self, "issued_at", int(time.time())),
+                 "rm": getattr(self, "remember", False),
                  "uc": [[plate, location, at] for (plate, location), at in self.unconfirmed.items()]}
         if self.demo:
             state["s"] = [{**x, "startTime": x["startTime"].isoformat(), "expireTime": x["expireTime"].isoformat()}
@@ -240,6 +242,7 @@ class UserSession:
     def from_state(cls, state):
         self = cls.__new__(cls)
         self.username, self._password, self.demo = state["u"], None, state["d"]
+        self.remember = state.get("rm", False)
         self.lock = threading.Lock()
         if self.demo:
             self.bot = DemoBot()
@@ -274,8 +277,15 @@ class UserSession:
             except requests.HTTPError as e:
                 if e.response is None or e.response.status_code != 401 or self.demo:
                     raise
-                if self._password is None:  # hosted mode: the password is not kept
-                    raise HTTPException(401, "Votre session PayByPhone a expiré, reconnectez-vous.")
+                if self._password is None:  # hosted mode: the password is not kept, the refresh token is
+                    refresh = getattr(self.bot, "refresh_token", None)
+                    if not refresh:
+                        raise HTTPException(401, "Votre session PayByPhone a expiré, reconnectez-vous.")
+                    try:
+                        self.bot = Bot.from_refresh_token(refresh)
+                    except Exception:
+                        raise HTTPException(401, "Votre session PayByPhone a expiré, reconnectez-vous.")
+                    return getattr(self.bot, method)(*args, **kwargs)
                 self.bot = Bot(self.username, self._password)
                 return getattr(self.bot, method)(*args, **kwargs)
 
@@ -319,8 +329,11 @@ def seal(session):
 def current(token):
     if HOSTED:
         try:
-            state = json.loads(_fernet().decrypt((token or "").encode(), ttl=SESSION_IDLE))
-            if time.time() - state.get("iat", 0) > SESSION_MAX:
+            state = json.loads(_fernet().decrypt((token or "").encode(), ttl=REMEMBER))
+            idle, most = (REMEMBER, REMEMBER) if state.get("rm") else (SESSION_IDLE, SESSION_MAX)
+            if time.time() - _fernet().extract_timestamp((token or "").encode()) > idle:
+                raise ValueError("idle too long")
+            if time.time() - state.get("iat", 0) > most:
                 raise ValueError("login too old")
             session = UserSession.from_state(state)
             session.issued_at = state["iat"]
@@ -336,8 +349,10 @@ def current(token):
     return session
 
 
-def set_session_cookie(response, value):
-    response.set_cookie(COOKIE, value, httponly=True, samesite="strict", secure=HOSTED, path="/")
+def set_session_cookie(response, value, remember=False):
+    """A browser-session cookie, or a 30-day one with "Se souvenir de moi"."""
+    response.set_cookie(COOKIE, value, httponly=True, samesite="strict", secure=HOSTED, path="/",
+                        max_age=REMEMBER if remember else None)
 
 
 SECURITY_HEADERS = {
@@ -373,7 +388,7 @@ async def persist_session(request: Request, call_next):
     _loaded.set(holder)
     response = await call_next(request)
     if HOSTED and holder and response.status_code != 401 and not getattr(holder[-1], "logged_out", False):
-        set_session_cookie(response, seal(holder[-1]))
+        set_session_cookie(response, seal(holder[-1]), getattr(holder[-1], "remember", False))
     for name, value in SECURITY_HEADERS.items():
         response.headers.setdefault(name, value)
     if HOSTED:
@@ -946,6 +961,7 @@ class Login(BaseModel):
     password: str = Field(max_length=200)
     accepted: bool = False  # terms of use and privacy policy
     signup: bool = False
+    remember: bool = False  # "Se souvenir de moi"
     email: str = Field(default="", max_length=254, pattern=EMAIL_PATTERN)  # required at sign-up
     zone: str = Field(default="", pattern=r"^$|^\w{3,10}$")  # home zone, asked at sign-up
 
@@ -1004,12 +1020,13 @@ def login(body: Login, request: Request, response: Response):
         log.warning("login failed for %s: %s", masked, e)
         raise HTTPException(400, friendly_error(e))
     log.info("login ok for %s (%s)", masked, "demo" if demo else "PayByPhone account %s***" % session.username[:5])
+    session.remember = body.remember
     if not demo and (body.signup or HOSTED):
         exists = guarded(lambda: has_account(session))
         if body.signup and exists:
             log.info("sign-up refused: account already exists for %s", masked)
             raise HTTPException(409, "Un compte PaybyBot existe déjà pour ce compte PayByPhone.")
-        if not body.signup and not exists:  # online, logging in needs a sign-up first
+        if not body.signup and not exists and not is_admin(session):  # online, logging in needs a sign-up first
             log.info("login refused: no account yet for %s", masked)
             raise HTTPException(404, "Aucun compte PaybyBot pour ce compte PayByPhone.")
     if body.signup and not demo:  # the account is created once the e-mail is confirmed with a code
@@ -1033,7 +1050,7 @@ def login(body: Login, request: Request, response: Response):
                 token = seal(session)  # the demo account lives in the cookie
         except Exception as e:
             log.warning("could not save the account e-mail: %s", e)
-    set_session_cookie(response, token)
+    set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
     if not demo:
         log_profile_queries(session)

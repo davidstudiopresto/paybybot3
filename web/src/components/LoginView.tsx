@@ -66,6 +66,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
   const [signupZone, setSignupZone] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [accepted, setAccepted] = useState(false)
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [accountExists, setAccountExists] = useState(false)
   const [noAccount, setNoAccount] = useState(false)
@@ -114,6 +115,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
         demo ? 'demo' : password,
         !demo,
         signup && !demo ? { email: signupEmail.trim(), zone: signupZone } : undefined,
+        !signup && !demo && remember,
       )
       if (isPending(result)) setCodeSentTo(result.email)
       else onLogin(result)
@@ -234,6 +236,18 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
                 {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
               </button>
             </div>
+
+            {!signup && (
+              <label className="flex cursor-pointer items-center gap-3 pt-1 text-[0.95rem] text-ink/70">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="size-5 accent-[var(--eu)]"
+                />
+                Se souvenir de moi
+              </label>
+            )}
 
             {signup && (
               <div className={fieldBox}>

@@ -30,7 +30,8 @@ function loadScript() {
   }))
 }
 
-const UNAVAILABLE = "La vérification anti-robot n'a pas pu se charger. Vérifiez votre connexion et rechargez la page."
+const UNAVAILABLE = "La vérification anti-robot n'a pas abouti. Rechargez la page et réessayez."
+const failure = (code: string | null) => (code ? `${UNAVAILABLE} (code ${code})` : UNAVAILABLE)
 
 /**
  * `box` goes on an empty element in the form: it stays empty unless Cloudflare needs a click.
@@ -42,11 +43,13 @@ export function useTurnstile() {
   const current = useRef<string | null>(null)
   const waiting = useRef<((token: string) => void)[]>([])
   const [enabled, setEnabled] = useState(false)
-  const [failed, setFailedState] = useState(false)
+  const [failed, setFailedState] = useState<string | null>(null) // Cloudflare's error code, shown to help support
   const broken = useRef(false)
-  const setFailed = (value: boolean) => {
-    broken.current = value
-    setFailedState(value)
+  const codeRef = useRef<string | null>(null)
+  const setFailed = (code: string | null) => {
+    broken.current = code !== null
+    codeRef.current = code
+    setFailedState(code)
   }
 
   useEffect(() => {
@@ -59,25 +62,25 @@ export function useTurnstile() {
         if (cancelled || !box.current) return
         const id = t.render(box.current, {
           sitekey: key,
-          appearance: 'interaction-only',
+          appearance: 'interaction-only', // visible only when Cloudflare needs a click, or on failure
           theme: 'light',
           language: 'fr',
           size: 'flexible',
           callback: (token: string) => {
             current.current = token
-            setFailed(false)
+            setFailed(null)
             waiting.current.splice(0).forEach((resolve) => resolve(token))
           },
           'expired-callback': () => (current.current = null),
           'error-callback': (code: string) => {
             console.warn('Turnstile error', code)
-            setFailed(true)
+            setFailed(String(code || 'inconnu'))
             return false // Cloudflare retries by itself
           },
         })
         widget.current = { t, id }
       } catch {
-        if (!cancelled) setFailed(true)
+        if (!cancelled) setFailed('script')
       }
     })
     return () => {
@@ -89,17 +92,17 @@ export function useTurnstile() {
 
   const token = useCallback(async () => {
     if (!enabled) return ''
-    if (broken.current && !current.current) throw new Error(UNAVAILABLE)
+    if (broken.current && !current.current && widget.current) widget.current.t.reset(widget.current.id) // one more try
     const value =
       current.current ??
       (await new Promise<string>((resolve, reject) => {
         waiting.current.push(resolve)
-        setTimeout(() => reject(new Error(UNAVAILABLE)), 30000)
+        setTimeout(() => reject(new Error(failure(codeRef.current))), broken.current ? 15000 : 30000)
       }))
     current.current = null // single use: the next submit waits for a new one
     if (widget.current) widget.current.t.reset(widget.current.id)
     return value
   }, [enabled])
 
-  return { box, token, failed: failed ? UNAVAILABLE : null }
+  return { box, token, failed: failed ? failure(failed) : null }
 }

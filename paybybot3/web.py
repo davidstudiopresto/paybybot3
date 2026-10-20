@@ -413,6 +413,11 @@ def friendly_error(e):
         return "Impossible de joindre PayByPhone. Vérifiez votre connexion internet."
     if "Quote error" in text:
         log.info("quote refused: %s", re.sub(r'"licensePlate": "[^"]*"', '"licensePlate": "…"', text)[:400])
+        if "VehicleAlreadyParked" in text:
+            return "Un ticket est déjà en cours pour ce véhicule : PayByPhone n'en accepte pas un second en même temps."
+        if "PbpParkingNotAllowed" in text:
+            return ("PayByPhone n'autorise pas ce stationnement pour ce véhicule dans cette zone. "
+                    "Pour le tarif résident, vérifiez que c'est bien la zone de votre carte résident.")
         return "PayByPhone refuse ce stationnement (zone, tarif ou durée non autorisés)."
     if "Payment job failed" in text:
         return "Le paiement a été refusé. Vérifiez votre moyen de paiement dans l'application PayByPhone."

@@ -36,7 +36,7 @@ export function RenewalNote({ ap }: { ap: Autopilot }) {
   if (paused) return <>Renouvellement en pause {end ? `jusqu'au ${dayText(end - 1)} inclus` : 'sans date de fin'}</>
   return (
     <>
-      Renouvelé automatiquement à la fin
+      Renouvelé automatiquement
       {later && <span className="block">Pause prévue du {dayText(start!)} {end ? `au ${dayText(end - 1)}` : 'sans date de fin'}</span>}
     </>
   )

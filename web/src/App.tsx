@@ -157,7 +157,20 @@ export default function App() {
       ) : route === 'admin' ? (
         <AdminPage signedIn={!!me} />
       ) : route === 'tarifs' ? (
-        <PricingPage hosted={hosted} signedIn={!!me} />
+        // The price is the account's own: signed out, the page is the sign-up, which then shows the two plans.
+        me ? (
+          <PricingPage hosted={hosted} signedIn />
+        ) : (
+          <LoginView
+            signup
+            hosted={hosted}
+            title={<>Inscrivez-vous avec vos identifiants <PayByPhone /> pour connaître vos tarifs</>}
+            onLogin={(m) => {
+              forgetZoneLookup()
+              setMe(m)
+            }}
+          />
+        )
       ) : route === 'faq' ? (
         <FaqView hosted={hosted} signedIn={!!me} />
       ) : me === null ? (

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { withPayByPhone } from '@/components/signs'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
+import { cn } from '@/lib/utils'
 
 /** PaybyBot is for Paris residents: French numbers only (calling code and flag stripes). */
 const COUNTRIES = [
@@ -42,7 +43,17 @@ function phoneUsername(national: string, code: string) {
 const fieldBox =
   'flex h-14 items-center rounded-xl border border-ink/20 bg-white transition focus-within:border-eu focus-within:ring-3 focus-within:ring-eu/15'
 
-export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: Me) => void; hosted: boolean; signup?: boolean }) {
+export function LoginView({
+  onLogin,
+  hosted,
+  signup = false,
+  title,
+}: {
+  onLogin: (me: Me) => void
+  hosted: boolean
+  signup?: boolean
+  title?: ReactNode // instead of « Inscription » / « Connexion à PaybyBot » (the Tarifs page asks to sign up)
+}) {
   const mode = 'phone' as 'phone' | 'email' // login by phone number only
   const country = 'FR'
   const [phone, setPhone] = useState('')
@@ -131,8 +142,13 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
             submit()
           }}
         >
-          <h1 className="font-heading text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink">
-            {signup ? 'Inscription' : 'Connexion à PaybyBot'}
+          <h1
+            className={cn(
+              'font-heading leading-[1.05] font-semibold tracking-[-0.035em] text-ink',
+              title ? 'text-[2rem] sm:text-[2.2rem]' : 'text-[2.6rem]',
+            )}
+          >
+            {title ?? (signup ? 'Inscription' : 'Connexion à PaybyBot')}
           </h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
             {withPayByPhone(signup ? 'Avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.')}{' '}

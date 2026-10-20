@@ -74,6 +74,8 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   }
 
   return (
+    <>
+    {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
     <div className="grid gap-4 sm:grid-cols-2">
       {PLANS.map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
         <div
@@ -119,19 +121,25 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
         </div>
       ))}
     </div>
+    </>
   )
 }
 
 
-/** Public pricing page (#/tarifs). */
+/** Pricing page (#/tarifs), once signed in: the account's own two plans (signed out, App shows the sign-up). */
 export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 pt-16 pb-20 lg:pt-24">
         <h1 className="rise text-center font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3.4rem]">
-          Tarifs.
+          {signedIn ? 'Vos tarifs.' : 'Tarifs.'}
         </h1>
+        {signedIn && (
+          <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
+            Calculés pour votre véhicule et votre zone de résidence.
+          </p>
+        )}
         <div className="mt-12">
           <PlanCards signedIn={signedIn} />
         </div>

@@ -305,6 +305,17 @@ function useStickyCta(ref: RefObject<HTMLElement | null>) {
 
 const QUESTIONS: [string, ReactNode][] = [
   [
+    'Combien ça coûte ?',
+    <>
+      Le prix dépend de votre véhicule et de votre zone de résidence : il est calculé à partir de votre compte{' '}
+      <PayByPhone /> et affiché avant tout paiement. Le premier mois est offert, sans carte bancaire, et l'offre annuelle
+      coûte 20 % de moins.
+      <a href="#/inscription" className={cn('mt-5 w-fit px-6 text-base sm:h-12', ui.primary)}>
+        Découvrir mon prix <ArrowRight className="size-5" />
+      </a>
+    </>,
+  ],
+  [
     'Quelles informations me demandez-vous ?',
     <>
       Rien de ce que <PayByPhone /> sait déjà : votre numéro, vos véhicules, votre carte et votre zone de résidence

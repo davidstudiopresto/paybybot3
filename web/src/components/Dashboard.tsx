@@ -128,6 +128,7 @@ export function Dashboard({
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
+      <TrialBanner trialEnd={account?.trialEnd ?? null} plan={account?.plan ?? null} />
       <TopBar>
         {me.demo && (
           <span className="inline-flex h-9 items-center rounded-full bg-amber/25 px-3 text-sm font-semibold text-ink sm:h-10 sm:px-4 sm:text-[0.95rem]">
@@ -139,7 +140,6 @@ export function Dashboard({
           <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>
         </button>
       </TopBar>
-      <TrialBanner trialEnd={account?.trialEnd ?? null} plan={account?.plan ?? null} />
 
       <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-12 pb-16">
         <p className="rise text-lg text-ink/60">{me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}</p>

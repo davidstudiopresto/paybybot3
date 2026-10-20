@@ -126,21 +126,18 @@ export function TrialBanner({ trialEnd, plan }: { trialEnd: string | null; plan:
       : `Mois offert : encore ${left} jour${left > 1 ? 's' : ''}.`
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className={cn(
-          'flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm transition',
-          left <= 0
-            ? 'bg-destructive/10 text-destructive hover:bg-destructive/15'
-            : ending
-              ? 'bg-amber/25 text-ink hover:bg-amber/35'
-              : 'bg-eu/[0.07] text-ink hover:bg-eu/[0.11]',
-        )}
-      >
-        <Sparkles className="size-4 text-eu" />
-        <span>{text}</span>
-        <span className="font-semibold underline underline-offset-[3px]">Choisir mon offre</span>
-      </button>
+      <div className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-[linear-gradient(90deg,#0b1024_0%,#1d2a6b_45%,#4b2f86_100%)] px-4 py-2.5 text-sm text-white">
+        <span className="flex items-center gap-2">
+          <Sparkles className="size-4 text-white/80" />
+          <span className={left <= 0 ? 'font-semibold text-[#ffb4b4]' : ending ? 'font-semibold' : ''}>{text}</span>
+        </span>
+        <button
+          onClick={() => setOpen(true)}
+          className="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-white/90"
+        >
+          Choisir mon offre
+        </button>
+      </div>
       {open && (
         <Dialog open onOpenChange={(o) => !o && setOpen(false)}>
           <DialogContent className="max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl bg-white p-6 sm:max-w-2xl sm:p-8">

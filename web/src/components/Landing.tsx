@@ -11,13 +11,13 @@ import { ui } from '@/lib/styles'
 import { PayByPhone, withPayByPhone } from '@/components/signs'
 
 
-/** The 26-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
+/** The 29-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
 function DemoVideo() {
   const ref = useRef<HTMLVideoElement>(null)
   const [mobile] = useState(() => window.matchMedia('(max-width: 639px)').matches)
   const [still] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [playing, setPlaying] = useState(!still)
-  const src = mobile ? '/video/paybybot-26s-mobile' : '/video/paybybot-26s'
+  const src = mobile ? '/video/paybybot-29s-mobile' : '/video/paybybot-29s'
 
   useEffect(() => {
     const v = ref.current
@@ -56,7 +56,7 @@ function DemoVideo() {
         loop
         playsInline
         preload="metadata"
-        aria-label="Vidéo de 26 secondes : activer le renouvellement automatique dans PaybyBot"
+        aria-label="Vidéo de 29 secondes : activer le renouvellement automatique dans PaybyBot"
         className="block aspect-[4/5] w-full rounded-[20px] bg-[#0b1024] object-cover sm:aspect-video"
       />
       <button
@@ -70,7 +70,7 @@ function DemoVideo() {
         onClick={openFull}
         className="absolute bottom-4 left-4 inline-flex h-11 items-center gap-2.5 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-5 text-[0.95rem] font-semibold text-white shadow-lg transition hover:brightness-110 sm:bottom-6 sm:left-6"
       >
-        <Play className="size-4 fill-white" /> Découvrir PaybyBot · 26 s
+        <Play className="size-4 fill-white" /> Découvrir PaybyBot · 29 s
       </button>
       {full && <FullVideo src={src} onClose={closeFull} />}
     </div>

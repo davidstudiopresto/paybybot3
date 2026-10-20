@@ -137,6 +137,25 @@ export function RiverainCard({
 
   const weekly = data?.autopilots.filter(isWeekly) ?? []
 
+  // « Renouveler un autre véhicule » only while a riverain vehicle is not renewed yet.
+  const key = (plate: string) => plate.replace(/[^0-9a-z]/gi, '').toUpperCase()
+  const renewed = weekly.map((ap) => key(ap.plate)).sort().join(',')
+  const [another, setAnother] = useState(false)
+  useEffect(() => {
+    if (!weekly.length || !data) return
+    const covered = new Set(renewed.split(','))
+    if (data.vehicles.every((v) => covered.has(key(v.plate)))) return setAnother(false) // nothing else at all
+    let cancelled = false
+    api.pricing().then(
+      (p) => !cancelled && setAnother((p.vehicles ?? []).some((v) => !covered.has(key(v.plate)))),
+      () => !cancelled && setAnother(false),
+    )
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renewed, data?.vehicles.length])
+
   if (weekly.length && data) {
     // Renewals of a running ticket are shown on the ticket itself; only the others are listed here.
     const others = weekly.filter((ap) => !data.sessions.some((s) => s.plate === ap.plate && s.location === ap.location))
@@ -163,9 +182,11 @@ export function RiverainCard({
             })}
           </ul>
         )}
-        <button onClick={() => setOpen(true)} className={cn('text-sm', ui.link)}>
-          Renouveler un autre véhicule
-        </button>
+        {another && (
+          <button onClick={() => setOpen(true)} className={cn('text-sm', ui.link)}>
+            Renouveler un autre véhicule
+          </button>
+        )}
         <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />
       </section>
     )

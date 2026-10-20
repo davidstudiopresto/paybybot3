@@ -231,6 +231,8 @@ function RiverainDialog({
   const [error, setError] = useState<string | null>(null)
 
   const covered = new Set(data.autopilots.filter(isWeekly).map((a) => a.plate))
+  // Renewals pay with a saved card only (PayPal or the phone bill are not offered for them).
+  const cards = data.payments.filter((p) => p.kind === 'card')
 
   // Each time the dialog opens: the riverain vehicles not renewed yet (all ticked), the home zone, the card.
   useEffect(() => {
@@ -264,13 +266,13 @@ function RiverainDialog({
       },
       () => {},
     )
-    setPayment(data.payments.find((p) => p.id === last.paymentAccountId)?.id ?? data.payments[0]?.id ?? '')
+    setPayment(cards.find((p) => p.id === last.paymentAccountId)?.id ?? cards[0]?.id ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, data])
 
   useEffect(() => {
-    if (open && !payment && data.payments[0]) setPayment(data.payments[0].id)
-  }, [open, data.payments, payment])
+    if (open && !payment && cards[0]) setPayment(cards[0].id)
+  }, [open, cards, payment])
 
   const ready = open && selected.length > 0 && payment && /^\w{3,}$/.test(zone)
 
@@ -406,13 +408,13 @@ function RiverainDialog({
             }}
           />
 
-          {!data.payments.length && <NoPayment compact onRefresh={async () => onDone()} />}
+          {!cards.length && <NoPayment compact onRefresh={async () => onDone()} />}
 
-          {data.payments.length > 1 && (
+          {cards.length > 1 && (
             <div>
               <p className={ui.label}>Payer avec</p>
               <div className="flex flex-wrap gap-2">
-                {data.payments.map((p) => (
+                {cards.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setPayment(p.id)}
@@ -811,41 +813,23 @@ export function ResidentGate({
 }
 
 /** Full screen over the blurred page: PaybyBot needs a vehicle with the resident rate; what to do, then the actions. */
-export function ResidentRequired({
-  zone = null,
-  vehicles = 2,
-  children,
-}: {
-  zone?: string | null
-  vehicles?: number // one: « votre véhicule », else the plural
-  children: ReactNode
-}) {
-  const where = zone ? arrondissement(zone) ?? `la zone ${zone}` : null
+/** Full screen over the blurred page: what PaybyBot needs and what to do, then the actions (children). */
+function FullScreenNotice({ title, intro, steps, children }: { title: string; intro: ReactNode; steps: string[]; children: ReactNode }) {
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="resident-required-title"
+      aria-labelledby="full-screen-notice-title"
       className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-white/60 p-4 backdrop-blur-md sm:p-6"
     >
       <div className="rise w-full max-w-lg rounded-3xl border border-ink/10 bg-white p-7 shadow-[0_40px_80px_-30px_rgb(11_16_36/0.35)] sm:p-9">
         <span className="grid size-12 place-items-center rounded-2xl bg-eu font-heading text-2xl font-bold text-white">P</span>
-        <h2 id="resident-required-title" className="mt-5 font-heading text-[1.9rem] leading-[1.1] font-semibold tracking-[-0.03em] text-ink">
-          Stationnement résident requis
+        <h2 id="full-screen-notice-title" className="mt-5 font-heading text-[1.9rem] leading-[1.1] font-semibold tracking-[-0.03em] text-ink">
+          {title}
         </h2>
-        <p className="mt-3 leading-relaxed text-ink/70">
-          Pour accéder aux services PaybyBot,{' '}
-          {vehicles === 1 ? 'votre véhicule doit' : 'au moins un de vos véhicules doit'} bénéficier du tarif résident sur
-          votre compte {withPayByPhone('PayByPhone')}
-          {where ? ` (${where})` : ''}.{' '}
-          {vehicles === 1 ? 'Ce n’est pas le cas pour le moment.' : 'Ce n’est le cas d’aucun d’entre eux pour le moment.'}
-        </p>
+        <p className="mt-3 leading-relaxed text-ink/70">{intro}</p>
         <ol className="mt-5 space-y-2.5 text-[0.95rem] leading-relaxed text-ink/80">
-          {[
-            'Faites votre demande de stationnement résident pour obtenir le forfait résident.',
-            'Vérifiez que le tarif résident apparaît dans votre application PayByPhone.',
-            'Revenez ici : l’accès à PaybyBot s’ouvre dès que le tarif résident est actif.',
-          ].map((step, i) => (
+          {steps.map((step, i) => (
             <li key={step} className="flex gap-3">
               <span className="grid size-6 shrink-0 place-items-center rounded-full bg-eu/[0.08] text-sm font-bold text-eu">
                 {i + 1}
@@ -857,5 +841,86 @@ export function ResidentRequired({
         {children}
       </div>
     </div>
+  )
+}
+
+/** PaybyBot needs a vehicle with the resident rate. */
+export function ResidentRequired({
+  zone = null,
+  vehicles = 2,
+  children,
+}: {
+  zone?: string | null
+  vehicles?: number // one: « votre véhicule », else the plural
+  children: ReactNode
+}) {
+  const where = zone ? arrondissement(zone) ?? `la zone ${zone}` : null
+  return (
+    <FullScreenNotice
+      title="Stationnement résident requis"
+      intro={
+        <>
+          Pour accéder aux services PaybyBot,{' '}
+          {vehicles === 1 ? 'votre véhicule doit' : 'au moins un de vos véhicules doit'} bénéficier du tarif résident sur
+          votre compte {withPayByPhone('PayByPhone')}
+          {where ? ` (${where})` : ''}.{' '}
+          {vehicles === 1 ? 'Ce n’est pas le cas pour le moment.' : 'Ce n’est le cas d’aucun d’entre eux pour le moment.'}
+        </>
+      }
+      steps={[
+        'Faites votre demande de stationnement résident pour obtenir le forfait résident.',
+        'Vérifiez que le tarif résident apparaît dans votre application PayByPhone.',
+        'Revenez ici : l’accès à PaybyBot s’ouvre dès que le tarif résident est actif.',
+      ]}
+    >
+      {children}
+    </FullScreenNotice>
+  )
+}
+
+/** Why a card: Apple Pay and Google Pay need the phone at each payment, so they cannot pay automatically. */
+export const CARD_NOTE =
+  'Une carte bancaire enregistrée dans PayByPhone est nécessaire : Apple Pay et Google Pay demandent une validation sur votre téléphone à chaque paiement et ne permettent pas le paiement automatique.'
+
+/** PaybyBot pays with a card saved on PayByPhone. */
+export function CardRequired({ children }: { children: ReactNode }) {
+  return (
+    <FullScreenNotice
+      title="Carte bancaire requise"
+      intro={
+        <>
+          Pour renouveler votre forfait automatiquement, PaybyBot paie avec une carte bancaire enregistrée sur votre compte{' '}
+          {withPayByPhone('PayByPhone')}. Aucune carte n’y est enregistrée pour le moment. Apple Pay et Google Pay ne
+          permettent pas le paiement automatique : ils demandent une validation sur votre téléphone à chaque paiement.
+        </>
+      }
+      steps={[
+        'Ouvrez l’application PayByPhone, rubrique Moyens de paiement.',
+        'Ajoutez une carte bancaire.',
+        'Revenez ici : l’accès à PaybyBot s’ouvre dès que la carte est enregistrée.',
+      ]}
+    >
+      {children}
+    </FullScreenNotice>
+  )
+}
+
+/** Signed in without a saved card: PaybyBot is not usable until one is added (the page reloads to check). */
+export function CardGate() {
+  async function logout() {
+    await api.logout().catch(() => {})
+    window.location.assign('/')
+  }
+  return (
+    <CardRequired>
+      <button onClick={() => window.location.reload()} className={cn('mt-7', ui.primary)}>
+        J’ai ajouté une carte, vérifier à nouveau
+      </button>
+      <p className="mt-5 text-center text-sm">
+        <button onClick={logout} className={ui.link}>
+          Se déconnecter
+        </button>
+      </p>
+    </CardRequired>
   )
 }

@@ -8,7 +8,7 @@ import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
-import { ManageRenewal, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
+import { CardGate, ManageRenewal, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
 import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -123,7 +123,12 @@ export function Dashboard({
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       {/* No resident rate on PayByPhone: PaybyBot is not usable, the page stays blurred behind the notice. */}
-      {resident?.resident === false && !me.demo && <ResidentGate zone={resident.zone} vehicles={data?.vehicles.length} onChecked={setResident} />}
+      {resident?.resident === false && !me.demo ? (
+        <ResidentGate zone={resident.zone} vehicles={data?.vehicles.length} onChecked={setResident} />
+      ) : (
+        // No card saved on PayByPhone (removed since, Apple Pay only): PaybyBot cannot pay, so it is not usable.
+        data && !me.demo && !data.payments.some((p) => p.kind === 'card') && <CardGate />
+      )}
       <TrialBanner trialEnd={account?.trialEnd ?? null} plan={account?.plan ?? null} blocked={account?.blocked ?? null} />
       <TopBar>
         {me.demo && (

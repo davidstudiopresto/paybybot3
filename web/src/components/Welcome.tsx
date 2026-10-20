@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
-import { ResidentGate, type ResidentStatus } from '@/components/Riverain'
+import { CardGate, ResidentGate, type ResidentStatus } from '@/components/Riverain'
 import { arrondissement, PayByPhone, Plate, withPayByPhone, Wordmark, ZonePlate } from '@/components/signs'
 import { api, until, type Me, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -81,13 +81,20 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
     if (zone === null && !me.demo) setStatus({ zone: null, resident: false })
   }, [zone, me.demo])
 
+  // PaybyBot pays with a card saved on PayByPhone: without one it cannot be used.
+  const cards = data.payments.filter((p) => p.kind === 'card')
+
   const step = 140
   let i = 0
   const next = () => ++i * step
 
   return (
     <div className="grid min-h-dvh bg-white lg:grid-cols-[1.05fr_1fr]">
-      {status?.resident === false && <ResidentGate zone={status.zone} vehicles={data.vehicles.length} onChecked={setStatus} />}
+      {status?.resident === false ? (
+        <ResidentGate zone={status.zone} vehicles={data.vehicles.length} onChecked={setStatus} />
+      ) : (
+        !cards.length && !me.demo && <CardGate />
+      )}
       <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,7vw,7rem)]">
         <Wordmark />
         <div className="mx-auto w-full max-w-lg lg:my-auto lg:py-10">
@@ -134,18 +141,23 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             </Row>
             <Row
               icon={<CreditCard className="size-5" />}
-              label={data.payments.length > 1 ? 'Moyens de paiement' : 'Moyen de paiement'}
+              label={cards.length > 1 ? 'Cartes bancaires' : 'Carte bancaire'}
               delay={next()}
-              found={data.payments.length > 0}
+              found={cards.length > 0}
             >
-              {data.payments.length ? (
-                <span className="flex flex-col gap-0.5 font-semibold">
-                  {data.payments.map((p) => (
-                    <span key={p.id}>{p.label}</span>
-                  ))}
-                </span>
+              {cards.length ? (
+                <>
+                  <span className="flex flex-col gap-0.5 font-semibold">
+                    {cards.map((p) => (
+                      <span key={p.id}>{p.label}</span>
+                    ))}
+                  </span>
+                  <span className="mt-1 block text-sm text-ink/55">
+                    Utilisée pour vos renouvellements. Apple Pay et Google Pay ne permettent pas le paiement automatique.
+                  </span>
+                </>
               ) : (
-                <span className="text-ink/60">Aucune carte : ajoutez-en une dans l’application PayByPhone.</span>
+                <span className="text-ink/60">{withPayByPhone('Aucune carte : ajoutez-en une dans l’application PayByPhone.')}</span>
               )}
             </Row>
             <Row icon={<MapPin className="size-5" />} label="Zone de résidence" delay={next()} found={!!zone}>
@@ -180,7 +192,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
 
           <button
             onClick={onContinue}
-            disabled={!zone || status?.resident === false}
+            disabled={!zone || status?.resident === false || !cards.length}
             className={cn('rise mt-8', ui.primary)}
             style={{ animationDelay: `${next()}ms` }}
           >

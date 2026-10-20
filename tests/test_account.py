@@ -60,6 +60,18 @@ class Account(unittest.TestCase):
         token = response.headers["set-cookie"].split("pbb_pending=")[1].split(";")[0]
         return fresh, result, codes[0], token
 
+    def test_sign_up_refused_without_a_saved_card(self):
+        fresh = web.UserSession("demo", "", demo=True)
+        fresh.demo = False
+        fresh.bot.get_payment_accounts = lambda: {"paymentCards": [], "paypalAccounts": []}  # e.g. Apple Pay only
+        with patch.object(web, "UserSession", return_value=fresh), patch.object(web, "send_code") as sent:
+            with self.assertRaises(HTTPException) as e:
+                web.login(web.Login(username="+33612345678", password="x", signup=True, email="c@d.fr"), None,
+                          Response())
+        self.assertEqual((e.exception.status_code, e.exception.detail["reason"]), (412, "no_card"))
+        sent.assert_not_called()
+        self.assertEqual(fresh.account, {})
+
     def test_sign_up_waits_for_the_code(self):
         fresh, result, code, token = self.sign_up()
         self.assertTrue(result["pending"])

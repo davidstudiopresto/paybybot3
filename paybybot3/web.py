@@ -490,6 +490,11 @@ def normalize_accounts(accounts):
     return result
 
 
+def has_card(s):
+    """A payment card saved on PayByPhone: what PaybyBot pays with (Apple Pay is never saved, it needs the phone)."""
+    return any(p["kind"] == "card" for p in normalize_accounts(s.call("get_payment_accounts") or {}))
+
+
 class Unconfirmed(Exception):
     """PayByPhone accepted the payment request but no parking session showed up."""
 
@@ -1217,6 +1222,11 @@ def login(body: Login, request: Request, response: Response):
             log.info("login refused: no account yet for %s", masked)
             raise HTTPException(404, "Aucun compte PaybyBot pour ce compte PayByPhone.")
     if body.signup and not demo:  # the account is created once the e-mail is confirmed with a code
+        # PaybyBot pays with a card saved on PayByPhone: Apple Pay / Google Pay need the phone at each payment.
+        if not guarded(lambda: has_card(session)):
+            log.info("sign-up refused: no saved card for %s", masked)
+            raise HTTPException(412, {"message": "Aucune carte bancaire n'est enregistrée sur votre compte PayByPhone.",
+                                      "reason": "no_card"})
         # PaybyBot is for residents: at least one vehicle must have the resident rate on PayByPhone.
         zone = guarded(lambda: resident_home_zone(session))  # from PayByPhone only, never typed
         if not zone:
@@ -1224,7 +1234,8 @@ def login(body: Login, request: Request, response: Response):
             count = len([v for v in guarded(lambda: session.call("get_vehicles")) or [] if not v.get("archived")])
             raise HTTPException(412, {"message": ("Votre véhicule ne bénéficie" if count == 1 else
                                                   "Aucun de vos véhicules ne bénéficie")
-                                                 + " du tarif résident sur PayByPhone.", "vehicles": count})
+                                                 + " du tarif résident sur PayByPhone.", "vehicles": count,
+                                      "reason": "no_resident"})
         return start_verification(response, session, body.email.strip(), zone)
     if HOSTED:
         token = seal(session)
@@ -1858,6 +1869,10 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     # One renewal per vehicle: two would each pay for the same car.
     if plate_key(body.plate) in guarded(lambda: renewed_plates(s)):
         raise HTTPException(409, "Ce véhicule a déjà un renouvellement automatique.")
+    # Renewals pay with a card saved on PayByPhone (nothing else is charged reliably without the user).
+    cards = {p["id"] for p in guarded(lambda: normalize_accounts(s.call("get_payment_accounts") or {})) if p["kind"] == "card"}
+    if body.paymentAccountId not in cards:
+        raise HTTPException(400, "Le renouvellement automatique se paie avec une carte bancaire enregistrée sur PayByPhone.")
     if HOSTED and not s.demo:
         refresh = getattr(s.bot, "refresh_token", None)
         if not refresh:

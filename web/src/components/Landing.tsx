@@ -107,7 +107,7 @@ function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
 
 const STEPS = [
   ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
-  ['Vérifiez', 'Véhicule et carte sont retrouvés dans votre compte PayByPhone. Vous indiquez votre adresse et confirmez votre e-mail.'],
+  ['Vérifiez', 'Véhicule et carte sont retrouvés dans votre compte PayByPhone.'],
   ["C'est tout", 'Le forfait résident est repayé à chaque échéance, même téléphone éteint.'],
 ]
 

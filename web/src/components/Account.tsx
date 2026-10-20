@@ -180,7 +180,8 @@ function AccountDialog({
         </dl>
 
         <p className="px-6 pt-4 text-sm text-ink/50">
-          Les véhicules viennent de <PayByPhone /> : modifiez-les dans son application.
+          Vos véhicules sont synchronisés avec votre compte <PayByPhone />. Pour en ajouter ou en modifier un,
+          rendez-vous dans l'application <PayByPhone />.
         </p>
 
         <div className={cn('px-6 pb-7', demo ? 'pt-2' : 'pt-6')}>

@@ -133,7 +133,7 @@ export const api = {
   deleteData: () => request('/api/me/data', { method: 'DELETE' }),
   overview: () => request<Overview>('/api/overview'),
   /** Home zone guessed from the PayByPhone history (null if none). */
-  residentZone: () => (zoneLookup ??= request<{ zone: string | null; manual?: boolean }>('/api/resident-zone').catch(() => ({ zone: null }))),
+  residentZone: () => (zoneLookup ??= request<{ zone: string | null; manual?: boolean }>('/api/resident-zone').catch(() => ({ zone: null, manual: false }))),
   /** Address autocomplete, only to find the zone (relayed by PaybyBot, not stored). */
   searchAddress: (q: string) => post<{ label: string; postcode: string }[]>('/api/address', { q }),
   rates: (location: string, plate: string) =>

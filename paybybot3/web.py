@@ -626,7 +626,7 @@ def email_html(title, lines, button=None, footer=RENEWAL_FOOTER, code=None):
            'font-size:16px;font-weight:700;text-decoration:none">%s</a></p>'
            % (escape(button[1]), escape(button[0]))) if button else ""
     return (
-        '<div style="margin:0;padding:32px 16px;background:#f4f5f8;%s">'
+        '<div style="margin:0;padding:32px 16px;background:#ffffff;%s">'
         '<div style="max-width:520px;margin:0 auto">'
         '<p style="margin:0 0 18px 4px"><a href="%s" style="text-decoration:none">'
         '<img src="%s/brand/paybybot-logo.png" width="120" alt="PaybyBot" style="display:block;border:0;height:auto"></a></p>'
@@ -2142,7 +2142,7 @@ def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
                     "arrêtés et tout ce que PaybyBot gardait pour vous est effacé.",
                     "Les tickets déjà en cours restent valables jusqu'à leur fin. Votre compte PayByPhone n'est pas "
                     "modifié.",
-                    "Vous n'avez rien demandé ? Écrivez-nous en répondant à cet e-mail."],
+                    "Vous n'avez rien demandé ? Écrivez-nous à %s ou répondez simplement à cet e-mail." % MAIL_REPLY_TO],
                    footer="Vous recevez cet e-mail parce que votre compte PaybyBot vient d'être supprimé.")
     s.account = {}
     s.autopilots.clear()

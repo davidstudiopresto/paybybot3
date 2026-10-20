@@ -303,10 +303,22 @@ _loaded = contextvars.ContextVar("pbb_loaded", default=None)
 
 def _secrets():
     """Current secret first; PAYBYBOT_SECRET_OLD lets data sealed with the previous one still be read."""
-    current_secret = os.environ.get("PAYBYBOT_SECRET")
+    current_secret = os.environ.get("PAYBYBOT_SECRET") or (None if HOSTED else _local_secret())
     if not current_secret:
         raise RuntimeError("PAYBYBOT_SECRET is not set")
     return [x for x in (current_secret, os.environ.get("PAYBYBOT_SECRET_OLD")) if x]
+
+
+def _local_secret():
+    """On a personal computer: a key made once and kept next to the config, readable by this user only.
+    It seals the "Se souvenir de moi" cookie, so a restart of PaybyBot does not log out."""
+    path = Path("~/.config/paybybot3-web.key").expanduser()
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(secrets.token_urlsafe(32))
+    return path.read_text().strip()
 
 
 def _subkey(secret, purpose):
@@ -344,6 +356,15 @@ def current(token):
             holder.append(session)
         return session
     session = SESSIONS.get(token or "")
+    if session is None and token and len(token) > 60:  # "Se souvenir de moi": sealed, survives a restart
+        try:
+            state = json.loads(_fernet().decrypt(token.encode(), ttl=REMEMBER))
+            if not state.get("rm") or time.time() - state.get("iat", 0) > REMEMBER:
+                raise ValueError("not remembered")
+            session = SESSIONS[token] = UserSession.from_state(state)
+            session.issued_at = state["iat"]
+        except Exception:
+            session = None
     if session is None:
         raise HTTPException(401, "Session expirée, reconnectez-vous.")
     return session
@@ -1144,7 +1165,7 @@ def login(body: Login, request: Request, response: Response):
             except Exception as e:
                 log.warning("could not refresh stored renewals: %s", e)
     else:
-        token = secrets.token_urlsafe(32)
+        token = seal(session) if body.remember else secrets.token_urlsafe(32)
         SESSIONS[token] = session
     if body.email.strip() or body.zone.strip():
         try:

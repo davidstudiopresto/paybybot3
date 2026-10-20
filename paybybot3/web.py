@@ -600,10 +600,12 @@ def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER):
                           headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
                           json={"from": MAIL_FROM, "to": [to], "reply_to": MAIL_REPLY_TO, "subject": subject,
                                 "html": html, "text": text})
-        log.info("e-mail '%s': %s", subject, r.status_code)  # never the address
+        log.info("e-mail '%s': %s", title, r.status_code)  # the title, never the address nor a code from the subject
+        if not r.ok:
+            log.warning("e-mail refused by Resend: %s", r.text[:200])
         return r.ok
     except Exception as e:
-        log.warning("e-mail '%s' failed: %s", subject, e)
+        log.warning("e-mail '%s' failed: %s", title, e)
         return False
 
 

@@ -11,14 +11,16 @@ import { AdminPage } from '@/components/Admin'
 import { PricingPage } from '@/components/Pricing'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { NotFoundPage } from '@/components/NotFound'
+import { Welcome } from '@/components/Welcome'
 import { PayByPhone } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
-type Route = 'faq' | 'tarifs' | 'connexion' | 'inscription' | 'demo' | 'admin' | null
+type Route = 'faq' | 'tarifs' | 'connexion' | 'inscription' | 'demo' | 'admin' | 'bienvenue' | null
 
 function routeFromHash(hash: string): Route {
   const id = hash.replace(/^#\/?/, '')
-  return id === 'faq' || id === 'tarifs' || id === 'connexion' || id === 'inscription' || id === 'demo' || id === 'admin'
+  return id === 'faq' || id === 'tarifs' || id === 'connexion' || id === 'inscription' || id === 'demo' || id === 'admin' ||
+    id === 'bienvenue'
     ? id
     : null
 }
@@ -52,6 +54,14 @@ export default function App() {
     history.replaceState(null, '', window.location.pathname)
     setRoute(null)
     if (me === null) api.login('demo', 'demo').then((m) => setMe(m as Me), (e) => toast.error((e as Error).message))
+  }, [route, me])
+
+  // #/bienvenue: show the welcome page again (what PaybyBot found in PayByPhone), once signed in.
+  useEffect(() => {
+    if (route !== 'bienvenue' || !me) return
+    history.replaceState(null, '', window.location.pathname)
+    setRoute(null)
+    setOnboarding(true)
   }, [route, me])
 
   // Back from the e-mail's « Débloquer mon compte » once Stripe has taken the payment.
@@ -173,6 +183,8 @@ export default function App() {
             refresh()
           }}
         />
+      ) : onboarding ? (
+        <Welcome me={me} data={data} onContinue={() => setOnboarding(false)} />
       ) : (
         <>
           <Dashboard

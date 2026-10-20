@@ -4,7 +4,7 @@ import { ArrowRight, ChevronDown, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pa
 import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
-import { PlanCards, REASSURANCE } from '@/components/Pricing'
+import { PlanCards } from '@/components/Pricing'
 import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -258,7 +258,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
           <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
             Un prix simple.
           </h2>
-          <p className="mx-auto mt-4 max-w-[34rem] text-center text-[1.05rem] text-ink/60 lg:text-lg">{REASSURANCE}</p>
           <div className="mx-auto mt-12 max-w-3xl">
             <PlanCards signedIn={false} />
           </div>

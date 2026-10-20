@@ -90,7 +90,6 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   )
 }
 
-export const REASSURANCE = '1 mois offert, sans carte bancaire. Rien n’est prélevé avant la fin du mois offert.'
 
 /** Public pricing page (#/tarifs). */
 export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
@@ -101,7 +100,6 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
         <h1 className="rise text-center font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3.4rem]">
           Tarifs.
         </h1>
-        <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">{REASSURANCE}</p>
         <div className="mt-12">
           <PlanCards signedIn={signedIn} />
         </div>
@@ -143,7 +141,7 @@ export function TrialBanner({ trialEnd, plan }: { trialEnd: string | null; plan:
           <DialogContent className="max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl bg-white p-6 sm:max-w-2xl sm:p-8">
             <DialogTitle className={ui.dialogTitle}>Choisir mon offre</DialogTitle>
             <DialogDescription className="mt-1 mb-8 text-ink/60">
-              Rien n’est prélevé avant la fin de votre mois offert. Sans engagement.
+              Sans engagement.
             </DialogDescription>
             <PlanCards signedIn />
           </DialogContent>

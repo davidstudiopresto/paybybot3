@@ -107,9 +107,7 @@ export function Dashboard({
       ? api.confirmCheckout(done[1]).then(
           (r) => {
             history.replaceState(null, '', window.location.pathname)
-            toast.success(`Offre ${r.plan === 'yearly' ? 'annuelle' : 'mensuelle'} activée.`, {
-              description: 'Rien n’est prélevé avant la fin de votre mois offert.',
-            })
+            toast.success(`Offre ${r.plan === 'yearly' ? 'annuelle' : 'mensuelle'} activée.`)
           },
           (e) => toast.error((e as Error).message),
         )

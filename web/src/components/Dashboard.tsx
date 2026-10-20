@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LogOut, Repeat } from 'lucide-react'
-import { Plate, ZonePlate, withPayByPhone } from '@/components/signs'
+import { PayByPhone, Plate, ZonePlate, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
-import { ManageRenewal, NoResidentStatus, RenewalNote, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
-import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
+import { ManageRenewal, NoResidentStatus, RenewalNote, RiverainCard, WEEKLY_LABEL, ZoneField, renewalOf } from '@/components/Riverain'
+import { api, forgetZoneLookup, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -106,9 +106,21 @@ export function Dashboard({
   }, [])
   // Resident status on PayByPhone: without it, nothing to renew (and no subscription).
   const [resident, setResident] = useState<{ zone: string | null; resident: boolean | null } | null>(null)
-  useEffect(() => {
+  const checkResident = useCallback(() => {
     if (!me.demo) api.residentStatus().then(setResident, () => {})
   }, [me.demo])
+  useEffect(checkResident, [checkResident])
+  // The status is checked in the home zone: unknown, the arrondissement is asked first.
+  async function saveZone(zone: string) {
+    try {
+      await api.updateAccount({ zone })
+      forgetZoneLookup()
+      setResident(null)
+      checkResident()
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
 
@@ -158,6 +170,15 @@ export function Dashboard({
         )}
 
         {resident?.resident === false && <NoResidentStatus zone={resident.zone} className="mt-8" />}
+        {resident && !resident.zone && (
+          <div className="mt-8 rounded-2xl border border-ink/10 p-5">
+            <p className="mb-3 text-ink/70">
+              Indiquez votre arrondissement de résidence : PaybyBot vérifie que votre statut résident est actif sur{' '}
+              <PayByPhone />.
+            </p>
+            <ZoneField zone="" fromHistory={false} onZone={saveZone} />
+          </div>
+        )}
 
         {/* The renewal is the one action of the app: no one-off payment button. */}
         <div className={renewing ? 'mt-6' : 'mt-10 border-t border-border pt-8'}>

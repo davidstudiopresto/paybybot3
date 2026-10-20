@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
 import { NoResidentStatus, ZoneField } from '@/components/Riverain'
-import { Wordmark } from '@/components/signs'
+import { PayByPhone, Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { api, forgetZoneLookup, type Pricing } from '@/lib/api'
@@ -90,7 +90,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
     {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
     {signedIn && pricing && pricing.monthly == null && pricing.resident !== false && (
       <div className="mb-6 rounded-2xl border border-ink/10 p-5">
-        <p className="mb-3 text-ink/70">Votre prix dépend de votre zone de résidence : indiquez votre arrondissement.</p>
+        <p className="mb-3 text-ink/70">Indiquez votre arrondissement de résidence : PaybyBot vérifie votre statut résident sur <PayByPhone /> et calcule votre prix.</p>
         <ZoneField zone="" fromHistory={false} onZone={saveZone} />
       </div>
     )}
@@ -312,7 +312,7 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
                 {pricing && pricing.monthly == null && !locked && (
                   <div className="rounded-2xl border border-ink/10 p-4">
                     <p className="mb-3 text-sm text-ink/60">
-                      Votre prix dépend de votre zone de résidence : indiquez votre arrondissement.
+                      Indiquez votre arrondissement de résidence : PaybyBot vérifie votre statut résident sur <PayByPhone /> et calcule votre prix.
                     </p>
                     <ZoneField zone="" fromHistory={false} onZone={saveZone} />
                   </div>

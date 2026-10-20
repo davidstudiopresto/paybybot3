@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
-import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pause, Play, Plus, Power, ShieldCheck, X } from 'lucide-react'
+import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pause, Play, Plus, Power, X } from 'lucide-react'
 import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
@@ -8,13 +8,6 @@ import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
-
-/** Under the main button: three facts the security and pricing pages back up. */
-const TRUST = [
-  [ShieldCheck, 'Paiement Stripe'],
-  [MapPin, 'Hébergé en France'],
-  [Power, 'Sans engagement'],
-] as const
 
 /** The 26-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
 function DemoVideo() {
@@ -191,10 +184,9 @@ export function Landing({ hosted }: { hosted: boolean }) {
     <div className="flex min-h-dvh flex-col bg-white">
       <PublicTopBar />
 
-      {/* Hero laid out like a product launch page: kicker on top, text left (573), video right (675), 64 apart at 1440. */}
+      {/* Hero laid out like a product launch page: text left (573), video right (675), 64 apart at 1440. */}
       <section className="rise mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:pt-16 lg:pr-[50px] lg:pl-[78px]">
-        <p className="text-center text-[13px] font-semibold tracking-[0.25em] text-eu uppercase">Stationnement résident automatisé</p>
-        <div className="mt-8 grid items-center gap-12 lg:mt-6 lg:grid-cols-[573fr_675fr] lg:gap-16">
+        <div className="grid items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="max-w-[40rem]">
             <h1 className={cn(ui.title, 'lg:text-[3.42rem] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
               Renouvellement automatique de votre ticket de stationnement.
@@ -214,13 +206,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
                 Se connecter
               </a>
             </p>
-            <ul className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink/55 lg:mt-6 lg:justify-start">
-              {TRUST.map(([Icon, text]) => (
-                <li key={text} className="flex items-center gap-1.5">
-                  <Icon className="size-4 text-eu" /> {text}
-                </li>
-              ))}
-            </ul>
           </div>
           <DemoVideo />
         </div>

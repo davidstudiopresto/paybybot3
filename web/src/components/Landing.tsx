@@ -92,7 +92,6 @@ function Security() {
  * Real users' feedback only, given with their consent: [first name and last name, short quote].
  * The section stays hidden while the list is empty.
  */
-// Hidden until there are real reviews: add [name, text] pairs here to show the section again.
 const TESTIMONIALS: [string, string][] = []
 
 function Testimonials() {

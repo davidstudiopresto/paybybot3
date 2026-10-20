@@ -2,10 +2,12 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
+import { ResidentRequired } from '@/components/Riverain'
 import { withPayByPhone } from '@/components/signs'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 import { cn } from '@/lib/utils'
+import { ui } from '@/lib/styles'
 
 /** PaybyBot is for Paris residents: French numbers only (calling code and flag stripes). */
 const COUNTRIES = [
@@ -66,6 +68,7 @@ export function LoginView({
   const [error, setError] = useState<string | null>(null)
   const [accountExists, setAccountExists] = useState(false)
   const [noAccount, setNoAccount] = useState(false)
+  const [noResident, setNoResident] = useState(false) // sign-up refused: no vehicle with the resident rate
   const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
   const human = useTurnstile()
@@ -118,6 +121,10 @@ export function LoginView({
       if (isPending(result)) setCodeSentTo(result.email)
       else onLogin(result)
     } catch (e) {
+      if (e instanceof ApiError && e.status === 412) {
+        setNoResident(true)
+        return
+      }
       setError((e as Error).message)
       setAccountExists(e instanceof ApiError && e.status === 409)
       setNoAccount(e instanceof ApiError && e.status === 404)
@@ -132,6 +139,24 @@ export function LoginView({
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
+      {noResident && (
+        <ResidentRequired>
+          <button
+            onClick={() => {
+              setNoResident(false)
+              submit()
+            }}
+            className={cn('mt-7', ui.primary)}
+          >
+            J’ai le tarif résident, réessayer
+          </button>
+          <p className="mt-5 text-center text-sm">
+            <a href="#/" onClick={() => setNoResident(false)} className={link}>
+              Retour à l’accueil
+            </a>
+          </p>
+        </ResidentRequired>
+      )}
       <PublicTopBar />
 
       <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center sm:pt-0">

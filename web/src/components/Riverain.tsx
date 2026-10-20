@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Check, Loader2, Mail, Pause, Play, Repeat } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -7,7 +7,7 @@ import { arrondissement, Plate, withPayByPhone, ZonePlate } from '@/components/s
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, clock, forgetZoneLookup, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, clock, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
 const WEEK_DAYS = 7
@@ -748,8 +748,6 @@ export type ResidentStatus = { zone: string | null; resident: boolean | null }
  */
 export function ResidentGate({ zone, onChecked }: { zone: string | null; onChecked: (status: ResidentStatus) => void }) {
   const [checking, setChecking] = useState(false)
-  const [changing, setChanging] = useState(false)
-  const where = zone ? arrondissement(zone) ?? `la zone ${zone}` : null
 
   async function check() {
     setChecking(true)
@@ -764,42 +762,48 @@ export function ResidentGate({ zone, onChecked }: { zone: string | null; onCheck
     }
   }
 
-  async function saveZone(z: string) {
-    try {
-      await api.updateAccount({ zone: z })
-      forgetZoneLookup()
-      setChanging(false)
-      await check()
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
-  }
-
   async function logout() {
     await api.logout().catch(() => {})
     window.location.assign('/')
   }
 
   return (
+    <ResidentRequired zone={zone}>
+      <button onClick={check} disabled={checking} className={cn('mt-7', ui.primary)}>
+        {checking ? <Loader2 className="size-5 animate-spin" /> : 'J’ai le tarif résident, vérifier à nouveau'}
+      </button>
+      <p className="mt-5 text-center text-sm">
+        <button onClick={logout} className={ui.link}>
+          Se déconnecter
+        </button>
+      </p>
+    </ResidentRequired>
+  )
+}
+
+/** Full screen over the blurred page: PaybyBot needs a vehicle with the resident rate; what to do, then the actions. */
+export function ResidentRequired({ zone = null, children }: { zone?: string | null; children: ReactNode }) {
+  const where = zone ? arrondissement(zone) ?? `la zone ${zone}` : null
+  return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="resident-gate-title"
+      aria-labelledby="resident-required-title"
       className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-white/60 p-4 backdrop-blur-md sm:p-6"
     >
       <div className="rise w-full max-w-lg rounded-3xl border border-ink/10 bg-white p-7 shadow-[0_40px_80px_-30px_rgb(11_16_36/0.35)] sm:p-9">
         <span className="grid size-12 place-items-center rounded-2xl bg-eu font-heading text-2xl font-bold text-white">P</span>
-        <h2 id="resident-gate-title" className="mt-5 font-heading text-[1.9rem] leading-[1.1] font-semibold tracking-[-0.03em] text-ink">
-          Tarif résident requis
+        <h2 id="resident-required-title" className="mt-5 font-heading text-[1.9rem] leading-[1.1] font-semibold tracking-[-0.03em] text-ink">
+          Stationnement résident requis
         </h2>
         <p className="mt-3 leading-relaxed text-ink/70">
-          PaybyBot est réservé aux titulaires du forfait résident. Aucun tarif résident n’a été trouvé pour vos véhicules
-          sur votre compte {withPayByPhone('PayByPhone')}
-          {where ? ` (${where})` : ''}.
+          Pour accéder aux services PaybyBot, au moins un de vos véhicules doit bénéficier du tarif résident sur votre
+          compte {withPayByPhone('PayByPhone')}
+          {where ? ` (${where})` : ''}. Ce n’est le cas d’aucun d’entre eux pour le moment.
         </p>
         <ol className="mt-5 space-y-2.5 text-[0.95rem] leading-relaxed text-ink/80">
           {[
-            'Effectuez votre demande de stationnement résident pour obtenir le forfait résident.',
+            'Faites votre demande de stationnement résident pour obtenir le forfait résident.',
             'Vérifiez que le tarif résident apparaît dans votre application PayByPhone.',
             'Revenez ici : l’accès à PaybyBot s’ouvre dès que le tarif résident est actif.',
           ].map((step, i) => (
@@ -811,25 +815,7 @@ export function ResidentGate({ zone, onChecked }: { zone: string | null; onCheck
             </li>
           ))}
         </ol>
-
-        {changing ? (
-          <div className="mt-6">
-            <ZoneField zone="" fromHistory={false} onZone={saveZone} />
-          </div>
-        ) : (
-          <button onClick={check} disabled={checking} className={cn('mt-7', ui.primary)}>
-            {checking ? <Loader2 className="size-5 animate-spin" /> : 'J’ai le tarif résident, vérifier à nouveau'}
-          </button>
-        )}
-        <p className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-ink/55">
-          <button onClick={() => setChanging((c) => !c)} className={ui.link}>
-            {changing ? 'Annuler' : 'Changer d’arrondissement'}
-          </button>
-          <span aria-hidden>·</span>
-          <button onClick={logout} className={ui.link}>
-            Se déconnecter
-          </button>
-        </p>
+        {children}
       </div>
     </div>
   )

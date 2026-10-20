@@ -33,8 +33,18 @@ class ResidentZone(unittest.TestCase):
         self.assertEqual(self.zone_with(sessions, resident_zones={"75017"}), "75017")
 
     def test_no_resident_zone(self):
-        self.assertIsNone(self.zone_with([]))
         self.assertIsNone(self.zone_with([ticket("33880", 24)], resident_zones=set()))
+
+    def test_not_in_the_history_found_arrondissement_by_arrondissement(self):
+        self.assertEqual(self.zone_with([], resident_zones={"75011"}), "75011")
+        self.assertEqual(self.zone_with([ticket("33880", 24)], resident_zones={"75017"}), "75017")
+
+    def test_sign_up_refused_without_a_resident_vehicle(self):
+        s = web.UserSession("demo", "", demo=True)
+        s.bot.get_rate_options = lambda zone, plate: [r for r in web.DemoBot().get_rate_options(zone, plate)
+                                                      if r["type"] != "Resident"]
+        self.assertIsNone(web.resident_home_zone(s))
+        self.assertEqual(s.account, {})  # nothing kept
 
     def test_demo_week_price(self):
         self.assertEqual(web.DemoBot()._price("101", 7, "Days"), 9)

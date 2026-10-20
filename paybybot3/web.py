@@ -900,7 +900,7 @@ def with_details(row):
 
 
 ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
-                  "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies")
+                  "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "zone_found")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -1209,7 +1209,12 @@ def login(body: Login, request: Request, response: Response):
             log.info("login refused: no account yet for %s", masked)
             raise HTTPException(404, "Aucun compte PaybyBot pour ce compte PayByPhone.")
     if body.signup and not demo:  # the account is created once the e-mail is confirmed with a code
-        return start_verification(response, session, body.email.strip(), body.zone.strip())
+        # PaybyBot is for residents: at least one vehicle must have the resident rate on PayByPhone.
+        zone = guarded(lambda: resident_home_zone(session))  # from PayByPhone only, never typed
+        if not zone:
+            log.info("sign-up refused: no resident vehicle for %s", masked)
+            raise HTTPException(412, "Aucun de vos véhicules ne bénéficie du tarif résident sur PayByPhone.")
+        return start_verification(response, session, body.email.strip(), zone)
     if HOSTED:
         token = seal(session)
         refresh = getattr(session.bot, "refresh_token", None)
@@ -1357,7 +1362,7 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
         raise HTTPException(400, "Code incorrect. Vérifiez l'e-mail reçu.")
     # The home zone is found later from PayByPhone (or asked when the renewal is set up), not at sign-up.
     save_account(session, {"email": pending["email"], "trial_start": datetime.now(timezone.utc).isoformat(),
-                           **({"zone": pending["zone"]} if pending.get("zone") else {})})
+                           **({"zone": pending["zone"], "zone_found": True} if pending.get("zone") else {})})
     session.remember = True  # a new user stays signed in (30 days), there is no box to tick at sign-up
     session.issued_at = int(time.time())
     if HOSTED:
@@ -2109,11 +2114,19 @@ def pricing(pbb_session: str = Cookie(None)):
 
 
 def resident_status(s):
-    """Is the resident status active on PayByPhone? True / False in the home zone, None while the zone is unknown."""
+    """Is the resident status active on PayByPhone, and in which zone? The zone always comes from PayByPhone: kept,
+    else from the history, else searched arrondissement by arrondissement (again if the kept one has no resident
+    rate any more, e.g. after a move)."""
     zone = (find_home_zone(s) or {}).get("zone")
-    if not zone:
-        return {"zone": None, "resident": None}
-    return {"zone": zone, "resident": resident_rate(s, zone)[1] is not None}
+    if zone and resident_rate(s, zone)[1] is not None:
+        return {"zone": zone, "resident": True}
+    found = scan_resident_zone(s)
+    if found and found != zone:
+        try:
+            save_account(s, {"zone": found, "zone_found": True})
+        except Exception as e:
+            log.warning("found zone not kept: %s", type(e).__name__)
+    return {"zone": found or zone, "resident": bool(found)}
 
 
 @app.get("/api/resident-status")
@@ -2230,6 +2243,8 @@ def billing_portal(pbb_session: str = Cookie(None)):
 def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
     patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None}
+    if patch.get("zone"):
+        patch["zone_found"] = False  # given by the user
     account = guarded(lambda: save_account(s, patch))
     if patch.get("zone"):  # a move: the price follows the new zone's resident rate
         try:
@@ -2323,12 +2338,51 @@ def resident_zone(pbb_session: str = Cookie(None)):
     return guarded(lambda: find_home_zone(s))
 
 
-def find_home_zone(s):
-    """The home zone: set by the user, else guessed from PayByPhone's history (see resident_zone)."""
+PARIS_ZONES = ["750%02d" % n for n in range(1, 21)]  # resident zones are numbered like the arrondissement's postcode
+
+
+def scan_resident_zone(s):
+    """Where PayByPhone offers one of the account's vehicles the resident rate, among the 20 Paris arrondissements
+    (the rate only exists in the arrondissement of the resident card). None: no resident vehicle at all."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]  # also renews the login if needed
+    vehicles.sort(key=lambda v: bool(TWO_WHEELS.search(str(v.get("type") or ""))))  # cars first
+    bot = s.bot
+
+    def resident_in(zone, vehicle):
+        try:
+            rates = bot.get_rate_options(zone, vehicle["licensePlate"]) or []
+        except Exception:
+            return False
+        return any(RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type"))) and not r.get("parkingNotAllowedReason")
+                   for r in rates)
+
+    for vehicle in vehicles:
+        with ThreadPoolExecutor(max_workers=10) as pool:
+            hits = list(pool.map(lambda z: resident_in(z, vehicle), PARIS_ZONES))
+        if any(hits):
+            return PARIS_ZONES[hits.index(True)]
+    return None
+
+
+def resident_home_zone(s):
+    """The home zone if one of the account's vehicles has the resident rate there, else None: from the account or
+    the history first, else by asking PayByPhone arrondissement by arrondissement."""
+    zone = (find_home_zone(s, scan=False) or {}).get("zone")  # at sign-up nothing is kept before the code
+    if zone and resident_vehicles(s, zone):
+        return zone
+    return scan_resident_zone(s)
+
+
+def find_home_zone(s, scan=True):
+    """The home zone: set by the user, else guessed from PayByPhone's history (see resident_zone), else found by
+    looking for the resident rate in each Paris arrondissement (kept on the account)."""
     def find():
-        manual = load_account(s).get("zone")
-        if manual:  # added by the user in "Mon compte"
-            return {"zone": manual, "manual": True}
+        account = load_account(s)
+        manual = account.get("zone")
+        if manual:  # added by the user in "Mon compte", or found once
+            return {"zone": manual, "manual": not account.get("zone_found")}
         history = s.call("get_past_sessions", limit=30) + s.call("get_parking_sessions")
 
         def long_ticket(x):
@@ -2350,7 +2404,13 @@ def find_home_zone(s):
             if any(RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type"))) and not r.get("parkingNotAllowedReason")
                    for r in rates):
                 return {"zone": zone}
-        return {"zone": None}
+        zone = scan_resident_zone(s) if scan else None
+        if zone:
+            try:
+                save_account(s, {"zone": zone, "zone_found": True})
+            except Exception as e:
+                log.warning("found zone not kept: %s", type(e).__name__)
+        return {"zone": zone}
 
     return find()
 

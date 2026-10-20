@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LogOut, Repeat } from 'lucide-react'
-import { PayByPhone, Plate, ZonePlate, withPayByPhone } from '@/components/signs'
+import { Plate, ZonePlate, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
-import { ManageRenewal, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, ZoneField, renewalOf } from '@/components/Riverain'
-import { api, forgetZoneLookup, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
+import { ManageRenewal, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
+import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -110,17 +110,6 @@ export function Dashboard({
     if (!me.demo) api.residentStatus().then(setResident, () => {})
   }, [me.demo])
   useEffect(checkResident, [checkResident])
-  // The status is checked in the home zone: unknown, the arrondissement is asked first.
-  async function saveZone(zone: string) {
-    try {
-      await api.updateAccount({ zone })
-      forgetZoneLookup()
-      setResident(null)
-      checkResident()
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
-  }
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
 
@@ -168,16 +157,6 @@ export function Dashboard({
             {sessions.map((s) => (
               <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} demo={me.demo} />
             ))}
-          </div>
-        )}
-
-        {resident && !resident.zone && (
-          <div className="mt-8 rounded-2xl border border-ink/10 p-5">
-            <p className="mb-3 text-ink/70">
-              Indiquez votre arrondissement de résidence : PaybyBot vérifie que votre statut résident est actif sur{' '}
-              <PayByPhone />.
-            </p>
-            <ZoneField zone="" fromHistory={false} onZone={saveZone} />
           </div>
         )}
 

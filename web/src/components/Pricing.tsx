@@ -4,11 +4,11 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
-import { NoResidentStatus, ZoneField } from '@/components/Riverain'
+import { NoResidentStatus } from '@/components/Riverain'
 import { PayByPhone, Plate, Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
-import { api, forgetZoneLookup, type Pricing } from '@/lib/api'
+import { api, type Pricing } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -82,18 +82,7 @@ const INCLUDED = [
 /** The two plans side by side; the yearly one is put forward. */
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
   const [busy, setBusy] = useState<Plan | null>(null)
-  const [pricing, reload] = usePricing(signedIn)
-
-  // Signed in, the price depends on the home zone: without one, the arrondissement is asked right here.
-  async function saveZone(zone: string) {
-    try {
-      await api.updateAccount({ zone })
-      forgetZoneLookup()
-      reload()
-    } catch (e) {
-      toast((e as Error).message)
-    }
-  }
+  const [pricing] = usePricing(signedIn)
 
   async function choose(plan: Plan) {
     if (!signedIn) {
@@ -113,12 +102,6 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   return (
     <>
     {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
-    {signedIn && pricing && pricing.monthly == null && pricing.resident !== false && (
-      <div className="mb-6 rounded-2xl border border-ink/10 p-5">
-        <p className="mb-3 text-ink/70">Indiquez votre arrondissement de résidence : PaybyBot vérifie votre statut résident sur <PayByPhone /> et calcule votre prix.</p>
-        <ZoneField zone="" fromHistory={false} onZone={saveZone} />
-      </div>
-    )}
     {signedIn && !pricing ? (
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="h-96 animate-pulse rounded-2xl bg-ink/[0.05]" />
@@ -284,19 +267,8 @@ export function TrialBanner({
 function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
   const [plan, setPlan] = useState<Plan>('yearly')
   const [busy, setBusy] = useState(false)
-  const [pricing, reload] = usePricing(true)
+  const [pricing] = usePricing(true)
   const locked = pricing?.resident === false
-
-  // The price depends on the home zone: without one, the arrondissement is asked right here.
-  async function saveZone(zone: string) {
-    try {
-      await api.updateAccount({ zone })
-      forgetZoneLookup()
-      reload()
-    } catch (e) {
-      toast((e as Error).message)
-    }
-  }
 
   async function pay() {
     setBusy(true)
@@ -336,12 +308,9 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
               >
               <div role="radiogroup" aria-label="Offre" className="mt-8 space-y-3">
                 {pricing && pricing.monthly == null && !locked && (
-                  <div className="rounded-2xl border border-ink/10 p-4">
-                    <p className="mb-3 text-sm text-ink/60">
-                      Indiquez votre arrondissement de résidence : PaybyBot vérifie votre statut résident sur <PayByPhone /> et calcule votre prix.
-                    </p>
-                    <ZoneField zone="" fromHistory={false} onZone={saveZone} />
-                  </div>
+                  <p className="rounded-2xl border border-ink/10 p-4 text-sm text-ink/60">
+                    Votre prix n’a pas pu être calculé avec <PayByPhone /> pour le moment. Réessayez dans quelques minutes.
+                  </p>
                 )}
                 {!pricing && <div className="h-40 animate-pulse rounded-2xl bg-ink/[0.05]" />}
                 {(pricing?.monthly != null || locked) && [...PLANS].reverse().map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (

@@ -66,7 +66,9 @@ class Account(unittest.TestCase):
         self.assertEqual(result["email"], "c•••@d.fr")
         self.assertEqual(fresh.account, {})  # nothing created before the code
         web.verify_signup(web.CodeCheck(code=code[:3] + " " + code[3:]), Response(), token)
-        self.assertEqual({k: fresh.account[k] for k in ("email", "zone")}, {"email": "c@d.fr", "zone": "75017"})
+        # The zone comes from PayByPhone (the demo offers the resident rate everywhere: the 1st), not the form.
+        self.assertEqual({k: fresh.account[k] for k in ("email", "zone", "zone_found")},
+                         {"email": "c@d.fr", "zone": "75001", "zone_found": True})
         self.assertIn("trial_start", fresh.account)  # the free month starts at sign-up
 
     def test_wrong_code_then_too_many_tries(self):

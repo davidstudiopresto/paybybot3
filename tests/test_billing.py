@@ -77,10 +77,17 @@ class Billing(unittest.TestCase):
                 if name == "get_vehicles":
                     return [{"licensePlate": "AB123CD", "type": "Car"}]
                 return [{"name": "Visiteur", "type": "Visitor"}] if name == "get_rate_options" else []
-        with patch.object(web, "find_home_zone", return_value={"zone": "75017"}):
-            self.assertEqual(web.resident_status(Session()), {"zone": "75017", "resident": False})
-        with patch.object(web, "find_home_zone", return_value={"zone": None}):
-            self.assertEqual(web.resident_status(Session())["resident"], None)
+        with patch.object(web, "scan_resident_zone", return_value=None):  # no arrondissement has it
+            with patch.object(web, "find_home_zone", return_value={"zone": "75017"}):
+                self.assertEqual(web.resident_status(Session()), {"zone": "75017", "resident": False})
+            with patch.object(web, "find_home_zone", return_value={"zone": None}):
+                self.assertEqual(web.resident_status(Session()), {"zone": None, "resident": False})
+        # Moved: the kept zone has no resident rate any more, the one PayByPhone offers now is found and kept.
+        with patch.object(web, "find_home_zone", return_value={"zone": "75017"}), \
+                patch.object(web, "scan_resident_zone", return_value="75011"), \
+                patch.object(web, "save_account") as saved:
+            self.assertEqual(web.resident_status(Session()), {"zone": "75011", "resident": True})
+        saved.assert_called_once()
 
     def test_a_move_reprices_from_the_next_billing_date(self):
         account = {"stripe_subscription": "sub_1", "weekly_cents": 1050, "billed_weekly_cents": 900,

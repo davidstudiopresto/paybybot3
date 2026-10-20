@@ -1,10 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { toast } from 'sonner'
 import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
-import { ResidentGate, ZoneField, type ResidentStatus } from '@/components/Riverain'
+import { ResidentGate, type ResidentStatus } from '@/components/Riverain'
 import { arrondissement, PayByPhone, Plate, withPayByPhone, Wordmark, ZonePlate } from '@/components/signs'
-import { api, forgetZoneLookup, until, type Me, type Overview, type PricedVehicle } from '@/lib/api'
+import { api, until, type Me, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -77,21 +76,10 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
     )
   }, [zone, me.demo])
 
-  // Not in the history: the arrondissement is asked here, and needed before going on (the price depends on it).
-  const [saving, setSaving] = useState(false)
-  async function saveZone(z: string) {
-    setSaving(true)
-    try {
-      await api.updateAccount({ zone: z })
-      forgetZoneLookup()
-      setZone(z)
-      setManual(true)
-    } catch (e) {
-      toast.error((e as Error).message)
-    } finally {
-      setSaving(false)
-    }
-  }
+  // The zone always comes from PayByPhone: none means no vehicle with the resident rate anywhere.
+  useEffect(() => {
+    if (zone === null && !me.demo) setStatus({ zone: null, resident: false })
+  }, [zone, me.demo])
 
   const step = 140
   let i = 0
@@ -167,15 +155,10 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                 <span className="flex flex-wrap items-baseline gap-x-3">
                   {arrondissement(zone) && <span className="font-semibold">{arrondissement(zone)}</span>}
                   <ZonePlate zone={zone} />
-                  <span className="text-sm text-ink/55">{manual ? 'indiquée par vous' : 'trouvée dans votre historique'}</span>
+                  <span className="text-sm text-ink/55">{manual ? 'indiquée par vous' : <>trouvée sur votre compte <PayByPhone /></>}</span>
                 </span>
               ) : (
-                <div className="space-y-3">
-                  <p className="text-ink/60">
-                    Pas trouvée dans votre historique <PayByPhone /> : indiquez votre arrondissement pour continuer.
-                  </p>
-                  <ZoneField zone="" fromHistory={false} onZone={saveZone} />
-                </div>
+                <span className="text-ink/60">Aucun arrondissement avec le tarif résident.</span>
               )}
             </Row>
             {data.sessions.length > 0 && (
@@ -197,7 +180,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
 
           <button
             onClick={onContinue}
-            disabled={!zone || saving || status?.resident === false}
+            disabled={!zone || status?.resident === false}
             className={cn('rise mt-8', ui.primary)}
             style={{ animationDelay: `${next()}ms` }}
           >

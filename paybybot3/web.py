@@ -1503,11 +1503,68 @@ def is_admin(s):
     return not s.demo and any(owner_id(c) == owner_id(s.username) for a in admins for c in login_candidates(a))
 
 
+# The owner's admin page has its own login (e-mail + password), separate from PayByPhone.
+# PAYBYBOT_ADMIN_EMAIL, and PAYBYBOT_ADMIN_PASSWORD_HASH made by scripts/admin_password.py (never the password).
+ADMIN_COOKIE = "pbb_admin"
+ADMIN_SESSION = 12 * 3600
+
+
+def password_matches(password, stored):
+    """stored = "pbkdf2_sha256$<iterations>$<salt hex>$<hash hex>"."""
+    try:
+        algo, iterations, salt, digest = stored.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        computed = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), int(iterations))
+        return hmac.compare_digest(computed.hex(), digest)
+    except Exception:
+        return False
+
+
+class AdminLogin(BaseModel):
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=200)
+
+
+@app.post("/api/admin/login")
+def admin_login(body: AdminLogin, request: Request, response: Response):
+    email, stored = os.environ.get("PAYBYBOT_ADMIN_EMAIL", ""), os.environ.get("PAYBYBOT_ADMIN_PASSWORD_HASH", "")
+    if not HOSTED or not email or not stored:
+        raise HTTPException(403, "Accès admin non configuré.")
+    ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    key = hmac.new(_subkey(_secrets()[0], "rate"), ip.encode(), hashlib.sha256).hexdigest()
+    if not store("rate_hit", p_key="admin:" + key, p_window_seconds=900, p_max=5):
+        raise HTTPException(429, "Trop de tentatives. Réessayez dans 15 minutes.")
+    ok_email = hmac.compare_digest(body.email.strip().lower(), email.strip().lower())
+    if not (password_matches(body.password, stored) and ok_email):
+        log.warning("admin login refused")
+        raise HTTPException(401, "Identifiants incorrects.")
+    response.set_cookie(ADMIN_COOKIE, _fernet("admin").encrypt(b"admin").decode(), httponly=True, samesite="strict",
+                        secure=True, path="/api/admin", max_age=ADMIN_SESSION)
+    log.info("admin login ok")
+    return {"ok": True}
+
+
+@app.post("/api/admin/logout")
+def admin_logout(response: Response):
+    response.delete_cookie(ADMIN_COOKIE, path="/api/admin")
+    return {"ok": True}
+
+
+def require_admin(value):
+    try:
+        if _fernet("admin").decrypt((value or "").encode(), ttl=ADMIN_SESSION) == b"admin":
+            return
+    except Exception:
+        pass
+    raise HTTPException(401, "Connexion admin requise.")
+
+
 @app.get("/api/admin/stats")
-def admin_stats(pbb_session: str = Cookie(None)):
-    s = current(pbb_session)
-    if not HOSTED or not is_admin(s):
+def admin_stats(pbb_admin: str = Cookie(None)):
+    if not HOSTED:
         raise HTTPException(403, "Accès réservé.")
+    require_admin(pbb_admin)
     return guarded(lambda: store("admin_stats"))
 
 

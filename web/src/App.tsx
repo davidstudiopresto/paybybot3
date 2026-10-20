@@ -87,8 +87,8 @@ export default function App() {
             <Wordmark />
           </span>
         </div>
-      ) : route === 'admin' && me ? (
-        <AdminPage />
+      ) : route === 'admin' ? (
+        <AdminPage signedIn={!!me} />
       ) : route === 'faq' ? (
         <FaqView hosted={hosted} signedIn={!!me} />
       ) : me === null ? (

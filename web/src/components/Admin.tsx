@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { ui } from '@/lib/styles'
+import { ApiError } from '@/lib/api'
 import { PublicTopBar } from '@/components/TopBar'
 import { api } from '@/lib/api'
 
@@ -16,13 +18,41 @@ export type AdminStats = {
 }
 
 /** The owner's page: a few counts, nothing else. */
-export function AdminPage() {
+export function AdminPage({ signedIn = false }: { signedIn?: boolean }) {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [needsLogin, setNeedsLogin] = useState(false)
 
-  useEffect(() => {
-    api.adminStats().then(setStats, (e) => setError((e as Error).message))
-  }, [])
+  function load() {
+    setError(null)
+    api.adminStats().then(
+      (s) => {
+        setStats(s)
+        setNeedsLogin(false)
+      },
+      (e) => {
+        if (e instanceof ApiError && e.status === 401) setNeedsLogin(true)
+        else setError((e as Error).message)
+      },
+    )
+  }
+
+  useEffect(load, [])
+
+  async function logout() {
+    await api.adminLogout().catch(() => {})
+    setStats(null)
+    setNeedsLogin(true)
+  }
+
+  if (needsLogin) {
+    return (
+      <div className="min-h-dvh bg-white">
+        <PublicTopBar signedIn={signedIn} />
+        <AdminLoginForm onDone={load} />
+      </div>
+    )
+  }
 
   const tiles: [string, number | undefined][] = [
     ['Inscrits', stats?.accounts],
@@ -38,9 +68,16 @@ export function AdminPage() {
 
   return (
     <div className="min-h-dvh bg-white">
-      <PublicTopBar signedIn />
+      <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto max-w-4xl px-6 pt-12 pb-20">
-        <h1 className="font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink">Admin</h1>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink">Admin</h1>
+          {stats && (
+            <button onClick={logout} className={ui.pillGray}>
+              Se déconnecter
+            </button>
+          )}
+        </div>
         {error ? (
           <p className="mt-6 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">{error}</p>
         ) : !stats ? (
@@ -76,5 +113,66 @@ export function AdminPage() {
         )}
       </main>
     </div>
+  )
+}
+
+function AdminLoginForm({ onDone }: { onDone: () => void }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit() {
+    setBusy(true)
+    setError(null)
+    try {
+      await api.adminLogin(email.trim(), password)
+      setPassword('')
+      onDone()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <main className="flex justify-center px-6 pt-[12vh] pb-12">
+      <form
+        className="w-full max-w-[24rem]"
+        onSubmit={(e) => {
+          e.preventDefault()
+          submit()
+        }}
+      >
+        <h1 className="font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink">Admin</h1>
+        <div className="mt-8 space-y-3">
+          <input
+            type="email"
+            autoComplete="username"
+            placeholder="E-mail"
+            aria-label="E-mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className={ui.field}
+          />
+          <input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Mot de passe"
+            aria-label="Mot de passe"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className={ui.field}
+          />
+        </div>
+        {error && <p className={`mt-4 ${ui.error}`}>{error}</p>}
+        <button type="submit" disabled={busy} className={`mt-6 ${ui.primary}`}>
+          {busy ? <Loader2 className="size-5 animate-spin" /> : 'Se connecter'}
+        </button>
+      </form>
+    </main>
   )
 }

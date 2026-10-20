@@ -149,7 +149,7 @@ export function LoginView({ onLogin, hosted, signup = false }: { onLogin: (me: M
           </h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
             {signup ? 'Avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.'}{' '}
-            {hosted ? 'Aucune donnée conservée, mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}{' '}
+            {hosted ? 'Mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}{' '}
             <a href="#/securite" target="_blank" rel="noopener" className={link}>
               En savoir plus
             </a>

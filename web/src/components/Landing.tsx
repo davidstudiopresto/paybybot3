@@ -143,9 +143,9 @@ const QUESTIONS: [string, ReactNode][] = [
   [
     'Quelles informations me demandez-vous ?',
     <>
-      Rien de ce que PayByPhone sait déjà : votre numéro, vos véhicules et votre carte viennent de votre compte, et votre
-      zone de votre historique de stationnement. Il ne reste qu'un e-mail, facultatif, pour les confirmations. Si votre
-      zone est introuvable, on vous demande votre adresse, seulement pour la retrouver : elle n'est pas conservée.
+      Rien de ce que PayByPhone sait déjà : votre numéro, vos véhicules et votre carte viennent de votre compte. On vous
+      demande seulement votre e-mail, pour les confirmations, et votre adresse de résidence, pour trouver votre zone :
+      l'adresse n'est pas conservée, seule la zone l'est.
     </>,
   ],
   [

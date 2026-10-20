@@ -105,9 +105,10 @@ export function SecurityDetails() {
             ['Jetons de connexion PayByPhone', 'Dans votre navigateur (cookie)', 'Chiffrés avec une clé que seul le serveur possède', '12 h sans activité, 24 h au plus'],
             ['Renouvellement riverain : jeton de reconnexion PayByPhone', 'Base de données à Paris', 'Chiffré ; la clé est conservée ailleurs', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Renouvellement riverain : plaque, zone, tarif, durée, moyen de paiement choisi', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à ce que vous l’arrêtiez'],
-            ['Renouvellement riverain : e-mail pour les confirmations (facultatif)', 'Base de données à Paris', 'Chiffré', 'Jusqu’à ce que vous le retiriez ou arrêtiez'],
+            ['Compte PaybyBot : e-mail et zone de résidence', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à la suppression du compte'],
+            ['Renouvellement riverain : e-mail pour les confirmations', 'Base de données à Paris', 'Chiffré', 'Jusqu’à ce que vous le retiriez ou arrêtiez'],
             ['Renouvellement riverain : dates de pause, de vérification et de paiement', 'Base de données à Paris', 'Dates seules, sans lien lisible avec vous', 'Jusqu’à ce que vous l’arrêtiez'],
-            ['Identifiant de votre compte', 'Base de données à Paris', 'Seulement une empreinte : le numéro ou l’e-mail n’y figure pas', 'Jusqu’à ce que vous l’arrêtiez'],
+            ['Identifiant de votre compte', 'Base de données à Paris', 'Seulement une empreinte : le numéro n’y figure pas', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Tentatives de connexion (anti-piratage)', 'Base de données à Paris', 'Empreintes de l’appareil et du compte, jamais l’adresse IP ni l’identifiant en clair', '24 h au plus'],
             ['Journaux techniques', 'Hébergeur (Vercel)', 'Identifiant et plaque masqués', 'Durée limitée fixée par l’hébergeur'],
           ]}
@@ -173,20 +174,6 @@ export function SecurityDetails() {
 function Security() {
   return (
     <>
-      <div className="rounded-2xl bg-muted p-6 sm:p-8">
-        <p className="font-heading text-3xl leading-tight font-bold tracking-tight sm:text-4xl">Aucune de vos données n’est conservée.</p>
-        <p className="mt-3 text-lg text-ink/70">
-          PaybyBot ne garde ni votre mot de passe, ni votre identifiant, ni vos véhicules, ni vos tickets, ni votre carte.
-          Tout est lu chez PayByPhone au moment où vous en avez besoin, puis oublié. Votre connexion ne vit que dans votre
-          navigateur, chiffrée, et s’efface d’elle-même au bout de 24 heures au plus.
-        </p>
-        <p className="mt-4 rounded-xl bg-white p-4 text-ink/70">
-          <strong className="text-ink">Seule exception, si vous le choisissez :</strong> le renouvellement riverain doit
-          pouvoir payer à votre place quand vous n’êtes pas là. Il garde donc, chiffré, de quoi se reconnecter à PayByPhone et
-          le détail du forfait, et l’e-mail de confirmation si vous en donnez un. Tout est effacé dès que vous l’arrêtez.
-        </p>
-      </div>
-
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
         {[
           [true, 'Votre mot de passe n’est jamais enregistré'],
@@ -218,15 +205,6 @@ function Privacy() {
         et quels sont vos droits, au sens du Règlement général sur la protection des données (RGPD).
       </p>
 
-      <div className="mt-8 rounded-2xl bg-muted p-6">
-        <p className="font-heading text-xl leading-tight font-bold">En une phrase</p>
-        <p className="mt-2 text-ink/70">
-          PaybyBot ne conserve aucune de vos données : ni mot de passe, ni identifiant, ni véhicule, ni carte. La seule
-          exception est le renouvellement riverain, si vous l’activez, qui garde chiffré ce qu’il faut pour payer à votre
-          place, et l’efface dès que vous l’arrêtez.
-        </p>
-      </div>
-
       <Section title="1. Qui est responsable">
         <p>
           PaybyBot appartient à {PUBLISHER.name}, responsable du traitement au sens du RGPD (coordonnées dans les{' '}
@@ -253,10 +231,15 @@ function Privacy() {
             PayByPhone pour prendre le ticket.
           </li>
           <li>
+            <strong>Compte PaybyBot :</strong> votre e-mail, vérifié par un code à l’inscription, et votre zone de
+            résidence, chiffrés ; une empreinte de votre identifiant. L’adresse que vous tapez pour trouver la zone n’est
+            pas conservée.
+          </li>
+          <li>
             <strong>Renouvellement riverain (si vous l’activez) :</strong> un jeton de reconnexion PayByPhone, la plaque,
             la zone, le tarif, la durée et le moyen de paiement choisis, tous chiffrés ; une empreinte de votre identifiant ;
             les dates des dernières vérifications et du dernier paiement, les dates de pause éventuelles, et le dernier
-            message d’erreur éventuel. Si vous le donnez, votre e-mail, chiffré lui aussi.
+            message d’erreur éventuel, et l’e-mail des confirmations, chiffré lui aussi.
           </li>
           <li>
             <strong>Sécurité :</strong> empreintes de votre adresse IP et de votre identifiant, pour limiter les tentatives
@@ -267,7 +250,7 @@ function Privacy() {
             plaque masqués.
           </li>
         </ul>
-        <p>PaybyBot ne collecte ni nom, ni adresse, ni données de localisation, et ne voit jamais votre numéro de carte.</p>
+        <p>PaybyBot ne conserve ni nom, ni adresse postale, et ne voit jamais votre numéro de carte.</p>
       </Section>
 
       <Section title="3. Pourquoi, et sur quelle base">
@@ -277,8 +260,8 @@ function Privacy() {
             exécution des conditions d’utilisation que vous acceptez (article 6.1.b du RGPD).
           </li>
           <li>
-            <strong>Vous tenir informé du renouvellement</strong> (confirmation de paiement, alerte en cas de problème), si
-            vous donnez votre e-mail : exécution du service demandé (article 6.1.b). Aucune lettre d’information, aucune
+            <strong>Vous tenir informé</strong> (code d’inscription, confirmation de paiement, alerte en cas de problème,
+            confirmation de suppression) : exécution du service demandé (article 6.1.b). Aucune lettre d’information, aucune
             publicité.
           </li>
           <li>
@@ -302,7 +285,7 @@ function Privacy() {
             (France).
           </li>
           <li>
-            <strong>Supabase Inc.</strong>, fournisseur de la base de données des renouvellements, hébergée à Paris
+            <strong>Supabase Inc.</strong>, fournisseur de la base de données des comptes et des renouvellements, hébergée à Paris
             (France).
           </li>
           <li>
@@ -310,8 +293,8 @@ function Privacy() {
             d’ouverture ni de clic. Il reçoit votre adresse et le contenu du message, uniquement au moment de l’envoi.
           </li>
           <li>
-            <strong>Géoplateforme (IGN, État français)</strong>, pour la recherche d’adresse, seulement si votre zone
-            n’a pas pu être retrouvée dans votre historique PayByPhone. PaybyBot relaie ce que vous tapez, sans le
+            <strong>Géoplateforme (IGN, État français)</strong>, pour la recherche d’adresse qui sert à trouver votre
+            zone. PaybyBot relaie ce que vous tapez, sans le
             conserver ni l’inscrire dans ses journaux, et ne garde que la zone qui en découle.
           </li>
         </ul>
@@ -325,7 +308,11 @@ function Privacy() {
 
       <Section title="5. Durées de conservation">
         <ul>
-          <li>Jetons de connexion (cookie) : 12 heures sans activité, 24 heures au plus.</li>
+          <li>
+            Jetons de connexion (cookie) : 12 heures sans activité, 24 heures au plus ; 30 jours si vous cochez « Se
+            souvenir de moi ».
+          </li>
+          <li>Compte PaybyBot (e-mail, zone de résidence) : jusqu’à la suppression du compte.</li>
           <li>Renouvellement riverain, y compris l’e-mail : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
           <li>Tentatives de connexion : 24 heures au plus.</li>
           <li>E-mails envoyés : conservés par Resend pour une durée limitée, le temps d’assurer leur bonne livraison.</li>
@@ -335,8 +322,9 @@ function Privacy() {
 
       <Section title="6. Cookies et stockage local">
         <p>
-          PaybyBot utilise un seul cookie, <strong>pbb_session</strong>, strictement nécessaire pour rester connecté. Il ne
-          sert pas au suivi et ne nécessite donc pas de consentement. PaybyBot n’utilise aucun cookie publicitaire ni outil
+          PaybyBot utilise le cookie <strong>pbb_session</strong>, strictement nécessaire pour rester connecté, et,
+          pendant l’inscription, <strong>pbb_pending</strong> (10 minutes, le temps de saisir le code). Ils ne servent
+          pas au suivi et ne nécessitent donc pas de consentement. PaybyBot n’utilise aucun cookie publicitaire ni outil
           de mesure d’audience.
         </p>
         <p>
@@ -445,7 +433,7 @@ function Terms() {
         </p>
         <p>
           Vous pouvez le mettre en pause entre deux dates, ou sans date de fin : aucun paiement n’est fait pendant la pause, et
-          il reprend tout seul à la fin. Si vous donnez un e-mail, PaybyBot vous envoie une confirmation à chaque paiement et
+          il reprend tout seul à la fin. PaybyBot vous envoie par e-mail une confirmation à chaque paiement et
           une alerte en cas de problème ; ces e-mails sont informatifs et ne remplacent pas la vérification de votre
           stationnement.
         </p>

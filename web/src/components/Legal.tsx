@@ -17,7 +17,7 @@ export const PUBLISHER = {
   email: 'contact@studiopresto.fr',
 }
 
-export const LEGAL_UPDATED = '19 octobre 2026'
+export const LEGAL_UPDATED = '20 octobre 2026'
 export const REPO_URL = 'https://github.com/davidstudiopresto/paybybot3/tree/web-interface'
 
 export type LegalPage = 'securite' | 'confidentialite' | 'cgu' | 'mentions-legales'
@@ -232,7 +232,8 @@ function Privacy() {
           </li>
           <li>
             <strong>Compte PaybyBot :</strong> votre e-mail, vérifié par un code à l’inscription, et votre zone de
-            résidence, chiffrés ; une empreinte de votre identifiant. L’adresse que vous tapez pour trouver la zone n’est
+            résidence, chiffrés ; une empreinte de votre identifiant ; si vous vous abonnez, l’offre choisie et les
+            identifiants de client et d’abonnement Stripe, chiffrés. L’adresse que vous tapez pour trouver la zone n’est
             pas conservée.
           </li>
           <li>
@@ -291,6 +292,10 @@ function Privacy() {
           <li>
             <strong>Resend Inc.</strong>, pour l’envoi des e-mails de confirmation, depuis l’Irlande, sans suivi
             d’ouverture ni de clic. Il reçoit votre adresse et le contenu du message, uniquement au moment de l’envoi.
+          </li>
+          <li>
+            <strong>Stripe</strong>, pour le paiement de l’abonnement : il reçoit votre e-mail et les données de votre
+            carte, que PaybyBot ne voit jamais, et conserve les factures selon ses obligations légales.
           </li>
           <li>
             <strong>Géoplateforme (IGN, État français)</strong>, pour la recherche d’adresse qui sert à trouver votre
@@ -381,7 +386,7 @@ function Terms() {
         <p>
           PaybyBot, service appartenant à {PUBLISHER.name}, est une interface qui permet de piloter son propre compte PayByPhone :
           payer un stationnement, prolonger un ticket en cours et, si vous l’activez, renouveler automatiquement un forfait
-          résident chaque semaine. Le service est gratuit.
+          résident chaque semaine. Le service est payant après un mois offert (voir « Abonnement et paiement »).
         </p>
       </Section>
 
@@ -401,8 +406,8 @@ function Terms() {
           avez choisis, jusqu’à ce que vous l’arrêtiez.
         </p>
         <p>
-          Les tickets sont achetés par vous, depuis votre compte PayByPhone, au tarif de PayByPhone. PaybyBot n’encaisse aucune
-          somme et ne facture rien.
+          Les tickets sont achetés par vous, depuis votre compte PayByPhone, au tarif de PayByPhone. PaybyBot n’encaisse pas
+          le prix des tickets : seul l’abonnement à PaybyBot est facturé (voir « Abonnement et paiement »).
         </p>
       </Section>
 
@@ -447,7 +452,7 @@ function Terms() {
 
       <Section title="7. Disponibilité et responsabilité">
         <p>
-          Le service est fourni gratuitement, en l’état, sans garantie de disponibilité ni de résultat. Il dépend du
+          Le service est fourni en l’état, sans garantie de disponibilité ni de résultat. Il dépend du
           fonctionnement de PayByPhone, qui peut évoluer à tout moment, et peut être interrompu ou arrêté.
         </p>
         <p>
@@ -477,7 +482,42 @@ function Terms() {
         </p>
       </Section>
 
-      <Section title="10. Arrêt, modification, droit applicable">
+      <Section title="10. Abonnement et paiement">
+        <ul>
+          <li>
+            <strong>Mois offert :</strong> chaque nouveau compte bénéficie d’un mois gratuit à compter de l’inscription, sans
+            carte bancaire.
+          </li>
+          <li>
+            <strong>Offres :</strong> Mensuel à 10 € TTC par mois, ou Annuel à 96 € TTC par an. Le paiement se fait par
+            carte bancaire, via notre prestataire de paiement Stripe ; PaybyBot ne voit ni ne conserve votre numéro de
+            carte.
+          </li>
+          <li>
+            <strong>Premier prélèvement :</strong> si vous souscrivez pendant votre mois offert, rien n’est prélevé avant
+            la fin de celui-ci.
+          </li>
+          <li>
+            <strong>Renouvellement :</strong> l’abonnement se renouvelle automatiquement à la fin de chaque période (mois ou
+            année), au tarif en vigueur, jusqu’à sa résiliation.
+          </li>
+          <li>
+            <strong>Résiliation :</strong> à tout moment, depuis « Mon compte », puis « Gérer ». Elle prend effet à la fin
+            de la période en cours, déjà payée ; aucun prélèvement n’a lieu ensuite.
+          </li>
+          <li>
+            <strong>Droit de rétractation :</strong> vous disposez de 14 jours à compter de votre souscription pour vous
+            rétracter, sans motif, en écrivant à <Mailto />. Si vous avez demandé que le service commence avant la fin
+            de ce délai, le montant correspondant au service déjà fourni reste dû ; le reste vous est remboursé.
+          </li>
+          <li>
+            <strong>Sans abonnement</strong> à la fin du mois offert, PaybyBot peut suspendre le renouvellement
+            automatique de vos forfaits ; vous en êtes prévenu par e-mail.
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="11. Arrêt, modification, droit applicable">
         <p>
           Vous pouvez cesser d’utiliser PaybyBot à tout moment. Ces conditions peuvent être modifiées ; la version en vigueur
           est celle publiée sur cette page. Elles sont soumises au droit français. En cas de difficulté, écrivez d’abord à{' '}

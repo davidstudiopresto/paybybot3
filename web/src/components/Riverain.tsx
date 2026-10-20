@@ -402,7 +402,7 @@ function RiverainDialog({
                 </li>
               </ul>
             ) : (
-              <p className="text-muted-foreground">Indiquez votre adresse pour voir le prix.</p>
+              <p className="text-muted-foreground">Indiquez votre arrondissement pour voir le prix.</p>
             )}
           </div>
 

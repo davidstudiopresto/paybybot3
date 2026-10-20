@@ -56,7 +56,18 @@ const INCLUDED = [
 /** The two plans side by side; the yearly one is put forward. */
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
   const [busy, setBusy] = useState<Plan | null>(null)
-  const [pricing] = usePricing(signedIn)
+  const [pricing, reload] = usePricing(signedIn)
+
+  // Signed in, the price depends on the home zone: without one, the arrondissement is asked right here.
+  async function saveZone(zone: string) {
+    try {
+      await api.updateAccount({ zone })
+      forgetZoneLookup()
+      reload()
+    } catch (e) {
+      toast((e as Error).message)
+    }
+  }
 
   async function choose(plan: Plan) {
     if (!signedIn) {
@@ -76,6 +87,18 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   return (
     <>
     {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
+    {signedIn && pricing && !pricing.weekly && pricing.resident !== false && (
+      <div className="mb-6 rounded-2xl border border-ink/10 p-5">
+        <p className="mb-3 text-ink/70">Votre prix dépend de votre zone de résidence : indiquez votre arrondissement.</p>
+        <ZoneField zone="" fromHistory={false} onZone={saveZone} />
+      </div>
+    )}
+    {signedIn && !pricing ? (
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="h-96 animate-pulse rounded-2xl bg-ink/[0.05]" />
+        <div className="h-96 animate-pulse rounded-2xl bg-ink/[0.05]" />
+      </div>
+    ) : (
     <div className="grid gap-4 sm:grid-cols-2">
       {PLANS.map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
         <div
@@ -121,6 +144,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
         </div>
       ))}
     </div>
+    )}
     </>
   )
 }

@@ -36,11 +36,10 @@ class Account(unittest.TestCase):
         self.assertEqual(send.call_args.args[0], "a@b.fr")
         self.assertEqual(self.s.account, {})
 
-    def test_sign_up_needs_an_email_and_a_zone(self):
-        with self.assertRaises(HTTPException):
-            web.login(web.Login(username="+33612345678", password="x", signup=True, zone="75017"), None, Response())
-        with self.assertRaises(HTTPException):
-            web.login(web.Login(username="+33612345678", password="x", signup=True, email="a@b.fr"), None, Response())
+    def test_sign_up_needs_an_email_not_an_address(self):
+        with self.assertRaises(HTTPException) as e:
+            web.login(web.Login(username="+33612345678", password="x", signup=True), None, Response())
+        self.assertIn("e-mail", e.exception.detail)
 
     def test_sign_up_refused_when_the_account_exists(self):
         web.update_account(web.AccountPatch(email="a@b.fr"), "t")

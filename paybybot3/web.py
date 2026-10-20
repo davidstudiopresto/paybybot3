@@ -1134,8 +1134,6 @@ def login(body: Login, request: Request, response: Response):
     masked = body.username.strip()[:4] + "***"
     if body.signup and not demo and not body.email.strip():
         raise HTTPException(400, "Indiquez votre adresse e-mail.")
-    if body.signup and not demo and not body.zone.strip():
-        raise HTTPException(400, "Indiquez votre adresse pour trouver votre zone de résidence.")
     if HOSTED and not demo:
         if not body.accepted:
             raise HTTPException(400, "Acceptez les conditions d'utilisation et la politique de confidentialité.")
@@ -1303,8 +1301,9 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
     code = re.sub(r"\D", "", body.code)
     if not hmac.compare_digest(code_hash(code, pending["email"]), pending["h"]):
         raise HTTPException(400, "Code incorrect. Vérifiez l'e-mail reçu.")
-    save_account(session, {"email": pending["email"], "zone": pending["zone"],
-                           "trial_start": datetime.now(timezone.utc).isoformat()})
+    # The home zone is found later from PayByPhone (or asked when the renewal is set up), not at sign-up.
+    save_account(session, {"email": pending["email"], "trial_start": datetime.now(timezone.utc).isoformat(),
+                           **({"zone": pending["zone"]} if pending.get("zone") else {})})
     session.remember = True  # a new user stays signed in (30 days), there is no box to tick at sign-up
     session.issued_at = int(time.time())
     if HOSTED:
@@ -2071,8 +2070,8 @@ class AddressQuery(BaseModel):
 def address_search(body: AddressQuery, pbb_session: str = Cookie(None)):
     """Address autocomplete through the French State's address service (Géoplateforme), relayed so the
     browser talks to PaybyBot only. Sent in a POST body so it never shows in URL logs; only used to find the
-    zone, neither logged nor stored. Open without a session: the sign-up page asks for the address before the
-    PayByPhone login (same-origin requests only, like every POST)."""
+    zone, neither logged nor stored. Signed-in users only: it is asked while setting up a renewal."""
+    current(pbb_session)
     q = body.q.strip()[:120]
     if len(q) < 3:
         return []

@@ -307,9 +307,9 @@ const QUESTIONS: [string, ReactNode][] = [
   [
     'Quelles informations me demandez-vous ?',
     <>
-      Rien de ce que <PayByPhone /> sait déjà : votre numéro, vos véhicules et votre carte viennent de votre compte. On vous
-      demande seulement votre e-mail, pour les confirmations, et votre adresse de résidence, pour trouver votre zone :
-      l'adresse n'est pas conservée, seule la zone l'est.
+      Rien de ce que <PayByPhone /> sait déjà : votre numéro, vos véhicules, votre carte et votre zone de résidence
+      viennent de votre compte. On vous demande seulement votre e-mail, pour les confirmations. Si votre zone n'y figure
+      pas, on vous demande votre adresse en activant le renouvellement : elle n'est pas conservée, seule la zone l'est.
     </>,
   ],
   [

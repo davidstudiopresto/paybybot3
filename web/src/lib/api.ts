@@ -103,7 +103,7 @@ export const api = {
     username: string,
     password: string,
     accepted = false,
-    signup?: { email: string; zone: string },
+    signup?: { email: string },
     remember = false,
     turnstile = '',
   ) =>

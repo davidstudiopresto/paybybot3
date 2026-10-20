@@ -171,7 +171,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
                 Se connecter
               </a>
             </p>
-            <ul className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink/55 lg:max-w-sm lg:justify-between lg:gap-x-0">
+            <ul className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink/55 lg:justify-start">
               {TRUST.map(([Icon, text]) => (
                 <li key={text} className="flex items-center gap-1.5">
                   <Icon className="size-4 text-eu" /> {text}

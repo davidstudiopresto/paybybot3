@@ -407,7 +407,7 @@ function RiverainDialog({
           </div>
 
           <button onClick={activate} disabled={!rate || !quote || saving} className={ui.primary}>
-            {saving ? <Loader2 className="size-5 animate-spin" /> : <>Activer {quote?.cost ? `· ${money(quote.cost)} par semaine` : ''}</>}
+            {saving ? <Loader2 className="size-5 animate-spin" /> : 'Activer mon renouvellement'}
           </button>
           <p className="-mt-3 text-center text-sm text-ink/50">
             {hosted

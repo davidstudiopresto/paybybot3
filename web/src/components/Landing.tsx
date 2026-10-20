@@ -92,7 +92,8 @@ function Security() {
  * Real users' feedback only, given with their consent: [first name and last name, short quote].
  * The section stays hidden while the list is empty.
  */
-const TESTIMONIALS: [string, string][] = Array.from({ length: 7 }, () => ['Prénom Nom', 'Avis à venir.'])
+// Hidden until there are real reviews: add [name, text] pairs here to show the section again.
+const TESTIMONIALS: [string, string][] = []
 
 function Testimonials() {
   if (!TESTIMONIALS.length) return null

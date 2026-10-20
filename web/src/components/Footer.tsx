@@ -26,6 +26,7 @@ export function HostedFooter({ className, hosted = true }: { className?: string;
           Hébergé sur Vercel, à Paris
         </p>
       )}
+      <p>© PaybyBot 2026</p>
     </footer>
   )
 }

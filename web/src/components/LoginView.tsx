@@ -117,7 +117,8 @@ export function LoginView({
         username,
         demo ? 'demo' : password,
         !demo,
-        signup && !demo ? { email: signupEmail.trim() } : undefined,
+        // Signed up by e-mail: that address is also the contact one (no second field).
+        signup && !demo ? { email: (mode === 'email' ? email : signupEmail).trim() } : undefined,
         !signup && !demo && remember,
         demo ? '' : await human.token(),
       )
@@ -242,11 +243,7 @@ export function LoginView({
                   placeholder="E-mail du compte PayByPhone"
                   aria-label="E-mail du compte PayByPhone"
                   value={email}
-                  onChange={(e) => {
-                    // At sign-up, the same address is the contact e-mail unless another one is typed.
-                    if (signup && (!signupEmail || signupEmail === email)) setSignupEmail(e.target.value)
-                    setEmail(e.target.value)
-                  }}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="h-full min-w-0 flex-1 bg-transparent px-4 text-lg text-ink outline-none placeholder:text-ink/30"
                 />
@@ -308,7 +305,7 @@ export function LoginView({
               </a>
             </div>
 
-            {signup && (
+            {signup && mode === 'phone' && (
               <div className={fieldBox}>
                 <input
                   id="signup-email"
@@ -326,7 +323,11 @@ export function LoginView({
             )}
           </div>
           {signup && (
-            <p className="mt-2 text-sm text-ink/50">Pour les confirmations de paiement et les alertes. Gardé chiffré.</p>
+            <p className="mt-2 text-sm text-ink/50">
+              {mode === 'email'
+                ? 'Cette adresse reçoit aussi les confirmations de paiement et les alertes. Gardée chiffrée.'
+                : 'Pour les confirmations de paiement et les alertes. Gardé chiffré.'}
+            </p>
           )}
 
 

@@ -45,7 +45,7 @@ function DemoVideo() {
   }
 
   return (
-    <div className="relative w-full rounded-[26px] bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] p-1.5 shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)]">
+    <div className="relative w-full rounded-[23px] bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] p-[3px] shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)]">
       <video
         ref={ref}
         src={src + '.mp4'}

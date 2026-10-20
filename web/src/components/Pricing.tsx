@@ -11,8 +11,8 @@ import { ui } from '@/lib/styles'
 export type Plan = 'monthly' | 'yearly'
 
 const PLANS: { id: Plan; name: string; price: string; per: string; note: string; popular?: boolean }[] = [
-  { id: 'monthly', name: 'Mensuel', price: '10 €', per: '/ mois', note: 'Sans engagement' },
-  { id: 'yearly', name: 'Annuel', price: '96 €', per: '/ an', note: 'Soit 8 € par mois', popular: true },
+  { id: 'monthly', name: 'Mensuel', price: '9,50 €', per: '/ mois', note: 'Sans engagement' },
+  { id: 'yearly', name: 'Annuel', price: '91,20 €', per: '/ an', note: 'Soit 7,60 € par mois', popular: true },
 ]
 
 const INCLUDED = [

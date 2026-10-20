@@ -1513,7 +1513,7 @@ class CheckoutDone(BaseModel):
 
 
 ACTIVE_STATUSES = ("trialing", "active", "past_due")
-PLANS = {"monthly": (1000, "month", "PaybyBot · Mensuel"), "yearly": (9600, "year", "PaybyBot · Annuel")}  # cents, TTC
+PLANS = {"monthly": (950, "month", "PaybyBot · Mensuel"), "yearly": (9120, "year", "PaybyBot · Annuel")}  # cents, TTC
 
 
 def stripe(method, path, **data):
@@ -1558,7 +1558,12 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
             "line_items[0][price_data][product_data][name]": name,
             "client_reference_id": owner_id(s.username), "metadata[plan]": body.plan,
             "success_url": base + "/#/abonnement?session_id={CHECKOUT_SESSION_ID}",
-            "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true"}
+            "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true",
+            # PaybyBot's own look on Stripe's page, without changing the Studio Presto account branding.
+            "branding_settings[display_name]": "PaybyBot",
+            "branding_settings[logo][type]": "url", "branding_settings[logo][url]": base + "/brand/paybybot-logo.png",
+            "branding_settings[button_color]": "#1d4ea3", "branding_settings[font_family]": "inter",
+            "branding_settings[border_style]": "rounded"}
     if account.get("stripe_customer"):
         data["customer"] = account["stripe_customer"]
     elif account.get("email"):

@@ -39,7 +39,7 @@ class Billing(unittest.TestCase):
         self.assertEqual(r["url"], "https://checkout.stripe.com/x")
         data = self.calls[0][2]
         self.assertEqual((data["line_items[0][price_data][unit_amount]"],
-                          data["line_items[0][price_data][recurring][interval]"]), (9600, "year"))
+                          data["line_items[0][price_data][recurring][interval]"]), (9120, "year"))
         trial_end = datetime.fromtimestamp(data["subscription_data[trial_end]"], timezone.utc)
         self.assertAlmostEqual((trial_end - datetime.now(timezone.utc)).days, 29, delta=1)
 

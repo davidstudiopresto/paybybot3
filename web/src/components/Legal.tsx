@@ -489,7 +489,7 @@ function Terms() {
             carte bancaire.
           </li>
           <li>
-            <strong>Offres :</strong> Mensuel à 10 € TTC par mois, ou Annuel à 96 € TTC par an. Le paiement se fait par
+            <strong>Offres :</strong> Mensuel à 9,50 € TTC par mois, ou Annuel à 91,20 € TTC par an. Le paiement se fait par
             carte bancaire, via notre prestataire de paiement Stripe ; PaybyBot ne voit ni ne conserve votre numéro de
             carte.
           </li>

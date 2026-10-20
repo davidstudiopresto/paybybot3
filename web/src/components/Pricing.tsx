@@ -188,7 +188,7 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
         </h1>
         {signedIn && (
           <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
-            Calculés pour votre véhicule et votre zone de résidence.
+            Un prix par véhicule riverain, selon votre zone de résidence.
           </p>
         )}
         <div className="mt-12">

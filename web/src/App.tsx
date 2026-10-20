@@ -109,7 +109,15 @@ export default function App() {
 
   const refresh = useCallback(async () => {
     try {
-      setData(await api.overview())
+      setData(
+        await api.overview().catch(async (e) => {
+          // Requests sent together may renew the PayByPhone login at the same time and one be refused: once more,
+          // with the cookie the other one brought back, before asking to log in again.
+          if (!(e instanceof ApiError && e.status === 401)) throw e
+          await new Promise((r) => setTimeout(r, 1500))
+          return api.overview()
+        }),
+      )
       setLoadError(null)
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setMe(null)

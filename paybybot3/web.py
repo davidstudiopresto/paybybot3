@@ -280,11 +280,9 @@ class UserSession:
                 if e.response is None or e.response.status_code != 401 or self.demo:
                     raise
                 if self._password is None:  # hosted mode: the password is not kept, the refresh token is
-                    refresh = getattr(self.bot, "refresh_token", None)
-                    if not refresh:
-                        raise HTTPException(401, "Votre session PayByPhone a expiré, reconnectez-vous.")
                     try:
-                        self.bot = Bot.from_refresh_token(refresh)
+                        self.bot = bot_from_refresh(getattr(self.bot, "refresh_token", None),
+                                                    owner_id(self.username) if HOSTED else None)
                     except Exception:
                         raise HTTPException(401, "Votre session PayByPhone a expiré, reconnectez-vous.")
                     return getattr(self.bot, method)(*args, **kwargs)
@@ -832,6 +830,61 @@ def decrypt_credential(value):
     return _fernet("credential").decrypt(value.encode()).decode()
 
 
+def stored_refresh(owner):
+    """The PayByPhone refresh token kept with this account's renewals, if any."""
+    if not owner:
+        return None
+    try:
+        value = store("renewal_get_credential", p_owner=owner)
+        return decrypt_credential(value) if value else None
+    except Exception as e:
+        log.warning("stored PayByPhone token unreadable: %s", type(e).__name__)
+        return None
+
+
+def share_refresh(owner, refresh):
+    """PayByPhone may replace the refresh token at each use: the account's renewals keep the newest one."""
+    if not (owner and refresh):
+        return
+    try:
+        store("renewal_put_credential", p_owner=owner, p_credential=encrypt_credential(refresh))
+    except Exception as e:
+        log.warning("could not store the new PayByPhone token: %s", type(e).__name__)
+
+
+def refusal(e):
+    """Why PayByPhone refused a token (status and error code only, never the token)."""
+    if not isinstance(e, requests.HTTPError) or e.response is None:
+        return type(e).__name__
+    try:
+        code = e.response.json().get("error")
+    except Exception:
+        code = None
+    return "%s %s" % (e.response.status_code, code or "")
+
+
+def bot_from_refresh(refresh, owner=None):
+    """PayByPhone login without the password. The login cookie and the renewals each hold a refresh token, and
+    using one may replace it: if this one is refused, the newest stored for the account is tried, and the token
+    PayByPhone hands back is stored for all."""
+    tried, error = set(), None
+    for get in (lambda: refresh, lambda: stored_refresh(owner)):
+        token = get()
+        if not token or token in tried:
+            continue
+        tried.add(token)
+        try:
+            bot = Bot.from_refresh_token(token)
+        except requests.HTTPError as e:
+            log.warning("PayByPhone refresh token refused: %s", refusal(e))
+            error = e
+            continue
+        if bot.refresh_token and bot.refresh_token != token:
+            share_refresh(owner, bot.refresh_token)
+        return bot
+    raise error or ValueError("no PayByPhone refresh token")
+
+
 RENEWAL_FIELDS = ("label", "plate", "location", "rate", "duration", "unit", "payment_account_id", "email", "days",
                   "start")
 
@@ -1013,7 +1066,7 @@ def process_renewal(row, refresh_token=None):
             return "blocked"
     try:
         refresh = refresh_token or decrypt_credential(row["credential"])
-        bot = Bot.from_refresh_token(refresh)
+        bot = bot_from_refresh(refresh, row.get("owner"))
     except Exception as e:
         log.warning("renewal %s: login with refresh token failed: %s", row["id"], str(e)[:200])
         store("renewal_update", p_id=row["id"],

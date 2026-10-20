@@ -1,7 +1,10 @@
 import { useState } from 'react'
-import { Check, Loader2, Sparkles } from 'lucide-react'
+import { Check, Loader2, Lock, Sparkles, X } from 'lucide-react'
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
+import { Horodateur } from '@/components/Horodateur'
+import { Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { api } from '@/lib/api'
@@ -189,14 +192,100 @@ export function TrialBanner({
   )
 }
 
+/** Full-page paywall: the offer and the way to pay on the left, the parking meter on the right. */
 function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
+  const [plan, setPlan] = useState<Plan>('yearly')
+  const [busy, setBusy] = useState(false)
+
+  async function pay() {
+    setBusy(true)
+    try {
+      window.location.assign((await api.checkout(plan)).url)
+    } catch (e) {
+      toast((e as Error).message)
+      setBusy(false)
+    }
+  }
+
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl bg-white p-6 sm:max-w-2xl sm:p-8">
-        <DialogTitle className={ui.dialogTitle}>Choisir mon offre</DialogTitle>
-        <DialogDescription className="mt-1 mb-8 text-ink/60">{text}</DialogDescription>
-        <PlanCards signedIn />
-      </DialogContent>
+    <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
+      <DialogPortal>
+        <DialogPrimitive.Popup className="fixed inset-0 z-50 grid overflow-y-auto bg-white outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 lg:grid-cols-2">
+          <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,8vw,8rem)]">
+            <div className="flex items-center justify-between">
+              <Wordmark />
+              <DialogClose
+                aria-label="Fermer"
+                disabled={busy}
+                className="grid size-10 place-items-center rounded-full bg-ink/[0.06] text-ink transition hover:bg-ink/[0.1]"
+              >
+                <X className="size-5" />
+              </DialogClose>
+            </div>
+            <Horodateur className="mx-auto mt-6 h-44 lg:hidden" />
+            <div className="mx-auto w-full max-w-md lg:my-auto lg:pt-10">
+              <DialogTitle className={cn(ui.title, 'mt-6 lg:mt-0')}>Choisissez votre offre</DialogTitle>
+              <DialogDescription className={ui.subtitle}>{text}</DialogDescription>
+
+              <div role="radiogroup" aria-label="Offre" className="mt-8 space-y-3">
+                {[...PLANS].reverse().map((p) => (
+                  <button
+                    key={p.id}
+                    role="radio"
+                    aria-checked={plan === p.id}
+                    onClick={() => setPlan(p.id)}
+                    className={cn(
+                      'flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition',
+                      plan === p.id ? 'border-eu bg-eu/[0.04] ring-1 ring-eu' : 'border-ink/15 hover:border-ink/30',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'grid size-5 shrink-0 place-items-center rounded-full border-2',
+                        plan === p.id ? 'border-eu' : 'border-ink/25',
+                      )}
+                    >
+                      {plan === p.id && <span className="size-2.5 rounded-full bg-eu" />}
+                    </span>
+                    <span className="flex-1">
+                      <span className="flex items-center gap-2 font-semibold text-ink">
+                        {p.name}
+                        {p.popular && (
+                          <span className="rounded-full bg-eu/[0.08] px-2 py-0.5 text-xs font-semibold text-eu">-20 %</span>
+                        )}
+                      </span>
+                      <span className="block text-sm text-ink/55">{p.note}</span>
+                    </span>
+                    <span className="text-right">
+                      <span className="font-heading text-xl font-semibold text-ink">{p.price}</span>{' '}
+                      <span className="text-sm text-ink/50">{p.per}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <ul className="mt-6 grid gap-2 text-[0.95rem] text-ink/70 sm:grid-cols-2">
+                {INCLUDED.map((x) => (
+                  <li key={x} className="flex items-start gap-2">
+                    <Check className="mt-0.5 size-4 shrink-0 text-eu" /> {x}
+                  </li>
+                ))}
+              </ul>
+
+              <button onClick={pay} disabled={busy} className={cn('mt-8', ui.primary)}>
+                {busy ? <Loader2 className="size-5 animate-spin" /> : 'Continuer vers le paiement'}
+              </button>
+              <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-sm text-ink/50">
+                <Lock className="size-3.5" /> Paiement sécurisé par Stripe. Sans engagement.
+              </p>
+            </div>
+          </div>
+
+          <div className="relative hidden items-center justify-center overflow-hidden bg-[radial-gradient(70%_60%_at_50%_45%,#e6ecfb_0%,#f4f6fb_60%,#f7f8fb_100%)] lg:flex">
+            <Horodateur className="w-[min(78%,30rem)] drop-shadow-[0_30px_40px_rgb(29_42_107/0.12)]" />
+          </div>
+        </DialogPrimitive.Popup>
+      </DialogPortal>
     </Dialog>
   )
 }

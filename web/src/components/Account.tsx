@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, Loader2, UserRound } from 'lucide-react'
+import { Loader2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { ZoneField } from '@/components/Riverain'
@@ -68,7 +68,6 @@ function AccountDialog({
     }
   }
 
-  const [main, ...others] = data.payments
   const row = 'flex items-start justify-between gap-6 py-4'
   const label = 'shrink-0 pt-1 text-sm text-ink/55'
 
@@ -133,30 +132,10 @@ function AccountDialog({
             </dd>
           </div>
 
-          <div className={row}>
-            <dt className={label}>Carte</dt>
-            <dd className="text-right">
-              {main ? (
-                <>
-                  <span className="inline-flex items-center gap-2 font-medium text-ink">
-                    <CreditCard className="size-4 text-ink/50" /> {main.label}
-                  </span>
-                  {others.length > 0 && (
-                    <span className="mt-1 block text-xs text-ink/45">
-                      + {others.length} autre{others.length > 1 ? 's' : ''} moyen{others.length > 1 ? 's' : ''} de
-                      paiement
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span className="text-ink/60">Aucune carte</span>
-              )}
-            </dd>
-          </div>
         </dl>
 
         <p className="px-6 pt-4 text-sm text-ink/50">
-          Véhicules et carte viennent de PayByPhone : modifiez-les dans son application.
+          Les véhicules viennent de PayByPhone : modifiez-les dans son application.
         </p>
 
         <div className={cn('px-6 pb-7', demo ? 'pt-2' : 'pt-6')}>

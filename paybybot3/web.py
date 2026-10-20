@@ -1302,6 +1302,8 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
         raise HTTPException(400, "Code incorrect. Vérifiez l'e-mail reçu.")
     save_account(session, {"email": pending["email"], "zone": pending["zone"],
                            "trial_start": datetime.now(timezone.utc).isoformat()})
+    session.remember = True  # a new user stays signed in (30 days), there is no box to tick at sign-up
+    session.issued_at = int(time.time())
     if HOSTED:
         token = seal(session)
         refresh = getattr(session.bot, "refresh_token", None)
@@ -1312,10 +1314,10 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
             except Exception as e:
                 log.warning("could not refresh stored renewals: %s", e)
     else:
-        token = secrets.token_urlsafe(32)
+        token = seal(session)
         SESSIONS[token] = session
         PENDING.pop(pbb_pending or "", None)
-    set_session_cookie(response, token)
+    set_session_cookie(response, token, True)
     response.delete_cookie(PENDING_COOKIE, path="/api/signup")
     log.info("sign-up confirmed")
     return {"username": session.username, "demo": False, "hosted": HOSTED, "firstName": first_name(session)}

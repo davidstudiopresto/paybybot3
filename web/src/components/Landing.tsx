@@ -189,7 +189,11 @@ export function Landing({ hosted }: { hosted: boolean }) {
         <div className="grid items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="max-w-[40rem]">
             <h1 className={cn(ui.title, 'lg:text-[3.42rem] lg:leading-[1.08] lg:tracking-[-0.045em]')}>
-              Renouvellement automatique de votre ticket de stationnement.
+              Renouvellement automatique de votre{' '}
+              <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] box-decoration-clone bg-clip-text text-transparent">
+                ticket de stationnement
+              </span>
+              .
             </h1>
             <p className={cn(ui.subtitle, 'lg:mt-6 lg:max-w-[30rem] lg:text-base lg:leading-[1.65]')}>
               Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.

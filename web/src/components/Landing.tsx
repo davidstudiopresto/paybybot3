@@ -310,7 +310,7 @@ const QUESTIONS: [string, ReactNode][] = [
       Le prix dépend de votre véhicule et de votre zone de résidence : il est calculé à partir de votre compte{' '}
       <PayByPhone /> et affiché avant tout paiement. Le premier mois est offert, sans carte bancaire, et l'offre annuelle
       coûte 20 % de moins.
-      <a href="#/inscription" className={cn('mt-5 w-fit px-6 text-base sm:h-12', ui.primary)}>
+      <a href="#/inscription" className={cn(ui.primary, 'mt-5 h-12 w-fit px-6 text-base no-underline hover:no-underline')}>
         Découvrir mon prix <ArrowRight className="size-5" />
       </a>
     </>,

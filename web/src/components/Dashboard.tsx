@@ -7,7 +7,6 @@ import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
-import { ExtendDialog } from '@/components/Extend'
 import { HostedFooter } from '@/components/Footer'
 import { ManageRenewal, RenewalNote, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
 import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
@@ -20,8 +19,6 @@ function useNow(interval = 1000) {
   }, [interval])
   return now
 }
-
-const quietLink = 'text-sm font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink'
 
 function Ticket({
   session,
@@ -36,7 +33,6 @@ function Ticket({
   onRefresh: () => Promise<void>
   demo: boolean
 }) {
-  const [extending, setExtending] = useState(false)
   const renewal = renewalOf(data, session)
   const start = new Date(session.start).getTime()
   const end = new Date(session.expire).getTime()
@@ -63,7 +59,7 @@ function Ticket({
           style={{ width: `${(1 - progress) * 100}%` }}
         />
       </div>
-      {renewal ? (
+      {renewal && (
         <div className="mt-4 flex items-start justify-between gap-4">
           <p className="flex gap-2 text-sm text-ink/70">
             <Repeat className="mt-0.5 size-4 shrink-0 text-eu" />
@@ -73,12 +69,7 @@ function Ticket({
           </p>
           <ManageRenewal ap={renewal} onChanged={onRefresh} demo={demo} />
         </div>
-      ) : (
-        <button onClick={() => setExtending(true)} className={`mt-4 ${quietLink}`}>
-          Prolonger
-        </button>
       )}
-      <ExtendDialog session={session} data={data} open={extending} onOpenChange={setExtending} onDone={onRefresh} />
     </article>
   )
 }

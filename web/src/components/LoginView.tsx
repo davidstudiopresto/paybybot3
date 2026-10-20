@@ -38,6 +38,14 @@ function Flag({ flag }: { flag: readonly string[] }) {
 /** PayByPhone's own page to reset its password (a code is sent to the phone number). */
 const PAYBYPHONE_PASSWORD_RESET = 'https://m.paybyphone.com/#/passwordReset'
 
+/** On Android, the PayByPhone app when it is installed (its home screen: PayByPhone offers no link to its own
+ *  « mot de passe oublié »), else the web page. On iPhone the app cannot be opened from a link: the web page. */
+const IS_ANDROID = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
+const PASSWORD_RESET_LINK = IS_ANDROID
+  ? 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.paybyphone;' +
+    `S.browser_fallback_url=${encodeURIComponent(PAYBYPHONE_PASSWORD_RESET)};end`
+  : PAYBYPHONE_PASSWORD_RESET
+
 /** "06 12 34 56 78" + France -> "+33612345678"; a number typed with its + prefix is kept as is. */
 function phoneUsername(national: string, code: string) {
   const raw = national.trim()
@@ -296,8 +304,8 @@ export function LoginView({
               )}
               {/* The password is PayByPhone's: only PayByPhone can reset it. */}
               <a
-                href={PAYBYPHONE_PASSWORD_RESET}
-                target="_blank"
+                href={PASSWORD_RESET_LINK}
+                target={IS_ANDROID ? undefined : '_blank'}
                 rel="noopener noreferrer"
                 className={cn('ml-auto text-[0.95rem]', link)}
               >

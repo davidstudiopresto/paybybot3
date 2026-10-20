@@ -1580,14 +1580,15 @@ def known_price(s, body):
 WEEK = timedelta(days=7)
 
 # The subscription follows what the resident pays PayByPhone: per month, twice the weekly resident ticket of the
-# home zone; per year, twelve months with 20 % off. The weekly price comes from PayByPhone (quote, then history),
-# else the Paris resident rate.
+# home zone, never under 4.90 € (some residents pay nothing a week); per year, twelve months with 20 % off. The
+# weekly price comes from PayByPhone (quote, then history), else the Paris resident rate.
 YEARLY_DISCOUNT = 0.20
+MIN_MONTHLY_CENTS = 490
 DEFAULT_WEEKLY_CENTS = int(PARIS_RESIDENT_WEEK["amount"] * 100)
 
 
 def plan_cents(weekly_cents, plan):
-    monthly = 2 * int(weekly_cents)
+    monthly = max(2 * int(weekly_cents), MIN_MONTHLY_CENTS)
     return monthly if plan == "monthly" else int(round(monthly * 12 * (1 - YEARLY_DISCOUNT)))
 
 
@@ -1619,14 +1620,14 @@ def weekly_resident_cents(s, zone):
             q = s.call("_create_quote", locationId=zone, ratePolicyId=str(rate["ratePolicyId"]), durationQuantity=7,
                        durationTimeUnit="Days", licensePlate=plate, paymentAccountId=payments[0]["id"],
                        operation="Start", parkingSessionId="")
-            if (q.get("cost") or {}).get("amount"):
+            if (q.get("cost") or {}).get("amount") is not None:  # 0: a free resident week
                 return int(round(float(q["cost"]["amount"]) * 100))
         except Exception as e:  # e.g. a ticket is running: fall back on the history
             log.info("weekly price quote refused: %s", str(e)[:200])
     body = Parking(location=zone, rate=str(rate["ratePolicyId"]), duration=7, unit="Days", plate=plate,
                    paymentAccountId=payments[0]["id"] if payments else "")
     cost, _ = known_price(s, body)
-    return int(round(float(cost["amount"]) * 100)) if cost and cost.get("amount") else None
+    return int(round(float(cost["amount"]) * 100)) if cost and cost.get("amount") is not None else None
 
 
 def account_pricing(s):
@@ -1636,7 +1637,7 @@ def account_pricing(s):
     if not zone:
         return None
     weekly = weekly_resident_cents(s, zone)
-    if not weekly:
+    if weekly is None:
         return None
     account = load_account(s)
     if account.get("weekly_cents") != weekly or account.get("price_zone") != zone:
@@ -1916,7 +1917,7 @@ def checkout_url(owner, account, plan, success_url):
     """A Stripe Checkout page for the plan; while the free month runs, the first charge waits for its end."""
     base = APP_URL.rstrip("/")
     interval, name = PLANS[plan]
-    weekly = int(account.get("weekly_cents") or DEFAULT_WEEKLY_CENTS)
+    weekly = int(DEFAULT_WEEKLY_CENTS if account.get("weekly_cents") is None else account["weekly_cents"])
     amount = plan_cents(weekly, plan)
     data = {"mode": "subscription", "line_items[0][quantity]": 1,
             "line_items[0][price_data][currency]": "eur", "line_items[0][price_data][unit_amount]": amount,
@@ -1977,10 +1978,10 @@ def reprice(account, owner):
     """The home zone's resident price changed (a move, a new city rate): the running subscription follows it from
     its next billing date, without proration. No e-mail: the Stripe receipt shows the new amount."""
     sub_id, weekly = account.get("stripe_subscription"), account.get("weekly_cents")
-    if not (owner and sub_id and weekly and os.environ.get("STRIPE_SECRET_KEY")):
+    if not (owner and sub_id and weekly is not None and os.environ.get("STRIPE_SECRET_KEY")):
         return False
     billed = account.get("billed_weekly_cents")
-    if billed and int(billed) == int(weekly):
+    if billed is not None and int(billed) == int(weekly):
         return False
     try:
         sub = stripe("GET", "subscriptions/" + sub_id)

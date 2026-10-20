@@ -52,6 +52,12 @@ class Billing(unittest.TestCase):
         self.assertEqual(web.plan_cents(900, "monthly"), 1800)
         self.assertEqual(web.plan_cents(900, "yearly"), 17280)
 
+    def test_floor_of_4_90_a_month_even_for_a_free_resident_week(self):
+        for weekly in (0, 100, 245):
+            self.assertEqual(web.plan_cents(weekly, "monthly"), 490)
+            self.assertEqual(web.plan_cents(weekly, "yearly"), 4704)  # still 20 % off twelve months
+        self.assertEqual(web.plan_cents(246, "monthly"), 492)
+
     def test_no_zone_no_checkout(self):
         with patch.object(web, "account_pricing", return_value=None), \
                 patch.object(web, "resident_status", return_value={"zone": None, "resident": None}), \

@@ -485,7 +485,8 @@ function Terms() {
           </li>
           <li>
             <strong>Offres et prix :</strong> Mensuel ou Annuel, TTC. Le prix dépend du type de véhicule et de la zone de
-            résidence ; l’offre annuelle coûte 20 % de moins que douze mois de l’offre mensuelle. Le prix exact est
+            résidence, sans jamais descendre sous 4,90 € par mois pour l’offre mensuelle ; l’offre annuelle coûte 20 % de
+            moins que douze mois de l’offre mensuelle. Le prix exact est
             affiché avant tout paiement. Le paiement se fait par carte
             bancaire, via notre prestataire de paiement Stripe ; PaybyBot ne voit ni ne conserve votre numéro de carte.
           </li>

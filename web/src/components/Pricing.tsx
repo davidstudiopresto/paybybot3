@@ -23,11 +23,12 @@ const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' 
 
 /** What a plan shows: the account's own price when known, else the rule with an example. */
 function planText(id: Plan, pricing?: Pricing | null) {
-  const week = pricing?.weekly
-  if (week) {
+  const monthly = pricing?.monthly
+  const yearly = pricing?.yearly
+  if (monthly != null && yearly != null) {
     return id === 'monthly'
-      ? { price: euros(2 * week), per: '/ mois', note: 'Sans engagement' }
-      : { price: euros(Math.round(24 * week * 0.8)), per: '/ an', note: `Soit ${euros(Math.round(2 * week * 0.8))} par mois` }
+      ? { price: euros(monthly), per: '/ mois', note: 'Sans engagement' }
+      : { price: euros(yearly), per: '/ an', note: `Soit ${euros(Math.round(yearly / 12))} par mois` }
   }
   return id === 'monthly'
     ? { price: 'Par mois', per: '', note: 'Prix selon votre véhicule et votre zone de résidence, affiché avant tout paiement. Sans engagement.' }
@@ -87,7 +88,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   return (
     <>
     {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
-    {signedIn && pricing && !pricing.weekly && pricing.resident !== false && (
+    {signedIn && pricing && pricing.monthly == null && pricing.resident !== false && (
       <div className="mb-6 rounded-2xl border border-ink/10 p-5">
         <p className="mb-3 text-ink/70">Votre prix dépend de votre zone de résidence : indiquez votre arrondissement.</p>
         <ZoneField zone="" fromHistory={false} onZone={saveZone} />
@@ -308,7 +309,7 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
                 className={cn(locked && 'pointer-events-none select-none opacity-50 blur-[2px] grayscale')}
               >
               <div role="radiogroup" aria-label="Offre" className="mt-8 space-y-3">
-                {pricing && !pricing.weekly && !locked && (
+                {pricing && pricing.monthly == null && !locked && (
                   <div className="rounded-2xl border border-ink/10 p-4">
                     <p className="mb-3 text-sm text-ink/60">
                       Votre prix dépend de votre zone de résidence : indiquez votre arrondissement.
@@ -317,7 +318,7 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
                   </div>
                 )}
                 {!pricing && <div className="h-40 animate-pulse rounded-2xl bg-ink/[0.05]" />}
-                {(pricing?.weekly != null || locked) && [...PLANS].reverse().map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
+                {(pricing?.monthly != null || locked) && [...PLANS].reverse().map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
                   <button
                     key={p.id}
                     role="radio"
@@ -361,7 +362,7 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
                 ))}
               </ul>
 
-              <button onClick={pay} disabled={busy || !pricing?.weekly} className={cn('mt-8', ui.primary)}>
+              <button onClick={pay} disabled={busy || pricing?.monthly == null} className={cn('mt-8', ui.primary)}>
                 {busy ? <Loader2 className="size-5 animate-spin" /> : 'Continuer vers le paiement'}
               </button>
               <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-sm text-ink/50">

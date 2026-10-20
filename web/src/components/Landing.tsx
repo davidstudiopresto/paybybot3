@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react'
-import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Plus, Power, Repeat, ShieldCheck } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ArrowRight, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pause, Play, Plus, Power, ShieldCheck } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
-import { Plate, ZonePlate } from '@/components/signs'
 import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -15,38 +14,59 @@ const TRUST = [
   [Power, 'Sans engagement'],
 ] as const
 
+/** The 15-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
+function DemoVideo() {
+  const ref = useRef<HTMLVideoElement>(null)
+  const [mobile] = useState(() => window.matchMedia('(max-width: 639px)').matches)
+  const [still] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const [playing, setPlaying] = useState(!still)
+  const src = mobile ? '/video/paybybot-15s-mobile' : '/video/paybybot-15s'
+
+  useEffect(() => {
+    const v = ref.current
+    if (v && !still) v.play().catch(() => setPlaying(false))
+  }, [still])
+
+  function toggle() {
+    const v = ref.current
+    if (!v) return
+    if (v.paused) v.play().then(() => setPlaying(true), () => {})
+    else {
+      v.pause()
+      setPlaying(false)
+    }
+  }
+
+  return (
+    <div className="relative mx-auto mt-14 max-w-5xl lg:mt-20">
+      <div className="absolute -inset-3 -z-10 rounded-[2rem] bg-eu/[0.06] sm:-inset-5" />
+      <video
+        ref={ref}
+        src={src + '.mp4'}
+        poster={src + '.jpg'}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-label="Vidéo de 15 secondes : activer le renouvellement automatique dans PaybyBot"
+        className="block aspect-[4/5] w-full rounded-2xl border border-ink/10 bg-[#0b1024] object-cover shadow-[0_30px_70px_-30px_rgb(30_42_94/0.45)] sm:aspect-video"
+      />
+      <button
+        onClick={toggle}
+        aria-label={playing ? 'Mettre la vidéo en pause' : 'Lire la vidéo'}
+        className="absolute bottom-4 left-4 inline-flex h-9 items-center gap-2 rounded-full bg-white/90 px-3.5 text-sm font-semibold text-ink shadow backdrop-blur transition hover:bg-white"
+      >
+        {playing ? <Pause className="size-4" /> : <Play className="size-4" />} {playing ? 'Pause' : 'Voir PaybyBot · 15 s'}
+      </button>
+    </div>
+  )
+}
+
 const STEPS = [
   ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
   ['Vérifiez', 'Véhicule et carte sont retrouvés dans votre compte PayByPhone. Vous indiquez votre adresse et confirmez votre e-mail.'],
   ["C'est tout", 'Le forfait résident est repayé à chaque échéance, même téléphone éteint.'],
 ]
-
-/** What the dashboard looks like once the renewal runs: a ticket that renews itself. */
-function Preview() {
-  return (
-    <div className="relative mx-auto w-full max-w-[28rem]" aria-hidden>
-      <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-eu/[0.05] sm:-inset-10" />
-      <div className="rounded-2xl border border-border bg-white p-6 shadow-[0_24px_60px_-28px_rgb(30_42_94/0.35)]">
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-3">
-            <Plate plate="AB123CD" size="sm" />
-            <ZonePlate zone="75017" />
-          </span>
-          <span className="text-sm text-muted-foreground">9,00 €</span>
-        </div>
-        <p className="mt-6 font-heading text-[2.8rem] leading-none font-bold tracking-tight tabular-nums">6 j 23 h</p>
-        <p className="mt-2 text-muted-foreground">jusqu'au lundi 26 octobre, 9h00</p>
-        <div className="mt-6 h-1 overflow-hidden rounded-full bg-muted">
-          <div className="h-full w-[97%] rounded-full bg-eu" />
-        </div>
-        <p className="mt-5 flex items-center gap-2 text-sm text-ink/70">
-          <Repeat className="size-4 text-eu" /> Renouvelé automatiquement à la fin
-        </p>
-      </div>
-      <p className="mt-5 text-center text-sm text-ink/45">Votre tableau de bord, une fois inscrit</p>
-    </div>
-  )
-}
 
 const GUARANTEES = [
   [Lock, 'Mot de passe jamais enregistré', 'Il sert seulement à vous connecter à PayByPhone. Il n’est écrit nulle part.'],
@@ -124,22 +144,22 @@ export function Landing({ hosted }: { hosted: boolean }) {
       <PublicTopBar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-[10vh] pb-24 sm:px-8 lg:pt-[14vh]">
-        <section className="rise grid items-center gap-12 lg:grid-cols-[1.45fr_1fr] lg:gap-16">
-          <div className="max-w-[40rem]">
-            <h1 className={cn(ui.title, 'lg:text-[3.3rem] lg:leading-[1.05]')}>Renouvellement automatique de votre ticket de stationnement.</h1>
+        <section className="rise">
+          <div className="mx-auto max-w-[46rem] text-center">
+            <h1 className={cn(ui.title, 'lg:text-[3.6rem] lg:leading-[1.04]')}>Renouvellement automatique de votre ticket de stationnement.</h1>
             <p className={cn(ui.subtitle, 'lg:mt-5 lg:text-xl')}>
               Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.
             </p>
-            <a href="#/inscription" className={cn('mt-9 lg:max-w-sm', ui.primary)}>
+            <a href="#/inscription" className={cn('mx-auto mt-9 max-w-sm', ui.primary)}>
               Essayer gratuitement <ArrowRight className="size-5" />
             </a>
-            <p className="mt-4 text-center text-sm text-ink/50 lg:max-w-sm">
+            <p className="mt-4 text-center text-sm text-ink/50">
               Déjà inscrit ?{' '}
               <a href="#/connexion" className={ui.link}>
                 Se connecter
               </a>
             </p>
-            <ul className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink/55 lg:max-w-sm lg:justify-between lg:gap-x-0">
+            <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-ink/55">
               {TRUST.map(([Icon, text]) => (
                 <li key={text} className="flex items-center gap-1.5">
                   <Icon className="size-4 text-eu" /> {text}
@@ -147,7 +167,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
               ))}
             </ul>
           </div>
-          <Preview />
+          <DemoVideo />
         </section>
 
         <section className="mt-24 lg:mt-36">

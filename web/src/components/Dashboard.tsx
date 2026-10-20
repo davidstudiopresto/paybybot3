@@ -8,7 +8,7 @@ import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
-import { ManageRenewal, NoResidentStatus, RenewalNote, RiverainCard, WEEKLY_LABEL, ZoneField, renewalOf } from '@/components/Riverain'
+import { ManageRenewal, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, ZoneField, renewalOf } from '@/components/Riverain'
 import { api, forgetZoneLookup, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -133,6 +133,8 @@ export function Dashboard({
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
+      {/* No resident rate on PayByPhone: PaybyBot is not usable, the page stays blurred behind the notice. */}
+      {resident?.resident === false && !me.demo && <ResidentGate zone={resident.zone} onChecked={setResident} />}
       <TrialBanner trialEnd={account?.trialEnd ?? null} plan={account?.plan ?? null} blocked={account?.blocked ?? null} />
       <TopBar>
         {me.demo && (
@@ -169,7 +171,6 @@ export function Dashboard({
           </div>
         )}
 
-        {resident?.resident === false && <NoResidentStatus zone={resident.zone} className="mt-8" />}
         {resident && !resident.zone && (
           <div className="mt-8 rounded-2xl border border-ink/10 p-5">
             <p className="mb-3 text-ink/70">

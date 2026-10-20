@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
-import { ZoneField } from '@/components/Riverain'
+import { ResidentGate, ZoneField, type ResidentStatus } from '@/components/Riverain'
 import { arrondissement, PayByPhone, Plate, Wordmark, ZonePlate } from '@/components/signs'
 import { api, forgetZoneLookup, until, type Me, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -61,6 +61,13 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
     )
   }, [])
 
+  // PaybyBot is for resident-rate holders: checked as soon as the home zone is known (the zone tells where).
+  const [status, setStatus] = useState<ResidentStatus | null>(null)
+  useEffect(() => {
+    if (!zone || me.demo) return
+    api.residentStatus().then(setStatus, () => {})
+  }, [zone, me.demo])
+
   // Not in the history: the arrondissement is asked here, and needed before going on (the price depends on it).
   const [saving, setSaving] = useState(false)
   async function saveZone(z: string) {
@@ -83,6 +90,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
 
   return (
     <div className="grid min-h-dvh bg-white lg:grid-cols-[1.05fr_1fr]">
+      {status?.resident === false && <ResidentGate zone={status.zone} onChecked={setStatus} />}
       <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,7vw,7rem)]">
         <Wordmark />
         <div className="mx-auto w-full max-w-lg lg:my-auto lg:py-10">
@@ -172,7 +180,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
 
           <button
             onClick={onContinue}
-            disabled={!zone || saving}
+            disabled={!zone || saving || status?.resident === false}
             className={cn('rise mt-8', ui.primary)}
             style={{ animationDelay: `${next()}ms` }}
           >

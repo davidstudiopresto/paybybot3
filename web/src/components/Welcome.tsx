@@ -127,7 +127,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                   <span className="text-sm text-ink/55">{manual ? 'indiquée par vous' : 'trouvée dans votre historique'}</span>
                 </span>
               ) : (
-                <span className="text-ink/60">Pas dans votre historique : vous indiquerez votre adresse à l’étape suivante.</span>
+                <span className="text-ink/60">Pas dans votre historique : vous choisirez votre arrondissement à l’étape suivante.</span>
               )}
             </Row>
             {data.sessions.length > 0 && (

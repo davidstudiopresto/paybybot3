@@ -309,7 +309,7 @@ const QUESTIONS: [string, ReactNode][] = [
     <>
       Rien de ce que <PayByPhone /> sait déjà : votre numéro, vos véhicules, votre carte et votre zone de résidence
       viennent de votre compte. On vous demande seulement votre e-mail, pour les confirmations. Si votre zone n'y figure
-      pas, on vous demande votre adresse en activant le renouvellement : elle n'est pas conservée, seule la zone l'est.
+      pas, vous choisissez simplement votre arrondissement en activant le renouvellement.
     </>,
   ],
   [

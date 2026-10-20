@@ -48,7 +48,6 @@ const SUBPROCESSORS = [
   ['Vercel', 'Hébergement de l’application', 'Paris (UE)', 'ISO 27001, SOC 2'],
   ['Supabase', 'Base de données des renouvellements', 'Paris (UE)', 'SOC 2'],
   ['Resend', 'E-mails de confirmation', 'Irlande (UE)', 'SOC 2'],
-  ['Géoplateforme (IGN)', 'Recherche d’adresse', 'France', 'Service public'],
 ]
 
 /** The security page, laid out like a trust page: seal, practice, framework, sub-processors, then the details. */

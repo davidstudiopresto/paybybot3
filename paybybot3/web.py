@@ -2062,31 +2062,6 @@ def resident_zone(pbb_session: str = Cookie(None)):
     return guarded(find)
 
 
-class AddressQuery(BaseModel):
-    q: str = Field(max_length=200)
-
-
-@app.post("/api/address")
-def address_search(body: AddressQuery, pbb_session: str = Cookie(None)):
-    """Address autocomplete through the French State's address service (Géoplateforme), relayed so the
-    browser talks to PaybyBot only. Sent in a POST body so it never shows in URL logs; only used to find the
-    zone, neither logged nor stored. Signed-in users only: it is asked while setting up a renewal."""
-    current(pbb_session)
-    q = body.q.strip()[:120]
-    if len(q) < 3:
-        return []
-    try:
-        r = requests.get("https://data.geopf.fr/geocodage/search",
-                         params={"q": q, "autocomplete": 1, "limit": 5, "index": "address"}, timeout=5)
-        r.raise_for_status()
-        features = r.json().get("features", [])
-    except Exception as e:
-        log.warning("address search failed: %s", type(e).__name__)
-        raise HTTPException(502, "La recherche d'adresse ne répond pas. Tapez votre code postal à la place.")
-    return [{"label": f["properties"].get("label"), "postcode": f["properties"].get("postcode")}
-            for f in features if f.get("properties", {}).get("postcode")]
-
-
 def update_own_renewal(s, ap_id, patch):
     """Hosted: change one of the user's stored renewals; returns it in the interface's shape."""
     try:

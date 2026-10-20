@@ -234,8 +234,7 @@ function Privacy() {
           <li>
             <strong>Compte PaybyBot :</strong> votre e-mail, vérifié par un code à l’inscription, et votre zone de
             résidence, chiffrés ; une empreinte de votre identifiant ; si vous vous abonnez, l’offre choisie et les
-            identifiants de client et d’abonnement Stripe, chiffrés. L’adresse que vous tapez pour trouver la zone n’est
-            pas conservée.
+            identifiants de client et d’abonnement Stripe, chiffrés.
           </li>
           <li>
             <strong>Renouvellement riverain (si vous l’activez) :</strong> un jeton de reconnexion <PayByPhone />, la plaque,
@@ -297,11 +296,6 @@ function Privacy() {
           <li>
             <strong>Stripe</strong>, pour le paiement de l’abonnement : il reçoit votre e-mail et les données de votre
             carte, que PaybyBot ne voit jamais, et conserve les factures selon ses obligations légales.
-          </li>
-          <li>
-            <strong>Géoplateforme (IGN, État français)</strong>, pour la recherche d’adresse qui sert à trouver votre
-            zone. PaybyBot relaie ce que vous tapez, sans le
-            conserver ni l’inscrire dans ses journaux, et ne garde que la zone qui en découle.
           </li>
         </ul>
         <p>

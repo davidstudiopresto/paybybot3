@@ -3,7 +3,7 @@ import { Check, Loader2, Mail, Pause, Play, Repeat } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
-import { Plate, ZonePlate, withPayByPhone } from '@/components/signs'
+import { arrondissement, Plate, withPayByPhone, ZonePlate } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
@@ -420,60 +420,32 @@ function RiverainDialog({
   )
 }
 
-/** The home zone: shown when known (history, last payment), else found from the address. */
+/** Paris arrondissements and their resident zone number on PayByPhone (the postcode). */
+const ARRONDISSEMENTS = Array.from({ length: 20 }, (_, i) => ({
+  label: i === 0 ? '1er' : `${i + 1}e`,
+  zone: `750${String(i + 1).padStart(2, '0')}`,
+}))
+
+/** The home zone: shown when known (history, account), else picked among the 20 arrondissements. */
 export function ZoneField({
   zone,
   fromHistory,
   onZone,
-  autoFocus = true,
 }: {
   zone: string
   fromHistory: boolean
   onZone: (zone: string) => void
-  autoFocus?: boolean
 }) {
   const [editing, setEditing] = useState(false)
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<{ label: string; postcode: string }[]>([])
-  const [searching, setSearching] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const open = editing || !zone
-
-  useEffect(() => {
-    const q = query.trim()
-    setError(null)
-    if (/^\d{5}$/.test(q)) {
-      setResults([{ label: `Code postal ${q}`, postcode: q }])
-      return
-    }
-    if (q.length < 4) {
-      setResults([])
-      return
-    }
-    let cancelled = false
-    setSearching(true)
-    const timer = setTimeout(async () => {
-      try {
-        const found = await api.searchAddress(q)
-        if (!cancelled) setResults(found)
-      } catch (e) {
-        if (!cancelled) setError((e as Error).message)
-      } finally {
-        if (!cancelled) setSearching(false)
-      }
-    }, 250)
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [query])
 
   if (!open) {
     return (
       <div>
-        <p className={ui.label}>Zone de votre domicile</p>
+        <p className={ui.label}>Arrondissement de résidence</p>
         <div className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-3">
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {arrondissement(zone) && <span className="font-semibold text-ink">{arrondissement(zone)}</span>}
             <ZonePlate zone={zone} />
             {fromHistory && <span className="text-sm text-ink/50">d'après votre historique</span>}
           </span>
@@ -487,46 +459,32 @@ export function ZoneField({
 
   return (
     <div>
-      <label htmlFor="riverain-address" className={ui.label}>
-        Votre adresse de résidence
-      </label>
-      <div className="relative">
-        <input
-          id="riverain-address"
-          autoComplete="street-address"
-          placeholder="12 rue de Lévis, Paris"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          autoFocus={autoFocus}
-          className={cn(ui.field, 'h-12 pr-10 text-base')}
-        />
-        {searching && <Loader2 className="absolute top-3.5 right-3.5 size-5 animate-spin text-ink/30" />}
+      <p id="riverain-arrondissement" className={ui.label}>
+        Votre arrondissement de résidence
+      </p>
+      <div role="radiogroup" aria-labelledby="riverain-arrondissement" className="grid grid-cols-5 gap-2">
+        {ARRONDISSEMENTS.map((a) => (
+          <button
+            key={a.zone}
+            role="radio"
+            aria-checked={a.zone === zone}
+            aria-label={`Paris ${a.label}`}
+            onClick={() => {
+              onZone(a.zone)
+              setEditing(false)
+            }}
+            className={cn(
+              'h-11 rounded-xl border text-[0.95rem] font-semibold transition',
+              a.zone === zone ? 'border-eu bg-eu/[0.06] text-eu ring-1 ring-eu' : 'border-ink/15 text-ink hover:border-ink/40',
+            )}
+          >
+            {a.label}
+          </button>
+        ))}
       </div>
-      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-      {results.length > 0 && (
-        <ul className="mt-2 overflow-hidden rounded-xl border border-ink/15" role="listbox" aria-label="Adresses trouvées">
-          {results.map((r) => (
-            <li key={r.label}>
-              <button
-                role="option"
-                aria-selected={false}
-                onClick={() => {
-                  onZone(r.postcode)
-                  setQuery('')
-                  setEditing(false)
-                }}
-                className="flex w-full items-center justify-between gap-3 border-b border-ink/10 px-4 py-3 text-left last:border-b-0 hover:bg-muted"
-              >
-                <span className="w-0 flex-1 truncate">{r.label}</span>
-                <span className="shrink-0 text-sm font-bold text-ink/50">{r.postcode}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
       {zone && (
         <button onClick={() => setEditing(false)} className={cn('mt-2 text-sm', ui.link)}>
-          Garder la zone {zone}
+          Garder {arrondissement(zone) ?? `la zone ${zone}`}
         </button>
       )}
     </div>

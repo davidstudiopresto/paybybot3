@@ -45,7 +45,7 @@ function DemoVideo() {
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full rounded-[26px] bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] p-1.5 shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)]">
       <video
         ref={ref}
         src={src + '.mp4'}
@@ -55,7 +55,7 @@ function DemoVideo() {
         playsInline
         preload="metadata"
         aria-label="Vidéo de 26 secondes : activer le renouvellement automatique dans PaybyBot"
-        className="block aspect-[4/5] w-full rounded-[20px] bg-[#0b1024] object-cover shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)] sm:aspect-video"
+        className="block aspect-[4/5] w-full rounded-[20px] bg-[#0b1024] object-cover sm:aspect-video"
       />
       <button
         onClick={toggle}

@@ -124,7 +124,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
               Votre forfait résident PayByPhone est repayé à chaque échéance. Plus d'oubli, plus d'amende.
             </p>
             <a href="#/inscription" className={cn('mt-9 lg:max-w-sm', ui.primary)}>
-              S'inscrire <ArrowRight className="size-5" />
+              Essayer gratuitement <ArrowRight className="size-5" />
             </a>
             <p className="mt-4 text-center text-sm text-ink/50 lg:max-w-sm">
               Déjà inscrit ?{' '}
@@ -254,7 +254,7 @@ export function FaqView({ hosted, signedIn = false }: { hosted: boolean; signedI
         </div>
         <Faq className="mt-10 lg:mt-14" />
         <a href="#/inscription" className={cn('mx-auto mt-14 max-w-sm', ui.primary)}>
-          S'inscrire <ArrowRight className="size-5" />
+          Essayer gratuitement <ArrowRight className="size-5" />
         </a>
       </main>
       <HostedFooter className="px-6 pb-8" hosted={hosted} />

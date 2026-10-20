@@ -97,7 +97,7 @@ const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) })
 
 export const api = {
-  config: () => request<{ hosted: boolean; turnstileSiteKey?: string | null }>('/api/config'),
+  config: () => request<{ hosted: boolean; turnstileSiteKey?: string | null; build?: string | null }>('/api/config'),
   me: () => request<Me>('/api/me'),
   login: (
     username: string,

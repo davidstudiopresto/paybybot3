@@ -1300,10 +1300,19 @@ def logout(response: Response, pbb_session: str = Cookie(None)):
     return {"ok": True}
 
 
+def current_build():
+    """Name of the app script in the deployed index.html: open pages compare it with theirs to reload after an update."""
+    try:
+        found = re.search(r"/assets/(index-[\w-]+\.js)", (STATIC_DIR / "index.html").read_text())
+        return found.group(1) if found else None
+    except OSError:
+        return None
+
+
 @app.get("/api/config")
 def config():
     """Public: lets the login page describe where credentials go."""
-    return {"hosted": HOSTED, "turnstileSiteKey": turnstile_site_key() or None}
+    return {"hosted": HOSTED, "turnstileSiteKey": turnstile_site_key() or None, "build": current_build()}
 
 
 @app.get("/api/me")

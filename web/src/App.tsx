@@ -63,6 +63,33 @@ export default function App() {
     api.config().then((c) => setHosted(c.hosted), () => {})
   }, [])
 
+  // A page left open across an update keeps running the old app: reload it once a new version is online.
+  useEffect(() => {
+    const mine = document.querySelector<HTMLScriptElement>('script[src*="/assets/index-"]')?.src.split('/assets/')[1]
+    if (!mine) return // dev server
+    const check = () =>
+      api.config().then(
+        (c) => {
+          if (!c.build || c.build === mine) return
+          try {
+            if (sessionStorage.getItem('pbb-build') === c.build) return // already reloaded for it: no loop
+            sessionStorage.setItem('pbb-build', c.build)
+          } catch {
+            return
+          }
+          window.location.reload()
+        },
+        () => {},
+      )
+    const onVisible = () => document.visibilityState === 'visible' && check()
+    document.addEventListener('visibilitychange', onVisible)
+    const id = setInterval(check, 5 * 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(id)
+    }
+  }, [])
+
   const refresh = useCallback(async () => {
     try {
       setData(await api.overview())

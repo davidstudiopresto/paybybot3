@@ -1,8 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
-import { arrondissement, PayByPhone, Plate, VehiclePlate, Wordmark, ZonePlate } from '@/components/signs'
-import { api, until, type Me, type Overview } from '@/lib/api'
+import { ZoneField } from '@/components/Riverain'
+import { arrondissement, PayByPhone, Plate, Wordmark, ZonePlate } from '@/components/signs'
+import { api, forgetZoneLookup, until, type Me, type Overview } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -59,6 +61,22 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
     )
   }, [])
 
+  // Not in the history: the arrondissement is asked here, and needed before going on (the price depends on it).
+  const [saving, setSaving] = useState(false)
+  async function saveZone(z: string) {
+    setSaving(true)
+    try {
+      await api.updateAccount({ zone: z })
+      forgetZoneLookup()
+      setZone(z)
+      setManual(true)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const step = 140
   let i = 0
   const next = () => ++i * step
@@ -94,7 +112,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               {data.vehicles.length ? (
                 <span className="flex flex-wrap gap-2 pt-0.5">
                   {data.vehicles.map((v) => (
-                    <VehiclePlate key={v.plate} plate={v.plate} type={v.type} />
+                    <Plate key={v.plate} plate={v.plate} size="sm" />
                   ))}
                 </span>
               ) : (
@@ -117,7 +135,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                 <span className="text-ink/60">Aucune carte : ajoutez-en une dans l’application PayByPhone.</span>
               )}
             </Row>
-            <Row icon={<MapPin className="size-5" />} label="Zone de résidence" delay={next()} found={zone !== null}>
+            <Row icon={<MapPin className="size-5" />} label="Zone de résidence" delay={next()} found={!!zone}>
               {zone === undefined ? (
                 <span className="inline-block h-5 w-24 animate-pulse rounded bg-ink/10" />
               ) : zone ? (
@@ -127,7 +145,12 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                   <span className="text-sm text-ink/55">{manual ? 'indiquée par vous' : 'trouvée dans votre historique'}</span>
                 </span>
               ) : (
-                <span className="text-ink/60">Pas dans votre historique : vous choisirez votre arrondissement à l’étape suivante.</span>
+                <div className="space-y-3">
+                  <p className="text-ink/60">
+                    Pas trouvée dans votre historique <PayByPhone /> : indiquez votre arrondissement pour continuer.
+                  </p>
+                  <ZoneField zone="" fromHistory={false} onZone={saveZone} />
+                </div>
               )}
             </Row>
             {data.sessions.length > 0 && (
@@ -147,7 +170,12 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             ou une carte à changer ? Faites-le dans l’application <PayByPhone /> : PaybyBot suit automatiquement.
           </p>
 
-          <button onClick={onContinue} className={cn('rise mt-8', ui.primary)} style={{ animationDelay: `${next()}ms` }}>
+          <button
+            onClick={onContinue}
+            disabled={!zone || saving}
+            className={cn('rise mt-8', ui.primary)}
+            style={{ animationDelay: `${next()}ms` }}
+          >
             C’est bien moi, continuer <ArrowRight className="size-5" />
           </button>
         </div>

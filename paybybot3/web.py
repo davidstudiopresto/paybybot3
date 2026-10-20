@@ -1538,23 +1538,29 @@ def plan_cents(weekly_cents, plan):
     return monthly if plan == "monthly" else int(round(monthly * 12 * (1 - YEARLY_DISCOUNT)))
 
 
+def resident_rate(s, zone):
+    """(plate, rate) of the resident rate PayByPhone offers this account in the zone, cars first; (None, None)
+    when it offers none: the resident status (carte résident) is not active there for any of its vehicles."""
+    vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]
+    two = [v for v in vehicles if TWO_WHEELS.search(str(v.get("type") or ""))]
+    for vehicle in [v for v in vehicles if v not in two] + two:
+        rates = s.call("get_rate_options", zone, vehicle["licensePlate"]) or []
+        wants_two = vehicle in two
+        rate = next((r for r in rates if RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type")))
+                     and bool(TWO_WHEELS.search("%s %s" % (r.get("name"), r.get("type")))) == wants_two
+                     and not r.get("parkingNotAllowedReason")), None)
+        if rate:
+            return vehicle["licensePlate"], rate
+    return None, None
+
+
 def weekly_resident_cents(s, zone):
     """What a week at the resident rate costs this account in its home zone, in cents (None if unknown).
     Cars first; an account with only two-wheelers gets the two-wheeler rate."""
-    vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]
-    payments = normalize_accounts(s.call("get_payment_accounts") or {})
-    if not vehicles:
-        return None
-    two = [v for v in vehicles if TWO_WHEELS.search(str(v.get("type") or ""))]
-    vehicle = next((v for v in vehicles if v not in two), vehicles[0])
-    plate = vehicle["licensePlate"]
-    rates = s.call("get_rate_options", zone, plate) or []
-    wants_two = vehicle in two
-    rate = next((r for r in rates if RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type")))
-                 and bool(TWO_WHEELS.search("%s %s" % (r.get("name"), r.get("type")))) == wants_two
-                 and not r.get("parkingNotAllowedReason")), None)
+    plate, rate = resident_rate(s, zone)
     if not rate:
         return None
+    payments = normalize_accounts(s.call("get_payment_accounts") or {})
     if payments:
         try:
             q = s.call("_create_quote", locationId=zone, ratePolicyId=str(rate["ratePolicyId"]), durationQuantity=7,
@@ -1571,7 +1577,8 @@ def weekly_resident_cents(s, zone):
 
 
 def account_pricing(s):
-    """The account's prices from its home zone; kept on the account for the e-mail links. None without a zone."""
+    """The account's prices from its home zone; kept on the account for the e-mail links. None without a zone, or
+    without a resident rate there (see resident_rate)."""
     zone = (find_home_zone(s) or {}).get("zone")
     if not zone:
         return None
@@ -1948,7 +1955,24 @@ def pricing(pbb_session: str = Cookie(None)):
     """The account's prices: twice its weekly resident ticket per month, 20 % off per year. No zone: zone None."""
     s = current(pbb_session)
     found = guarded(lambda: account_pricing(s))
-    return found or {"zone": None, "weekly": None, "monthly": None, "yearly": None}
+    if found:
+        return {**found, "resident": True}
+    status = guarded(lambda: resident_status(s))
+    return {"zone": status["zone"], "weekly": None, "monthly": None, "yearly": None, "resident": status["resident"]}
+
+
+def resident_status(s):
+    """Is the resident status active on PayByPhone? True / False in the home zone, None while the zone is unknown."""
+    zone = (find_home_zone(s) or {}).get("zone")
+    if not zone:
+        return {"zone": None, "resident": None}
+    return {"zone": zone, "resident": resident_rate(s, zone)[1] is not None}
+
+
+@app.get("/api/resident-status")
+def resident_status_route(pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+    return guarded(lambda: resident_status(s))
 
 
 @app.post("/api/billing/checkout")
@@ -1960,6 +1984,9 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
     if not os.environ.get("STRIPE_SECRET_KEY"):
         raise HTTPException(503, "Le paiement en ligne arrive très bientôt. Profitez de votre mois offert !")
     if not guarded(lambda: account_pricing(s)):
+        if guarded(lambda: resident_status(s))["resident"] is False:
+            raise HTTPException(400, "Votre statut résident n'est pas activé sur PayByPhone : l'abonnement n'est pas "
+                                     "disponible pour l'instant.")
         raise HTTPException(400, "Choisissez d'abord votre arrondissement : le prix dépend de votre forfait résident.")
     account = guarded(lambda: load_account(s))
     url = checkout_url(owner_id(s.username), account, body.plan,

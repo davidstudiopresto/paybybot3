@@ -52,8 +52,28 @@ class Billing(unittest.TestCase):
         self.assertEqual(web.plan_cents(900, "yearly"), 17280)
 
     def test_no_zone_no_checkout(self):
-        with patch.object(web, "account_pricing", return_value=None), self.assertRaises(HTTPException):
+        with patch.object(web, "account_pricing", return_value=None), \
+                patch.object(web, "resident_status", return_value={"zone": None, "resident": None}), \
+                self.assertRaises(HTTPException):
             web.billing_checkout(web.Checkout(plan="monthly"), None, "t")
+
+    def test_no_resident_status_no_checkout(self):
+        with patch.object(web, "account_pricing", return_value=None), \
+                patch.object(web, "resident_status", return_value={"zone": "75017", "resident": False}), \
+                self.assertRaises(HTTPException) as e:
+            web.billing_checkout(web.Checkout(plan="monthly"), None, "t")
+        self.assertIn("statut résident", e.exception.detail)
+
+    def test_resident_status_reads_the_rates_of_the_home_zone(self):
+        class Session:
+            def call(self, name, *args, **kw):
+                if name == "get_vehicles":
+                    return [{"licensePlate": "AB123CD", "type": "Car"}]
+                return [{"name": "Visiteur", "type": "Visitor"}] if name == "get_rate_options" else []
+        with patch.object(web, "find_home_zone", return_value={"zone": "75017"}):
+            self.assertEqual(web.resident_status(Session()), {"zone": "75017", "resident": False})
+        with patch.object(web, "find_home_zone", return_value={"zone": None}):
+            self.assertEqual(web.resident_status(Session())["resident"], None)
 
     def test_a_move_reprices_from_the_next_billing_date(self):
         account = {"stripe_subscription": "sub_1", "weekly_cents": 1050, "billed_weekly_cents": 900,

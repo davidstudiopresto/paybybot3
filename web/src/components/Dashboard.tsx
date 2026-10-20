@@ -8,7 +8,7 @@ import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
-import { ManageRenewal, RenewalNote, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
+import { ManageRenewal, NoResidentStatus, RenewalNote, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
 import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -104,6 +104,11 @@ export function Dashboard({
       : Promise.resolve()
     confirm.then(() => api.account().then(setAccount, () => {}))
   }, [])
+  // Resident status on PayByPhone: without it, nothing to renew (and no subscription).
+  const [resident, setResident] = useState<{ zone: string | null; resident: boolean | null } | null>(null)
+  useEffect(() => {
+    if (!me.demo) api.residentStatus().then(setResident, () => {})
+  }, [me.demo])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
 
@@ -151,6 +156,8 @@ export function Dashboard({
             ))}
           </div>
         )}
+
+        {resident?.resident === false && <NoResidentStatus zone={resident.zone} className="mt-8" />}
 
         {/* The renewal is the one action of the app: no one-off payment button. */}
         <div className={renewing ? 'mt-6' : 'mt-10 border-t border-border pt-8'}>

@@ -4,7 +4,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
-import { ZoneField } from '@/components/Riverain'
+import { NoResidentStatus, ZoneField } from '@/components/Riverain'
 import { Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -227,6 +227,7 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
   const [plan, setPlan] = useState<Plan>('yearly')
   const [busy, setBusy] = useState(false)
   const [pricing, reload] = usePricing(true)
+  const locked = pricing?.resident === false
 
   // The price depends on the home zone: without one, the arrondissement is asked right here.
   async function saveZone(zone: string) {
@@ -264,13 +265,19 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
                 <X className="size-5" />
               </DialogClose>
             </div>
-            <Horodateur className="mx-auto mt-6 h-44 lg:hidden" />
+            <Horodateur className={cn('mx-auto mt-6 h-44 lg:hidden', locked && 'opacity-50 grayscale')} />
             <div className="mx-auto w-full max-w-md lg:my-auto lg:pt-10">
               <DialogTitle className={cn(ui.title, 'mt-6 lg:mt-0')}>Choisissez votre offre</DialogTitle>
               <DialogDescription className={ui.subtitle}>{text}</DialogDescription>
 
+              {locked && <NoResidentStatus zone={pricing.zone} className="mt-8" />}
+              {/* No resident status on PayByPhone: the offer stays visible but greyed and out of reach. */}
+              <div
+                aria-hidden={locked || undefined}
+                className={cn(locked && 'pointer-events-none select-none opacity-50 blur-[2px] grayscale')}
+              >
               <div role="radiogroup" aria-label="Offre" className="mt-8 space-y-3">
-                {pricing && !pricing.weekly && (
+                {pricing && !pricing.weekly && !locked && (
                   <div className="rounded-2xl border border-ink/10 p-4">
                     <p className="mb-3 text-sm text-ink/60">
                       Votre prix dépend de votre forfait résident : indiquez votre arrondissement.
@@ -279,7 +286,7 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
                   </div>
                 )}
                 {!pricing && <div className="h-40 animate-pulse rounded-2xl bg-ink/[0.05]" />}
-                {pricing?.weekly != null && [...PLANS].reverse().map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
+                {(pricing?.weekly != null || locked) && [...PLANS].reverse().map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
                   <button
                     key={p.id}
                     role="radio"
@@ -329,11 +336,17 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
               <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-sm text-ink/50">
                 <Lock className="size-3.5" /> Paiement sécurisé par Stripe. Sans engagement.
               </p>
+              </div>
             </div>
           </div>
 
           <div className="relative hidden items-center justify-center overflow-hidden bg-[radial-gradient(70%_60%_at_50%_45%,#e6ecfb_0%,#f4f6fb_60%,#f7f8fb_100%)] lg:flex">
-            <Horodateur className="w-[min(78%,30rem)] drop-shadow-[0_30px_40px_rgb(29_42_107/0.12)]" />
+            <Horodateur
+              className={cn(
+                'w-[min(78%,30rem)] drop-shadow-[0_30px_40px_rgb(29_42_107/0.12)]',
+                locked && 'opacity-50 grayscale',
+              )}
+            />
           </div>
         </DialogPrimitive.Popup>
       </DialogPortal>

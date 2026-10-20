@@ -1,21 +1,26 @@
+import { useId } from 'react'
+
 /** A friendly Paris parking meter (the "bot" of PaybyBot) handing out a ticket that renews itself. */
 export function Horodateur({ className }: { className?: string }) {
+  // Unique gradient ids: a hidden copy of the drawing (other screen size) must not own the ones in use.
+  const id = useId().replace(/:/g, '')
+  const g = (name: string) => `${id}-${name}`
   return (
     <svg viewBox="0 0 360 500" className={className} role="img" aria-label="Un horodateur parisien qui délivre un ticket">
       <defs>
-        <linearGradient id="hd-body" x1="0" x2="1">
+        <linearGradient id={g('body')} x1="0" x2="1">
           <stop offset="0" stopColor="#3b4a5c" />
           <stop offset="1" stopColor="#2b3746" />
         </linearGradient>
-        <linearGradient id="hd-front" x1="0" x2="0" y1="0" y2="1">
+        <linearGradient id={g('front')} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="#53657a" />
           <stop offset="1" stopColor="#465769" />
         </linearGradient>
-        <linearGradient id="hd-solar" x1="0" x2="1">
+        <linearGradient id={g('solar')} x1="0" x2="1">
           <stop offset="0" stopColor="#1d2a6b" />
           <stop offset="1" stopColor="#2a3f9a" />
         </linearGradient>
-        <linearGradient id="hd-ticket" x1="0" x2="1">
+        <linearGradient id={g('ticket')} x1="0" x2="1">
           <stop offset="0" stopColor="#ffffff" />
           <stop offset="1" stopColor="#f3f5fb" />
         </linearGradient>
@@ -36,14 +41,14 @@ export function Horodateur({ className }: { className?: string }) {
       <rect x="128" y="458" width="84" height="16" rx="6" fill="#222c38" />
 
       {/* solar panel */}
-      <path d="M92 74 L250 46 L262 76 L104 104 Z" fill="url(#hd-solar)" />
+      <path d="M92 74 L250 46 L262 76 L104 104 Z" fill={`url(#${g('solar')})`} />
       <path d="M118 70 L130 98 M146 65 L158 93 M174 60 L186 88 M202 55 L214 83 M230 50 L242 78 M98 89 L256 61"
             stroke="#8fa8ff" strokeWidth="1.5" opacity=".55" />
       <rect x="160" y="96" width="20" height="18" fill="#2b3746" />
 
       {/* body */}
-      <rect x="96" y="108" width="148" height="284" rx="22" fill="url(#hd-body)" />
-      <rect x="110" y="122" width="120" height="256" rx="14" fill="url(#hd-front)" />
+      <rect x="96" y="108" width="148" height="284" rx="22" fill={`url(#${g('body')})`} />
+      <rect x="110" y="122" width="120" height="256" rx="14" fill={`url(#${g('front')})`} />
 
       {/* blue P sign */}
       <rect x="146" y="134" width="48" height="48" rx="9" fill="#1d4ea3" />
@@ -80,7 +85,7 @@ export function Horodateur({ className }: { className?: string }) {
       {/* ticket slot and the ticket coming out */}
       <rect x="236" y="250" width="14" height="70" rx="5" fill="#2b3746" />
       <g transform="rotate(-8 250 285)">
-        <rect x="246" y="250" width="92" height="70" rx="8" fill="url(#hd-ticket)" stroke="#dfe4ef" />
+        <rect x="246" y="250" width="92" height="70" rx="8" fill={`url(#${g('ticket')})`} stroke="#dfe4ef" />
         <rect x="256" y="262" width="12" height="16" rx="2" fill="#1d4ea3" />
         <text x="273" y="275" fontSize="12" fontWeight="800" fill="#111" style={{ fontFamily: 'var(--font-plate)' }}>
           AB-123

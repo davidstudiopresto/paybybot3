@@ -40,7 +40,9 @@ class Billing(unittest.TestCase):
         data = self.calls[0][2]
         self.assertEqual((data["line_items[0][price_data][unit_amount]"],
                           data["line_items[0][price_data][recurring][interval]"]), (9120, "year"))
-        trial_end = datetime.fromtimestamp(data["subscription_data[trial_end]"], timezone.utc)
+        self.assertNotIn("subscription_data[trial_end]", data)  # no Stripe trial: the free month already runs
+        self.assertEqual(data["subscription_data[proration_behavior]"], "none")
+        trial_end = datetime.fromtimestamp(data["subscription_data[billing_cycle_anchor]"], timezone.utc)
         self.assertAlmostEqual((trial_end - datetime.now(timezone.utc)).days, 29, delta=1)
 
     def test_confirm_records_the_plan(self):

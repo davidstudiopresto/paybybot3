@@ -1570,9 +1570,16 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
         data["customer_email"] = account["email"]
     start = parse_dt(account.get("trial_start"))
     trial_end = start + timedelta(days=TRIAL_DAYS) if start else None
-    if trial_end and trial_end > datetime.now(timezone.utc) + timedelta(hours=49):
-        # Nothing is charged before the free month ends (Stripe wants at least 48 h ahead).
-        data["subscription_data[trial_end]"] = int(trial_end.timestamp())
+    if trial_end and trial_end > datetime.now(timezone.utc) + timedelta(hours=1):
+        # The free month is already running: no Stripe "trial" (its page would offer to start one); the first
+        # charge is simply set on the day the free month ends, nothing being due before.
+        data["subscription_data[billing_cycle_anchor]"] = int(trial_end.timestamp())
+        data["subscription_data[proration_behavior]"] = "none"
+        months = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
+                  "novembre", "décembre"]
+        day = trial_end.astimezone(PARIS)
+        data["custom_text[submit][message]"] = (
+            "Rien n'est prélevé avant la fin de votre mois offert, le %d %s." % (day.day, months[day.month - 1]))
     session = stripe("POST", "checkout/sessions", **data)
     return {"url": session["url"]}
 

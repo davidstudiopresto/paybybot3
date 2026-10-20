@@ -48,7 +48,7 @@ HOSTED = os.environ.get("PAYBYBOT_HOSTED") == "1"
 SESSION_IDLE = 12 * 3600  # an unused login cookie expires after 12 hours...
 SESSION_MAX = 24 * 3600  # ...and any login after 24 hours
 REMEMBER = 30 * 24 * 3600  # "Se souvenir de moi": 30 days
-LOGIN_LIMITS = (("ip", 10), ("user", 5))  # attempts per 15 minutes, per device and per account
+LOGIN_LIMITS = (("ip", 50), ("user", 20))  # attempts per 15 minutes, per device and per account
 PARIS = ZoneInfo("Europe/Paris")
 MAIL_FROM = os.environ.get("PAYBYBOT_MAIL_FROM", "PaybyBot <paybybot@studiopresto.fr>")
 MAIL_REPLY_TO = os.environ.get("PAYBYBOT_MAIL_REPLY_TO", "contact@studiopresto.fr")

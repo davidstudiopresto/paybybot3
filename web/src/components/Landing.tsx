@@ -26,7 +26,7 @@ const FEATURES: Question[] = [
   [
     'Support',
     <>
-      Une question ? Écrivez-nous à <a href="mailto:contact@paybybot.fr">contact@paybybot.fr</a>.
+      Une question ? Écrivez-nous à <a href="mailto:contact@paybybot.fr">contact@paybybot.fr</a>, 7j/7.
     </>,
   ],
 ]

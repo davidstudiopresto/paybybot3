@@ -218,7 +218,7 @@ const QUESTIONS: Question[] = [
   [
     'Que fait PayByBot exactement ?',
     <>
-      PayByBot renouvelle chaque semaine votre ticket résident sur votre compte <PayByPhone />. Vous l'activez une
+      PayByBot renouvelle chaque semaine votre stationnement résident sur votre compte <PayByPhone />. Vous l'activez une
       fois, puis chaque nouvelle semaine est payée avant la fin de la précédente : votre véhicule reste couvert sans
       que vous ayez à y penser.
     </>,
@@ -226,24 +226,17 @@ const QUESTIONS: Question[] = [
   [
     'Quelle différence avec PayByPhone ?',
     <>
-      <PayByPhone /> vend les tickets, PayByBot les commande pour vous au bon moment. Les tickets restent ceux de votre
-      compte <PayByPhone />, payés avec la carte que vous y avez enregistrée : PayByBot fonctionne par-dessus ce compte
-      et en a besoin.
+      <PayByPhone /> vend le stationnement résident, PayByBot le renouvelle pour vous au bon moment. Il reste sur votre
+      compte <PayByPhone />, payé avec la carte que vous y avez enregistrée.
     </>,
   ],
   [
-    'Le ticket coûte-t-il plus cher ?',
-    <>
-      Non. Il est payé à <PayByPhone /> au même prix que si vous le preniez vous-même dans l'application. L'abonnement
-      PayByBot est la seule dépense en plus.
-    </>,
+    'Le stationnement résident coûte-t-il plus cher ?',
+    <>Non. Il est payé à <PayByPhone /> au même prix que si vous le preniez vous-même dans l'application.</>,
   ],
   [
-    "Faut-il installer l'application PayByPhone ?",
-    <>
-      Non. Il vous faut en revanche un compte <PayByPhone /> avec votre véhicule, votre tarif résident activé et une
-      carte bancaire enregistrée.
-    </>,
+    'Mon téléphone doit-il rester allumé ?',
+    <>Non. Le renouvellement part de nos serveurs : votre téléphone peut être éteint ou sans réseau.</>,
   ],
   [
     'Combien ça coûte ?',
@@ -256,21 +249,17 @@ const QUESTIONS: Question[] = [
     </>,
   ],
   [
-    'Mon téléphone doit-il rester allumé ?',
-    <>Non. Le renouvellement part de nos serveurs : votre téléphone peut être éteint ou sans réseau.</>,
-  ],
-  [
-    'Quand mon ticket est-il payé ?',
+    'Quand mon stationnement résident est-il payé ?',
     <>
-      La veille de la fin de votre ticket, en le prolongeant d'une semaine. Si <PayByPhone /> ne permet pas de
-      prolonger ce ticket, la nouvelle semaine est achetée dès qu'il se termine.
+      La veille de la fin de la semaine en cours, en la prolongeant d'une semaine. Si <PayByPhone /> ne permet pas de
+      la prolonger, la nouvelle semaine est achetée dès qu'elle se termine.
     </>,
   ],
   [
     'Comment savoir que c’est fait ?',
     <>
-      Vous recevez un e-mail à chaque paiement, et le ticket apparaît dans votre application <PayByPhone /> comme si
-      vous l'aviez pris vous-même.
+      Vous recevez un e-mail à chaque paiement, et le stationnement résident apparaît dans votre application{' '}
+      <PayByPhone /> comme si vous l'aviez pris vous-même.
     </>,
   ],
   [
@@ -278,9 +267,9 @@ const QUESTIONS: Question[] = [
     <>PayByBot récupère uniquement les informations de votre compte <PayByPhone />.</>,
   ],
   [
-    'Quels tickets PayByBot renouvelle-t-il ?',
+    'Quels stationnements PayByBot renouvelle-t-il ?',
     <>
-      Le ticket résident à la semaine, à Paris. Les autres tarifs (professionnel, handicap, deux-roues électrique…)
+      Le stationnement résident à la semaine, à Paris. Les autres tarifs (professionnel, handicap, deux-roues électrique…)
       ne sont pas proposés pour l'instant.
     </>,
   ],
@@ -296,9 +285,9 @@ const QUESTIONS: Question[] = [
   ],
   ['Dans quelles villes ?', <>À Paris, dans les 20 arrondissements, pour le moment.</>],
   [
-    'Puis-je activer avec un ticket déjà en cours ?',
+    'Puis-je activer avec un stationnement résident déjà en cours ?',
     <>
-      Oui. Rien n'est payé en double : PayByBot attend la veille de la fin de votre ticket pour payer la semaine
+      Oui. Rien n'est payé en double : PayByBot attend la veille de la fin de la semaine en cours pour payer la
       suivante.
     </>,
   ],
@@ -319,8 +308,8 @@ const QUESTIONS: Question[] = [
   [
     'Et si je pars en vacances ?',
     <>
-      Mettez le renouvellement en pause entre deux dates depuis votre tableau de bord : aucun ticket n'est payé
-      pendant la pause, et tout reprend seul à la fin.
+      Mettez le renouvellement en pause entre deux dates depuis votre tableau de bord : aucun stationnement n'est
+      payé pendant la pause, et tout reprend seul à la fin.
     </>,
   ],
   [
@@ -339,7 +328,7 @@ const QUESTIONS: Question[] = [
   [
     'Comment arrêter ?',
     <>
-      Depuis le tableau de bord, « Gérer » puis « Arrêter le renouvellement ». Le ticket en cours reste valable jusqu'à
+      Depuis le tableau de bord, « Gérer » puis « Arrêter le renouvellement ». Le stationnement en cours reste valable jusqu'à
       sa fin, et ce qui était gardé pour ce renouvellement est effacé.
     </>,
   ],
@@ -354,7 +343,7 @@ const QUESTIONS: Question[] = [
   [
     'Pourquoi mon mot de passe PayByPhone ?',
     <>
-      Pour commander vos tickets, PayByBot se connecte à votre compte <PayByPhone />. Le mot de passe ne sert qu'à
+      Pour renouveler votre stationnement résident, PayByBot se connecte à votre compte <PayByPhone />. Le mot de passe ne sert qu'à
       cette connexion et n'est jamais enregistré : seule une clé de reconnexion est gardée, chiffrée, et effacée dès
       que vous arrêtez.
     </>,

@@ -197,7 +197,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
         <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="@container max-w-[40rem] lg:max-w-none">
             {/* Sized to its column (cqw), so « de votre stationnement résident » keeps to one line. */}
-            <p className={cn(KICKER, 'mb-5 lg:mb-7')}>100 % automatique • Même téléphone éteint • Pause en vacances</p>
+            <p className={cn(KICKER, 'mb-5 lg:mb-7')}>100 % automatique • Même téléphone éteint • Plus besoin d’y penser</p>
             <h1 className={cn(ui.title, 'font-medium text-[#2b2f3a] lg:text-[clamp(2.5rem,min(7.3cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
               <span className="lg:block">Renouvellement automatique</span>{' '}
               <span className="lg:block">de votre stationnement résident</span>

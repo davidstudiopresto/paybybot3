@@ -353,10 +353,7 @@ function SetUpScreen() {
             boxShadow: '0 24px 40px -18px rgba(29,78,163,0.7)', transform: `scale(${renewPressed})`,
           }}
         >
-          <span style={{ display: 'grid', placeItems: 'center', width: 52, height: 52, borderRadius: 16, background: 'rgba(255,255,255,0.18)' }}>
-            {on ? <Check size={28} strokeWidth={3} /> : <Repeat size={28} />}
-          </span>
-          <div style={{ marginTop: 16, fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em' }}>
+          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em' }}>
             {on ? 'Renouvellement activé' : 'Renouvellement automatique'}
           </div>
           <div style={{ marginTop: 4, fontSize: 16, opacity: 0.85 }}>{on ? 'Chaque semaine, tout seul.' : 'Forfait résident · 9,00 € / semaine'}</div>
@@ -396,7 +393,7 @@ function SetUpScreen() {
   )
 }
 
-function PhoneScene({ caption, sub, len, children }: { caption: string[]; sub: string; len: number; children: ReactNode }) {
+function PhoneScene({ caption, sub, len, children }: { caption: string[]; sub?: string; len: number; children: ReactNode }) {
   const frame = useCurrentFrame()
   const { portrait, u, height } = useLayout()
   const p = spring({ frame: frame - 4, fps: FPS, config: { damping: 18, stiffness: 90 } })
@@ -504,7 +501,6 @@ function Weekly() {
         <div style={{ flex: portrait ? undefined : '0 1 820px' }}>
           <Caption
             lines={['Chaque semaine,', 'renouvelé', 'tout seul.']}
-            sub="Même téléphone éteint. Un e-mail de confirmation à chaque fois."
             start={6}
             align={portrait ? 'center' : 'left'}
           />
@@ -600,7 +596,7 @@ export function Landing() {
         <Problem />
       </Sequence>
       <Sequence from={S2.from} durationInFrames={S2.len}>
-        <PhoneScene caption={['Connectez-vous.', 'Un clic.']} sub="Avec votre compte PayByPhone. Puis un seul bouton." len={S2.len}>
+        <PhoneScene caption={['Connectez-vous', 'en un clic', 'avec PayByPhone.']} len={S2.len}>
           <SetUpScreen />
         </PhoneScene>
       </Sequence>

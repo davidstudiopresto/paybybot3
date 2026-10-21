@@ -2379,7 +2379,29 @@ def billing_status(account, owner=None):
     start = parse_dt(account.get("trial_start"))
     if not start or start + timedelta(days=TRIAL_DAYS) > datetime.now(timezone.utc):
         return "trial", None  # no start yet: the free month begins when the account is first opened
+    if owner and not sub_id and os.environ.get("STRIPE_SECRET_KEY") and recover_subscription(account, owner):
+        return "ok", None  # paid on Stripe but the return to PayByBot never happened (tab closed)
     return "trial_over", None
+
+
+def recover_subscription(account, owner):
+    """A subscription paid on Stripe Checkout whose return page never loaded: found by its owner metadata, then
+    recorded on the account so it is not looked up again."""
+    try:
+        found = stripe("GET", "subscriptions/search?query=" + requests.utils.quote(
+            "metadata['owner']:'%s'" % owner)).get("data") or []
+    except HTTPException:
+        return False
+    live = [x for x in found if x.get("status") in PAID_STATUSES + UNPAID_STATUSES]
+    if not live:
+        return False
+    sub = live[0]
+    interval = ((((sub.get("items") or {}).get("data") or [{}])[0].get("price") or {}).get("recurring") or {}).get("interval")
+    save_account_by_owner(owner, {"stripe_subscription": sub["id"], "stripe_customer": sub.get("customer"),
+                                  "plan": (sub.get("metadata") or {}).get("plan") or
+                                          ("yearly" if interval == "year" else "monthly")})
+    log.info("subscription recovered from Stripe (return page missed)")
+    return sub.get("status") in PAID_STATUSES
 
 
 def billing_state(account, owner=None):

@@ -213,3 +213,25 @@ class Blocking(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RecoverSubscription(unittest.TestCase):
+    """Paid on Stripe, but the return page never loaded: the subscription is found by its owner and kept."""
+
+    def test_a_paid_subscription_is_found_and_unblocks(self):
+        over = {"trial_start": (datetime.now(timezone.utc) - timedelta(days=40)).isoformat()}
+        saved = []
+        found = {"data": [{"id": "sub_9", "status": "active", "customer": "cus_9", "metadata": {"owner": "o"},
+                           "items": {"data": [{"price": {"recurring": {"interval": "year"}}}]}}]}
+        with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test_x"}), \
+                patch.object(web, "stripe", return_value=found) as call, \
+                patch.object(web, "save_account_by_owner", side_effect=lambda o, p: saved.append((o, p))):
+            self.assertEqual(web.billing_state(over, "o"), "ok")
+        self.assertIn("subscriptions/search", call.call_args[0][1])
+        self.assertEqual(saved, [("o", {"stripe_subscription": "sub_9", "stripe_customer": "cus_9", "plan": "yearly"})])
+
+    def test_nothing_on_stripe_stays_blocked(self):
+        over = {"trial_start": (datetime.now(timezone.utc) - timedelta(days=40)).isoformat()}
+        with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test_x"}), \
+                patch.object(web, "stripe", return_value={"data": []}):
+            self.assertEqual(web.billing_state(over, "o"), "trial_over")

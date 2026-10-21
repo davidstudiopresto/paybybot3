@@ -50,7 +50,7 @@ function DemoVideo() {
       <video
         ref={ref}
         src={src + '.mp4'}
-        poster={src + '.jpg'}
+        poster={src + '-cover.jpg'}
         muted
         loop
         playsInline
@@ -86,7 +86,7 @@ function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
           <DialogTitle className="sr-only">Découvrir PaybyBot</DialogTitle>
           <video
             src={src + '.mp4'}
-            poster={src + '.jpg'}
+            poster={src + '-cover.jpg'}
             autoPlay
             controls
             playsInline

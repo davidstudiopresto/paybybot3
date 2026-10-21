@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "studio": "remotion studio src/index.ts",
-    "render": "remotion render src/index.ts Landing out/paybybot-18s-v2.mp4 && remotion render src/index.ts LandingMobile out/paybybot-18s-v2-mobile.mp4 && remotion still src/index.ts Landing out/paybybot-18s-v2.jpg --frame=440 && remotion still src/index.ts LandingMobile out/paybybot-18s-v2-mobile.jpg --frame=440"
+    "render": "remotion render src/index.ts Landing out/paybybot-18s-v2.mp4 && remotion render src/index.ts LandingMobile out/paybybot-18s-v2-mobile.mp4 && remotion still src/index.ts Landing out/paybybot-18s-v2-cover.jpg --frame=515 && remotion still src/index.ts LandingMobile out/paybybot-18s-v2-mobile-cover.jpg --frame=515"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.537",

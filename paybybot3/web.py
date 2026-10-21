@@ -490,11 +490,6 @@ def normalize_accounts(accounts):
     return result
 
 
-def has_card(s):
-    """A payment card saved on PayByPhone: what PaybyBot pays with (Apple Pay is never saved, it needs the phone)."""
-    return any(p["kind"] == "card" for p in normalize_accounts(s.call("get_payment_accounts") or {}))
-
-
 class Unconfirmed(Exception):
     """PayByPhone accepted the payment request but no parking session showed up."""
 
@@ -1222,11 +1217,7 @@ def login(body: Login, request: Request, response: Response):
             log.info("login refused: no account yet for %s", masked)
             raise HTTPException(404, "Aucun compte PaybyBot pour ce compte PayByPhone.")
     if body.signup and not demo:  # the account is created once the e-mail is confirmed with a code
-        # PaybyBot pays with a card saved on PayByPhone: Apple Pay / Google Pay need the phone at each payment.
-        if not guarded(lambda: has_card(session)):
-            log.info("sign-up refused: no saved card for %s", masked)
-            raise HTTPException(412, {"message": "Aucune carte bancaire n'est enregistrée sur votre compte PayByPhone.",
-                                      "reason": "no_card"})
+        # No card saved on PayByPhone does not stop the sign-up: the account then asks for one, full screen.
         # PaybyBot is for residents: at least one vehicle must have the resident rate on PayByPhone.
         zone = guarded(lambda: resident_home_zone(session))  # from PayByPhone only, never typed
         if not zone:

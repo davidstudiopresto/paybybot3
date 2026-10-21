@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
-import { CARD_NOTE, CardRequired, ResidentRequired } from '@/components/Riverain'
+import { CARD_NOTE, ResidentRequired } from '@/components/Riverain'
 import { withPayByPhone } from '@/components/signs'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
@@ -80,7 +80,6 @@ export function LoginView({
   const [accountExists, setAccountExists] = useState(false)
   const [noAccount, setNoAccount] = useState(false)
   const [noResident, setNoResident] = useState<number | null>(null) // sign-up refused: how many vehicles the account has
-  const [noCard, setNoCard] = useState(false) // sign-up refused: no card saved on PayByPhone
   const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
   const human = useTurnstile()
@@ -135,8 +134,7 @@ export function LoginView({
       else onLogin(result)
     } catch (e) {
       if (e instanceof ApiError && e.status === 412) {
-        if (e.data.reason === 'no_card') setNoCard(true)
-        else setNoResident(typeof e.data.vehicles === 'number' ? e.data.vehicles : 2)
+        setNoResident(typeof e.data.vehicles === 'number' ? e.data.vehicles : 2)
         return
       }
       setError((e as Error).message)
@@ -170,24 +168,6 @@ export function LoginView({
             </a>
           </p>
         </ResidentRequired>
-      )}
-      {noCard && (
-        <CardRequired>
-          <button
-            onClick={() => {
-              setNoCard(false)
-              submit()
-            }}
-            className={cn('mt-7', ui.primary)}
-          >
-            J’ai ajouté une carte, réessayer
-          </button>
-          <p className="mt-5 text-center text-sm">
-            <a href="#/" onClick={() => setNoCard(false)} className={link}>
-              Retour à l’accueil
-            </a>
-          </p>
-        </CardRequired>
       )}
       <PublicTopBar />
 

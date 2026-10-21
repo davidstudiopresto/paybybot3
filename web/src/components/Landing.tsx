@@ -69,7 +69,7 @@ function DemoVideo() {
         onClick={openFull}
         className="absolute bottom-4 left-4 inline-flex h-11 items-center gap-2.5 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-5 text-[0.95rem] font-semibold text-white shadow-lg transition hover:brightness-110 sm:bottom-6 sm:left-6"
       >
-        <Play className="size-4 fill-white" /> Découvrir PaybyBot · 18 s
+        <Play className="size-4 fill-white" /> Découvrir PaybyBot
       </button>
       {full && <FullVideo src={src} onClose={closeFull} />}
     </div>

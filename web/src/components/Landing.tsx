@@ -29,7 +29,7 @@ const TESTIMONIALS: [string, string, string][] = [
   ['Camille D.', 'Résident Paris 16', 'Enfin ! Depuis le temps que je voulais automatiser ce truc.'],
   ['Antoine P.', 'Résident Paris 5', 'Pris après une énième amende pour un ticket oublié. Plus jamais.'],
   ['Léa F.', 'Résident Paris 2', 'Avec mon conjoint, chacun croyait que l’autre l’avait fait. Plus maintenant.'],
-  ['Marc V.', '', 'J’ai vérifié les premières fois : le ticket était bien pris. Je laisse faire.'],
+  ['Marc V.', 'Résident Paris 16', 'J’ai vérifié les premières fois : le ticket était bien pris. Je laisse faire.'],
 ]
 
 function Testimonials() {

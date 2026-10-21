@@ -287,6 +287,8 @@ function RiverainDialog({
   const [saving, setSaving] = useState(false)
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // The bank asks to confirm every payment: trying again would only send it another request.
+  const cardRefused = !!error && /3-D Secure/.test(error)
   // Online, a renewal needs a subscription, chosen on Stripe even during the free month (nothing charged before
   // it ends): without one, « Activer » opens the offer choice first.
   const [account, setAccount] = useState<Account | null>(null)
@@ -320,8 +322,9 @@ function RiverainDialog({
       },
     )
     setPayment(cards.find((p) => p.id === last.paymentAccountId)?.id ?? cards[0]?.id ?? '')
+    // Only when it opens: a refresh of the account behind it must not wipe the price or a message on screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, data])
+  }, [open])
 
   useEffect(() => {
     if (open && !payment && cards[0]) setPayment(cards[0].id)
@@ -385,15 +388,16 @@ function RiverainDialog({
       setChecking(true)
       setError(null)
       const problems: string[] = []
+      let paid = false
       for (const plate of ok) {
         try {
-          await api.renewalCheck(parking(found[plate].rate!, plate))
+          paid = (await api.renewalCheck(parking(found[plate].rate!, plate))).paid || paid
         } catch (e) {
           problems.push(ok.length > 1 ? `${plate} : ${(e as Error).message}` : (e as Error).message)
         }
       }
       setChecking(false)
-      onDone() // a first week may have been paid: show its ticket
+      if (paid) onDone() // a first week was paid: show its ticket behind
       if (problems.length) return setError(problems.join('\n'))
       setPaywall(true)
       return
@@ -539,9 +543,13 @@ function RiverainDialog({
             )}
           </div>
 
-          {error && <p className="whitespace-pre-line text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="rounded-xl border-l-4 border-destructive bg-destructive/8 px-4 py-3 text-sm whitespace-pre-line text-destructive">
+              {error}
+            </p>
+          )}
 
-          <button onClick={activate} disabled={!ok.length || loading || saving || checking} className={ui.primary}>
+          <button onClick={activate} disabled={!ok.length || loading || saving || checking || cardRefused} className={ui.primary}>
             {checking ? (
               <>
                 <Loader2 className="size-5 animate-spin" /> Vérification du paiement avec PayByPhone…

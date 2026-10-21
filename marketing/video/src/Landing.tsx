@@ -2,17 +2,17 @@ import type { CSSProperties, ReactNode } from 'react'
 import { AbsoluteFill, Easing, interpolate, Sequence, spring, useCurrentFrame, useVideoConfig } from 'remotion'
 import { loadFont as loadFigtree } from '@remotion/google-fonts/Figtree'
 import { loadFont as loadOverpass } from '@remotion/google-fonts/Overpass'
-import { Check, Gift, Lock, Mail, Repeat } from 'lucide-react'
+import { Check, Gift, Lock, Repeat } from 'lucide-react'
 
 const { fontFamily: FIGTREE } = loadFigtree('normal', { weights: ['400', '500', '600', '700', '800'] })
 const { fontFamily: OVERPASS } = loadOverpass('normal', { weights: ['700', '800'] })
 
 export const FPS = 30
 // Scenes: the problem, the one-time set-up, the promise (it renews on its own), the brand.
-const S1 = { from: 0, len: 75 }
-const S2 = { from: 75, len: 150 }
-const S3 = { from: 225, len: 135 }
-const S4 = { from: 360, len: 90 }
+const S1 = { from: 0, len: 90 }
+const S2 = { from: 90, len: 195 }
+const S3 = { from: 285, len: 165 }
+const S4 = { from: 450, len: 90 }
 export const TOTAL = S4.from + S4.len
 
 const EU = '#1d4ea3'
@@ -301,15 +301,15 @@ function Field({ label, value, focused }: { label: string; value: string; focuse
   )
 }
 
-const LOGIN_TAP = 54
-const RENEW_TAP = 112
+const LOGIN_TAP = 72
+const RENEW_TAP = 142
 
 /** Sign in to PaybyBot with the PayByPhone account, then one tap on « Renouvellement automatique ». */
 function SetUpScreen() {
   const frame = useCurrentFrame()
   const phone = '06 12 34 56 78'
-  const typedPhone = phone.slice(0, Math.max(0, Math.min(phone.length, Math.floor((frame - 8) / 1.3))))
-  const typedPass = '•'.repeat(Math.max(0, Math.min(10, Math.floor((frame - 30) / 1.4))))
+  const typedPhone = phone.slice(0, Math.max(0, Math.min(phone.length, Math.floor((frame - 10) / 1.8))))
+  const typedPass = '•'.repeat(Math.max(0, Math.min(10, Math.floor((frame - 42) / 2))))
   const loginPressed = interpolate(frame, [LOGIN_TAP - 4, LOGIN_TAP, LOGIN_TAP + 6], [1, 0.96, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
   const swap = enter(frame, LOGIN_TAP + 8, 16) // login slides away, home slides in
   const renewPressed = interpolate(frame, [RENEW_TAP - 4, RENEW_TAP, RENEW_TAP + 6], [1, 0.96, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
@@ -322,8 +322,8 @@ function SetUpScreen() {
         <Wordmark size={30} />
         <div style={{ marginTop: 34, fontSize: 34, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Connexion</div>
         <div style={{ marginTop: 8, fontSize: 16, color: 'rgba(17,17,17,0.6)' }}>Avec votre compte PayByPhone.</div>
-        <Field label="Numéro de téléphone" value={typedPhone} focused={frame < 30} />
-        <Field label="Mot de passe" value={typedPass} focused={frame >= 30 && frame < LOGIN_TAP} />
+        <Field label="Numéro de téléphone" value={typedPhone} focused={frame < 40} />
+        <Field label="Mot de passe" value={typedPass} focused={frame >= 40 && frame < LOGIN_TAP} />
         <div
           style={{
             marginTop: 26, height: 58, borderRadius: 16, background: GRADIENT, color: '#fff', fontSize: 19, fontWeight: 700,
@@ -429,76 +429,89 @@ function PhoneScene({ caption, sub, len, children }: { caption: string[]; sub: s
 
 // ---------------------------------------------------------------- Scene 3: it renews on its own
 
-const MONDAYS = ['lundi 27 octobre', 'lundi 3 novembre', 'lundi 10 novembre']
-const UNTIL = ['3 nov.', '10 nov.', '17 nov.']
+const RENEWALS = ['lundi 27 oct.', 'lundi 3 nov.', 'lundi 10 nov.', 'lundi 17 nov.']
+const EVERY = 32 // frames between two renewals
+const FIRST = 22
 
-function LockScreen() {
-  const frame = useCurrentFrame()
-  const step = (i: number) => 14 + i * 34 // a Monday every 34 frames
-  const current = MONDAYS.reduce((acc, _, i) => (frame >= step(i) - 8 ? i : acc), 0)
+/** One renewal, like a notification: green check, « Forfait renouvelé », the date and price. */
+function RenewalCard({ date }: { date: string }) {
+  const { u } = useLayout()
   return (
     <div
       style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'radial-gradient(120% 70% at 50% 0%, #2a3a8f 0%, #10162f 60%, #0b0f22 100%)',
-        fontFamily: FIGTREE,
-        color: '#fff',
-        textAlign: 'center',
+        width: 640 * u, padding: `${30 * u}px ${34 * u}px`, borderRadius: 30 * u, background: '#f7f8fa',
+        display: 'flex', alignItems: 'center', gap: 26 * u, fontFamily: FIGTREE, color: INK,
+        boxShadow: `0 ${30 * u}px ${60 * u}px -${24 * u}px rgba(0,0,0,0.65)`,
       }}
     >
-      <div style={{ marginTop: 110, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, fontSize: 15, opacity: 0.8 }}>
-        <Lock size={15} /> Téléphone verrouillé
-      </div>
-      <div style={{ height: 30, marginTop: 14, position: 'relative', overflow: 'hidden', fontSize: 21, fontWeight: 600 }}>
-        {MONDAYS.map((day, i) => {
-          const p = enter(frame, step(i) - 8, 10)
-          const out = i < MONDAYS.length - 1 ? enter(frame, step(i + 1) - 8, 10) : 0
-          return (
-            <div key={day} style={{ position: 'absolute', inset: 0, opacity: i === 0 ? 1 - out : p - out, transform: `translateY(${(i === 0 ? 0 : 1 - p) * 24 - out * 24}px)` }}>
-              {day}
-            </div>
-          )
-        })}
-      </div>
-      <div style={{ fontSize: 96, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1.05 }}>9:00</div>
-      <div style={{ position: 'absolute', left: 16, right: 16, top: 330, display: 'flex', flexDirection: 'column-reverse', gap: 10 }}>
-        {MONDAYS.map((_, i) => {
-          const p = spring({ frame: frame - step(i), fps: FPS, config: { damping: 15 } })
-          if (frame < step(i)) return null
-          return (
-            <div
-              key={i}
-              style={{
-                textAlign: 'left',
-                padding: '14px 16px',
-                borderRadius: 20,
-                background: 'rgba(255,255,255,0.16)',
-                border: '1px solid rgba(255,255,255,0.14)',
-                display: 'flex',
-                gap: 12,
-                opacity: p * (i === current ? 1 : 0.62),
-                transform: `translateY(${(1 - p) * -40}px) scale(${0.94 + 0.06 * p})`,
-              }}
-            >
-              <span style={{ display: 'grid', placeItems: 'center', width: 38, height: 38, flexShrink: 0, borderRadius: 10, background: GRADIENT }}>
-                <Mail size={20} />
-              </span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, opacity: 0.7 }}>
-                  <span>PaybyBot</span>
-                  <span>{i === current ? 'maintenant' : MONDAYS[i].replace('lundi ', '')}</span>
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>Forfait renouvelé · 9,00 €</div>
-                <div style={{ fontSize: 14, opacity: 0.75, marginTop: 1 }}>
-                  {PLATE} · valable jusqu'au {UNTIL[i]}
-                </div>
-              </span>
-            </div>
-          )
-        })}
-      </div>
+      <span style={{ display: 'grid', placeItems: 'center', width: 70 * u, height: 70 * u, flexShrink: 0, borderRadius: '50%', background: '#e3f5e9', color: '#16a34a' }}>
+        <Check size={36 * u} strokeWidth={3} />
+      </span>
+      <span style={{ flex: 1 }}>
+        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ fontSize: 36 * u, fontWeight: 700, letterSpacing: '-0.02em' }}>Forfait renouvelé</span>
+          <span style={{ fontSize: 24 * u, color: 'rgba(17,17,17,0.45)' }}>PaybyBot</span>
+        </span>
+        <span style={{ display: 'block', marginTop: 4 * u, fontSize: 30 * u, color: 'rgba(17,17,17,0.6)' }}>{date} · 9,00 €</span>
+      </span>
     </div>
+  )
+}
+
+/** The renewals pile up week after week: the newest in front, the older ones step back. */
+function RenewalStack() {
+  const frame = useCurrentFrame()
+  const { u } = useLayout()
+  const arrive = (i: number) => spring({ frame: frame - (FIRST + i * EVERY), fps: FPS, config: { damping: 16, stiffness: 120 } })
+  return (
+    <div style={{ position: 'relative', width: 640 * u, height: 420 * u }}>
+      {RENEWALS.map((date, i) => {
+        const p = arrive(i)
+        if (p <= 0.001) return null
+        const depth = RENEWALS.slice(i + 1).reduce((d, _, j) => d + arrive(i + 1 + j), 0) // how far back it went
+        const opacity = Math.min(p, Math.max(0, 1 - depth * 0.38))
+        return (
+          <div
+            key={date}
+            style={{
+              position: 'absolute', left: 0, top: 0, zIndex: 10 + i, opacity,
+              transform: `translate(${depth * 46 * u}px, ${(depth * 128 - (1 - p) * 90) * u}px) scale(${1 - depth * 0.06})`,
+              transformOrigin: 'left top',
+              filter: `blur(${depth * 1.2}px)`,
+            }}
+          >
+            <RenewalCard date={date} />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Weekly() {
+  const { portrait, u } = useLayout()
+  return (
+    <SceneFade len={S3.len}>
+      <AbsoluteFill
+        style={{
+          flexDirection: portrait ? 'column' : 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: (portrait ? 110 : 140) * u,
+          padding: portrait ? `0 ${70 * u}px` : `0 ${150 * u}px`,
+        }}
+      >
+        <div style={{ flex: portrait ? undefined : '0 1 820px' }}>
+          <Caption
+            lines={['Chaque semaine,', 'renouvelé', 'tout seul.']}
+            sub="Même téléphone éteint. Un e-mail de confirmation à chaque fois."
+            start={6}
+            align={portrait ? 'center' : 'left'}
+          />
+        </div>
+        <RenewalStack />
+      </AbsoluteFill>
+    </SceneFade>
   )
 }
 
@@ -592,9 +605,7 @@ export function Landing() {
         </PhoneScene>
       </Sequence>
       <Sequence from={S3.from} durationInFrames={S3.len}>
-        <PhoneScene caption={['Chaque semaine,', 'renouvelé', 'tout seul.']} sub="Même téléphone éteint. Un e-mail de confirmation à chaque fois." len={S3.len}>
-          <LockScreen />
-        </PhoneScene>
+        <Weekly />
       </Sequence>
       <Sequence from={S4.from} durationInFrames={S4.len}>
         <Brand />

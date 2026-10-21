@@ -10,13 +10,13 @@ import { ui } from '@/lib/styles'
 import { PaybyBot, PayByPhone, withPayByPhone } from '@/components/signs'
 
 
-/** The 15-second loop (made with Remotion in marketing/video): muted autoplay like a GIF; the 4:5 cut on phones. */
+/** The 18-second loop (made with Remotion in marketing/video): muted autoplay like a GIF; the 4:5 cut on phones. */
 function DemoVideo() {
   const ref = useRef<HTMLVideoElement>(null)
   const [mobile] = useState(() => window.matchMedia('(max-width: 639px)').matches)
   const [still] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [playing, setPlaying] = useState(!still)
-  const src = mobile ? '/video/paybybot-15s-v2-mobile' : '/video/paybybot-15s-v2'
+  const src = mobile ? '/video/paybybot-18s-mobile' : '/video/paybybot-18s'
 
   useEffect(() => {
     const v = ref.current
@@ -55,7 +55,7 @@ function DemoVideo() {
         loop
         playsInline
         preload="metadata"
-        aria-label="Vidéo de 15 secondes : un forfait expiré, la connexion à PaybyBot, le renouvellement automatique activé, puis les paiements de chaque semaine"
+        aria-label="Vidéo de 18 secondes : un forfait expiré, la connexion à PaybyBot, le renouvellement automatique activé, puis les paiements de chaque semaine"
         className="block aspect-[4/5] w-full rounded-[20px] bg-[#0b1024] object-cover sm:aspect-video"
       />
       <button
@@ -69,7 +69,7 @@ function DemoVideo() {
         onClick={openFull}
         className="absolute bottom-4 left-4 inline-flex h-11 items-center gap-2.5 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-5 text-[0.95rem] font-semibold text-white shadow-lg transition hover:brightness-110 sm:bottom-6 sm:left-6"
       >
-        <Play className="size-4 fill-white" /> Découvrir PaybyBot · 15 s
+        <Play className="size-4 fill-white" /> Découvrir PaybyBot · 18 s
       </button>
       {full && <FullVideo src={src} onClose={closeFull} />}
     </div>

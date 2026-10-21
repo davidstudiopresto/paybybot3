@@ -8,7 +8,7 @@ import { loadLast, saveLast } from '@/components/PayWizard'
 import { PlansDialog } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, clock, money, type Account, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, clock, money, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
 
@@ -31,8 +31,29 @@ function clearPending() {
   }
 }
 
+/** PayByPhone's own app link: opens the app on a phone, else its store or site. */
+const PAYBYPHONE_APP = 'https://paybyphone.onelink.me/ZQkh/'
+
+/** What the activation did for a car, as the e-mail says it, with who pays when a payment fails. */
+export function activationToast(activation: Activation, plate?: string) {
+  const show = activation.failed ? toast.error : toast.success
+  show(plate ? `${plate} : ${activation.title}` : activation.title, {
+    description: (
+      <>
+        {activation.text}
+        <span className="mt-1.5 block font-medium">{activation.payYourself}</span>
+      </>
+    ),
+    // A failed payment stays until read, with the way to pay.
+    duration: activation.failed ? Infinity : 15_000,
+    action: activation.failed
+      ? { label: 'Ouvrir PayByPhone', onClick: () => window.open(PAYBYPHONE_APP, '_blank', 'noopener') }
+      : undefined,
+  })
+}
+
 /** Back from Stripe with a subscription: activate the renewals chosen before leaving. */
-export async function runPendingRenewals(): Promise<{ done: number; failed: string[] }> {
+export async function runPendingRenewals(): Promise<{ done: number; failed: string[]; shown: number }> {
   let items: Parking[] = []
   try {
     const saved = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null')
@@ -42,15 +63,20 @@ export async function runPendingRenewals(): Promise<{ done: number; failed: stri
   }
   clearPending()
   const failed: string[] = []
+  let shown = 0
   for (const p of items) {
     try {
-      await api.addAutopilot({ ...p, label: WEEKLY_LABEL })
+      const { activation } = await api.addAutopilot({ ...p, label: WEEKLY_LABEL })
       saveLast(p)
+      if (activation) {
+        activationToast(activation, items.length > 1 ? p.plate : undefined)
+        shown += 1
+      }
     } catch (e) {
       failed.push(`${p.plate} : ${(e as Error).message}`)
     }
   }
-  return { done: items.length - failed.length, failed }
+  return { done: items.length - failed.length, failed, shown }
 }
 const WEEK_DAYS = 7
 
@@ -413,11 +439,17 @@ function RiverainDialog({
     setSaving(true)
     setError(null)
     const failed: string[] = []
+    let shown = 0
     for (const plate of ok) {
       try {
         const p = parking(found[plate].rate!, plate)
-        await api.addAutopilot({ ...p, label: WEEKLY_LABEL }) // confirmations go to the account e-mail
+        // Confirmations go to the account e-mail; online, the answer says what was paid and when the next is.
+        const { activation } = await api.addAutopilot({ ...p, label: WEEKLY_LABEL })
         saveLast(p)
+        if (activation) {
+          activationToast(activation, ok.length > 1 ? plate : undefined)
+          shown += 1
+        }
       } catch (e) {
         failed.push(`${plate} : ${(e as Error).message}`)
       }
@@ -425,11 +457,12 @@ function RiverainDialog({
     setSaving(false)
     const done = ok.length - failed.length
     if (done) {
-      toast.success(done > 1 ? `Renouvellement activé pour ${done} véhicules.` : 'Renouvellement hebdomadaire activé.', {
-        description: ok.some(runningFor)
-          ? 'Chaque renouvellement prend le relais à la fin du ticket en cours.'
-          : 'La première semaine est en cours de paiement.',
-      })
+      if (!shown)
+        toast.success(done > 1 ? `Renouvellement activé pour ${done} véhicules.` : 'Renouvellement hebdomadaire activé.', {
+          description: ok.some(runningFor)
+            ? 'Chaque renouvellement prend le relais à la fin du ticket en cours.'
+            : 'La première semaine est en cours de paiement.',
+        })
       setTimeout(onDone, 2500)
       onDone()
     }

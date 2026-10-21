@@ -98,3 +98,39 @@ class EarlyRenewal(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ActivationMessage(unittest.TestCase):
+    """What activating says, on screen and in the e-mail, for each case."""
+
+    row = {"location": "75005", "rate": "101"}
+
+    def t(self, hours_left, started_hours_ago=48, zone="75005"):
+        now = datetime.now(timezone.utc)
+        return {"parkingSessionId": "s1", "locationId": zone, "rateOption": {"ratePolicyId": "101"},
+                "startTime": now - timedelta(hours=started_hours_ago), "expireTime": now + timedelta(hours=hours_left)}
+
+    def test_cases(self):
+        running = self.t(72)
+        self.assertEqual(web.activation_case("active", [running], [running], self.row)[0], "later")
+        self.assertEqual(web.activation_case("paid", [], [self.t(168, 0)], self.row)[0], "first")
+        just_paid = self.t(168, started_hours_ago=0.1)  # the check before the offer page paid it
+        self.assertEqual(web.activation_case("active", [just_paid], [just_paid], self.row)[0], "first")
+        self.assertEqual(web.activation_case("paid", [self.t(10)], [self.t(178)], self.row)[0], "extended")
+        other = self.t(10, zone="75015")
+        self.assertEqual(web.activation_case("active", [other], [other], self.row)[0], "atEnd")
+
+    def test_later_says_when_the_next_week_is_paid(self):
+        running = self.t(72)
+        case, expire, next_payment = web.activation_case("active", [running], [running], self.row)
+        title, text = web.activation_message(case, expire, next_payment)
+        self.assertIn("Votre ticket court jusqu'au", title)
+        self.assertIn(web.paris_text(running["expireTime"] - timedelta(hours=24)), text)
+
+    def test_the_e_mail_says_who_pays_when_a_payment_fails(self):
+        with patch.object(web, "send_email") as send:
+            web.notify({"email": "a@b.fr", "plate": "FT630FH", "location": "75005"}, "activated",
+                       message=("Titre.", "Texte."))
+        lines = send.call_args.args[3]
+        self.assertEqual(lines[1:3], ["Titre.", "Texte."])
+        self.assertEqual(lines[-1], web.PAY_YOURSELF)

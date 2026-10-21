@@ -27,6 +27,10 @@ export type Parking = {
   plate: string
   paymentAccountId: string
 }
+/** What activating a weekly renewal did (first week paid, ticket extended, or paid the day before its end), in the
+ *  words of the activation e-mail. */
+export type Activation = { title: string; text: string; payYourself: string; failed?: boolean }
+
 export type Autopilot = Parking & {
   id: string
   label: string
@@ -175,7 +179,8 @@ export const api = {
     post<{ cost: Money; start: string; expire: string; afterCurrent?: boolean; currentExpire?: string | null; priceSource?: 'history' | 'paris' | null }>('/api/quote', p),
   extend: (p: Parking & { sessionId: string }) => post<{ ok: true; expire: string; cost: Money }>('/api/extend', p),
   pay: (p: Parking) => post<{ ok: true; expire: string; cost: Money }>('/api/pay', p),
-  addAutopilot: (p: Parking & { label: string; email?: string }) => post<Autopilot>('/api/autopilots', p),
+  addAutopilot: (p: Parking & { label: string; email?: string }) =>
+    post<Autopilot & { activation?: Activation }>('/api/autopilots', p),
   pauseAutopilot: (id: string, start: string, end: string | null) =>
     post<Autopilot>(`/api/autopilots/${id}/pause`, { start, end }),
   lastCard: () => request<{ paymentAccountId: string | null }>('/api/last-card'),

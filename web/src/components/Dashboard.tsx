@@ -99,13 +99,13 @@ export function Dashboard({
             history.replaceState(null, '', window.location.pathname)
             const offer = `Offre ${r.plan === 'yearly' ? 'annuelle' : 'mensuelle'} activée.`
             // The renewal chosen just before Stripe is activated now.
-            const { done: renewed, failed } = await runPendingRenewals()
+            toast.success(offer, { description: "Rien n'est prélevé avant la fin de votre mois offert." })
+            const { done: renewed, failed, shown } = await runPendingRenewals()
             if (renewed) {
-              toast.success(renewed > 1 ? `Renouvellement activé pour ${renewed} véhicules.` : 'Renouvellement activé.', {
-                description: offer + " Rien n'est prélevé avant la fin de votre mois offert.",
-              })
+              if (!shown)
+                toast.success(renewed > 1 ? `Renouvellement activé pour ${renewed} véhicules.` : 'Renouvellement activé.')
               onRefresh()
-            } else toast.success(offer)
+            }
             if (failed.length) toast.error(failed.join('\n'))
           },
           (e) => toast.error((e as Error).message),

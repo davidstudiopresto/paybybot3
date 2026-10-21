@@ -762,9 +762,11 @@ def notify(details, event, **info):
                    "Tickets automatiques activés", lines, open_app)
     elif event == "activated":
         lines = ["Le renouvellement automatique de votre forfait résident est activé pour %s." % car]
-        if info.get("expire"):
-            lines.append("Votre véhicule est couvert jusqu'au %s. Le forfait suivant sera payé automatiquement à "
-                         "cette date." % paris_text(info["expire"]))
+        if info.get("message"):
+            lines += list(info["message"])
+        elif info.get("expire"):
+            lines.append("Votre véhicule est couvert jusqu'au %s." % paris_text(info["expire"]))
+        lines.append(PAY_YOURSELF)
         send_email(to, "Renouvellement activé · %s" % plate_text(details.get("plate")), "Renouvellement activé",
                    lines, open_app)
     elif event == "paid":
@@ -847,6 +849,44 @@ def covered_until(active):
 
 
 EARLY_RENEWAL = timedelta(hours=24)  # the weekly renewal extends the running ticket this long before its end
+
+PAY_YOURSELF = ("Si un paiement échoue, vous serez prévenu aussitôt par e-mail. Il vous reviendra alors de payer "
+                "vous-même votre ticket dans l'application PayByPhone : tant que ce ne sera pas fait, votre véhicule "
+                "ne sera pas couvert.")
+
+
+def activation_message(case, expire, next_payment):
+    """What activating a weekly renewal did, the same on screen and in the e-mail: (title, text)."""
+    if case == "first":
+        return ("Première semaine payée : vous êtes couvert jusqu'au %s." % paris_text(expire),
+                "La semaine suivante sera payée la veille.")
+    if case == "extended":
+        return ("Semaine suivante payée : vous êtes couvert jusqu'au %s." % paris_text(expire),
+                "La suivante sera payée la veille.")
+    if case == "later":
+        return ("Votre ticket court jusqu'au %s." % paris_text(expire),
+                "Nous paierons la semaine suivante la veille, le %s." % paris_text(next_payment))
+    return ("Votre ticket en cours se termine le %s." % paris_text(expire),
+            "Nous achèterons votre semaine résidente à sa fin.")
+
+
+def activation_case(outcome, before, after, row, now=None):
+    """Which of the activation cases happened, from the tickets running before and after the first look:
+    'first' (a first week paid, now or by the check just before), 'extended' (the running ticket extended),
+    'later' (extended a day before its end), 'atEnd' (a ticket PayByBot cannot extend: bought at its end)."""
+    now = now or datetime.now(timezone.utc)
+    if not after:
+        return None, None, None
+    expire = aware(covered_until(after))
+    if outcome == "paid":
+        return ("extended" if before else "first"), expire, expire - EARLY_RENEWAL
+    ticket = extendable(after, row)
+    started = aware((ticket or {}).get("startTime"))
+    if ticket and started and now - started < timedelta(hours=2):  # the first week the check just paid
+        return "first", expire, expire - EARLY_RENEWAL
+    if ticket:
+        return "later", expire, expire - EARLY_RENEWAL
+    return "atEnd", expire, expire
 
 
 def aware(dt):
@@ -2088,7 +2128,8 @@ def debug(pbb_session: str = Cookie(None)):
     return report
 
 
-CARD_NEEDS_CHECK = "Votre banque a refusé ce paiement automatique : vérifiez votre carte dans l'application PayByPhone."
+CARD_NEEDS_CHECK = ("Votre banque a refusé ce paiement automatique : payez vous-même votre ticket dans l'application "
+                    "PayByPhone, et vérifiez votre carte.")
 
 
 def mail_check_failed(s, plate, message):
@@ -2182,15 +2223,30 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                                          "payment_account_id": body.paymentAccountId,
                                          "email": body.email.strip(), "days": days, "start": start})})
             details = {**with_details(row)}
+            before = running_for(s, body.plate)
             outcome = process_renewal(row, refresh_token=refresh)  # pay now if it is due and nothing is active
             stored = next((r for r in store("renewal_list", p_owner=owner_id(s.username)) if r["id"] == row["id"]), row)
+            message = None
             if outcome in ("paid", "active", "waiting"):
                 active = running_for(s, body.plate)
                 rule = rule_of(details)
-                notify(details, "activated", expire=covered_until(active) if active else None,
+                case, expire, next_payment = (None, None, None) if rule else activation_case(outcome, before, active,
+                                                                                            details)
+                message = activation_message(case, expire, next_payment) if case else None
+                notify(details, "activated", expire=covered_until(active) if active else None, message=message,
                        next=schedule.next_ticket(rule, datetime.now(timezone.utc)) if rule else None)
             follow_renewals(s)
-            return with_next_ticket(stored_to_autopilot(stored))
+            answer = with_next_ticket(stored_to_autopilot(stored))
+            if message:
+                answer["activation"] = {"title": message[0], "text": message[1], "payYourself": PAY_YOURSELF}
+            elif outcome in ("unconfirmed", "not_payable", "error"):
+                # Paying now failed while the customer is on the page: say it there, they pay this ticket themselves.
+                answer["activation"] = {"failed": True, "title": "Le paiement n'a pas abouti.",
+                                        "text": stored.get("last_error") or UNCONFIRMED,
+                                        "payYourself": "Payez vous-même votre ticket dans l'application PayByPhone : "
+                                                       "tant que ce ne sera pas fait, votre véhicule ne sera pas "
+                                                       "couvert."}
+            return answer
 
         return guarded(save)
     ap = {**body.model_dump(), "duration": fmt_qty(body.duration), "id": uuid.uuid4().hex[:8], "enabled": True,

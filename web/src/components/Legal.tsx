@@ -421,6 +421,7 @@ function Terms() {
           </li>
           <li>Disposer des droits nécessaires aux tarifs spéciaux, comme le tarif résident, et les tenir à jour.</li>
           <li>Garder vos identifiants <PayByPhone /> confidentiels.</li>
+          <li>Payer vous-même votre stationnement dans l’application <PayByPhone /> quand un paiement automatique échoue.</li>
           <li>Ne pas perturber le service, ni tenter d’y accéder de façon non autorisée ou de l’utiliser de façon abusive.</li>
         </ul>
       </Section>
@@ -428,20 +429,25 @@ function Terms() {
       <Section title="6. Renouvellement résident">
         <p>
           Une fois activé, le renouvellement paie automatiquement, sans nouvelle confirmation, une semaine au tarif résident
-          à chaque expiration, tant que vous ne l’arrêtez pas. Il ne paie pas si un ticket est déjà en cours pour le même
-          véhicule dans la même zone.
+          après l’autre, tant que vous ne l’arrêtez pas. Chaque semaine est payée la veille de la fin du ticket en cours,
+          en prolongeant ce ticket ; si <PayByPhone /> ne permet pas de le prolonger, elle est achetée à sa fin. Le même
+          véhicule n’est jamais payé deux fois pour la même période.
         </p>
         <p>
           Vous pouvez le mettre en pause entre deux dates, ou sans date de fin : aucun paiement n’est fait pendant la pause, et
-          il reprend tout seul à la fin. PayByBot vous envoie par e-mail une confirmation à chaque paiement et
+          il reprend tout seul à la fin. Une semaine déjà payée avant le début de la pause n’est pas remboursée. PayByBot vous envoie par e-mail une confirmation à chaque paiement et
           une alerte en cas de problème ; ces e-mails sont informatifs et ne remplacent pas la vérification de votre
           stationnement.
         </p>
         <p>
           Il peut ne pas aboutir, par exemple si votre connexion <PayByPhone /> a expiré, si votre carte est refusée, si votre
           droit au tarif résident a pris fin ou si <PayByPhone /> modifie son service. Dans ces cas, PayByBot l’indique sur votre
-          tableau de bord. Si un paiement n’est pas confirmé par <PayByPhone />, le renouvellement se met en pause pour éviter
-          un double paiement.
+          tableau de bord, vous prévient par e-mail et réessaie automatiquement. Si votre banque refuse à nouveau, ou si un
+          paiement n’est pas confirmé par <PayByPhone />, le renouvellement est suspendu pour éviter un double paiement.
+        </p>
+        <p>
+          En cas d’échec d’un paiement, PayByBot vous en informera par e-mail. Le paiement de votre stationnement restera
+          sous votre responsabilité : il vous appartiendra de le régler vous-même dans l’application <PayByPhone />.
         </p>
       </Section>
 

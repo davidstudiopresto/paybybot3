@@ -87,7 +87,12 @@ export function LoginView({
 
   // Sign-up: say right away, once the number is typed, that it is already signed up.
   useEffect(() => {
-    if (!signup) return
+    // « Se connecter » from the banner switches this same form to sign-in: the number stays, the banner goes.
+    if (!signup) {
+      setAccountExists(false)
+      setError(null)
+      return
+    }
     const digits = phone.replace(/\D/g, '')
     if (digits.length < 9) {
       setAccountExists(false)

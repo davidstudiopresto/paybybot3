@@ -16,7 +16,7 @@ class EarlyRenewal(unittest.TestCase):
     def tearDown(self):
         self.env.stop()
 
-    def run_renewal(self, hours_left, extend=None, zone="75005", rate="101", **row_extra):
+    def run_renewal(self, hours_left, extend=None, zone="75005", rate="101", activating=False, **row_extra):
         now = datetime.now(timezone.utc)
         ticket = {"parkingSessionId": "s1", "locationId": zone, "vehicle": {"licensePlate": "FT630FH"},
                   "rateOption": {"ratePolicyId": rate}, "expireTime": now + timedelta(hours=hours_left)}
@@ -51,27 +51,27 @@ class EarlyRenewal(unittest.TestCase):
                 patch.object(web.UserSession, "for_bot", return_value=session), \
                 patch.object(web, "log_diagnosis"), \
                 patch.object(web, "pay_and_confirm", side_effect=AssertionError("must not buy a new ticket")):
-            outcome = web.process_renewal(row, refresh_token="t")
+            outcome = web.process_renewal(row, refresh_token="t", activating=activating)
         p = stored[-1]["p_patch"]
         return outcome, p, mail, session, ticket, datetime.fromisoformat(p["next_check"])
 
-    def test_extends_a_day_before_the_end(self):
-        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=10)
+    def test_extends_once_20_00_the_day_before_has_come(self):
+        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=3)  # 20:00 the day before: past
         self.assertEqual(outcome, "paid")
         self.assertIn("extend", [c.args[0] for c in session.call.call_args_list])
         new_end = ticket["expireTime"] + timedelta(days=7)
-        self.assertEqual(next_check, new_end - web.EARLY_RENEWAL)
+        self.assertEqual(next_check, web.extension_time(new_end))
         self.assertEqual(mail.call_args.args[1], "paid")
 
     def test_waits_until_a_day_before_the_end(self):
         outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=72)
         self.assertEqual(outcome, "active")
         self.assertNotIn("extend", [c.args[0] for c in session.call.call_args_list])
-        self.assertEqual(next_check, ticket["expireTime"] - web.EARLY_RENEWAL)
+        self.assertEqual(next_check, web.extension_time(ticket["expireTime"]))
 
     def test_extension_refused_buys_at_the_end_as_before(self):
         refused = RuntimeError('Quote error: [{"reason": "MaxStayExceeded"}]')
-        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=10, extend=refused)
+        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=3, extend=refused)
         self.assertEqual(outcome, "active")
         self.assertEqual(next_check, ticket["expireTime"] + timedelta(seconds=30))
         mail.assert_not_called()
@@ -79,19 +79,30 @@ class EarlyRenewal(unittest.TestCase):
     def test_bank_refusal_leaves_a_day_and_tries_again_in_an_hour(self):
         challenged = {"challenged": True, "jobStages": [{"status": "authenticationChallengePending"}]}
         before = datetime.now(timezone.utc)
-        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=20, extend=challenged)
+        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=3, extend=challenged)
         self.assertEqual(outcome, "unconfirmed")
         self.assertTrue(timedelta(minutes=59) < next_check - before < timedelta(minutes=61))
         self.assertEqual(mail.call_args.args[1], "problem")
 
+    def test_activating_in_the_last_day_extends_at_once(self):
+        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=23.5, activating=True)
+        self.assertEqual(outcome, "paid")
+
+    def test_20_00_the_day_before_never_earlier_than_paybyphone_allows(self):
+        paris = web.PARIS
+        friday_14 = datetime(2026, 10, 23, 14, 0, tzinfo=paris)
+        self.assertEqual(web.extension_time(friday_14), datetime(2026, 10, 22, 20, 0, tzinfo=paris))
+        friday_23 = datetime(2026, 10, 23, 23, 0, tzinfo=paris)  # 20:00 Thursday is 27 h before: too early
+        self.assertEqual(web.extension_time(friday_23), datetime(2026, 10, 22, 23, 1, tzinfo=paris))
+
     def test_no_extension_into_a_pause(self):
-        pause = (datetime.now(timezone.utc) + timedelta(hours=5)).isoformat()
-        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=10, paused_from=pause)
+        pause = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()  # starts before the end
+        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=3, paused_from=pause)
         self.assertEqual(outcome, "active")
         self.assertNotIn("extend", [c.args[0] for c in session.call.call_args_list])
 
     def test_a_ticket_in_another_zone_is_not_extended(self):
-        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=10, zone="75015")
+        outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=3, zone="75015")
         self.assertEqual(outcome, "active")
         self.assertEqual(next_check, ticket["expireTime"] + timedelta(seconds=30))
 
@@ -125,7 +136,7 @@ class ActivationMessage(unittest.TestCase):
         case, expire, next_payment = web.activation_case("active", [running], [running], self.row)
         title, text = web.activation_message(case, expire, next_payment)
         self.assertIn("Votre ticket court jusqu'au", title)
-        self.assertIn(web.paris_text(running["expireTime"] - timedelta(hours=24)), text)
+        self.assertIn(web.paris_text(web.extension_time(running["expireTime"])), text)
 
     def test_the_e_mail_says_who_pays_when_a_payment_fails(self):
         with patch.object(web, "send_email") as send:

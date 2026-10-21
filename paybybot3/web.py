@@ -848,7 +848,18 @@ def covered_until(active):
     return max((x["expireTime"] for x in active), default=None)
 
 
-EARLY_RENEWAL = timedelta(hours=24)  # the weekly renewal extends the running ticket this long before its end
+EARLY_RENEWAL = timedelta(hours=24)  # PayByPhone offers « Prolonger » this long before the end of a resident week
+EXTEND_HOUR = 20  # the weekly renewal extends the running week at 20:00 (Paris) the day before it ends
+
+
+def extension_time(ends):
+    """When the weekly renewal extends a week ending at `ends`: 20:00 (Paris) the day before, and never before
+    PayByPhone offers to extend (24 hours before the end), e.g. a week ending at 23:00 is extended at 23:00 the day
+    before."""
+    ends = aware(ends)
+    day_before = (ends.astimezone(PARIS) - timedelta(days=1)).replace(hour=EXTEND_HOUR, minute=0, second=0,
+                                                                         microsecond=0)
+    return max(day_before.astimezone(timezone.utc), ends - EARLY_RENEWAL + timedelta(minutes=1))
 
 PAY_YOURSELF = ("Si un paiement échoue, vous serez prévenu aussitôt par e-mail. Il vous reviendra alors de payer "
                 "vous-même votre ticket dans l'application PayByPhone : tant que ce ne sera pas fait, votre véhicule "
@@ -879,13 +890,13 @@ def activation_case(outcome, before, after, row, now=None):
         return None, None, None
     expire = aware(covered_until(after))
     if outcome == "paid":
-        return ("extended" if before else "first"), expire, expire - EARLY_RENEWAL
+        return ("extended" if before else "first"), expire, extension_time(expire)
     ticket = extendable(after, row)
     started = aware((ticket or {}).get("startTime"))
     if ticket and started and now - started < timedelta(hours=2):  # the first week the check just paid
-        return "first", expire, expire - EARLY_RENEWAL
+        return "first", expire, extension_time(expire)
     if ticket:
-        return "later", expire, expire - EARLY_RENEWAL
+        return "later", expire, extension_time(expire)
     return "atEnd", expire, expire
 
 
@@ -1205,7 +1216,7 @@ def utc_iso(dt):
     return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
 
 
-def process_renewal(row, refresh_token=None):
+def process_renewal(row, refresh_token=None, activating=False):
     """Check one stored renewal and pay for it if no session is active. Never raises."""
     now = datetime.now(timezone.utc)
     patch = {}
@@ -1262,7 +1273,9 @@ def process_renewal(row, refresh_token=None):
         ticket = None if rule else extendable(active, row)
         ends = aware(covered_until(active))
         pause = parse_dt(row.get("paused_from"))
-        if ticket and ends - now <= EARLY_RENEWAL and not (pause and pause <= ends):
+        # At 20:00 the day before the end; when activating, at once if PayByPhone already offers to extend.
+        due = bool(ticket) and (now >= extension_time(ends) or (activating and ends - now <= EARLY_RENEWAL))
+        if ticket and due and not (pause and pause <= ends):
             card = check_payable(session, row["location"], row["rate"], row["plate"], row["payment_account_id"])
             try:
                 result, found = extend_and_confirm(session, ticket, row, card)
@@ -1277,7 +1290,7 @@ def process_renewal(row, refresh_token=None):
                 found = None
             if found:
                 expire = covered_until(found)
-                patch.update(last_payment=utc_iso(now), next_check=utc_iso(aware(expire) - EARLY_RENEWAL),
+                patch.update(last_payment=utc_iso(now), next_check=utc_iso(extension_time(expire)),
                              last_error=None)
                 outcome = "paid"
             else:
@@ -1289,7 +1302,7 @@ def process_renewal(row, refresh_token=None):
             if rule:  # covered already: never pay twice, look again when it ends or at the next window
                 next_check = schedule.decide(rule, now, None, None, row.get("last_payment"), expire)[1]
             elif ticket and not (pause and pause <= ends):  # come back a day before the end to extend it
-                next_check = ends - EARLY_RENEWAL
+                next_check = extension_time(ends)
             patch.update(next_check=utc_iso(next_check or now + timedelta(days=30)), last_error=None)
             outcome = "active"
         else:
@@ -1297,7 +1310,7 @@ def process_renewal(row, refresh_token=None):
             result, found = pay_and_confirm(session, row["location"], row["rate"], fmt_qty(row["duration"]),
                                             row["unit"], row["plate"], card)
             expire = covered_until(found)
-            next_check = schedule.next_slot(rule, now) if rule else aware(expire) - EARLY_RENEWAL
+            next_check = schedule.next_slot(rule, now) if rule else extension_time(expire)
             patch.update(last_payment=utc_iso(now), next_check=utc_iso(next_check or now + timedelta(days=30)),
                          last_error=None)
             outcome = "paid"
@@ -2224,7 +2237,7 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                                          "email": body.email.strip(), "days": days, "start": start})})
             details = {**with_details(row)}
             before = running_for(s, body.plate)
-            outcome = process_renewal(row, refresh_token=refresh)  # pay now if it is due and nothing is active
+            outcome = process_renewal(row, refresh_token=refresh, activating=True)  # pay now if it is due
             stored = next((r for r in store("renewal_list", p_owner=owner_id(s.username)) if r["id"] == row["id"]), row)
             message = None
             if outcome in ("paid", "active", "waiting"):

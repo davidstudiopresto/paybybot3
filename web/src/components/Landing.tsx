@@ -27,7 +27,7 @@ function DemoVideo() {
   }
 
   return (
-    <div className="relative w-full rounded-[23px] bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] p-[3px] shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)]">
+    <div className="group relative w-full rounded-[23px] bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] p-[3px] shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)]">
       <video
         ref={ref}
         src={src + '.mp4'}
@@ -40,12 +40,16 @@ function DemoVideo() {
         aria-label="Vidéo de 18 secondes : un forfait expiré, la connexion à PaybyBot, le renouvellement automatique activé, puis les paiements de chaque semaine"
         className="block aspect-[4/5] w-full cursor-pointer rounded-[20px] bg-[#0b1024] object-cover sm:aspect-video"
       />
+      {/* Big and centred while paused; once playing it fades away and comes back on hover to pause. */}
       <button
         onClick={toggle}
         aria-label={playing ? 'Mettre la vidéo en pause' : 'Lire la vidéo'}
-        className="absolute top-4 right-4 grid size-10 place-items-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur transition hover:bg-black/60"
+        className={cn(
+          'absolute top-1/2 left-1/2 grid size-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur transition duration-300 hover:scale-105 hover:bg-black/60 focus-visible:opacity-100 sm:size-24',
+          playing ? 'opacity-0 group-hover:opacity-100' : 'opacity-100',
+        )}
       >
-        {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+        {playing ? <Pause className="size-8 fill-white sm:size-9" /> : <Play className="size-8 translate-x-0.5 fill-white sm:size-9" />}
       </button>
     </div>
   )

@@ -514,10 +514,10 @@ class Unconfirmed(Exception):
     """PayByPhone accepted the payment request but no parking session showed up."""
 
 
-BANK_CHECK = ("Votre banque a demandé de valider ce paiement (3-D Secure) : PayByBot ne peut pas le faire à votre "
-              "place. Si vous l'avez validé dans l'application de votre banque, le ticket apparaîtra dans PayByPhone. "
-              "Sinon, choisissez dans PayByPhone une carte qui ne demande pas de validation à chaque paiement, puis "
-              "relancez le renouvellement.")
+BANK_CHECK = ("Votre banque n'a pas accepté ce paiement automatique : soit elle demande de valider chaque paiement "
+              "(3-D Secure), soit la carte n'est plus utilisable (bloquée, opposée, plafond atteint…). Vérifiez votre "
+              "carte, ou ajoutez-en une autre dans l'application PayByPhone, puis relancez le renouvellement. Si vous "
+              "avez validé ce paiement dans l'application de votre banque, le ticket apparaîtra dans PayByPhone.")
 NO_CARD = ("Aucune carte bancaire dans votre compte PayByPhone : ajoutez-en une dans l'application PayByPhone, "
            "puis relancez le renouvellement.")
 CARD_EXPIRED = ("La carte bancaire de votre compte PayByPhone a expiré (%s) : ajoutez votre nouvelle carte dans "
@@ -1325,8 +1325,6 @@ def login(body: Login, request: Request, response: Response):
             log.warning("could not save the account e-mail: %s", e)
     set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
-    if HOSTED and not demo:  # temporary: is a saved card's verification readable without paying?
-        log_card_status(session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -1975,9 +1973,10 @@ def debug(pbb_session: str = Cookie(None)):
     return report
 
 
-CARD_NEEDS_CHECK = ("Votre banque demande de valider chaque paiement de cette carte (3-D Secure) : le renouvellement "
-                    "automatique ne peut pas fonctionner avec elle, personne n'est là pour valider. Choisissez dans "
-                    "PayByPhone une autre carte bancaire, puis réessayez. Si vous avez validé ce paiement, votre "
+CARD_NEEDS_CHECK = ("Votre banque n'a pas accepté ce paiement automatique : soit elle demande de valider chaque "
+                    "paiement (3-D Secure), soit la carte n'est plus utilisable (bloquée, opposée, plafond atteint…). "
+                    "Le renouvellement automatique ne peut pas fonctionner ainsi. Vérifiez votre carte ou ajoutez-en "
+                    "une autre dans l'application PayByPhone, puis réessayez. Si vous avez validé ce paiement, votre "
                     "ticket de cette semaine est bien pris.")
 
 
@@ -2535,22 +2534,6 @@ def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None and k != "zone"}
     account = guarded(lambda: save_account(s, patch))
     return {"email": account.get("email") or "", "zone": account.get("zone") or None}
-
-
-def log_card_status(session):
-    """Temporary: what PayByPhone says of each card's verification (statuses and codes,
-    never a card number), to see whether a card can be checked without paying."""
-    try:
-        accounts = session.call("get_payment_accounts") or {}
-        for card in accounts.get("paymentCards") or []:
-            try:
-                info = session.call("get_payment_account_status", card["paymentAccountId"]) or {}
-                info.pop("paymentAccountId", None)
-                log.info("card status probe: %s", json.dumps(info, default=str)[:1500])
-            except Exception as e:
-                log.info("card status probe failed: %s", str(e)[:600])
-    except Exception as e:
-        log.info("card status probe: no accounts: %s", str(e)[:300])
 
 
 def is_admin(s):

@@ -846,6 +846,52 @@ def covered_until(active):
     return max((x["expireTime"] for x in active), default=None)
 
 
+EARLY_RENEWAL = timedelta(hours=24)  # the weekly renewal extends the running ticket this long before its end
+
+
+def aware(dt):
+    return dt if dt is None or dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def extendable(active, row):
+    """The running ticket a weekly renewal can extend: the one ending last, in its zone and at its resident rate."""
+    last = max(active, key=lambda x: aware(x["expireTime"]), default=None)
+    if last and str(last.get("locationId")) == str(row["location"]) \
+            and str((last.get("rateOption") or {}).get("ratePolicyId")) == str(row["rate"]):
+        return last
+    return None
+
+
+def extend_and_confirm(session, ticket, row, card, attempts=10, delay=3):
+    """Add the next week to the running ticket, then poll until PayByPhone shows its later end."""
+    before = aware(ticket["expireTime"])
+    log.info("renewal extend: zone=%s plate=%s", row["location"], row["plate"][:2] + "***")
+    result = session.call("extend", parkingSessionId=ticket["parkingSessionId"], durationQuantity=fmt_qty(row["duration"]),
+                          durationTimeUnit=row["unit"], licensePlate=row["plate"], locationId=row["location"],
+                          ratePolicyId=row["rate"], paymentAccountId=card)
+    session.attempts.append({"at": datetime.now(timezone.utc).isoformat(), "location": row["location"],
+                             "plate": row["plate"], "operation": "extend",
+                             **{k: result.get(k) for k in ("quoteId", "parkingSessionId", "jobId", "jobStatus")}})
+    if result.get("challenged"):  # the bank asks to confirm: a quick look, then say it
+        attempts = min(attempts, 2)
+    for i in range(attempts):
+        now_ticket = next((x for x in session.call("get_parking_sessions") or []
+                           if x.get("parkingSessionId") == ticket["parkingSessionId"]), None)
+        if now_ticket and aware(now_ticket["expireTime"]) > before:
+            log.info("renewal extend: confirmed after %s check(s)", i + 1)
+            return result, [now_ticket]
+        if not session.demo:
+            time.sleep(delay)
+    log.warning("renewal extend: end time unchanged (jobStatus=%s stages=%s)", result.get("jobStatus"),
+                result.get("jobStages"))
+    session.unconfirmed[(row["plate"], row["location"])] = time.time()
+    log_diagnosis(session)
+    if result.get("challenged") or any("authenticationChallenge" in str(st.get("status"))
+                                       for st in result.get("jobStages") or []):
+        raise BankCheck(BANK_CHECK)
+    raise Unconfirmed(UNCONFIRMED)
+
+
 def run_autopilot(session, ap, now=None):
     """Pay for the configured parking if no session is active right now (and, for precise days, if it is time)."""
     now = now or datetime.now(timezone.utc)
@@ -1171,11 +1217,39 @@ def process_renewal(row, refresh_token=None):
     result, expire = None, None
     try:
         active = running_for(session, row["plate"])
-        if active:
+        # Weekly renewal: the next week is added to the running ticket a day before it ends, so a refused payment
+        # leaves a day to fix the card while the car is still covered. Not when a pause starts before the end.
+        ticket = None if rule else extendable(active, row)
+        ends = aware(covered_until(active))
+        pause = parse_dt(row.get("paused_from"))
+        if ticket and ends - now <= EARLY_RENEWAL and not (pause and pause <= ends):
+            card = check_payable(session, row["location"], row["rate"], row["plate"], row["payment_account_id"])
+            try:
+                result, found = extend_and_confirm(session, ticket, row, card)
+            except Unconfirmed:
+                raise
+            except Exception as e:
+                if "Quote error" not in str(e) and "No quote returned" not in str(e):
+                    raise
+                # PayByPhone does not extend this ticket (longest stay reached, for one): buy the next week
+                # when it ends, as before.
+                log.info("renewal %s: extension refused, next week bought at the end: %s", row["id"], str(e)[:300])
+                found = None
+            if found:
+                expire = covered_until(found)
+                patch.update(last_payment=utc_iso(now), next_check=utc_iso(aware(expire) - EARLY_RENEWAL),
+                             last_error=None)
+                outcome = "paid"
+            else:
+                patch.update(next_check=utc_iso(ends + timedelta(seconds=30)), last_error=None)
+                outcome = "active"
+        elif active:
             expire = covered_until(active)
             next_check = expire + timedelta(seconds=30)
             if rule:  # covered already: never pay twice, look again when it ends or at the next window
                 next_check = schedule.decide(rule, now, None, None, row.get("last_payment"), expire)[1]
+            elif ticket and not (pause and pause <= ends):  # come back a day before the end to extend it
+                next_check = ends - EARLY_RENEWAL
             patch.update(next_check=utc_iso(next_check or now + timedelta(days=30)), last_error=None)
             outcome = "active"
         else:
@@ -1183,7 +1257,7 @@ def process_renewal(row, refresh_token=None):
             result, found = pay_and_confirm(session, row["location"], row["rate"], fmt_qty(row["duration"]),
                                             row["unit"], row["plate"], card)
             expire = covered_until(found)
-            next_check = schedule.next_slot(rule, now) if rule else expire + timedelta(seconds=30)
+            next_check = schedule.next_slot(rule, now) if rule else aware(expire) - EARLY_RENEWAL
             patch.update(last_payment=utc_iso(now), next_check=utc_iso(next_check or now + timedelta(days=30)),
                          last_error=None)
             outcome = "paid"

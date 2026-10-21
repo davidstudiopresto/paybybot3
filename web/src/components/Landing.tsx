@@ -114,7 +114,7 @@ const STEPS = [
 ]
 
 /**
- * Real users' feedback only, given with their consent: [first name and last name, short quote].
+ * Real users' feedback only, given with their consent: [first name and last-name initial, e.g. « Charles H. », one sentence].
  * The section stays hidden while the list is empty.
  */
 const TESTIMONIALS: [string, string][] = []
@@ -122,17 +122,17 @@ const TESTIMONIALS: [string, string][] = []
 function Testimonials() {
   if (!TESTIMONIALS.length) return null
   const card = (name: string, text: string, key: string, copy = false) => (
-    <li key={key} aria-hidden={copy || undefined} className="w-[22rem] shrink-0 rounded-2xl border border-ink/10 bg-ink/[0.02] p-6">
+    <li key={key} aria-hidden={copy || undefined} className="w-[18rem] shrink-0 rounded-2xl sm:w-[22rem] border border-ink/10 bg-ink/[0.02] p-6">
       <p className="font-semibold text-ink">{name}</p>
       <p className="mt-3 leading-relaxed text-ink/70">{text}</p>
     </li>
   )
   return (
-    <section className="mt-24 lg:mt-36" aria-label="Retour Utilisateurs">
+    <section className="mt-24 lg:mt-36" aria-label="Ils nous font confiance">
       <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
-        Retour Utilisateurs
+        Ils nous font confiance.
       </h2>
-      <div className="relative mt-12 -mx-6 overflow-hidden sm:-mx-8 [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
+      <div className="relative left-1/2 mt-12 w-screen -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
         <ul className="marquee flex w-max gap-4">
           {TESTIMONIALS.map(([name, text], i) => card(name, text, 'a' + i))}
           {TESTIMONIALS.map(([name, text], i) => card(name, text, 'b' + i, true))}
@@ -147,7 +147,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
   const cta = useRef<HTMLAnchorElement>(null)
   const sticky = useStickyCta(cta)
   return (
-    <div className="flex min-h-dvh flex-col bg-white pb-20 lg:pb-0">
+    <div className="flex min-h-dvh flex-col overflow-x-clip bg-white pb-20 lg:pb-0">
       <PublicTopBar />
 
       {/* Hero laid out like a product launch page: text left (573), video right (675), 64 apart at 1440. */}

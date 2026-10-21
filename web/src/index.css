@@ -160,6 +160,7 @@
 @keyframes marquee { to { transform: translateX(-50%); } }
 .marquee { animation: marquee 50s linear infinite; }
 .marquee:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }
 .blink { animation: blink 1.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {

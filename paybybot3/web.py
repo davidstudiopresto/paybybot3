@@ -988,7 +988,7 @@ def with_details(row):
 
 ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "zone_found",
-                  "vehicle_zones", "dunning")
+                  "vehicle_zones", "dunning", "check_mailed")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -2019,6 +2019,27 @@ CARD_NEEDS_CHECK = ("Votre banque n'a pas accepté ce paiement automatique : soi
                     "ticket de cette semaine est bien pris.")
 
 
+def mail_check_failed(s, plate, message):
+    """The check before activating could not pay: the same e-mail as a renewal that cannot pay, with the
+    PayByPhone button. At most one an hour per vehicle, the check being easy to run again."""
+    if not HOSTED or s.demo:
+        return
+    try:
+        account = load_account(s)
+        to, now = account.get("email"), datetime.now(timezone.utc)
+        mailed = account.get("check_mailed") or {}
+        last = parse_dt(mailed.get(plate_key(plate)))
+        if not to or (last and now - last < timedelta(hours=1)):
+            return
+        send_email(to, "Action requise · renouvellement %s" % plate_text(plate), "Le renouvellement a besoin de vous",
+                   ["Le renouvellement automatique pour %s n'a pas pu être activé :" % plate_text(plate), message,
+                    "Réglez-le dans l'application PayByPhone, puis activez le renouvellement depuis PayByBot."],
+                   ("Ouvrir PayByPhone", PAYBYPHONE_URL))
+        save_account(s, {"check_mailed": {**mailed, plate_key(plate): now.isoformat()}})
+    except Exception as e:
+        log.warning("check e-mail failed: %s", str(e)[:200])
+
+
 @app.post("/api/renewal-check")
 def renewal_check(body: Parking, pbb_session: str = Cookie(None)):
     """Before the offer page: make sure PayByPhone can really be paid unattended for this car. Resident rate and
@@ -2030,6 +2051,7 @@ def renewal_check(body: Parking, pbb_session: str = Cookie(None)):
         try:
             card = check_payable(s, body.location, body.rate, body.plate, body.paymentAccountId)
         except NotPayable as e:
+            mail_check_failed(s, body.plate, str(e))
             raise HTTPException(400, str(e))
         if s.demo or running_for(s, body.plate):
             return {"ok": True, "paid": False}
@@ -2037,10 +2059,13 @@ def renewal_check(body: Parking, pbb_session: str = Cookie(None)):
             result, found = pay_and_confirm(s, body.location, body.rate, fmt_qty(body.duration), body.unit,
                                             body.plate, card)
         except BankCheck:
+            mail_check_failed(s, body.plate, CARD_NEEDS_CHECK)
             raise HTTPException(409, CARD_NEEDS_CHECK)
         except Unconfirmed as e:
+            mail_check_failed(s, body.plate, str(e))
             raise HTTPException(504, str(e))
         if result.get("challenged"):
+            mail_check_failed(s, body.plate, CARD_NEEDS_CHECK)
             raise HTTPException(409, CARD_NEEDS_CHECK)
         s.log("success", "Première semaine payée : zone %s, %s" % (body.location, body.plate))
         return {"ok": True, "paid": True, "expire": iso(covered_until(found)), "cost": result.get("cost")}

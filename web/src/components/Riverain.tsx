@@ -91,13 +91,24 @@ export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; 
   const [pausing, setPausing] = useState(false)
 
   async function resume() {
+    if (ap.enabled) {
+      try {
+        await api.resumeAutopilot(ap.id)
+        toast.success('Renouvellement repris.')
+      } catch (e) {
+        toast.error((e as Error).message)
+      }
+      return onChanged()
+    }
+    // Relaunch: the server tries the payment right away and answers with the outcome (up to about a minute).
+    const waiting = toast.loading('Relance en cours…', { description: 'PaybyBot vérifie votre compte PayByPhone et paie si besoin.' })
     try {
-      await api.resumeAutopilot(ap.id)
-      toast.success(ap.enabled ? 'Renouvellement repris.' : 'Renouvellement relancé.', {
-        description: ap.enabled ? undefined : 'Si un ticket est déjà en cours, il prendra le relais à sa fin.',
-      })
+      const after = await api.resumeAutopilot(ap.id)
+      if (after.lastError) toast.error('Renouvellement non effectué', { id: waiting, description: after.lastError, duration: 15000 })
+      else if (after.lastPayment) toast.success('Forfait renouvelé.', { id: waiting })
+      else toast.success('Renouvellement relancé.', { id: waiting, description: 'Un ticket est déjà en cours : il prendra le relais à sa fin.' })
     } catch (e) {
-      toast.error((e as Error).message)
+      toast.error((e as Error).message, { id: waiting })
     }
     onChanged()
   }

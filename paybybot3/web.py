@@ -2689,8 +2689,26 @@ def resume_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
     if HOSTED and not s.demo:
         # Ends a pause, or relaunches a suspended renewal; checked right away: a ticket may be needed now (a ticket
         # already running is never paid twice: the renewal waits for its end).
-        return update_own_renewal(s, ap_id, {"paused_from": None, "paused_until": None, "enabled": True,
-                                             "last_error": None, "next_check": utc_iso(datetime.now(timezone.utc))})
+        owner = owner_id(s.username)
+        before = next((r for r in store("renewal_list", p_owner=owner) if r["id"] == ap_id), None)
+        refresh = getattr(s.bot, "refresh_token", None)
+        relaunch = bool(before and not before.get("enabled") and refresh)
+        # A relaunch is tried below, in this request: keep the scheduler off it meanwhile (never two payments at once).
+        check = datetime.now(timezone.utc) + (timedelta(minutes=10) if relaunch else timedelta())
+        result = update_own_renewal(s, ap_id, {"paused_from": None, "paused_until": None, "enabled": True,
+                                               "last_error": None, "next_check": utc_iso(check)})
+        if relaunch:
+            # Relaunched: try now, in this request, so the user sees the outcome (ticket or reason) within a minute
+            # instead of « Paiement en cours… » until the next scheduler run.
+            if billing_state(guarded(lambda: load_account(s)), owner) in BLOCKED_STATES:
+                raise HTTPException(402, "Compte bloqué : débloquez-le (bandeau en haut de page) pour relancer le "
+                                         "renouvellement.")
+            row = next((r for r in store("renewal_list", p_owner=owner) if r["id"] == ap_id), None)
+            if row:
+                process_renewal({**row, "owner": owner}, refresh_token=refresh)
+                row = next((r for r in store("renewal_list", p_owner=owner) if r["id"] == ap_id), row)
+                result = with_next_ticket(stored_to_autopilot(row))
+        return result
     ap = s.autopilots.get(ap_id)
     if not ap:
         raise HTTPException(404, "Renouvellement introuvable.")

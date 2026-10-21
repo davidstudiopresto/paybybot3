@@ -171,6 +171,20 @@ export function Dashboard({
               : "Aucun véhicule n'est couvert en ce moment."}
         </p>
 
+        {/* No ticket: still show the car(s), the ones a renewal does not already list below. */}
+        {data && sessions.length === 0 && (() => {
+          const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
+          const renewed = new Set(data.autopilots.filter((ap) => ap.label === WEEKLY_LABEL).map((ap) => key(ap.plate)))
+          const cars = data.vehicles.filter((v) => !renewed.has(key(v.plate)))
+          return cars.length > 0 ? (
+            <div className="mt-6 flex flex-wrap gap-3">
+              {cars.map((v) => (
+                <Plate key={v.plate} plate={v.plate} />
+              ))}
+            </div>
+          ) : null
+        })()}
+
         {data && sessions.length > 0 && (
           <div className="mt-6 space-y-3">
             {sessions.map((s) => (

@@ -1325,6 +1325,8 @@ def login(body: Login, request: Request, response: Response):
             log.warning("could not save the account e-mail: %s", e)
     set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
+    if HOSTED and not demo:  # temporary, read only
+        log_probes(session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -2555,6 +2557,49 @@ def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None and k != "zone"}
     account = guarded(lambda: save_account(s, patch))
     return {"email": account.get("email") or "", "zone": account.get("zone") or None}
+
+
+PROBES = {
+    # Temporary (read only): what PayByPhone says of mandates, resident rights, subscriptions and renewable tickets.
+    "mandates": ("""query P($input: GetPaymentAccountByIdInput!) { getPaymentAccountByIdV1(input: $input) {
+        mandates { id status } } }""", "card"),
+    "eligibilities": ("""query P($input: GetEligibilitiesInput!) { getEligibilitiesV1(input: $input) { totalSize
+        items { eligibilityType startTime expireTime productId zones status revocationTime externalMemberType } } }""",
+                      {"input": {"pageSize": 20}}),
+    "eligibilities_empty": ("""query P($input: GetEligibilitiesInput!) { getEligibilitiesV1(input: $input) { totalSize
+        items { eligibilityType startTime expireTime zones status revocationTime } } }""", {"input": {}}),
+    "subscriptions": ("""query P { getSubscriptionsV2 { state mandateId operatorName subscriptionId } }""", {}),
+    "renewable": ("""query P($input: GetParkingSessionsInput!) { getParkingSessionsV1(input: $input) {
+        status isRenewable renewableAfter isExtendable } }""",
+                  {"input": {"periodType": "CURRENT", "offset": 0, "limit": 5}}),
+}
+
+
+def log_probes(session):
+    """Statuses and codes only: ids are replaced by their presence, no name, address or card number."""
+    def clean(value):
+        if isinstance(value, dict):
+            return {k: (bool(v) if k in ("id", "mandateId", "subscriptionId") else clean(v)) for k, v in value.items()}
+        if isinstance(value, list):
+            return [clean(v) for v in value]
+        return value
+
+    cards = []
+    try:
+        cards = [c["paymentAccountId"] for c in (session.call("get_payment_accounts") or {}).get("paymentCards") or []]
+    except Exception as e:
+        log.info("probe: no cards: %s", str(e)[:200])
+    for name, (query, variables) in PROBES.items():
+        runs = [{"input": {"paymentAccountId": c}} for c in cards] if variables == "card" else [variables]
+        for v in runs:
+            try:
+                answer = session.call("_graphql", query, v)
+                log.info("probe %s: %s", name, json.dumps(clean(answer), default=str)[:1500])
+            except requests.HTTPError as e:  # schema errors come back as HTTP 400 with the reason in the body
+                log.info("probe %s failed: %s %s", name, e.response.status_code if e.response is not None else "",
+                         (e.response.text if e.response is not None else str(e))[:700])
+            except Exception as e:
+                log.info("probe %s failed: %s", name, str(e)[:700])
 
 
 def is_admin(s):

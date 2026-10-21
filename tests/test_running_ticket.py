@@ -33,9 +33,9 @@ class RunningTicket(unittest.TestCase):
         s = self.session([ticket("FT-630-FH", "75015"), ticket("ZZ999ZZ", "75005"), ticket("FT630FH", "75005", -1)])
         self.assertEqual([x["locationId"] for x in web.running_for(s, "FT630FH")], ["75015"])
 
-    def run_renewal(self, tickets, pay_error=None, **account):
+    def run_renewal(self, tickets, pay_error=None, last_error=None, **account):
         row = {"id": "r1", "owner": "o", "plate": "FT630FH", "location": "75005", "rate": "101", "duration": 7,
-               "unit": "Days", "payment_account_id": "c", "last_error": None}
+               "unit": "Days", "payment_account_id": "c", "last_error": last_error}
         stored = []
         bot = MagicMock(refresh_token="t")
         with patch.object(web, "with_details", side_effect=lambda r: r), \
@@ -81,12 +81,26 @@ class RunningTicket(unittest.TestCase):
         self.assertEqual(web.known_price(session([]), body), (web.PARIS_RESIDENT_WEEK, "paris"))
         self.assertEqual(web.known_price(session([]), body.model_copy(update={"location": "69001"})), (None, None))
 
-    def test_bank_asking_to_confirm_suspends_with_its_reason(self):
+    def test_bank_asking_to_confirm_is_tried_again_in_an_hour(self):
+        before = datetime.now(timezone.utc)
         outcome, patch_, mail, _ = self.run_renewal([], pay_error=web.BankCheck(web.BANK_CHECK))
+        self.assertEqual(outcome, "unconfirmed")
+        self.assertNotIn("enabled", patch_)
+        self.assertIn("3-D Secure", patch_["last_error"])
+        retry = datetime.fromisoformat(patch_["next_check"]) - before
+        self.assertTrue(timedelta(minutes=59) < retry < timedelta(minutes=61))
+        mail.assert_called_once()
+        self.assertFalse(mail.call_args.kwargs["suspended"])
+
+    def test_bank_refusing_again_suspends_with_its_reason(self):
+        outcome, patch_, mail, _ = self.run_renewal([], pay_error=web.BankCheck(web.BANK_CHECK),
+                                                    last_error=web.BANK_CHECK)
         self.assertEqual(outcome, "unconfirmed")
         self.assertFalse(patch_["enabled"])
         self.assertIn("3-D Secure", patch_["last_error"])
-        mail.assert_called_once()
+        self.assertIn("suspendu", patch_["last_error"])
+        mail.assert_called_once()  # this time to say it is suspended
+        self.assertTrue(mail.call_args.kwargs["suspended"])
 
     def test_resident_rate_refused_is_said_before_paying(self):
         refused = [{"ratePolicyId": "101", "name": "Résident", "parkingNotAllowedReason": "PermitExpired"}]

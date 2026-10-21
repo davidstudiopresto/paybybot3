@@ -530,6 +530,9 @@ class BankCheck(Unconfirmed):
     """The bank asked the card holder to confirm the payment (3-D Secure): nothing can be done unattended."""
 
 
+PAYBYPHONE_URL = "https://m.paybyphone.com/"  # the e-mails' button: fix the card or the payment there
+RETRY_AFTER = timedelta(hours=1)  # a renewal that could not pay is tried again this long after
+
 UNCONFIRMED = ("PayByPhone n'a pas confirmé ce stationnement. Vérifiez dans l'application PayByPhone "
                "avant de réessayer, pour ne pas payer deux fois.")
 
@@ -776,11 +779,19 @@ def notify(details, event, **info):
                    ["Aucun forfait ne sera payé pour %s à partir du %s, %s." % (car, info.get("from_day"), until),
                     "Un ticket déjà en cours reste valable jusqu'à sa fin."], open_app)
     elif event == "problem":
+        message = info.get("message", "")
+        if message == RELOGIN:  # only a new login on PayByBot fixes it
+            send_email(to, "Action requise · renouvellement %s" % plate_text(details.get("plate")),
+                       "Le renouvellement a besoin de vous",
+                       ["Le renouvellement automatique pour %s est en attente :" % car, message], open_app)
+            return
+        next_step = ("Le renouvellement est suspendu : une fois le problème réglé dans PayByPhone, relancez-le "
+                     "depuis PayByBot." if info.get("suspended") else
+                     "Réglez-le dans l'application PayByPhone : nous réessayons automatiquement dans une heure.")
         send_email(to, "Action requise · renouvellement %s" % plate_text(details.get("plate")),
                    "Le renouvellement a besoin de vous",
-                   ["Le renouvellement automatique pour %s n'a pas pu payer :" % car, info.get("message", ""),
-                    "Ouvrez PayByBot pour le relancer, et vérifiez votre stationnement dans l'application PayByPhone."],
-                   open_app)
+                   ["Le renouvellement automatique pour %s n'a pas pu payer :" % car, message, next_step],
+                   ("Ouvrir PayByPhone", PAYBYPHONE_URL))
 
 
 DAY_NAMES = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
@@ -1175,12 +1186,17 @@ def process_renewal(row, refresh_token=None):
                          last_error=None)
             outcome = "paid"
     except Unconfirmed as e:
-        # Never retry blindly: the payment may have gone through, retrying could pay twice (and a bank that asks
-        # to confirm every payment would ask again at every try).
-        patch.update(enabled=False, last_error=suspended_message(e))
+        # One more try an hour later, time to fix the card in PayByPhone: the active ticket is looked for first, so
+        # a payment that went through after all is never paid twice. Still refused then: suspended, since a bank
+        # that asks to confirm every payment would ask again at every try.
+        message = str(e) if isinstance(e, BankCheck) else UNCONFIRMED
+        if previous_error == message:
+            patch.update(enabled=False, last_error=message + " Renouvellement suspendu.")
+        else:
+            patch.update(last_error=message, next_check=utc_iso(now + RETRY_AFTER))
         outcome = "unconfirmed"
-    except NotPayable as e:  # nothing was paid: tell the user, look again in 6 hours
-        patch.update(last_error=str(e), next_check=utc_iso(now + timedelta(hours=6)))
+    except NotPayable as e:  # nothing was paid: tell the user, look again in an hour
+        patch.update(last_error=str(e), next_check=utc_iso(now + RETRY_AFTER))
         outcome = "not_payable"
     except Exception as e:
         if "VehicleAlreadyParked" in str(e):  # a ticket PayByPhone knows of but did not list: wait, not an error
@@ -1194,7 +1210,7 @@ def process_renewal(row, refresh_token=None):
         notify(row, "paid", cost=(result or {}).get("cost"), expire=expire,
                next=schedule.next_ticket(rule, now, row.get("paused_from"), row.get("paused_until")) if rule else None)
     elif patch.get("last_error") and patch["last_error"] != previous_error:
-        notify(row, "problem", message=patch["last_error"])
+        notify(row, "problem", message=patch["last_error"], suspended=patch.get("enabled") is False)
     return outcome
 
 

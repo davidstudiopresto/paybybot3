@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /** French licence plate: white field, blue EU band with the country letter. */
@@ -176,4 +176,22 @@ export function PayByPhone() {
 /** A text with each « PayByPhone » shown as above. */
 export function withPayByPhone(text: string): ReactNode {
   return text.split('PayByPhone').flatMap((part, i) => (i ? [<PayByPhone key={i} />, part] : [part]))
+}
+
+/** A text with each « PayByBot » and « PayByPhone » in its brand colours. */
+export function withBrands(text: string): ReactNode[] {
+  return text
+    .split(/(PayByBot|PayByPhone)/)
+    .map((part, i) => (part === 'PayByBot' ? <PayByBot key={i} /> : part === 'PayByPhone' ? <PayByPhone key={i} /> : part))
+}
+
+/** The same for a whole block of JSX: every text inside it, however deep (links and buttons left as they are). */
+export function brandNodes(node: ReactNode): ReactNode {
+  if (typeof node === 'string') return node.includes('PayBy') ? withBrands(node) : node
+  if (Array.isArray(node)) return Children.map(node, brandNodes)
+  if (isValidElement(node)) {
+    const el = node as ReactElement<{ children?: ReactNode }>
+    return el.props.children === undefined ? el : cloneElement(el, undefined, brandNodes(el.props.children))
+  }
+  return node
 }

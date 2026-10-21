@@ -5,7 +5,7 @@ import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
-import { PayByBot, PayByPhone, withPayByPhone } from '@/components/signs'
+import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/components/signs'
 
 
 /** The 18-second loop (made with Remotion in marketing/video): starts only on play, the PayByBot card until then;
@@ -386,7 +386,7 @@ function Faq({ className }: { className?: string }) {
         <AccordionItem key={q} value={q} className="border-b border-ink/12 not-last:border-b">
           <AccordionTrigger className="group/q items-center gap-6 rounded-none py-6 text-[1.05rem] font-normal text-ink hover:no-underline focus-visible:ring-0 sm:text-[1.15rem] **:data-[slot=accordion-trigger-icon]:hidden">
             <span className="underline-offset-[6px] decoration-ink/60 group-hover/q:underline group-aria-expanded/accordion-trigger:underline">
-              {withPayByPhone(q)}
+              {withBrands(q)}
             </span>
             <Plus
               aria-hidden
@@ -394,7 +394,9 @@ function Faq({ className }: { className?: string }) {
               className="size-5 shrink-0 text-ink transition-transform duration-300 group-aria-expanded/accordion-trigger:rotate-45"
             />
           </AccordionTrigger>
-          <AccordionContent className="max-w-[46rem] pb-8 text-[1.02rem] leading-[1.7] text-ink/75 sm:text-[1.08rem]">{a}</AccordionContent>
+          <AccordionContent className="max-w-[46rem] pb-8 text-[1.02rem] leading-[1.7] text-ink/75 sm:text-[1.08rem]">
+            {brandNodes(a)}
+          </AccordionContent>
         </AccordionItem>
       ))}
     </Accordion>

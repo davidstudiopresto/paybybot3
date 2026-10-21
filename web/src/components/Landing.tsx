@@ -13,7 +13,7 @@ const STEP_ICONS = [Link2, RefreshCw, ShieldCheck]
 
 const STEPS = [
   ['Connectez PayByPhone', 'Reliez votre compte PayByPhone existant.'],
-  ['Activez le renouvellement', 'Choisissez votre véhicule, PayByBot s’occupe du reste.'],
+  ['Activez le renouvellement', 'Choisissez votre véhicule et activez le renouvellement hebdomadaire en un clic.'],
   ['Vous êtes tranquilles', 'PayByBot veille 24/7 et renouvelle votre stationnement avant chaque expiration.'],
 ]
 

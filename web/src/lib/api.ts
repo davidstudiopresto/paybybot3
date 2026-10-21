@@ -155,6 +155,7 @@ export const api = {
     request<Account>('/api/account', { method: 'PUT', body: JSON.stringify(patch) }),
   logout: () => post('/api/logout'),
   checkout: (plan: 'monthly' | 'yearly') => post<{ url: string }>('/api/billing/checkout', { plan }),
+  contact: (p: { email: string; message: string; website: string }) => post<{ ok: true }>('/api/contact', p),
   confirmCheckout: (session_id: string) => post<{ plan: string }>('/api/billing/confirm', { session_id }),
   billingPortal: () => post<{ url: string }>('/api/billing/portal'),
   unlock: () => post<{ url: string }>('/api/billing/unlock'),

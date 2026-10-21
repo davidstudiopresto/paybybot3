@@ -721,7 +721,7 @@ def email_html(title, lines, button=None, footer=RENEWAL_FOOTER, code=None):
     )
 
 
-def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER, code=None):
+def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER, code=None, reply_to=None):
     """Transactional e-mail through Resend. Silently skipped without an address or an API key."""
     key = os.environ.get("RESEND_API_KEY")
     if not to or not key:
@@ -732,7 +732,7 @@ def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER, co
     try:
         r = requests.post("https://api.resend.com/emails", timeout=10,
                           headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
-                          json={"from": MAIL_FROM, "to": [to], "reply_to": MAIL_REPLY_TO, "subject": subject,
+                          json={"from": MAIL_FROM, "to": [to], "reply_to": reply_to or MAIL_REPLY_TO, "subject": subject,
                                 "html": html, "text": text})
         log.info("e-mail '%s': %s", title, r.status_code)  # the title, never the address nor a code from the subject
         if not r.ok:
@@ -3102,6 +3102,38 @@ class Assets(StaticFiles):
 
 if (STATIC_DIR / "assets").exists():
     app.mount("/assets", Assets(directory=STATIC_DIR / "assets"), name="assets")
+
+
+class ContactMessage(BaseModel):
+    email: str = Field(max_length=254, pattern=r"^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$")
+    message: str = Field(min_length=2, max_length=3000)
+    website: str = Field(default="", max_length=200)  # left empty by people, filled by bots
+
+
+@app.post("/api/contact")
+def contact(body: ContactMessage, request: Request, pbb_session: str = Cookie(None)):
+    """The « Contact » window: the message goes to the contact address, a reply goes straight to the visitor."""
+    if body.website:  # a bot filled the hidden field: say it went, send nothing
+        return {"ok": True}
+    if HOSTED:
+        ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+        key = hmac.new(_subkey(_secrets()[0], "rate"), ip.encode(), hashlib.sha256).hexdigest()
+        if not guarded(lambda: store("rate_hit", p_key="contact:" + key, p_window_seconds=3600, p_max=5)):
+            raise HTTPException(429, "Trop de messages envoyés. Réessayez dans une heure, ou écrivez à %s." % MAIL_REPLY_TO)
+    account = ""
+    try:  # signed in: say which PayByPhone account writes, to answer faster
+        account = current(pbb_session).username
+    except Exception:
+        pass
+    text = body.message.strip()
+    lines = ["De : %s" % body.email.strip()] + (["Compte PayByPhone : %s" % account] if account else []) \
+        + [x.strip() for x in re.split(r"\n\s*\n", text) if x.strip()]
+    if not send_email(MAIL_REPLY_TO, "Message du site · %s" % body.email.strip(), "Nouveau message", lines,
+                      footer="Envoyé depuis la fenêtre « Contact » de paybybot.fr. Répondez à cet e-mail pour "
+                             "écrire au visiteur.", reply_to=body.email.strip()):
+        raise HTTPException(503, "Le message n'a pas pu partir. Écrivez-nous à %s." % MAIL_REPLY_TO)
+    log.info("contact message sent (%d characters)", len(text))
+    return {"ok": True}
 
 
 @app.get("/{path:path}", include_in_schema=False)

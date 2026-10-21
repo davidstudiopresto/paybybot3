@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Wordmark } from '@/components/signs'
+import { ContactLink } from '@/components/Contact'
 import { ui } from '@/lib/styles'
 
 /** The bar on top of every page: logo on the left, links in the middle (if any), actions on the right. */
@@ -39,6 +40,7 @@ export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
           <a href="#/demo" className={navLink}>
             Démo
           </a>
+          <ContactLink className={navLink} />
         </>
       }
     >

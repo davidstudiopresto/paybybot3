@@ -153,6 +153,17 @@ export function ActionTile({
   )
 }
 
+/** PaybyBot's name in running text, « by » in the wordmark's blue. */
+export function PaybyBot() {
+  return (
+    <span className="whitespace-nowrap">
+      Pay
+      <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">by</span>
+      Bot
+    </span>
+  )
+}
+
 /** PayByPhone's name as its logo writes it: « By » in its green. */
 export function PayByPhone() {
   return (

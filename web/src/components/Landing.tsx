@@ -7,7 +7,7 @@ import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
-import { PayByPhone, withPayByPhone } from '@/components/signs'
+import { PaybyBot, PayByPhone, withPayByPhone } from '@/components/signs'
 
 
 /** The 20-second loop (real demo recording): muted autoplay like a GIF; the portrait cut on phones. */
@@ -197,14 +197,14 @@ export function Landing({ hosted }: { hosted: boolean }) {
         <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="@container max-w-[40rem] lg:max-w-none">
             {/* Sized to its column (cqw), so « de votre stationnement résident » keeps to one line. */}
-            <p className={cn(KICKER, 'mb-5 lg:mb-7')}>100 % automatique • Même téléphone éteint • Fini les oublis</p>
+            <p className={cn(KICKER, 'mb-5 lg:mb-7')}>100 % automatique • Même téléphone éteint • Pause en vacances</p>
             <h1 className={cn(ui.title, 'font-medium text-[#2b2f3a] lg:text-[clamp(2.5rem,min(7.3cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
               <span className="lg:block">Renouvellement automatique</span>{' '}
               <span className="lg:block">de votre stationnement résident</span>
             </h1>
             <p className={cn(ui.subtitle, 'lg:mt-10 lg:max-w-[32rem] lg:text-[clamp(1rem,min(1.1vw,2vh),1.2rem)] lg:leading-[1.7]')}>
-              Votre ticket expire, PaybyBot le renouvelle sur votre compte <PayByPhone />. Vous partez en vacances, il se met
-              en pause. Vous n’y pensez plus.
+              <PaybyBot /> renouvelle votre ticket résident <PayByPhone /> dès qu’il expire. Fini les oublis, fini les
+              amendes.
             </p>
             <a
               ref={cta}

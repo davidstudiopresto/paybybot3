@@ -335,7 +335,10 @@ def _fernet(purpose="cookie"):
 def seal(session):
     state = session.to_state()
     state.setdefault("iat", int(time.time()))
-    return _fernet().encrypt(json.dumps(state).encode()).decode()
+    sealed = _fernet().encrypt(json.dumps(state).encode()).decode()
+    if len(sealed) > 3800:  # browsers silently drop a cookie over 4 KB: the session would then be lost
+        log.warning("session cookie close to the 4 KB limit: %d bytes (remember=%s)", len(sealed), bool(state.get("rm")))
+    return sealed
 
 
 def current(token):
@@ -349,7 +352,10 @@ def current(token):
                 raise ValueError("login too old")
             session = UserSession.from_state(state)
             session.issued_at = state["iat"]
-        except Exception:
+        except Exception as e:
+            # Why a session is refused (never its content): no cookie, unreadable or expired, idle, too old.
+            reason = "no cookie" if not token else str(e) if isinstance(e, ValueError) else type(e).__name__
+            log.info("session refused: %s (cookie %d bytes)", reason, len(token or ""))
             raise HTTPException(401, "Session expirée, reconnectez-vous.")
         holder = _loaded.get()
         if holder is not None:

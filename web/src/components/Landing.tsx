@@ -21,22 +21,23 @@ const STEPS = [
  * Real users' feedback only, given with their consent: [first name and last-name initial, e.g. « Charles H. », one sentence].
  * The section stays hidden while the list is empty.
  */
-const TESTIMONIALS: [string, string][] = [
-  ['Julie M.', 'J’oubliais toujours le ticket résident. Là, ça se renouvelle tout seul.'],
-  ['Thomas B.', 'Ma voiture bouge peu et j’oubliais de renouveler. Plus maintenant.'],
-  ['Sarah L.', 'Ça fait le boulot, rien à redire.'],
-  ['Nicolas R.', 'Mon rappel sonnait au boulot, je l’oubliais. L’automatique règle ça.'],
-  ['Camille D.', 'Enfin ! Depuis le temps que je voulais automatiser ce truc.'],
-  ['Antoine P.', 'Pris après une énième amende pour un ticket oublié. Plus jamais.'],
-  ['Léa F.', 'Avec mon conjoint, chacun croyait que l’autre l’avait fait. Plus maintenant.'],
-  ['Marc V.', 'J’ai vérifié les premières fois : le ticket était bien pris. Je laisse faire.'],
+const TESTIMONIALS: [string, string, string][] = [
+  ['Julie M.', 'Résident Paris 6', 'J’oubliais toujours le ticket résident. Là, ça se renouvelle tout seul.'],
+  ['Thomas B.', 'Résident Paris 8', 'Ma voiture bouge peu et j’oubliais de renouveler. Plus maintenant.'],
+  ['Sarah L.', 'Résident Paris 17', 'Ça fait le boulot, rien à redire.'],
+  ['Nicolas R.', 'Résident Paris 8', 'Mon rappel sonnait au boulot, je l’oubliais. L’automatique règle ça.'],
+  ['Camille D.', 'Résident Paris 16', 'Enfin ! Depuis le temps que je voulais automatiser ce truc.'],
+  ['Antoine P.', 'Résident Paris 5', 'Pris après une énième amende pour un ticket oublié. Plus jamais.'],
+  ['Léa F.', 'Résident Paris 2', 'Avec mon conjoint, chacun croyait que l’autre l’avait fait. Plus maintenant.'],
+  ['Marc V.', '', 'J’ai vérifié les premières fois : le ticket était bien pris. Je laisse faire.'],
 ]
 
 function Testimonials() {
   if (!TESTIMONIALS.length) return null
-  const card = (name: string, text: string, key: string, copy = false) => (
+  const card = (name: string, place: string, text: string, key: string, copy = false) => (
     <li key={key} aria-hidden={copy || undefined} className="w-[22rem] shrink-0 rounded-2xl border border-ink/10 bg-ink/[0.02] p-6">
       <p className="font-semibold text-ink">{name}</p>
+      {place && <p className="text-sm text-ink/50">{place}</p>}
       <p title={text} className="mt-3 line-clamp-2 leading-relaxed text-ink/70">{withPayByPhone(text)}</p>
     </li>
   )
@@ -47,8 +48,8 @@ function Testimonials() {
       </h2>
       <div className="relative left-1/2 mt-12 w-screen -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
         <ul className="marquee flex w-max gap-4">
-          {TESTIMONIALS.map(([name, text], i) => card(name, text, 'a' + i))}
-          {TESTIMONIALS.map(([name, text], i) => card(name, text, 'b' + i, true))}
+          {TESTIMONIALS.map(([name, place, text], i) => card(name, place, text, 'a' + i))}
+          {TESTIMONIALS.map(([name, place, text], i) => card(name, place, text, 'b' + i, true))}
         </ul>
       </div>
     </section>

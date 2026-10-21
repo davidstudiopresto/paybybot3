@@ -108,9 +108,9 @@ function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
 const KICKER = 'text-[0.78rem] font-medium tracking-[0.19em] text-[#2a66d1] uppercase'
 
 const STEPS = [
-  ['Connectez PayByPhone', 'Vos identifiants habituels suffisent. Votre mot de passe n’est jamais enregistré.'],
+  ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
   ['Activez le renouvellement', 'Votre plaque et votre carte sont retrouvées toutes seules. Rien à saisir.'],
-  ['Vous êtes tranquille', 'Chaque ticket est repris dès qu’il expire, jour et nuit, même téléphone éteint.'],
+  ['Vous êtes tranquilles', 'Le forfait résident est repayé à chaque échéance, même téléphone éteint.'],
 ]
 
 const GUARANTEES = [

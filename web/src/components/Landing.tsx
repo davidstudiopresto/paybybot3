@@ -43,7 +43,7 @@ function Testimonials() {
   )
   return (
     <section className="flex flex-col justify-center py-24 lg:min-h-[calc(100dvh-4rem)] lg:py-20" aria-label="Ils nous font confiance">
-      <h2 className="text-center font-heading text-[2.4rem] leading-[1.08] font-bold tracking-[-0.04em] text-[#2b2f3a] sm:text-[3.2rem] lg:text-[4rem]">
+      <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
         Ils nous font confiance.
       </h2>
       <div className="relative left-1/2 mt-16 w-screen lg:mt-24 -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
@@ -116,7 +116,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
         {/* Almost a full screen on a computer: three centered steps, each an icon in a ring with its number,
             joined by a thin line. */}
         <section id="comment" className="flex scroll-mt-16 flex-col justify-center py-24 lg:min-h-[calc(100dvh-4rem)] lg:py-20">
-          <h2 className="text-center font-heading text-[2.4rem] leading-[1.08] font-bold tracking-[-0.04em] text-[#2b2f3a] sm:text-[3.2rem] lg:text-[4rem]">
+          <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
             Comment ça marche
           </h2>
           <ol className="relative mt-16 grid gap-14 lg:mt-24 lg:grid-cols-3 lg:gap-12">

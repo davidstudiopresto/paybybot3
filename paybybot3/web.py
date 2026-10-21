@@ -50,10 +50,10 @@ SESSION_MAX = 24 * 3600  # ...and any login after 24 hours
 REMEMBER = 30 * 24 * 3600  # "Se souvenir de moi": 30 days
 LOGIN_LIMITS = (("ip", 50), ("user", 20))  # attempts per 15 minutes, per device and per account
 PARIS = ZoneInfo("Europe/Paris")
-MAIL_FROM = os.environ.get("PAYBYBOT_MAIL_FROM", "PaybyBot <contact@paybybot.fr>")
+MAIL_FROM = os.environ.get("PAYBYBOT_MAIL_FROM", "PayByBot <contact@paybybot.fr>")
 MAIL_REPLY_TO = os.environ.get("PAYBYBOT_MAIL_REPLY_TO", "contact@paybybot.fr")
 APP_URL = os.environ.get("PAYBYBOT_URL", "https://paybybot.vercel.app")
-RELOGIN = ("Votre connexion PayByPhone a expiré : reconnectez-vous sur PaybyBot pour relancer "
+RELOGIN = ("Votre connexion PayByPhone a expiré : reconnectez-vous sur PayByBot pour relancer "
            "le renouvellement automatique.")
 
 app = FastAPI(title="paybybot3", docs_url=None, redoc_url=None)
@@ -311,7 +311,7 @@ def _secrets():
 
 def _local_secret():
     """On a personal computer: a key made once and kept next to the config, readable by this user only.
-    It seals the "Se souvenir de moi" cookie, so a restart of PaybyBot does not log out."""
+    It seals the "Se souvenir de moi" cookie, so a restart of PayByBot does not log out."""
     path = Path("~/.config/paybybot3-web.key").expanduser()
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -397,7 +397,7 @@ SECURITY_HEADERS = {
 
 
 def same_origin(request):
-    """State-changing calls must come from PaybyBot's own pages."""
+    """State-changing calls must come from PayByBot's own pages."""
     origin = request.headers.get("origin")
     if origin:
         return origin.split("://", 1)[-1] == request.headers.get("host")
@@ -514,7 +514,7 @@ class Unconfirmed(Exception):
     """PayByPhone accepted the payment request but no parking session showed up."""
 
 
-BANK_CHECK = ("Votre banque a demandé de valider ce paiement (3-D Secure) : PaybyBot ne peut pas le faire à votre "
+BANK_CHECK = ("Votre banque a demandé de valider ce paiement (3-D Secure) : PayByBot ne peut pas le faire à votre "
               "place. Si vous l'avez validé dans l'application de votre banque, le ticket apparaîtra dans PayByPhone. "
               "Sinon, choisissez dans PayByPhone une carte qui ne demande pas de validation à chaque paiement, puis "
               "relancez le renouvellement.")
@@ -674,7 +674,7 @@ def money_text(cost):
     return ("%.2f €" % float(cost["amount"])).replace(".", ",")
 
 
-RENEWAL_FOOTER = ("Vous recevez cet e-mail parce que vous avez activé le renouvellement automatique sur PaybyBot. Pour ne "
+RENEWAL_FOOTER = ("Vous recevez cet e-mail parce que vous avez activé le renouvellement automatique sur PayByBot. Pour ne "
                   "plus en recevoir, retirez votre adresse ou arrêtez le renouvellement depuis l'application.")
 
 
@@ -682,7 +682,7 @@ SITE_URL = "https://paybybot.fr"
 
 
 def email_html(title, lines, button=None, footer=RENEWAL_FOOTER, code=None):
-    """The PaybyBot look for transactional e-mails: logo, white card, blue button, legal footer."""
+    """The PayByBot look for transactional e-mails: logo, white card, blue button, legal footer."""
     from html import escape
 
     font = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
@@ -703,14 +703,14 @@ def email_html(title, lines, button=None, footer=RENEWAL_FOOTER, code=None):
         '<div style="margin:0;padding:32px 16px;background:#ffffff;%s">'
         '<div style="max-width:520px;margin:0 auto">'
         '<p style="margin:0 0 18px 4px"><a href="%s" style="text-decoration:none">'
-        '<img src="%s/brand/paybybot-logo.png" width="120" alt="PaybyBot" style="display:block;border:0;height:auto"></a></p>'
+        '<img src="%s/brand/paybybot-logo.png" width="120" alt="PayByBot" style="display:block;border:0;height:auto"></a></p>'
         '<div style="background:#ffffff;border:1px solid #e6e8ee;border-radius:16px;padding:32px 28px">'
         '<h1 style="margin:0 0 16px;font-size:23px;line-height:1.25;letter-spacing:-0.3px;color:#111111">%s</h1>%s%s'
         "</div>"
         '<p style="margin:20px 4px 0;font-size:12.5px;line-height:1.55;color:#7a8091">%s</p>'
         '<p style="margin:10px 4px 0;font-size:12.5px;line-height:1.55;color:#7a8091">'
-        'PaybyBot · Studio Presto · <a href="mailto:%s" style="color:#7a8091">%s</a> · '
-        '<a href="%s" style="color:#7a8091">paybybot.fr</a><br>PaybyBot est un service indépendant de PayByPhone.</p>'
+        'PayByBot · Studio Presto · <a href="mailto:%s" style="color:#7a8091">%s</a> · '
+        '<a href="%s" style="color:#7a8091">paybybot.fr</a><br>PayByBot est un service indépendant de PayByPhone.</p>'
         "</div></div>"
         % (font, SITE_URL, SITE_URL, escape(title), body, cta, escape(footer), MAIL_REPLY_TO, MAIL_REPLY_TO, SITE_URL)
     )
@@ -744,7 +744,7 @@ def notify(details, event, **info):
     if not to:
         return
     car = "%s, zone %s" % (plate_text(details.get("plate")), details.get("location"))
-    open_app = ("Ouvrir PaybyBot", APP_URL)
+    open_app = ("Ouvrir PayByBot", APP_URL)
     rule = rule_of(details)
     if event == "activated" and rule:
         lines = ["Les tickets automatiques sont activés pour %s, %s." % (car, rule_text(rule))]
@@ -779,7 +779,7 @@ def notify(details, event, **info):
         send_email(to, "Action requise · renouvellement %s" % plate_text(details.get("plate")),
                    "Le renouvellement a besoin de vous",
                    ["Le renouvellement automatique pour %s n'a pas pu payer :" % car, info.get("message", ""),
-                    "Ouvrez PaybyBot pour le relancer, et vérifiez votre stationnement dans l'application PayByPhone."],
+                    "Ouvrez PayByBot pour le relancer, et vérifiez votre stationnement dans l'application PayByPhone."],
                    open_app)
 
 
@@ -982,7 +982,7 @@ TRIAL_DAYS = 30  # one free month for every new account
 
 
 def load_account(s):
-    """The PaybyBot account of a session: e-mail given at sign-up and home zone added by hand."""
+    """The PayByBot account of a session: e-mail given at sign-up and home zone added by hand."""
     if HOSTED and not s.demo:
         data = store("account_get", p_owner=owner_id(s.username))
         return json.loads(_fernet("account").decrypt(data.encode())) if data else {}
@@ -1019,7 +1019,7 @@ def save_account(s, patch):
 
 
 def check_login_rate(request, username):
-    """Hosted: refuse bursts of login attempts (password guessing through PaybyBot)."""
+    """Hosted: refuse bursts of login attempts (password guessing through PayByBot)."""
     ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
     keys = {"ip": hmac.new(_subkey(_secrets()[0], "rate"), ip.encode(), hashlib.sha256).hexdigest(),
             "user": owner_id(username.strip().lower())}
@@ -1288,13 +1288,13 @@ def login(body: Login, request: Request, response: Response):
         exists = guarded(lambda: has_account(session))
         if body.signup and exists:
             log.info("sign-up refused: account already exists for %s", masked)
-            raise HTTPException(409, "Un compte PaybyBot existe déjà pour ce compte PayByPhone.")
+            raise HTTPException(409, "Un compte PayByBot existe déjà pour ce compte PayByPhone.")
         if not body.signup and not exists and not is_admin(session):  # online, logging in needs a sign-up first
             log.info("login refused: no account yet for %s", masked)
-            raise HTTPException(404, "Aucun compte PaybyBot pour ce compte PayByPhone.")
+            raise HTTPException(404, "Aucun compte PayByBot pour ce compte PayByPhone.")
     if body.signup and not demo:  # the account is created once the e-mail is confirmed with a code
         # No card saved on PayByPhone does not stop the sign-up: the account then asks for one, full screen.
-        # PaybyBot is for residents: at least one vehicle must have the resident rate on PayByPhone.
+        # PayByBot is for residents: at least one vehicle must have the resident rate on PayByPhone.
         zone = guarded(lambda: resident_home_zone(session))  # from PayByPhone only, never typed
         if not zone:
             log.info("sign-up refused: no resident vehicle for %s", masked)
@@ -1325,6 +1325,8 @@ def login(body: Login, request: Request, response: Response):
             log.warning("could not save the account e-mail: %s", e)
     set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
+    if HOSTED and not demo and is_admin(session):
+        log_card_status(session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -1335,7 +1337,7 @@ class SignupCheck(BaseModel):
 @app.post("/api/signup/check")
 def signup_check(body: SignupCheck, request: Request):
     """Tell the sign-up page, as soon as the number is typed, that this account is already signed up.
-    Limited per device, since it reveals whether a number uses PaybyBot."""
+    Limited per device, since it reveals whether a number uses PayByBot."""
     if not HOSTED:
         return {"exists": False}
     ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
@@ -1377,12 +1379,12 @@ def mask_email(email):
 
 
 def send_code(email, code):
-    sent = send_email(email, "Votre code PaybyBot : %s" % code, "Votre code de vérification",
-                      ["Saisissez ce code sur PaybyBot pour finir votre inscription :",
+    sent = send_email(email, "Votre code PayByBot : %s" % code, "Votre code de vérification",
+                      ["Saisissez ce code sur PayByBot pour finir votre inscription :",
                        "Il est valable 10 minutes. Ne le communiquez à personne."],
                       code="%s %s" % (code[:3], code[3:]),
                       footer="Vous recevez cet e-mail parce que cette adresse a été indiquée pour créer un compte "
-                             "PaybyBot. Si ce n'est pas vous, ignorez-le : aucun compte ne sera créé.")
+                             "PayByBot. Si ce n'est pas vous, ignorez-le : aucun compte ne sera créé.")
     if not sent:
         if HOSTED:
             raise HTTPException(502, "L'e-mail n'a pas pu être envoyé. Vérifiez l'adresse et réessayez.")
@@ -1708,7 +1710,7 @@ def vehicle_resident_rate(s, zone, vehicle):
 
 def resident_vehicles(s, zone):
     """The account's vehicles with a resident rate in the home zone, cars first, with that rate: [(vehicle, rate)].
-    PaybyBot only deals with these « riverain » vehicles."""
+    PayByBot only deals with these « riverain » vehicles."""
     vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]
     vehicles.sort(key=lambda v: bool(TWO_WHEELS.search(str(v.get("type") or ""))))
     found = []
@@ -2100,7 +2102,7 @@ class CheckoutDone(BaseModel):
 
 
 ACTIVE_STATUSES = ("trialing", "active", "past_due")
-PLANS = {"monthly": ("month", "PaybyBot · Mensuel"), "yearly": ("year", "PaybyBot · Annuel")}  # price: plan_cents
+PLANS = {"monthly": ("month", "PayByBot · Mensuel"), "yearly": ("year", "PayByBot · Annuel")}  # price: plan_cents
 
 
 def stripe(method, path, **data):
@@ -2133,7 +2135,7 @@ UNPAID_STATUSES = ("past_due", "unpaid", "incomplete")
 BLOCKED_STATES = ("unpaid", "trial_over")
 GRACE_DAYS = 7  # after a refused charge, renewals keep going this long while the customer fixes the card
 DUNNING_DAYS = (0, 3, 6, 7)  # days after the refused charge an e-mail goes out; the last says renewals stopped
-BLOCKED = ("Compte bloqué : l'abonnement PaybyBot n'est pas réglé. Le ticket en cours reste valable, le suivant "
+BLOCKED = ("Compte bloqué : l'abonnement PayByBot n'est pas réglé. Le ticket en cours reste valable, le suivant "
            "ne sera pas payé.")
 UNLOCK_TTL = 30 * 86400  # how long the "Débloquer mon compte" link of an e-mail works
 
@@ -2201,21 +2203,21 @@ def notify_blocked(details, state):
     if not to:
         return
     car = "%s, zone %s" % (plate_text(details.get("plate")), details.get("location"))
-    first = ("Le dernier paiement de votre abonnement PaybyBot n'a pas abouti : votre compte est bloqué."
+    first = ("Le dernier paiement de votre abonnement PayByBot n'a pas abouti : votre compte est bloqué."
              if state == "unpaid" else
              "Votre mois offert est terminé et aucun abonnement n'a été souscrit : votre compte est bloqué.")
-    send_email(to, "Compte PaybyBot bloqué · paiement requis",
+    send_email(to, "Compte PayByBot bloqué · paiement requis",
                "Paiement refusé : compte bloqué" if state == "unpaid" else "Votre compte est bloqué",
                [first,
                 "Votre ticket en cours reste valable jusqu'à sa fin, mais le renouvellement suivant pour %s "
                 "n'aura pas lieu." % car,
                 "Débloquez votre compte : le renouvellement reprend tout seul dès que le paiement est fait."],
                ("Débloquer mon compte", unlock_link(details["owner"])),
-               footer="Vous recevez cet e-mail parce que vous avez un renouvellement automatique sur PaybyBot.")
+               footer="Vous recevez cet e-mail parce que vous avez un renouvellement automatique sur PayByBot.")
 
 
 def subscription_owner(sub):
-    """The PaybyBot owner a subscription belongs to: its metadata, else the Checkout session that created it (then
+    """The PayByBot owner a subscription belongs to: its metadata, else the Checkout session that created it (then
     written on the subscription for next time)."""
     owner = (sub.get("metadata") or {}).get("owner")
     if owner:
@@ -2232,25 +2234,25 @@ def notify_unpaid(to, link, step, end):
     left = GRACE_DAYS - step
     deadline = paris_text(end)
     button = ("Régulariser mon paiement", link)
-    footer = "Vous recevez cet e-mail parce que vous avez un abonnement PaybyBot."
+    footer = "Vous recevez cet e-mail parce que vous avez un abonnement PayByBot."
     if step >= GRACE_DAYS:
-        send_email(to, "Renouvellement PaybyBot arrêté · paiement requis", "Renouvellement arrêté",
-                   ["Le paiement de votre abonnement PaybyBot n'a pas été régularisé : le renouvellement automatique "
+        send_email(to, "Renouvellement PayByBot arrêté · paiement requis", "Renouvellement arrêté",
+                   ["Le paiement de votre abonnement PayByBot n'a pas été régularisé : le renouvellement automatique "
                     "est arrêté.",
                     "Votre ticket en cours reste valable jusqu'à sa fin, mais le suivant ne sera pas payé.",
                     "Régularisez : le renouvellement reprend tout seul dès que le paiement est fait."],
                    button, footer=footer)
         return
     if step == 0:
-        subject, title = "Paiement PaybyBot refusé · mettez à jour votre carte", "Votre paiement n'est pas passé"
-        first = ("Le prélèvement de votre abonnement PaybyBot a été refusé (carte expirée, opposition ou plafond "
+        subject, title = "Paiement PayByBot refusé · mettez à jour votre carte", "Votre paiement n'est pas passé"
+        first = ("Le prélèvement de votre abonnement PayByBot a été refusé (carte expirée, opposition ou plafond "
                  "atteint, par exemple).")
     elif left > 1:
-        subject, title = "Rappel · paiement PaybyBot en attente", "Plus que %d jours pour régulariser" % left
-        first = "Le paiement de votre abonnement PaybyBot est toujours en attente."
+        subject, title = "Rappel · paiement PayByBot en attente", "Plus que %d jours pour régulariser" % left
+        first = "Le paiement de votre abonnement PayByBot est toujours en attente."
     else:
-        subject, title = "Dernier jour · paiement PaybyBot en attente", "Dernier jour pour régulariser"
-        first = "Le paiement de votre abonnement PaybyBot est toujours en attente."
+        subject, title = "Dernier jour · paiement PayByBot en attente", "Dernier jour pour régulariser"
+        first = "Le paiement de votre abonnement PayByBot est toujours en attente."
     send_email(to, subject, title,
                [first,
                 "Vos renouvellements continuent jusqu'au %s. Sans paiement d'ici là, ils s'arrêteront." % deadline,
@@ -2318,8 +2320,8 @@ def checkout_url(owner, account, plan, success_url):
             # A simple page: euros only (no currency switch) and cards only (Apple Pay / Google Pay included,
             # no Klarna or Revolut Pay).
             "adaptive_pricing[enabled]": "false", "payment_method_types[0]": "card",
-            # PaybyBot's own look on Stripe's page, without changing the Studio Presto account branding.
-            "branding_settings[display_name]": "PaybyBot",
+            # PayByBot's own look on Stripe's page, without changing the Studio Presto account branding.
+            "branding_settings[display_name]": "PayByBot",
             "branding_settings[logo][type]": "url", "branding_settings[logo][url]": base + "/brand/paybybot-logo.png",
             "branding_settings[button_color]": "#1d4ea3", "branding_settings[font_family]": "inter",
             "branding_settings[border_style]": "rounded"}
@@ -2506,7 +2508,7 @@ def portal_configuration():
     if found:
         return found[0]["id"]
     return stripe("POST", "billing_portal/configurations", **{
-        "business_profile[headline]": "PaybyBot : gérez votre abonnement",
+        "business_profile[headline]": "PayByBot : gérez votre abonnement",
         "features[invoice_history][enabled]": "true",
         "features[payment_method_update][enabled]": "true",
         "features[subscription_cancel][enabled]": "true",
@@ -2533,6 +2535,22 @@ def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None and k != "zone"}
     account = guarded(lambda: save_account(s, patch))
     return {"email": account.get("email") or "", "zone": account.get("zone") or None}
+
+
+def log_card_status(session):
+    """Temporary, owner's account only: what PayByPhone says of each card's verification (statuses and codes,
+    never a card number), to see whether a card can be checked without paying."""
+    try:
+        accounts = session.call("get_payment_accounts") or {}
+        for card in accounts.get("paymentCards") or []:
+            try:
+                info = session.call("get_payment_account_status", card["paymentAccountId"]) or {}
+                info.pop("paymentAccountId", None)
+                log.info("card status probe: %s", json.dumps(info, default=str)[:1500])
+            except Exception as e:
+                log.info("card status probe failed: %s", str(e)[:600])
+    except Exception as e:
+        log.info("card status probe: no accounts: %s", str(e)[:300])
 
 
 def is_admin(s):
@@ -2809,13 +2827,13 @@ def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
         guarded(lambda: store("renewal_delete_owner", p_owner=owner_id(s.username)))
         guarded(lambda: store("account_delete", p_owner=owner_id(s.username)))
     if email and not s.demo:
-        send_email(email, "Compte PaybyBot supprimé", "Votre compte est supprimé",
-                   ["Votre compte PaybyBot a été supprimé à votre demande. Les renouvellements automatiques sont "
-                    "arrêtés et tout ce que PaybyBot gardait pour vous est effacé.",
+        send_email(email, "Compte PayByBot supprimé", "Votre compte est supprimé",
+                   ["Votre compte PayByBot a été supprimé à votre demande. Les renouvellements automatiques sont "
+                    "arrêtés et tout ce que PayByBot gardait pour vous est effacé.",
                     "Les tickets déjà en cours restent valables jusqu'à leur fin. Votre compte PayByPhone n'est pas "
                     "modifié.",
                     "Vous n'avez rien demandé ? Écrivez-nous à %s ou répondez simplement à cet e-mail." % MAIL_REPLY_TO],
-                   footer="Vous recevez cet e-mail parce que votre compte PaybyBot vient d'être supprimé.")
+                   footer="Vous recevez cet e-mail parce que votre compte PayByBot vient d'être supprimé.")
     s.account = {}
     s.autopilots.clear()
     s.logged_out = True  # the middleware must not write the cookie back

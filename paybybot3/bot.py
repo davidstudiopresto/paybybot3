@@ -195,6 +195,32 @@ class Bot:
             "getPaymentAccountsV1"
         ]
 
+    def get_payment_account_status(self, paymentAccountId):
+        """The card's verification by PayByPhone when it was added (no charge): status, failure reason, codes."""
+        query = """query GetPaymentAccountByIdV1($input: GetPaymentAccountByIdInput!) {
+  getPaymentAccountByIdV1(input: $input) {
+    paymentAccountId
+    accountType
+    expiryMonth
+    expiryYear
+    creationStatus {
+      status
+      failureReason
+      accountStatusDetails {
+        code
+        reasonCode
+        reasonMessage
+      }
+      cardValidations {
+        gateway
+        countryCode
+        distributionChannel
+      }
+    }
+  }
+}"""
+        return self._graphql(query, {"input": {"paymentAccountId": paymentAccountId}})["getPaymentAccountByIdV1"]
+
     def _resolve_payment(self, paymentAccountId):
         if not paymentAccountId:
             return "", ""

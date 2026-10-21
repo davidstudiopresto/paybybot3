@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Check, Loader2, Mail, Pause, Play, Repeat } from 'lucide-react'
+import { Check, Loader2, Mail, Pause, Play, Repeat, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
@@ -554,11 +554,27 @@ function RiverainDialog({
           {error && (
             <p role="alert" className="rounded-xl border-l-4 border-destructive bg-destructive/8 px-4 py-3 text-sm whitespace-pre-line text-destructive">
               {error}
+              {cardRefused && cards.length > 1 && (
+                <span className="mt-2 block font-semibold">Vous pouvez aussi choisir votre autre carte ci-dessus, puis réessayer.</span>
+              )}
             </p>
           )}
 
-          <button onClick={activate} disabled={!ok.length || loading || saving || checking || cardRefused} className={ui.primary}>
-            {checking ? (
+          {/* After a refusal: retry on purpose (once the card is checked or changed in PayByPhone, or with the other
+              card chosen above), never by accident. */}
+          <button
+            onClick={() => {
+              setError(null)
+              activate()
+            }}
+            disabled={!ok.length || loading || saving || checking}
+            className={ui.primary}
+          >
+            {cardRefused && !checking ? (
+              <>
+                <RotateCw className="size-5" /> Réessayer
+              </>
+            ) : checking ? (
               <>
                 <Loader2 className="size-5 animate-spin" /> Vérification du paiement avec PayByPhone…
               </>

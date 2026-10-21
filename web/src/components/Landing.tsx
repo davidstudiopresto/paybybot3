@@ -65,7 +65,7 @@ function Testimonials() {
   )
   return (
     <section className="flex flex-col justify-center pt-10 pb-24 lg:min-h-[calc(85dvh-4rem)] lg:pt-12 lg:pb-20" aria-label="Ils nous font confiance">
-      <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+      <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
         Ils nous font confiance.
       </h2>
       <div className="relative left-1/2 mt-16 w-screen lg:mt-24 -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
@@ -96,7 +96,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
           two lines (the first in the brand gradient), then the call to action. */}
       <section className="rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-20">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center text-center">
-          <h1 className="font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+          <h1 className="font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
             <span className="block">de votre stationnement résident</span>
             <span className="block">sur <PayByPhone /></span>
@@ -128,7 +128,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
         {/* Almost a full screen on a computer: three centered steps, each an icon in a ring with its number,
             joined by a thin line. */}
         <section id="comment" className="flex scroll-mt-16 flex-col justify-center pt-24 pb-10 lg:min-h-[calc(85dvh-4rem)] lg:pt-20 lg:pb-12">
-          <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             Comment ça marche
           </h2>
           <ol className="relative mt-16 grid gap-14 lg:mt-24 lg:grid-cols-3 lg:gap-12">
@@ -153,7 +153,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
 
         <section id="fonctionnalites" className="scroll-mt-16 py-10 lg:py-12">
-          <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             Fonctionnalités
           </h2>
           <Rows items={FEATURES} className="mt-12 lg:mt-16" />
@@ -260,7 +260,7 @@ const FAQ_TITLE = 'Questions fréquentes.'
 
 function FaqTitle({ as: Tag = 'h1' }: { as?: 'h1' | 'h2' }) {
   return (
-    <Tag className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+    <Tag className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
       {FAQ_TITLE}
     </Tag>
   )

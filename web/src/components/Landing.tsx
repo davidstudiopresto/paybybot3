@@ -42,16 +42,22 @@ function Testimonials() {
     </li>
   )
   return (
-    <section className="mt-24 lg:mt-36" aria-label="Ils nous font confiance">
-      <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+    <section className="flex flex-col justify-center py-24 lg:min-h-[calc(100dvh-4rem)] lg:py-20" aria-label="Ils nous font confiance">
+      <h2 className="text-center font-heading text-[2.4rem] leading-[1.08] font-bold tracking-[-0.04em] text-[#2b2f3a] sm:text-[3.2rem] lg:text-[4rem]">
         Ils nous font confiance.
       </h2>
-      <div className="relative left-1/2 mt-12 w-screen -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
+      <div className="relative left-1/2 mt-16 w-screen lg:mt-24 -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
         <ul className="marquee flex w-max gap-4">
           {TESTIMONIALS.map(([name, place, text], i) => card(name, place, text, 'a' + i))}
           {TESTIMONIALS.map(([name, place, text], i) => card(name, place, text, 'b' + i, true))}
         </ul>
       </div>
+      <a
+        href="#/inscription"
+        className={cn('mx-auto mt-14 w-full shadow-[0_14px_30px_-12px_var(--eu)] sm:w-fit sm:px-10 lg:mt-20 lg:h-14 lg:rounded-[12px] lg:text-lg', ui.primary)}
+      >
+        Essayer gratuitement <ArrowRight className="size-5" />
+      </a>
     </section>
   )
 }

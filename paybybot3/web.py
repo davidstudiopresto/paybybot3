@@ -1325,7 +1325,7 @@ def login(body: Login, request: Request, response: Response):
             log.warning("could not save the account e-mail: %s", e)
     set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
-    if HOSTED and not demo and is_admin(session):
+    if HOSTED and not demo:  # temporary: is a saved card's verification readable without paying?
         log_card_status(session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
@@ -2538,7 +2538,7 @@ def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
 
 
 def log_card_status(session):
-    """Temporary, owner's account only: what PayByPhone says of each card's verification (statuses and codes,
+    """Temporary: what PayByPhone says of each card's verification (statuses and codes,
     never a card number), to see whether a card can be checked without paying."""
     try:
         accounts = session.call("get_payment_accounts") or {}

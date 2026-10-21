@@ -535,7 +535,7 @@ def check_payable(session, location, rate, plate, payment_account_id):
     if not chosen or chosen.get("parkingNotAllowedReason"):
         reason = (chosen or {}).get("parkingNotAllowedReason")
         raise NotPayable(RESIDENT_REFUSED % (" (motif PayByPhone : %s)" % reason if reason else ""))
-    cards = [p["id"] for p in normalize_accounts(session.call("get_payment_accounts") or {})]
+    cards = [p["id"] for p in normalize_accounts(session.call("get_payment_accounts") or {}) if p["kind"] == "card"]
     if not cards:
         raise NotPayable(NO_CARD)
     return payment_account_id if payment_account_id in cards else cards[0]
@@ -1955,7 +1955,7 @@ def debug(pbb_session: str = Cookie(None)):
 
 CARD_NEEDS_CHECK = ("Votre banque demande de valider chaque paiement de cette carte (3-D Secure) : le renouvellement "
                     "automatique ne peut pas fonctionner avec elle, personne n'est là pour valider. Choisissez dans "
-                    "PayByPhone une autre carte (ou PayPal), puis réessayez. Si vous avez validé ce paiement, votre "
+                    "PayByPhone une autre carte bancaire, puis réessayez. Si vous avez validé ce paiement, votre "
                     "ticket de cette semaine est bien pris.")
 
 

@@ -214,194 +214,168 @@ function useStickyCta(ref: RefObject<HTMLElement | null>) {
 
 type Question = [string, ReactNode]
 
-/** The FAQ by topic, like a help centre: what PayByBot does, which tickets, special cases, pauses, security. */
-const SECTIONS: [string, Question[]][] = [
+const QUESTIONS: Question[] = [
   [
-    'Comment ça marche ?',
-    [
-      [
-        'Combien ça coûte ?',
-        <>
-          Le prix dépend de votre véhicule et de votre zone de résidence : il est calculé à partir de votre compte{' '}
-          <PayByPhone /> et affiché avant tout paiement. Le premier mois est offert, et l'offre annuelle coûte 20 % de moins.
-          <a href="#/tarifs" className={cn(ui.primary, 'mt-5 h-12 w-fit px-6 text-base no-underline! hover:text-white! hover:no-underline!')}>
-            Découvrir mon prix <ArrowRight className="size-5" />
-          </a>
-        </>,
-      ],
-      [
-        'Que fait PayByBot exactement ?',
-        <>
-          PayByBot renouvelle chaque semaine votre ticket résident sur votre compte <PayByPhone />. Vous l'activez une
-          fois, puis chaque nouvelle semaine est payée avant la fin de la précédente : votre véhicule reste couvert sans
-          que vous ayez à y penser.
-        </>,
-      ],
-      [
-        'Quelle différence avec PayByPhone ?',
-        <>
-          <PayByPhone /> vend les tickets, PayByBot les commande pour vous au bon moment. Les tickets restent ceux de votre
-          compte <PayByPhone />, payés avec la carte que vous y avez enregistrée : PayByBot fonctionne par-dessus ce compte
-          et en a besoin.
-        </>,
-      ],
-      [
-        'Le ticket coûte-t-il plus cher ?',
-        <>
-          Non. Il est payé à <PayByPhone /> au même prix que si vous le preniez vous-même dans l'application. L'abonnement
-          PayByBot est la seule dépense en plus.
-        </>,
-      ],
-      [
-        "Faut-il installer l'application PayByPhone ?",
-        <>
-          Non. Il vous faut en revanche un compte <PayByPhone /> avec votre véhicule, votre tarif résident activé et une
-          carte bancaire enregistrée.
-        </>,
-      ],
-      [
-        'Mon téléphone doit-il rester allumé ?',
-        <>Non. Le renouvellement part de nos serveurs : votre téléphone peut être éteint ou sans réseau.</>,
-      ],
-      [
-        'Quand mon ticket est-il payé ?',
-        <>
-          La veille de la fin de votre ticket, en le prolongeant d'une semaine. Si <PayByPhone /> ne permet pas de
-          prolonger ce ticket, la nouvelle semaine est achetée dès qu'il se termine.
-        </>,
-      ],
-      [
-        'Comment savoir que c’est fait ?',
-        <>
-          Vous recevez un e-mail à chaque paiement, et le ticket apparaît dans votre application <PayByPhone /> comme si
-          vous l'aviez pris vous-même.
-        </>,
-      ],
-      [
-        'Quelles informations me demandez-vous ?',
-        <>PayByBot récupère uniquement les informations de votre compte <PayByPhone />.</>,
-      ],
-    ],
+    'Que fait PayByBot exactement ?',
+    <>
+      PayByBot renouvelle chaque semaine votre ticket résident sur votre compte <PayByPhone />. Vous l'activez une
+      fois, puis chaque nouvelle semaine est payée avant la fin de la précédente : votre véhicule reste couvert sans
+      que vous ayez à y penser.
+    </>,
   ],
   [
-    'Types de ticket',
-    [
-      [
-        'Quels tickets PayByBot renouvelle-t-il ?',
-        <>
-          Le ticket résident à la semaine, à Paris. Les autres tarifs (professionnel, handicap, deux-roues électrique…)
-          ne sont pas proposés pour l'instant.
-        </>,
-      ],
-      [
-        'Pour quels véhicules ?',
-        <>
-          Voiture, deux-roues ou utilitaire : tout véhicule de votre compte <PayByPhone /> qui a le tarif résident.
-        </>,
-      ],
-      [
-        "Et des tickets à l'heure ou à la journée ?",
-        <>Pas pour le moment : PayByBot renouvelle uniquement le forfait résident à la semaine.</>,
-      ],
-      ['Dans quelles villes ?', <>À Paris, dans les 20 arrondissements, pour le moment.</>],
-    ],
+    'Quelle différence avec PayByPhone ?',
+    <>
+      <PayByPhone /> vend les tickets, PayByBot les commande pour vous au bon moment. Les tickets restent ceux de votre
+      compte <PayByPhone />, payés avec la carte que vous y avez enregistrée : PayByBot fonctionne par-dessus ce compte
+      et en a besoin.
+    </>,
   ],
   [
-    'Cas spéciaux',
-    [
-      [
-        'Puis-je activer avec un ticket déjà en cours ?',
-        <>
-          Oui. Rien n'est payé en double : PayByBot attend la veille de la fin de votre ticket pour payer la semaine
-          suivante.
-        </>,
-      ],
-      [
-        'Et si j’ai plusieurs véhicules ?',
-        <>
-          Cochez-les au moment d'activer le renouvellement. Chaque véhicule a son propre renouvellement, que vous gérez à
-          part.
-        </>,
-      ],
-      [
-        'Et si je change de véhicule ou de zone ?',
-        <>
-          Mettez d'abord à jour votre véhicule ou votre carte résident dans <PayByPhone />, puis arrêtez et réactivez le
-          renouvellement dans PayByBot. Le prix de votre abonnement suit votre nouvelle situation.
-        </>,
-      ],
-    ],
+    'Le ticket coûte-t-il plus cher ?',
+    <>
+      Non. Il est payé à <PayByPhone /> au même prix que si vous le preniez vous-même dans l'application. L'abonnement
+      PayByBot est la seule dépense en plus.
+    </>,
   ],
   [
-    'Pauses',
-    [
-      [
-        'Et si je pars en vacances ?',
-        <>
-          Mettez le renouvellement en pause entre deux dates depuis votre tableau de bord : aucun ticket n'est payé
-          pendant la pause, et tout reprend seul à la fin.
-        </>,
-      ],
-      [
-        'Puis-je faire une pause sans date de fin ?',
-        <>
-          Oui : cochez « Pas de date de fin pour le moment ». Le renouvellement reste en pause jusqu'à ce que vous le
-          relanciez.
-        </>,
-      ],
-      [
-        'Puis-je programmer une pause à l’avance ?',
-        <>
-          Oui, choisissez simplement sa date de début. Une semaine déjà payée avant le début de la pause reste due.
-        </>,
-      ],
-      [
-        'Comment arrêter ?',
-        <>
-          Depuis le tableau de bord, « Gérer » puis « Arrêter le renouvellement ». Le ticket en cours reste valable jusqu'à
-          sa fin, et ce qui était gardé pour ce renouvellement est effacé.
-        </>,
-      ],
-    ],
+    "Faut-il installer l'application PayByPhone ?",
+    <>
+      Non. Il vous faut en revanche un compte <PayByPhone /> avec votre véhicule, votre tarif résident activé et une
+      carte bancaire enregistrée.
+    </>,
   ],
   [
-    'Sécurité',
-    [
-      [
-        'Mes données sont-elles protégées ?',
-        <>
-          Oui. Votre mot de passe n'est jamais enregistré et aucun numéro de carte n'est gardé : le paiement est fait par{' '}
-          <PayByPhone />. Pas de publicité, pas de traceur, et un clic suffit pour tout effacer.{' '}
-          <a href="#/securite">Tout le détail sur la sécurité</a>
-        </>,
-      ],
-      [
-        'Pourquoi mon mot de passe PayByPhone ?',
-        <>
-          Pour commander vos tickets, PayByBot se connecte à votre compte <PayByPhone />. Le mot de passe ne sert qu'à
-          cette connexion et n'est jamais enregistré : seule une clé de reconnexion est gardée, chiffrée, et effacée dès
-          que vous arrêtez.
-        </>,
-      ],
-      [
-        'PayByBot voit-il ma carte bancaire ?',
-        <>
-          Non. Votre carte est enregistrée chez <PayByPhone />, qui fait le paiement. PayByBot n'en voit que les derniers
-          chiffres, comme dans l'application, et ne garde aucun numéro.
-        </>,
-      ],
-      [
-        'Je préfère ne pas confier mon mot de passe',
-        <>
-          Si vous utilisez le même mot de passe ailleurs, changez d'abord celui de <PayByPhone /> : vous ne confierez ainsi
-          que l'accès à ce compte.
-        </>,
-      ],
-      [
-        'J’ai oublié mon mot de passe PayByPhone',
-        <>Réinitialisez-le dans l'application ou sur le site <PayByPhone />, puis connectez-vous à PayByBot avec le nouveau.</>,
-      ],
-    ],
+    'Combien ça coûte ?',
+    <>
+      Le prix dépend de votre véhicule et de votre zone de résidence : il est calculé à partir de votre compte{' '}
+      <PayByPhone /> et affiché avant tout paiement. Le premier mois est offert, et l'offre annuelle coûte 20 % de moins.
+      <a href="#/tarifs" className={cn(ui.primary, 'mt-5 h-12 w-fit px-6 text-base no-underline! hover:text-white! hover:no-underline!')}>
+        Découvrir mon prix <ArrowRight className="size-5" />
+      </a>
+    </>,
+  ],
+  [
+    'Mon téléphone doit-il rester allumé ?',
+    <>Non. Le renouvellement part de nos serveurs : votre téléphone peut être éteint ou sans réseau.</>,
+  ],
+  [
+    'Quand mon ticket est-il payé ?',
+    <>
+      La veille de la fin de votre ticket, en le prolongeant d'une semaine. Si <PayByPhone /> ne permet pas de
+      prolonger ce ticket, la nouvelle semaine est achetée dès qu'il se termine.
+    </>,
+  ],
+  [
+    'Comment savoir que c’est fait ?',
+    <>
+      Vous recevez un e-mail à chaque paiement, et le ticket apparaît dans votre application <PayByPhone /> comme si
+      vous l'aviez pris vous-même.
+    </>,
+  ],
+  [
+    'Quelles informations me demandez-vous ?',
+    <>PayByBot récupère uniquement les informations de votre compte <PayByPhone />.</>,
+  ],
+  [
+    'Quels tickets PayByBot renouvelle-t-il ?',
+    <>
+      Le ticket résident à la semaine, à Paris. Les autres tarifs (professionnel, handicap, deux-roues électrique…)
+      ne sont pas proposés pour l'instant.
+    </>,
+  ],
+  [
+    'Pour quels véhicules ?',
+    <>
+      Voiture, deux-roues ou utilitaire : tout véhicule de votre compte <PayByPhone /> qui a le tarif résident.
+    </>,
+  ],
+  [
+    "Et des tickets à l'heure ou à la journée ?",
+    <>Pas pour le moment : PayByBot renouvelle uniquement le forfait résident à la semaine.</>,
+  ],
+  ['Dans quelles villes ?', <>À Paris, dans les 20 arrondissements, pour le moment.</>],
+  [
+    'Puis-je activer avec un ticket déjà en cours ?',
+    <>
+      Oui. Rien n'est payé en double : PayByBot attend la veille de la fin de votre ticket pour payer la semaine
+      suivante.
+    </>,
+  ],
+  [
+    'Et si j’ai plusieurs véhicules ?',
+    <>
+      Cochez-les au moment d'activer le renouvellement. Chaque véhicule a son propre renouvellement, que vous gérez à
+      part.
+    </>,
+  ],
+  [
+    'Et si je change de véhicule ou de zone ?',
+    <>
+      Mettez d'abord à jour votre véhicule ou votre carte résident dans <PayByPhone />, puis arrêtez et réactivez le
+      renouvellement dans PayByBot. Le prix de votre abonnement suit votre nouvelle situation.
+    </>,
+  ],
+  [
+    'Et si je pars en vacances ?',
+    <>
+      Mettez le renouvellement en pause entre deux dates depuis votre tableau de bord : aucun ticket n'est payé
+      pendant la pause, et tout reprend seul à la fin.
+    </>,
+  ],
+  [
+    'Puis-je faire une pause sans date de fin ?',
+    <>
+      Oui : cochez « Pas de date de fin pour le moment ». Le renouvellement reste en pause jusqu'à ce que vous le
+      relanciez.
+    </>,
+  ],
+  [
+    'Puis-je programmer une pause à l’avance ?',
+    <>
+      Oui, choisissez simplement sa date de début. Une semaine déjà payée avant le début de la pause reste due.
+    </>,
+  ],
+  [
+    'Comment arrêter ?',
+    <>
+      Depuis le tableau de bord, « Gérer » puis « Arrêter le renouvellement ». Le ticket en cours reste valable jusqu'à
+      sa fin, et ce qui était gardé pour ce renouvellement est effacé.
+    </>,
+  ],
+  [
+    'Mes données sont-elles protégées ?',
+    <>
+      Oui. Votre mot de passe n'est jamais enregistré et aucun numéro de carte n'est gardé : le paiement est fait par{' '}
+      <PayByPhone />. Pas de publicité, pas de traceur, et un clic suffit pour tout effacer.{' '}
+      <a href="#/securite">Tout le détail sur la sécurité</a>
+    </>,
+  ],
+  [
+    'Pourquoi mon mot de passe PayByPhone ?',
+    <>
+      Pour commander vos tickets, PayByBot se connecte à votre compte <PayByPhone />. Le mot de passe ne sert qu'à
+      cette connexion et n'est jamais enregistré : seule une clé de reconnexion est gardée, chiffrée, et effacée dès
+      que vous arrêtez.
+    </>,
+  ],
+  [
+    'PayByBot voit-il ma carte bancaire ?',
+    <>
+      Non. Votre carte est enregistrée chez <PayByPhone />, qui fait le paiement. PayByBot n'en voit que les derniers
+      chiffres, comme dans l'application, et ne garde aucun numéro.
+    </>,
+  ],
+  [
+    'Je préfère ne pas confier mon mot de passe',
+    <>
+      Si vous utilisez le même mot de passe ailleurs, changez d'abord celui de <PayByPhone /> : vous ne confierez ainsi
+      que l'accès à ce compte.
+    </>,
+  ],
+  [
+    'J’ai oublié mon mot de passe PayByPhone',
+    <>Réinitialisez-le dans l'application ou sur le site <PayByPhone />, puis connectez-vous à PayByBot avec le nouveau.</>,
   ],
 ]
 
@@ -415,33 +389,26 @@ function FaqTitle({ as: Tag = 'h1' }: { as?: 'h1' | 'h2' }) {
   )
 }
 
-/** One question per line, a hairline between them, "+" turning into "×" when open; grouped by topic. */
+/** One question per line, a hairline between them, "+" turning into "×" when open. */
 function Faq({ className }: { className?: string }) {
   return (
-    <div className={cn('space-y-12', className)}>
-      {SECTIONS.map(([topic, questions]) => (
-        <section key={topic}>
-          <h3 className="mb-3 font-heading text-[1.25rem] font-semibold tracking-[-0.02em] text-ink sm:text-[1.4rem]">{topic}</h3>
-          <Accordion className="border-t border-ink/12">
-            {questions.map(([q, a]) => (
-              <AccordionItem key={q} value={q} className="border-b border-ink/12 not-last:border-b">
-                <AccordionTrigger className="group/q items-center gap-6 rounded-none py-6 text-[1.05rem] font-normal text-ink hover:no-underline focus-visible:ring-0 sm:text-[1.15rem] **:data-[slot=accordion-trigger-icon]:hidden">
-                  <span className="underline-offset-[6px] decoration-ink/60 group-hover/q:underline group-aria-expanded/accordion-trigger:underline">
-                    {withPayByPhone(q)}
-                  </span>
-                  <Plus
-                    aria-hidden
-                    strokeWidth={1.5}
-                    className="size-5 shrink-0 text-ink transition-transform duration-300 group-aria-expanded/accordion-trigger:rotate-45"
-                  />
-                </AccordionTrigger>
-                <AccordionContent className="max-w-[46rem] pb-8 text-[1.02rem] leading-[1.7] text-ink/75 sm:text-[1.08rem]">{a}</AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </section>
+    <Accordion className={cn('border-t border-ink/12', className)}>
+      {QUESTIONS.map(([q, a]) => (
+        <AccordionItem key={q} value={q} className="border-b border-ink/12 not-last:border-b">
+          <AccordionTrigger className="group/q items-center gap-6 rounded-none py-6 text-[1.05rem] font-normal text-ink hover:no-underline focus-visible:ring-0 sm:text-[1.15rem] **:data-[slot=accordion-trigger-icon]:hidden">
+            <span className="underline-offset-[6px] decoration-ink/60 group-hover/q:underline group-aria-expanded/accordion-trigger:underline">
+              {withPayByPhone(q)}
+            </span>
+            <Plus
+              aria-hidden
+              strokeWidth={1.5}
+              className="size-5 shrink-0 text-ink transition-transform duration-300 group-aria-expanded/accordion-trigger:rotate-45"
+            />
+          </AccordionTrigger>
+          <AccordionContent className="max-w-[46rem] pb-8 text-[1.02rem] leading-[1.7] text-ink/75 sm:text-[1.08rem]">{a}</AccordionContent>
+        </AccordionItem>
       ))}
-    </div>
+    </Accordion>
   )
 }
 

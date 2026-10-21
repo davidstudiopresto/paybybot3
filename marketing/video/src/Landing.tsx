@@ -165,7 +165,7 @@ function Wordmark({ size, light }: { size: number; light?: boolean }) {
           color: 'transparent',
         }}
       >
-        by
+        By
       </span>
       Bot
     </span>
@@ -304,7 +304,7 @@ function Field({ label, value, focused }: { label: string; value: string; focuse
 const LOGIN_TAP = 72
 const RENEW_TAP = 142
 
-/** Sign in to PaybyBot with the PayByPhone account, then one tap on « Renouvellement automatique ». */
+/** Sign in to PayByBot with the PayByPhone account, then one tap on « Renouvellement automatique ». */
 function SetUpScreen() {
   const frame = useCurrentFrame()
   const phone = '06 12 34 56 78'
@@ -447,7 +447,7 @@ function RenewalCard({ date }: { date: string }) {
       <span style={{ flex: 1 }}>
         <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <span style={{ fontSize: 36 * u, fontWeight: 700, letterSpacing: '-0.02em' }}>Forfait renouvelé</span>
-          <span style={{ fontSize: 24 * u, color: 'rgba(17,17,17,0.45)' }}>PaybyBot</span>
+          <span style={{ fontSize: 24 * u, color: 'rgba(17,17,17,0.45)' }}>PayByBot</span>
         </span>
         <span style={{ display: 'block', marginTop: 4 * u, fontSize: 30 * u, color: 'rgba(17,17,17,0.6)' }}>{date} · 9,00 €</span>
       </span>

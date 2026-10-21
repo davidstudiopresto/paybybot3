@@ -105,7 +105,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
         <section id="comment" className="mt-24 scroll-mt-20 lg:mt-36">
           <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
-            Deux minutes, et vous n’y pensez plus.
+            Comment ça marche
           </h2>
           <ol className="mt-12 grid gap-6 lg:grid-cols-3 lg:gap-10">
             {STEPS.map(([title, text], i) => (

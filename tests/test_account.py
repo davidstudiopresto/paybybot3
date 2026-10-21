@@ -16,11 +16,9 @@ class Account(unittest.TestCase):
     def tearDown(self):
         self.current.stop()
 
-    def test_manual_zone_comes_first(self):
-        web.update_account(web.AccountPatch(zone="75017"), "t")
-        account = web.get_account("t")
-        self.assertEqual((account["email"], account["zone"], account["plan"]), ("", "75017", None))
-        self.assertEqual(web.resident_zone("t"), {"zone": "75017", "manual": True})
+    def test_the_zone_cannot_be_typed(self):
+        web.update_account(web.AccountPatch(zone="75017"), "t")  # ignored: it comes from PayByPhone
+        self.assertNotIn("zone", self.s.account)
 
     def test_free_month_lasts_30_days(self):
         from datetime import datetime

@@ -914,7 +914,8 @@ def with_details(row):
 
 
 ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
-                  "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "zone_found")
+                  "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "zone_found",
+                  "vehicle_zones")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -1662,12 +1663,64 @@ def weekly_resident_cents(s, zone):
     return week_price(s, zone, plate, rate) if rate else None
 
 
-def vehicle_prices(s, zone):
-    """Per resident vehicle (one plate): its resident week in the home zone, in cents (None if unknown)."""
-    found = resident_vehicles(s, zone)
+VEHICLE_ZONE_RECHECK = 12 * 3600  # a vehicle without a resident rate is looked for again after 12 hours
+
+
+def vehicle_zones(s, keep=True):
+    """Each riverain vehicle with its arrondissement and resident rate, cars first: [(vehicle, zone, rate)].
+    Always found on PayByPhone, never typed: the arrondissement kept for it, else another vehicle's, the home one or
+    the history's, else searched among the 20. Kept on the account (keep=False at sign-up: nothing is stored yet)."""
+    vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]
+    vehicles.sort(key=lambda v: bool(TWO_WHEELS.search(str(v.get("type") or ""))))  # cars first
+    account = load_account(s) if keep else {}
+    kept = dict(account.get("vehicle_zones") or {})
+    now, found, changed = time.time(), [], False
+    home, looked = None, False  # the home zone, only looked up when a vehicle needs it
+    for vehicle in vehicles:
+        key = plate_key(vehicle["licensePlate"])
+        entry = kept.get(key) or {}
+        zone = rate = None
+        if entry.get("z"):
+            rate = vehicle_resident_rate(s, entry["z"], vehicle)
+            zone = entry["z"] if rate else None
+        elif entry and now - entry.get("t", 0) < VEHICLE_ZONE_RECHECK:
+            continue  # no resident rate a little while ago: not searched again yet
+        if not zone:  # not known yet, or no resident rate there any more (a move)
+            if not looked:
+                home, looked = (find_home_zone(s, scan=False) or {}).get("zone"), True
+            tried = {entry.get("z")}
+            for z in dict.fromkeys([z for _, z, _ in found] + [home]):
+                if z and z not in tried:
+                    tried.add(z)
+                    rate = vehicle_resident_rate(s, z, vehicle)
+                    if rate:
+                        zone = z
+                        break
+            if not zone:
+                zone = scan_vehicle_zone(s, vehicle)
+                rate = vehicle_resident_rate(s, zone, vehicle) if zone else None
+                zone = zone if rate else None
+            kept[key] = {"z": zone, "t": int(now)}
+            changed = True
+        if zone and rate:
+            found.append((vehicle, zone, rate))
+    if keep and changed:
+        patch = {"vehicle_zones": kept}
+        if found and account.get("zone") != found[0][1]:
+            patch.update(zone=found[0][1], zone_found=True)
+        try:
+            save_account(s, patch)
+        except Exception as e:
+            log.warning("vehicle zones not kept: %s", type(e).__name__)
+    return found
+
+
+def vehicle_prices(s):
+    """Per riverain vehicle (one plate): its arrondissement and its resident week there, in cents (None if unknown)."""
+    found = vehicle_zones(s)
     payments = normalize_accounts(s.call("get_payment_accounts") or {}) if found else []
-    return [{"plate": v["licensePlate"], "type": v.get("type"),
-             "weekly": week_price(s, zone, v["licensePlate"], rate, payments)} for v, rate in found]
+    return [{"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
+             "weekly": week_price(s, zone, v["licensePlate"], rate, payments)} for v, zone, rate in found]
 
 
 def renewed_plates(s):
@@ -1704,15 +1757,13 @@ def week_price(s, zone, plate, rate, payments=None):
 
 
 def account_pricing(s):
-    """The account's prices from its home zone: one price per resident vehicle, and the subscription, for the
-    vehicles with a renewal (the first one while none has). The billed weeks are kept on the account for checkout
-    and the e-mail links. None without a zone, or without a priced resident vehicle there."""
-    zone = (find_home_zone(s) or {}).get("zone")
-    if not zone:
-        return None
-    vehicles = [v for v in vehicle_prices(s, zone) if v["weekly"] is not None]
+    """The account's prices: one price per riverain vehicle (in its own arrondissement), and the subscription, for
+    the vehicles with a renewal (the first one while none has). The billed weeks are kept on the account for checkout
+    and the e-mail links. None without a priced riverain vehicle."""
+    vehicles = [v for v in vehicle_prices(s) if v["weekly"] is not None]
     if not vehicles:
         return None
+    zone = vehicles[0]["zone"]
     renewed = renewed_plates(s)
     billed = [v for v in vehicles if plate_key(v["plate"]) in renewed] or vehicles[:1]
     weeklies = sorted(v["weekly"] for v in billed)
@@ -1723,7 +1774,7 @@ def account_pricing(s):
     return {"zone": zone, "weekly": weeklies[0],
             "monthly": plan_total(weeklies, "monthly"), "yearly": plan_total(weeklies, "yearly"),
             "billed": [v["plate"] for v in billed],
-            "vehicles": [{"plate": v["plate"], "type": v["type"], "weekly": v["weekly"],
+            "vehicles": [{"plate": v["plate"], "type": v["type"], "zone": v["zone"], "weekly": v["weekly"],
                           "monthly": plan_cents(v["weekly"], "monthly"), "yearly": plan_cents(v["weekly"], "yearly"),
                           "renewed": plate_key(v["plate"]) in renewed} for v in vehicles]}
 
@@ -2140,19 +2191,12 @@ def pricing(pbb_session: str = Cookie(None)):
 
 
 def resident_status(s):
-    """Is the resident status active on PayByPhone, and in which zone? The zone always comes from PayByPhone: kept,
-    else from the history, else searched arrondissement by arrondissement (again if the kept one has no resident
-    rate any more, e.g. after a move)."""
-    zone = (find_home_zone(s) or {}).get("zone")
-    if zone and resident_rate(s, zone)[1] is not None:
-        return {"zone": zone, "resident": True}
-    found = scan_resident_zone(s)
-    if found and found != zone:
-        try:
-            save_account(s, {"zone": found, "zone_found": True})
-        except Exception as e:
-            log.warning("found zone not kept: %s", type(e).__name__)
-    return {"zone": found or zone, "resident": bool(found)}
+    """Is the resident status active on PayByPhone for one of the vehicles, and in which arrondissement? Always found
+    on PayByPhone, vehicle by vehicle (see vehicle_zones)."""
+    found = vehicle_zones(s)
+    if found:
+        return {"zone": found[0][1], "resident": True}
+    return {"zone": (find_home_zone(s, scan=False) or {}).get("zone"), "resident": False}
 
 
 @app.get("/api/resident-status")
@@ -2268,15 +2312,9 @@ def billing_portal(pbb_session: str = Cookie(None)):
 @app.put("/api/account")
 def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
-    patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None}
-    if patch.get("zone"):
-        patch["zone_found"] = False  # given by the user
+    # The e-mail only: the arrondissement is never typed, it comes from PayByPhone for each vehicle.
+    patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None and k != "zone"}
     account = guarded(lambda: save_account(s, patch))
-    if patch.get("zone"):  # a move: the price follows the new zone's resident rate
-        try:
-            account_pricing(s)
-        except Exception as e:
-            log.info("pricing after a zone change failed: %s", str(e)[:200])
     return {"email": account.get("email") or "", "zone": account.get("zone") or None}
 
 
@@ -2367,6 +2405,26 @@ def resident_zone(pbb_session: str = Cookie(None)):
 PARIS_ZONES = ["750%02d" % n for n in range(1, 21)]  # resident zones are numbered like the arrondissement's postcode
 
 
+def scan_vehicle_zone(s, vehicle):
+    """The arrondissement where PayByPhone offers this vehicle the resident rate, among the 20 (the rate only exists
+    in the arrondissement of its resident card), or None."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    bot = s.bot
+
+    def resident_in(zone):
+        try:
+            rates = bot.get_rate_options(zone, vehicle["licensePlate"]) or []
+        except Exception:
+            return False
+        return any(RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type"))) and not r.get("parkingNotAllowedReason")
+                   for r in rates)
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        hits = list(pool.map(resident_in, PARIS_ZONES))
+    return PARIS_ZONES[hits.index(True)] if any(hits) else None
+
+
 def scan_resident_zone(s):
     """Where PayByPhone offers one of the account's vehicles the resident rate, among the 20 Paris arrondissements
     (the rate only exists in the arrondissement of the resident card). None: no resident vehicle at all."""
@@ -2395,10 +2453,8 @@ def scan_resident_zone(s):
 def resident_home_zone(s):
     """The home zone if one of the account's vehicles has the resident rate there, else None: from the account or
     the history first, else by asking PayByPhone arrondissement by arrondissement."""
-    zone = (find_home_zone(s, scan=False) or {}).get("zone")  # at sign-up nothing is kept before the code
-    if zone and resident_vehicles(s, zone):
-        return zone
-    return scan_resident_zone(s)
+    found = vehicle_zones(s, keep=False)  # at sign-up nothing is kept before the code
+    return found[0][1] if found else None
 
 
 def find_home_zone(s, scan=True):

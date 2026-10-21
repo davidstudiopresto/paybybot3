@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react'
 import { Loader2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { ZoneField } from '@/components/Riverain'
 import { arrondissement, PayByPhone, Plate, ZonePlate } from '@/components/signs'
-import { api, forgetZoneLookup, type Account, type Overview, type PricedVehicle } from '@/lib/api'
+import { api, type Account, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -40,19 +39,15 @@ function AccountDialog({
   onDeleted: () => void
   demo: boolean
 }) {
-  const [zone, setZone] = useState<string | null | undefined>(undefined)
   const [email, setEmail] = useState<string | undefined>(undefined)
-  const [editingZone, setEditingZone] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [account, setAccount] = useState<Account | null | undefined>(undefined)
-  // Only the « riverain » vehicles (a resident rate in the home zone); undefined: looking, null: zone unknown.
-  const [vehicles, setVehicles] = useState<PricedVehicle[] | null | undefined>(undefined)
+  // Only the « riverain » vehicles, each with the arrondissement PayByPhone gives it the resident rate in (never
+  // typed); undefined: looking.
+  const [vehicles, setVehicles] = useState<PricedVehicle[] | undefined>(undefined)
   useEffect(() => {
-    if (zone === undefined) return
-    if (!zone) return setVehicles(null)
-    setVehicles(undefined)
-    api.pricing().then((p) => setVehicles(p.vehicles ?? []), () => setVehicles(null))
-  }, [zone])
+    api.pricing().then((p) => setVehicles(p.vehicles ?? []), () => setVehicles([]))
+  }, [])
 
   async function openPortal() {
     try {
@@ -63,10 +58,6 @@ function AccountDialog({
   }
 
   useEffect(() => {
-    api.residentZone().then(
-      (r) => setZone(r.zone),
-      () => setZone(null),
-    )
     api.account().then(
       (a) => {
         setEmail(a.email)
@@ -78,18 +69,6 @@ function AccountDialog({
       },
     )
   }, [])
-
-  async function saveZone(z: string) {
-    try {
-      await api.updateAccount({ zone: z })
-      forgetZoneLookup() // the resident setup picks it up from now on
-      setZone(z)
-      setEditingZone(false)
-      toast.success(`Zone ${z} enregistrée.`)
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
-  }
 
   const row = 'flex items-start justify-between gap-6 py-4'
   const label = 'shrink-0 pt-1 text-sm text-ink/55'
@@ -109,50 +88,23 @@ function AccountDialog({
         <dl className="mx-6 mt-5 divide-y divide-ink/10 border-y border-ink/10">
           <div className={row}>
             <dt className={label}>{vehicles && vehicles.length > 1 ? 'Véhicules riverains' : 'Véhicule riverain'}</dt>
-            <dd className="flex flex-wrap justify-end gap-2">
+            <dd className="flex flex-col items-end gap-2">
               {vehicles === undefined ? (
                 <span className="inline-block h-5 w-32 animate-pulse rounded bg-ink/10" />
-              ) : vehicles === null ? (
-                <span className="text-right text-ink/60">Indiquez votre zone de résidence ci-dessous.</span>
               ) : vehicles.length ? (
-                vehicles.map((v) => <Plate key={v.plate} plate={v.plate} size="sm" />)
+                vehicles.map((v) => (
+                  <span key={v.plate} className="flex flex-wrap items-center justify-end gap-2">
+                    <Plate plate={v.plate} size="sm" />
+                    {arrondissement(v.zone) && <span className="text-sm font-semibold text-ink">{arrondissement(v.zone)}</span>}
+                    <ZonePlate zone={v.zone} />
+                  </span>
+                ))
               ) : (
                 <span className="text-right text-ink/60">
                   {data.vehicles.length ? 'Aucun véhicule au tarif résident' : 'Aucun véhicule'}
                 </span>
               )}
             </dd>
-          </div>
-
-          <div className="py-4">
-            <div className="flex items-start justify-between gap-6">
-              <dt className={label}>Zone de résidence</dt>
-              <dd className="text-right">
-                {zone === undefined ? (
-                  <Loader2 className="size-4 animate-spin text-ink/40" />
-                ) : editingZone ? null : zone ? (
-                  <span className="flex items-center gap-3">
-                    {arrondissement(zone) && <span className="text-sm font-semibold text-ink">{arrondissement(zone)}</span>}
-                    <ZonePlate zone={zone} />
-                    <button onClick={() => setEditingZone(true)} className={cn('text-sm', ui.link)}>
-                      Changer
-                    </button>
-                  </span>
-                ) : (
-                  <button onClick={() => setEditingZone(true)} className={cn('text-sm', ui.link)}>
-                    Ajouter
-                  </button>
-                )}
-              </dd>
-            </div>
-            {editingZone && (
-              <div className="mt-3">
-                <ZoneField zone="" fromHistory={false} onZone={saveZone} />
-                <button onClick={() => setEditingZone(false)} className={cn('mt-2 text-sm', ui.link)}>
-                  Annuler
-                </button>
-              </div>
-            )}
           </div>
 
           {!demo && (

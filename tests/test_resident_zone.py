@@ -39,6 +39,24 @@ class ResidentZone(unittest.TestCase):
         self.assertEqual(self.zone_with([], resident_zones={"75011"}), "75011")
         self.assertEqual(self.zone_with([ticket("33880", 24)], resident_zones={"75017"}), "75017")
 
+    def test_each_vehicle_gets_its_own_arrondissement_kept_on_the_account(self):
+        s = web.UserSession("demo", "", demo=True)
+        cards = {"AB123CD": "75011", "EF456GH": "75017"}  # resident cards in two arrondissements
+        rates = web.DemoBot().get_rate_options
+        calls = []
+
+        def only_there(zone, plate):
+            calls.append(zone)
+            return [r for r in rates(zone, plate) if r["type"] != "Resident" or cards.get(plate) == zone]
+        s.bot.get_rate_options = only_there
+        s.bot.get_past_sessions = lambda limit=20: []
+        found = web.vehicle_zones(s)
+        self.assertEqual({v["licensePlate"]: z for v, z, _ in found}, cards)
+        self.assertEqual(s.account["vehicle_zones"]["EF456GH"]["z"], "75017")
+        calls.clear()
+        web.vehicle_zones(s)  # kept: one check per vehicle, no new search
+        self.assertEqual(sorted(calls), ["75011", "75017"])
+
     def test_sign_up_refused_without_a_resident_vehicle(self):
         s = web.UserSession("demo", "", demo=True)
         s.bot.get_rate_options = lambda zone, plate: [r for r in web.DemoBot().get_rate_options(zone, plate)

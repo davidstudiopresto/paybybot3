@@ -222,8 +222,7 @@ function RiverainDialog({
 }) {
   const [plates, setPlates] = useState<string[] | null>(null) // the « riverain » vehicles (null: looking)
   const [selected, setSelected] = useState<string[]>([])
-  const [zone, setZone] = useState('')
-  const [zoneFromHistory, setZoneFromHistory] = useState(false)
+  const [zones, setZones] = useState<Record<string, string>>({}) // each riverain vehicle's arrondissement, from PayByPhone
   const [payment, setPayment] = useState('')
   const [found, setFound] = useState<Record<string, Found>>({})
   const [loading, setLoading] = useState(false)
@@ -234,7 +233,8 @@ function RiverainDialog({
   // Renewals pay with a saved card only (PayPal or the phone bill are not offered for them).
   const cards = data.payments.filter((p) => p.kind === 'card')
 
-  // Each time the dialog opens: the riverain vehicles not renewed yet (all ticked), the home zone, the card.
+  // Each time the dialog opens: the riverain vehicles not renewed yet (all ticked), each with the arrondissement
+  // PayByPhone gives it the resident rate in (never typed), and the card.
   useEffect(() => {
     if (!open) return
     const last = loadLast()
@@ -243,28 +243,15 @@ function RiverainDialog({
     setPlates(null)
     api.pricing().then(
       (p) => {
-        const riverain = (p.vehicles?.length ? p.vehicles.map((v) => v.plate) : data.vehicles.map((v) => v.plate))
-        setPlates(riverain)
-        setSelected(riverain.filter((x) => !covered.has(x)))
+        const riverain = (p.vehicles ?? []).filter((v) => v.zone)
+        setZones(Object.fromEntries(riverain.map((v) => [v.plate, v.zone])))
+        setPlates(riverain.map((v) => v.plate))
+        setSelected(riverain.map((v) => v.plate).filter((x) => !covered.has(x)))
       },
-      () => {
-        const all = data.vehicles.map((v) => v.plate)
-        setPlates(all)
-        setSelected(all.filter((x) => !covered.has(x)).slice(0, 1))
+      (e) => {
+        setPlates([])
+        setError((e as Error).message)
       },
-    )
-    // The home zone: the one where PayByPhone offers this account the resident rate. The last one-off
-    // payment's zone is not used, it is rarely the home one.
-    setZone('')
-    setZoneFromHistory(false)
-    api.residentZone().then(
-      (r) => {
-        if (r.zone) {
-          setZone((z) => z || r.zone!)
-          setZoneFromHistory(true)
-        }
-      },
-      () => {},
     )
     setPayment(cards.find((p) => p.id === last.paymentAccountId)?.id ?? cards[0]?.id ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -274,9 +261,9 @@ function RiverainDialog({
     if (open && !payment && cards[0]) setPayment(cards[0].id)
   }, [open, cards, payment])
 
-  const ready = open && selected.length > 0 && payment && /^\w{3,}$/.test(zone)
+  const ready = open && selected.length > 0 && payment
 
-  // For each ticked vehicle: its resident rate and the price of a week, as soon as the zone is complete.
+  // For each ticked vehicle: its resident rate and the price of a week, in its own arrondissement.
   useEffect(() => {
     if (!ready) {
       setFound({})
@@ -288,7 +275,7 @@ function RiverainDialog({
       const results = await Promise.all(
         selected.map(async (plate): Promise<[string, Found]> => {
           try {
-            const rates = await api.rates(zone, plate)
+            const rates = await api.rates(zones[plate], plate)
             const resident = residentRateFor(rates, data.vehicles.find((v) => v.plate === plate)?.type)
             if (!resident) throw new Error('Pas de tarif résident pour ce véhicule dans cette zone.')
             if (!resident.acceptedTimeUnits.includes('Days')) throw new Error('Le tarif résident de cette zone ne se paie pas à la journée.')
@@ -309,10 +296,10 @@ function RiverainDialog({
       clearTimeout(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, zone, selected.join(','), payment])
+  }, [ready, selected.join(','), payment])
 
   function parking(r: Rate, plate: string): Parking {
-    return { location: zone, rate: r.ratePolicyId, duration: WEEK_DAYS, unit: 'Days', plate, paymentAccountId: payment }
+    return { location: zones[plate], rate: r.ratePolicyId, duration: WEEK_DAYS, unit: 'Days', plate, paymentAccountId: payment }
   }
 
   const samePlate = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCase() === b.replace(/[^0-9a-z]/gi, '').toUpperCase()
@@ -399,15 +386,6 @@ function RiverainDialog({
             )}
           </div>
 
-          <ZoneField
-            zone={zone}
-            fromHistory={zoneFromHistory}
-            onZone={(z) => {
-              setZone(z)
-              setZoneFromHistory(false)
-            }}
-          />
-
           {!cards.length && <NoPayment compact onRefresh={async () => onDone()} />}
 
           {cards.length > 1 && (
@@ -431,8 +409,6 @@ function RiverainDialog({
           <div className="rounded-xl bg-muted p-4" aria-live="polite">
             {!selected.length ? (
               <p className="text-muted-foreground">Cochez au moins un véhicule.</p>
-            ) : !/^\w{3,}$/.test(zone) ? (
-              <p className="text-muted-foreground">Indiquez votre arrondissement pour voir le prix.</p>
             ) : loading ? (
               <p className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" /> Recherche du tarif résident…
@@ -444,7 +420,10 @@ function RiverainDialog({
                   return (
                     <li key={plate} className="flex items-start justify-between gap-3">
                       <span className="min-w-0">
-                        <Plate plate={plate} size="sm" />
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Plate plate={plate} size="sm" />
+                          {zones[plate] && <ZonePlate zone={zones[plate]} />}
+                        </span>
                         <span className="mt-1 block text-sm text-muted-foreground">
                           {f?.error ? (
                             <span className="text-destructive">{f.error}</span>

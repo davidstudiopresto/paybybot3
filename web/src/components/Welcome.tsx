@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ArrowRight, Car, Check, CreditCard, MapPin, Minus, Phone, Ticket, UserRound } from 'lucide-react'
+import { ArrowRight, Car, Check, CreditCard, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
 import { CardGate, ResidentGate, type ResidentStatus } from '@/components/Riverain'
 import { arrondissement, PayByPhone, Plate, withPayByPhone, Wordmark, ZonePlate } from '@/components/signs'
@@ -48,38 +48,19 @@ function Row({
 
 /** First sign-in: everything PaybyBot found in the PayByPhone account, so the user can check it is right. */
 export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onContinue: () => void }) {
-  const [zone, setZone] = useState<string | null | undefined>(undefined)
-  const [manual, setManual] = useState(false)
-  useEffect(() => {
-    api.residentZone().then(
-      (r) => {
-        setZone(r.zone)
-        setManual(!!r.manual)
-      },
-      () => setZone(null),
-    )
-  }, [])
-
-  // PaybyBot is for resident-rate holders: checked as soon as the home zone is known (the zone tells where).
-  // The same lookup gives the « riverain » vehicles: only those are shown (undefined: looking).
+  // The « riverain » vehicles, each with the arrondissement PayByPhone gives it the resident rate in (found on
+  // PayByPhone, never typed); undefined: looking. None at all: PaybyBot cannot be used (resident notice).
   const [status, setStatus] = useState<ResidentStatus | null>(null)
   const [vehicles, setVehicles] = useState<PricedVehicle[] | undefined>(undefined)
   useEffect(() => {
-    if (!zone) return
-    setVehicles(undefined)
     api.pricing().then(
       (p) => {
         setVehicles(p.vehicles ?? [])
-        if (!me.demo) setStatus({ zone: p.zone, resident: p.resident ?? null })
+        if (!me.demo) setStatus({ zone: p.zone, resident: p.vehicles?.length ? true : (p.resident ?? false) })
       },
       () => setVehicles([]),
     )
-  }, [zone, me.demo])
-
-  // The zone always comes from PayByPhone: none means no vehicle with the resident rate anywhere.
-  useEffect(() => {
-    if (zone === null && !me.demo) setStatus({ zone: null, resident: false })
-  }, [zone, me.demo])
+  }, [me.demo])
 
   // PaybyBot pays with a card saved on PayByPhone: without one it cannot be used.
   const cards = data.payments.filter((p) => p.kind === 'card')
@@ -121,20 +102,23 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               delay={next()}
               found={!!vehicles?.length}
             >
-              {!zone ? (
-                <span className="text-ink/60">Retrouvés dès que votre arrondissement est connu.</span>
-              ) : vehicles === undefined ? (
+              {vehicles === undefined ? (
                 <span className="inline-block h-5 w-40 animate-pulse rounded bg-ink/10" />
               ) : vehicles.length ? (
-                <span className="flex flex-wrap gap-2 pt-0.5">
+                <span className="flex flex-col gap-2 pt-0.5">
                   {vehicles.map((v) => (
-                    <Plate key={v.plate} plate={v.plate} size="sm" />
+                    <span key={v.plate} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <Plate plate={v.plate} size="sm" />
+                      {arrondissement(v.zone) && <span className="font-semibold">{arrondissement(v.zone)}</span>}
+                      <ZonePlate zone={v.zone} />
+                    </span>
                   ))}
+                  <span className="text-sm text-ink/55">Arrondissement trouvé sur votre compte <PayByPhone /></span>
                 </span>
               ) : (
                 <span className="text-ink/60">
                   {data.vehicles.length
-                    ? 'Aucun véhicule au tarif résident dans cet arrondissement.'
+                    ? 'Aucun véhicule au tarif résident.'
                     : withPayByPhone('Aucun véhicule : ajoutez-le dans l’application PayByPhone.')}
                 </span>
               )}
@@ -160,19 +144,6 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                 <span className="text-ink/60">{withPayByPhone('Aucune carte : ajoutez-en une dans l’application PayByPhone.')}</span>
               )}
             </Row>
-            <Row icon={<MapPin className="size-5" />} label="Zone de résidence" delay={next()} found={!!zone}>
-              {zone === undefined ? (
-                <span className="inline-block h-5 w-24 animate-pulse rounded bg-ink/10" />
-              ) : zone ? (
-                <span className="flex flex-wrap items-baseline gap-x-3">
-                  {arrondissement(zone) && <span className="font-semibold">{arrondissement(zone)}</span>}
-                  <ZonePlate zone={zone} />
-                  <span className="text-sm text-ink/55">{manual ? 'indiquée par vous' : <>trouvée sur votre compte <PayByPhone /></>}</span>
-                </span>
-              ) : (
-                <span className="text-ink/60">Aucun arrondissement avec le tarif résident.</span>
-              )}
-            </Row>
             {data.sessions.length > 0 && (
               <Row icon={<Ticket className="size-5" />} label="Ticket en cours" delay={next()}>
                 {data.sessions.map((s) => (
@@ -192,7 +163,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
 
           <button
             onClick={onContinue}
-            disabled={!zone || status?.resident === false || !cards.length}
+            disabled={!vehicles?.length || status?.resident === false || !cards.length}
             className={cn('rise mt-8', ui.primary)}
             style={{ animationDelay: `${next()}ms` }}
           >

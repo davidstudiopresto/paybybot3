@@ -77,6 +77,7 @@ export type Pricing = {
 export type PricedVehicle = {
   plate: string
   type?: string | null
+  zone: string // the arrondissement PayByPhone gives it the resident rate in (never typed)
   weekly: number
   monthly: number
   yearly: number

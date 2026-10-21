@@ -71,23 +71,13 @@ class Billing(unittest.TestCase):
             web.billing_checkout(web.Checkout(plan="monthly"), None, "t")
         self.assertIn("statut résident", e.exception.detail)
 
-    def test_resident_status_reads_the_rates_of_the_home_zone(self):
-        class Session:
-            def call(self, name, *args, **kw):
-                if name == "get_vehicles":
-                    return [{"licensePlate": "AB123CD", "type": "Car"}]
-                return [{"name": "Visiteur", "type": "Visitor"}] if name == "get_rate_options" else []
-        with patch.object(web, "scan_resident_zone", return_value=None):  # no arrondissement has it
-            with patch.object(web, "find_home_zone", return_value={"zone": "75017"}):
-                self.assertEqual(web.resident_status(Session()), {"zone": "75017", "resident": False})
-            with patch.object(web, "find_home_zone", return_value={"zone": None}):
-                self.assertEqual(web.resident_status(Session()), {"zone": None, "resident": False})
-        # Moved: the kept zone has no resident rate any more, the one PayByPhone offers now is found and kept.
-        with patch.object(web, "find_home_zone", return_value={"zone": "75017"}), \
-                patch.object(web, "scan_resident_zone", return_value="75011"), \
-                patch.object(web, "save_account") as saved:
-            self.assertEqual(web.resident_status(Session()), {"zone": "75011", "resident": True})
-        saved.assert_called_once()
+    def test_resident_status_from_the_vehicles_arrondissements(self):
+        car = {"licensePlate": "AB123CD", "type": "Car"}
+        with patch.object(web, "vehicle_zones", return_value=[]), \
+                patch.object(web, "find_home_zone", return_value={"zone": "75017"}):
+            self.assertEqual(web.resident_status(None), {"zone": "75017", "resident": False})
+        with patch.object(web, "vehicle_zones", return_value=[(car, "75011", {"ratePolicyId": "1"})]):
+            self.assertEqual(web.resident_status(None), {"zone": "75011", "resident": True})
 
     def test_a_move_reprices_from_the_next_billing_date(self):
         account = {"stripe_subscription": "sub_1", "weekly_cents": 1050, "billed_weekly_cents": 900,
@@ -112,9 +102,9 @@ class Billing(unittest.TestCase):
         self.assertEqual(web.plan_total([900, 900], "monthly"), 3600)
         self.assertEqual(web.plan_total([900, 0], "monthly"), 1800 + 490)  # the floor is per vehicle
         self.assertEqual(web.plan_total([900, 900], "yearly"), 34560)
-        prices = [{"plate": "AB-123-CD", "type": "Car", "weekly": 900}, {"plate": "EF-456-GH", "type": "Car", "weekly": 450}]
-        with patch.object(web, "find_home_zone", return_value={"zone": "75015"}), \
-                patch.object(web, "vehicle_prices", return_value=prices), \
+        prices = [{"plate": "AB-123-CD", "type": "Car", "zone": "75015", "weekly": 900},
+                  {"plate": "EF-456-GH", "type": "Car", "zone": "75011", "weekly": 450}]
+        with patch.object(web, "vehicle_prices", return_value=prices), \
                 patch.object(web, "load_account", return_value={}), \
                 patch.object(web, "save_account", side_effect=lambda s, p: p), patch.object(web, "reprice"):
             with patch.object(web, "renewed_plates", return_value=set()):  # none renewed yet: the first one

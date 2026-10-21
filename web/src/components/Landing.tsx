@@ -175,155 +175,57 @@ type Question = [string, ReactNode]
 
 const QUESTIONS: Question[] = [
   [
-    'Que fait PayByBot exactement ?',
+    'Comment fonctionne PayByBot ?',
     <>
-      PayByBot renouvelle chaque semaine votre stationnement résident sur votre compte <PayByPhone />. Vous l'activez une
-      fois, puis chaque nouvelle semaine est payée avant la fin de la précédente : votre véhicule reste couvert sans
-      que vous ayez à y penser.
+      Vous connectez votre compte <PayByPhone /> et activez le renouvellement. Chaque semaine, votre stationnement
+      résident est repris avant la fin de la précédente, même téléphone éteint.
     </>,
   ],
   [
-    'Quelle différence avec PayByPhone ?',
+    'Le stationnement coûte-t-il plus cher ?',
+    <>Non. Il est payé à <PayByPhone />, avec votre carte, au même prix que dans l'application.</>,
+  ],
+  [
+    'Pour quels véhicules et quels stationnements ?',
     <>
-      <PayByPhone /> vend le stationnement résident, PayByBot le renouvelle pour vous au bon moment. Il reste sur votre
-      compte <PayByPhone />, payé avec la carte que vous y avez enregistrée.
+      Voiture, deux-roues ou utilitaire ayant le tarif résident à Paris. Les autres tarifs (PMR, professionnel,
+      électrique…) ne sont pas encore proposés.
     </>,
   ],
   [
-    'Le stationnement résident coûte-t-il plus cher ?',
-    <>Non. Il est payé à <PayByPhone /> au même prix que si vous le preniez vous-même dans l'application.</>,
-  ],
-  [
-    'Mon téléphone doit-il rester allumé ?',
-    <>Non. Le renouvellement part de nos serveurs : votre téléphone peut être éteint ou sans réseau.</>,
-  ],
-  [
-    'Combien ça coûte ?',
+    'Combien coûte l’abonnement ?',
     <>
-      Le prix dépend de votre véhicule et de votre zone de résidence : il est calculé à partir de votre compte{' '}
-      <PayByPhone /> et affiché avant tout paiement. Le premier mois est offert, et l'offre annuelle coûte 20 % de moins.
+      Le prix est affiché avant tout paiement. Le premier mois est offert, et l'offre annuelle coûte 20 % de moins.
       <a href="#/tarifs" className={cn(ui.primary, 'mt-5 h-12 w-fit px-6 text-base no-underline! hover:text-white! hover:no-underline!')}>
         Découvrir mon prix <ArrowRight className="size-5" />
       </a>
     </>,
   ],
   [
-    'Quand mon stationnement résident est-il payé ?',
+    'Mes identifiants PayByPhone sont-ils protégés ?',
     <>
-      La veille de la fin de la semaine en cours, en la prolongeant d'une semaine. Si <PayByPhone /> ne permet pas de
-      la prolonger, la nouvelle semaine est achetée dès qu'elle se termine.
+      Oui. Votre mot de passe n'est jamais enregistré, ni votre numéro de carte : seule une clé de reconnexion chiffrée
+      est gardée, et effacée dès que vous arrêtez. <a href="#/securite">Tout le détail sur la sécurité</a>
     </>,
   ],
   [
     'Comment savoir que c’est fait ?',
+    <>Un e-mail à chaque paiement, et le ticket apparaît dans votre application <PayByPhone />.</>,
+  ],
+  [
+    'Que se passe-t-il si le renouvellement échoue ?',
     <>
-      Vous recevez un e-mail à chaque paiement, et le stationnement résident apparaît dans votre application{' '}
-      <PayByPhone /> comme si vous l'aviez pris vous-même.
+      Vous êtes prévenu par e-mail avec la raison (carte refusée, droit résident expiré…), et vous relancez en un clic
+      une fois le problème réglé.
     </>,
   ],
   [
-    'Quelles informations me demandez-vous ?',
-    <>PayByBot récupère uniquement les informations de votre compte <PayByPhone />.</>,
+    'Puis-je faire une pause pendant mes vacances ?',
+    <>Oui, entre deux dates ou sans date de fin, depuis votre tableau de bord. Rien n'est payé pendant la pause.</>,
   ],
   [
-    'Quels stationnements PayByBot renouvelle-t-il ?',
-    <>
-      Le stationnement résident à la semaine, à Paris. Les autres tarifs (professionnel, handicap, deux-roues électrique…)
-      ne sont pas proposés pour l'instant.
-    </>,
-  ],
-  [
-    'Pour quels véhicules ?',
-    <>
-      Voiture, deux-roues ou utilitaire : tout véhicule de votre compte <PayByPhone /> qui a le tarif résident.
-    </>,
-  ],
-  [
-    "Et des tickets à l'heure ou à la journée ?",
-    <>Pas pour le moment : PayByBot renouvelle uniquement le forfait résident à la semaine.</>,
-  ],
-  ['Dans quelles villes ?', <>À Paris, dans les 20 arrondissements, pour le moment.</>],
-  [
-    'Puis-je activer avec un stationnement résident déjà en cours ?',
-    <>
-      Oui. Rien n'est payé en double : PayByBot attend la veille de la fin de la semaine en cours pour payer la
-      suivante.
-    </>,
-  ],
-  [
-    'Et si j’ai plusieurs véhicules ?',
-    <>
-      Cochez-les au moment d'activer le renouvellement. Chaque véhicule a son propre renouvellement, que vous gérez à
-      part.
-    </>,
-  ],
-  [
-    'Et si je change de véhicule ou de zone ?',
-    <>
-      Mettez d'abord à jour votre véhicule ou votre carte résident dans <PayByPhone />, puis arrêtez et réactivez le
-      renouvellement dans PayByBot. Le prix de votre abonnement suit votre nouvelle situation.
-    </>,
-  ],
-  [
-    'Et si je pars en vacances ?',
-    <>
-      Mettez le renouvellement en pause entre deux dates depuis votre tableau de bord : aucun stationnement n'est
-      payé pendant la pause, et tout reprend seul à la fin.
-    </>,
-  ],
-  [
-    'Puis-je faire une pause sans date de fin ?',
-    <>
-      Oui : cochez « Pas de date de fin pour le moment ». Le renouvellement reste en pause jusqu'à ce que vous le
-      relanciez.
-    </>,
-  ],
-  [
-    'Puis-je programmer une pause à l’avance ?',
-    <>
-      Oui, choisissez simplement sa date de début. Une semaine déjà payée avant le début de la pause reste due.
-    </>,
-  ],
-  [
-    'Comment arrêter ?',
-    <>
-      Depuis le tableau de bord, « Gérer » puis « Arrêter le renouvellement ». Le stationnement en cours reste valable jusqu'à
-      sa fin, et ce qui était gardé pour ce renouvellement est effacé.
-    </>,
-  ],
-  [
-    'Mes données sont-elles protégées ?',
-    <>
-      Oui. Votre mot de passe n'est jamais enregistré et aucun numéro de carte n'est gardé : le paiement est fait par{' '}
-      <PayByPhone />. Pas de publicité, pas de traceur, et un clic suffit pour tout effacer.{' '}
-      <a href="#/securite">Tout le détail sur la sécurité</a>
-    </>,
-  ],
-  [
-    'Pourquoi mon mot de passe PayByPhone ?',
-    <>
-      Pour renouveler votre stationnement résident, PayByBot se connecte à votre compte <PayByPhone />. Le mot de passe ne sert qu'à
-      cette connexion et n'est jamais enregistré : seule une clé de reconnexion est gardée, chiffrée, et effacée dès
-      que vous arrêtez.
-    </>,
-  ],
-  [
-    'PayByBot voit-il ma carte bancaire ?',
-    <>
-      Non. Votre carte est enregistrée chez <PayByPhone />, qui fait le paiement. PayByBot n'en voit que les derniers
-      chiffres, comme dans l'application, et ne garde aucun numéro.
-    </>,
-  ],
-  [
-    'Je préfère ne pas confier mon mot de passe',
-    <>
-      Si vous utilisez le même mot de passe ailleurs, changez d'abord celui de <PayByPhone /> : vous ne confierez ainsi
-      que l'accès à ce compte.
-    </>,
-  ],
-  [
-    'J’ai oublié mon mot de passe PayByPhone',
-    <>Réinitialisez-le dans l'application ou sur le site <PayByPhone />, puis connectez-vous à PayByBot avec le nouveau.</>,
+    'Puis-je arrêter à tout moment ?',
+    <>Oui, sans engagement, en un clic. Le ticket en cours reste valable jusqu'à sa fin.</>,
   ],
 ]
 

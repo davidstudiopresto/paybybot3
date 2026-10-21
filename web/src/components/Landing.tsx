@@ -104,6 +104,49 @@ function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
   )
 }
 
+/** Small capitals above a title, like a launch page's kicker. */
+const KICKER = 'text-[0.78rem] font-medium tracking-[0.19em] text-[#2a66d1] uppercase'
+
+/** What a resident no longer has to think about: the questions around PaybyBot's answer. */
+const QUESTIONS_GONE = [
+  'Mon ticket expire quand ?',
+  'Ai-je pensé à renouveler ?',
+  'Vais-je avoir une amende ?',
+  'Quel est le tarif de ma zone ?',
+  'Dois-je reprendre un ticket ce soir ?',
+  'Et pendant mes vacances ?',
+  'Mon téléphone doit-il rester allumé ?',
+  'Ai-je payé deux fois ?',
+]
+
+function NoMoreQuestions() {
+  const half = QUESTIONS_GONE.length / 2
+  const chip = 'rounded-full border border-ink/10 bg-white px-4 py-2 text-[0.95rem] text-ink/55 lg:px-5 lg:py-2.5 lg:text-base'
+  return (
+    <section className="mt-24 text-center lg:mt-36">
+      <p className={KICKER}>Sans charge mentale</p>
+      <h2 className="mt-4 font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+        Les questions que vous ne vous posez plus.
+      </h2>
+      <ul className="mx-auto mt-12 flex max-w-4xl flex-wrap items-center justify-center gap-3">
+        {QUESTIONS_GONE.slice(0, half).map((q) => (
+          <li key={q} className={chip}>
+            {q}
+          </li>
+        ))}
+        <li className="rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-6 py-3 text-lg font-semibold text-white shadow-[0_12px_30px_-12px_rgb(29_78_163/0.6)] lg:text-xl">
+          PaybyBot s’en occupe
+        </li>
+        {QUESTIONS_GONE.slice(half).map((q) => (
+          <li key={q} className={chip}>
+            {q}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 const STEPS = [
   ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
   ['Vérifiez', 'Véhicule et carte sont retrouvés dans votre compte PayByPhone.'],
@@ -195,7 +238,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
           <div className="@container max-w-[40rem] lg:max-w-none">
             {/* Sized to its column (cqw), so « de votre stationnement résident » keeps to one line. */}
             {/* Like a launch page: the problem in black, then « on s'en occupe » in the logo's blue, a size smaller. */}
-            <h1 className={cn(ui.title, 'font-medium lg:text-[clamp(2.5rem,min(7.3cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
+            <p className={cn(KICKER, 'mb-5 lg:mb-7')}>100 % automatique • Même téléphone éteint • Fini les oublis</p>
+            <h1 className={cn(ui.title, 'font-medium text-[#2b2f3a] lg:text-[clamp(2.5rem,min(7.3cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
               <span className="lg:block">Renouvellement automatique</span>{' '}
               <span className="lg:block">de votre stationnement résident</span>
               <span className="mt-[0.33em] block w-fit bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] box-decoration-clone bg-clip-text text-[0.83em] leading-[1.17] text-transparent lg:mt-[0.6em] lg:leading-[1.3]">
@@ -203,7 +247,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
               </span>
             </h1>
             <p className={cn(ui.subtitle, 'lg:mt-10 lg:max-w-[32rem] lg:text-[clamp(1rem,min(1.1vw,2vh),1.2rem)] lg:leading-[1.7]')}>
-              Votre forfait résident <PayByPhone /> est repayé à chaque échéance. Plus d'oubli, plus d'amende.
+              Votre ticket expire, PaybyBot le renouvelle sur votre compte <PayByPhone />. Vous partez en vacances, il se met
+              en pause. Vous n’y pensez plus.
             </p>
             <a
               ref={cta}
@@ -251,6 +296,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
             ))}
           </ol>
         </section>
+
+        <NoMoreQuestions />
 
         <Security />
 

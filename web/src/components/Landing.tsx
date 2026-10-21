@@ -73,7 +73,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
           </p>
           <h1 className="font-heading text-[2.4rem] leading-[1.08] font-bold tracking-[-0.04em] text-[#2b2f3a] sm:text-[3.4rem] lg:text-[clamp(3rem,min(4.6vw,8vh),4.75rem)]">
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
-            <span className="block">de votre stationnement résident sur <PayByPhone /></span>
+            <span className="block">de votre stationnement résident</span>
+            <span className="block">sur <PayByPhone /></span>
           </h1>
           <p className="mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]">
             <PayByBot /> renouvelle votre stationnement résident sur <PayByPhone />, sans interruption. Zéro oubli, zéro

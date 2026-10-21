@@ -564,6 +564,8 @@ def pay_and_confirm(session, location, rate, duration, unit, plate, paymentAccou
         return mine or [x for x in sessions if same_plate((x.get("vehicle") or {}).get("licensePlate"), plate)
                         and str(x.get("locationId")) == str(location)]
 
+    if result.get("challenged"):  # the bank asks to confirm: a quick look, then say it
+        attempts = min(attempts, 2)
     for i in range(attempts):
         found = visible()
         if found:
@@ -575,7 +577,8 @@ def pay_and_confirm(session, location, rate, duration, unit, plate, paymentAccou
                 result.get("jobStatus"), result.get("jobStages"))
     session.unconfirmed[(plate, location)] = time.time()
     log_diagnosis(session)
-    if any("authenticationChallenge" in str(st.get("status")) for st in result.get("jobStages") or []):
+    if result.get("challenged") or any("authenticationChallenge" in str(st.get("status"))
+                                       for st in result.get("jobStages") or []):
         raise BankCheck(BANK_CHECK)
     raise Unconfirmed(UNCONFIRMED)
 

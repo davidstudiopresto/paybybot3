@@ -547,6 +547,8 @@ class Bot:
             job = self._get_job(jobId)
             challenged = challenged or any("authenticationChallenge" in str(cg.get("status"))
                                            for cg in job.get("captureGroups") or [])
+            if challenged and _ >= 2:  # waits on the card holder: no point polling for 30 seconds
+                break
             failures = self._job_failures(job)
             if failures:
                 raise RuntimeError("Payment job failed: %s" % json.dumps(failures))

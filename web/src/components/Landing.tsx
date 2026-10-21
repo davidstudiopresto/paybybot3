@@ -107,46 +107,6 @@ function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
 /** Small capitals above a title, like a launch page's kicker. */
 const KICKER = 'text-[0.78rem] font-medium tracking-[0.19em] text-[#2a66d1] uppercase'
 
-/** What a resident no longer has to think about: the questions around PaybyBot's answer. */
-const QUESTIONS_GONE = [
-  'Mon ticket expire quand ?',
-  'Ai-je pensé à renouveler ?',
-  'Vais-je avoir une amende ?',
-  'Quel est le tarif de ma zone ?',
-  'Dois-je reprendre un ticket ce soir ?',
-  'Et pendant mes vacances ?',
-  'Mon téléphone doit-il rester allumé ?',
-  'Ai-je payé deux fois ?',
-]
-
-function NoMoreQuestions() {
-  const half = QUESTIONS_GONE.length / 2
-  const chip = 'rounded-full border border-ink/10 bg-white px-4 py-2 text-[0.95rem] text-ink/55 lg:px-5 lg:py-2.5 lg:text-base'
-  return (
-    <section className="mt-24 text-center lg:mt-36">
-      <p className={KICKER}>Sans charge mentale</p>
-      <h2 className="mt-4 font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
-        Les questions que vous ne vous posez plus.
-      </h2>
-      <ul className="mx-auto mt-12 flex max-w-4xl flex-wrap items-center justify-center gap-3">
-        {QUESTIONS_GONE.slice(0, half).map((q) => (
-          <li key={q} className={chip}>
-            {q}
-          </li>
-        ))}
-        <li className="rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-6 py-3 text-lg font-semibold text-white shadow-[0_12px_30px_-12px_rgb(29_78_163/0.6)] lg:text-xl">
-          PaybyBot s’en occupe
-        </li>
-        {QUESTIONS_GONE.slice(half).map((q) => (
-          <li key={q} className={chip}>
-            {q}
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
 const STEPS = [
   ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
   ['Vérifiez', 'Véhicule et carte sont retrouvés dans votre compte PayByPhone.'],
@@ -292,8 +252,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
             ))}
           </ol>
         </section>
-
-        <NoMoreQuestions />
 
         <Security />
 

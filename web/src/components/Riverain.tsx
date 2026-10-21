@@ -285,6 +285,7 @@ function RiverainDialog({
   const [found, setFound] = useState<Record<string, Found>>({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [checking, setChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Online, a renewal needs a subscription, chosen on Stripe even during the free month (nothing charged before
   // it ends): without one, « Activer » opens the offer choice first.
@@ -379,6 +380,21 @@ function RiverainDialog({
   async function activate() {
     if (!ok.length) return
     if (account && !account.subscribed && !account.blocked) {
+      // Before the offer page, make sure PayByPhone can be paid on its own for each car: resident rate, card, and
+      // (no ticket running) the first week paid now, which shows whether the bank asks to confirm every payment.
+      setChecking(true)
+      setError(null)
+      const problems: string[] = []
+      for (const plate of ok) {
+        try {
+          await api.renewalCheck(parking(found[plate].rate!, plate))
+        } catch (e) {
+          problems.push(ok.length > 1 ? `${plate} : ${(e as Error).message}` : (e as Error).message)
+        }
+      }
+      setChecking(false)
+      onDone() // a first week may have been paid: show its ticket
+      if (problems.length) return setError(problems.join('\n'))
       setPaywall(true)
       return
     }
@@ -525,8 +541,12 @@ function RiverainDialog({
 
           {error && <p className="whitespace-pre-line text-sm text-destructive">{error}</p>}
 
-          <button onClick={activate} disabled={!ok.length || loading || saving} className={ui.primary}>
-            {saving ? (
+          <button onClick={activate} disabled={!ok.length || loading || saving || checking} className={ui.primary}>
+            {checking ? (
+              <>
+                <Loader2 className="size-5 animate-spin" /> Vérification du paiement avec PayByPhone…
+              </>
+            ) : saving ? (
               <Loader2 className="size-5 animate-spin" />
             ) : ok.length > 1 ? (
               `Activer le renouvellement pour ${ok.length} véhicules`

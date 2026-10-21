@@ -542,8 +542,11 @@ class Bot:
         )
 
         job = None
+        challenged = False  # the bank asked the card holder to confirm (3-D Secure), even if it was done in time
         for _ in range(15):
             job = self._get_job(jobId)
+            challenged = challenged or any("authenticationChallenge" in str(cg.get("status"))
+                                           for cg in job.get("captureGroups") or [])
             failures = self._job_failures(job)
             if failures:
                 raise RuntimeError("Payment job failed: %s" % json.dumps(failures))
@@ -558,6 +561,7 @@ class Bot:
             "expireTime": session.get("expireTime"),
             "jobId": jobId,
             "jobStatus": job.get("status") if job else None,
+            "challenged": challenged,
             # Where a payment still in progress is stuck (statuses and codes only, no card data).
             "jobStages": [
                 {"stage": cg.get("stage"), "status": cg.get("status"),

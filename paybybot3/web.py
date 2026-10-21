@@ -1950,6 +1950,41 @@ def debug(pbb_session: str = Cookie(None)):
     return report
 
 
+CARD_NEEDS_CHECK = ("Votre banque demande de valider chaque paiement de cette carte (3-D Secure) : le renouvellement "
+                    "automatique ne peut pas fonctionner avec elle, personne n'est là pour valider. Choisissez dans "
+                    "PayByPhone une autre carte (ou PayPal), puis réessayez. Si vous avez validé ce paiement, votre "
+                    "ticket de cette semaine est bien pris.")
+
+
+@app.post("/api/renewal-check")
+def renewal_check(body: Parking, pbb_session: str = Cookie(None)):
+    """Before the offer page: make sure PayByPhone can really be paid unattended for this car. Resident rate and
+    card are checked; with no ticket running, the first week (the price shown) is paid now, which also tells
+    whether the bank asks to confirm each payment (3-D Secure): then the renewal could never run on its own."""
+    s = current(pbb_session)
+
+    def run():
+        try:
+            card = check_payable(s, body.location, body.rate, body.plate, body.paymentAccountId)
+        except NotPayable as e:
+            raise HTTPException(400, str(e))
+        if s.demo or running_for(s, body.plate):
+            return {"ok": True, "paid": False}
+        try:
+            result, found = pay_and_confirm(s, body.location, body.rate, fmt_qty(body.duration), body.unit,
+                                            body.plate, card)
+        except BankCheck:
+            raise HTTPException(409, CARD_NEEDS_CHECK)
+        except Unconfirmed as e:
+            raise HTTPException(504, str(e))
+        if result.get("challenged"):
+            raise HTTPException(409, CARD_NEEDS_CHECK)
+        s.log("success", "Première semaine payée : zone %s, %s" % (body.location, body.plate))
+        return {"ok": True, "paid": True, "expire": iso(covered_until(found)), "cost": result.get("cost")}
+
+    return guarded(run)
+
+
 @app.post("/api/autopilots")
 def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     s = current(pbb_session)

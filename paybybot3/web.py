@@ -480,14 +480,28 @@ def serialize_session(s):
     }
 
 
-def normalize_accounts(accounts):
+def card_valid_until(card):
+    """Last moment a card can be used: the end of its expiry month (Paris time is close enough); None if unknown."""
+    try:
+        month, year = int(card.get("expiryMonth")), int(card.get("expiryYear"))
+    except (TypeError, ValueError):
+        return None
+    year += 2000 if year < 100 else 0
+    first_next = datetime(year + (month == 12), month % 12 + 1, 1, tzinfo=timezone.utc)
+    return first_next - timedelta(seconds=1)
+
+
+def normalize_accounts(accounts, now=None):
+    now = now or datetime.now(timezone.utc)
     result = []
     for card in accounts.get("paymentCards") or []:
         masked = card.get("maskedCardNumber") or ""
         label = "%s •••• %s" % (card.get("cardType") or "Carte", masked[-4:])
-        if card.get("expiryMonth") and card.get("expiryYear"):
+        until = card_valid_until(card)
+        if until:
             label += " — exp. %02d/%s" % (int(card["expiryMonth"]), str(card["expiryYear"])[-2:])
-        result.append({"id": card["paymentAccountId"], "label": label, "kind": "card"})
+        result.append({"id": card["paymentAccountId"], "label": label, "kind": "card",
+                       "validUntil": until.isoformat() if until else None, "expired": bool(until and until < now)})
     for acc in accounts.get("mno") or []:
         result.append({"id": acc["paymentAccountId"], "label": "Facture opérateur %s" % (acc.get("operator") or ""),
                        "kind": "phone"})
@@ -506,6 +520,8 @@ BANK_CHECK = ("Votre banque a demandé de valider ce paiement (3-D Secure) : Pay
               "relancez le renouvellement.")
 NO_CARD = ("Aucune carte bancaire dans votre compte PayByPhone : ajoutez-en une dans l'application PayByPhone, "
            "puis relancez le renouvellement.")
+CARD_EXPIRED = ("La carte bancaire de votre compte PayByPhone a expiré (%s) : ajoutez votre nouvelle carte dans "
+                "l'application PayByPhone. Le renouvellement reprendra tout seul.")
 RESIDENT_REFUSED = ("PayByPhone n'accepte plus le tarif résident pour ce véhicule dans cette zone%s. Vérifiez votre "
                     "carte résident dans l'application PayByPhone.")
 
@@ -535,10 +551,14 @@ def check_payable(session, location, rate, plate, payment_account_id):
     if not chosen or chosen.get("parkingNotAllowedReason"):
         reason = (chosen or {}).get("parkingNotAllowedReason")
         raise NotPayable(RESIDENT_REFUSED % (" (motif PayByPhone : %s)" % reason if reason else ""))
-    cards = [p["id"] for p in normalize_accounts(session.call("get_payment_accounts") or {}) if p["kind"] == "card"]
+    cards = [p for p in normalize_accounts(session.call("get_payment_accounts") or {}) if p["kind"] == "card"]
     if not cards:
         raise NotPayable(NO_CARD)
-    return payment_account_id if payment_account_id in cards else cards[0]
+    valid = [p["id"] for p in cards if not p["expired"]]
+    if not valid:  # every card is past its expiry date: the payment would be refused
+        chosen = next((p for p in cards if p["id"] == payment_account_id), cards[0])
+        raise NotPayable(CARD_EXPIRED % chosen["label"].split("—")[-1].strip())
+    return payment_account_id if payment_account_id in valid else valid[0]
 
 
 def pay_and_confirm(session, location, rate, duration, unit, plate, paymentAccountId, attempts=10, delay=3):

@@ -299,7 +299,9 @@ function RiverainDialog({
 
   const covered = new Set(data.autopilots.filter(isWeekly).map((a) => a.plate))
   // Renewals pay with a saved card only (PayPal or the phone bill are not offered for them).
-  const cards = data.payments.filter((p) => p.kind === 'card')
+  // Expired cards would be refused: never offered.
+  const allCards = data.payments.filter((p) => p.kind === 'card')
+  const cards = allCards.filter((p) => !p.expired)
 
   // Each time the dialog opens: the riverain vehicles not renewed yet (all ticked), each with the arrondissement
   // PayByPhone gives it the resident rate in (never typed), and the card.
@@ -475,7 +477,13 @@ function RiverainDialog({
             )}
           </div>
 
-          {!cards.length && <NoPayment compact onRefresh={async () => onDone()} />}
+          {!allCards.length && <NoPayment compact onRefresh={async () => onDone()} />}
+          {allCards.length > 0 && !cards.length && (
+            <p role="alert" className="rounded-xl border-l-4 border-destructive bg-destructive/8 px-4 py-3 text-sm text-destructive">
+              {allCards.length > 1 ? "Les cartes" : "La carte"} de votre compte PayByPhone {allCards.length > 1 ? 'ont' : 'a'} expiré (
+              {allCards.map((p) => p.label.split('—').pop()!.trim()).join(', ')}). Ajoutez votre nouvelle carte dans l'application PayByPhone, puis rouvrez cette fenêtre.
+            </p>
+          )}
 
           {cards.length > 1 && (
             <div>

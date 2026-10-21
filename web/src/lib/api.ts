@@ -1,7 +1,7 @@
 export type Money = { amount: number; currency: string }
 
 export type Vehicle = { plate: string; country?: string; type?: string }
-export type PaymentMethod = { id: string; label: string; kind: 'card' | 'phone' | 'paypal' }
+export type PaymentMethod = { id: string; label: string; kind: 'card' | 'phone' | 'paypal'; validUntil?: string | null; expired?: boolean }
 export type Session = {
   id: string
   location: string

@@ -134,6 +134,25 @@ class RunningTicket(unittest.TestCase):
         answer, _ = self.check(cards=())
         self.assertEqual((answer.status_code, answer.detail), (400, web.NO_CARD))
 
+    def accounts(self, *cards):
+        s = MagicMock()
+        rates = [{"ratePolicyId": "101", "name": "Résident", "type": "Resident"}]
+        s.call.side_effect = lambda name, *a, **k: {"get_rate_options": rates,
+                                                     "get_payment_accounts": {"paymentCards": list(cards)}}.get(name)
+        return s
+
+    def test_an_expired_card_is_not_used(self):
+        old = {"paymentAccountId": "c", "cardType": "Visa", "maskedCardNumber": "1111", "expiryMonth": 1, "expiryYear": 2020}
+        new = {"paymentAccountId": "n", "cardType": "Visa", "maskedCardNumber": "2222", "expiryMonth": 1, "expiryYear": 2099}
+        self.assertEqual(web.check_payable(self.accounts(old, new), "75005", "101", "FT630FH", "c"), "n")
+        with self.assertRaises(web.NotPayable) as refused:
+            web.check_payable(self.accounts(old), "75005", "101", "FT630FH", "c")
+        self.assertIn("exp. 01/20", str(refused.exception))
+
+    def test_a_card_is_valid_until_the_end_of_its_month(self):
+        until = web.card_valid_until({"expiryMonth": 2, "expiryYear": 28})
+        self.assertEqual((until.year, until.month, until.day), (2028, 2, 29))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 type Bubble = { from: 'us' | 'you'; text: string }
 
-const HELLO = 'Bonjour ! Une question sur PayByBot ? Écrivez-nous ici : nous vous répondons par e-mail.'
+const HELLO = 'Bonjour ! Une question sur PayByBot ? Écrivez-nous ici : nous vous répondons dans les plus brefs délais.'
 
 /** « Contact » in the top bar: a small chat-like window whose message is e-mailed to us. */
 export function ContactLink({ className }: { className?: string }) {
@@ -75,13 +75,10 @@ function ContactWindow({ onClose }: { onClose: () => void }) {
       className="fixed right-4 bottom-4 z-50 flex max-h-[min(34rem,calc(100dvh-2rem))] w-[min(23rem,calc(100vw-2rem))] animate-in flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-[0_24px_60px_-12px_rgba(11,16,36,0.35)] duration-200 fade-in-0 slide-in-from-bottom-3"
     >
       <div className="flex items-center gap-3 bg-[linear-gradient(110deg,#0b1024_0%,#1d2a6b_60%,#1d4ea3_100%)] px-4 py-3.5 text-white">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/12 font-heading text-sm font-semibold">
-          PB
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white">
+          <img src="/favicon.svg" alt="" className="size-5" />
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-heading text-[0.98rem] leading-tight font-semibold">Contact PayByBot</span>
-          <span className="block text-xs text-white/65">Réponse par e-mail</span>
-        </span>
+        <span className="min-w-0 flex-1 font-heading text-[0.98rem] leading-tight font-semibold">Contact PayByBot</span>
         <button
           type="button"
           onClick={onClose}

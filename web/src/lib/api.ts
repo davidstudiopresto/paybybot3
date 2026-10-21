@@ -178,6 +178,7 @@ export const api = {
   addAutopilot: (p: Parking & { label: string; email?: string }) => post<Autopilot>('/api/autopilots', p),
   pauseAutopilot: (id: string, start: string, end: string | null) =>
     post<Autopilot>(`/api/autopilots/${id}/pause`, { start, end }),
+  lastCard: () => request<{ paymentAccountId: string | null }>('/api/last-card'),
   renewalCheck: (p: Parking) => post<{ ok: true; paid: boolean; expire?: string }>('/api/renewal-check', p),
   resumeAutopilot: (id: string) => request<Autopilot>(`/api/autopilots/${id}/pause`, { method: 'DELETE' }),
   setAutopilotEmail: (id: string, email: string) =>

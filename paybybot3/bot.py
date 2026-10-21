@@ -195,6 +195,20 @@ class Bot:
             "getPaymentAccountsV1"
         ]
 
+    def get_receipts(self, parkingSessionId):
+        """Receipts of a parking session, with the card it was paid with (brand and last four digits)."""
+        query = """query GetReceiptsByParkingSessionIdV1($parkingSessionId: UUID!) {
+  getReceiptsByParkingSessionIdV1(parkingSessionId: $parkingSessionId) {
+    parkingSessionId
+    startTime
+    paymentMethod {
+      brand
+      lastFourDigitsOfCardNumber
+    }
+  }
+}"""
+        return self._graphql(query, {"parkingSessionId": parkingSessionId})["getReceiptsByParkingSessionIdV1"] or []
+
     def get_payment_account_status(self, paymentAccountId):
         """The card's verification by PayByPhone when it was added (no charge): status, failure reason, codes."""
         query = """query GetPaymentAccountByIdV1($input: GetPaymentAccountByIdInput!) {

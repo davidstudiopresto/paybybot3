@@ -1581,6 +1581,27 @@ def rates(location: str, plate: str, pbb_session: str = Cookie(None)):
     return guarded(lambda: s.call("get_rate_options", locationId=location.strip(), licensePlate=plate))
 
 
+@app.get("/api/last-card")
+def last_card(pbb_session: str = Cookie(None)):
+    """The card PayByPhone was last paid with (from the receipt of the latest tickets), to choose it by default:
+    PayByPhone keeps no « default card » on its side, only on the phone. None when unknown."""
+    s = current(pbb_session)
+    try:
+        cards = [c for c in (s.call("get_payment_accounts") or {}).get("paymentCards") or []]
+        sessions = s.call("get_parking_sessions") + s.call("get_past_sessions", limit=10)
+        sessions.sort(key=lambda x: parse_dt(x.get("startTime")) or datetime.min.replace(tzinfo=timezone.utc),
+                      reverse=True)
+        for x in sessions[:3]:
+            for receipt in s.call("get_receipts", x.get("parkingSessionId")) or []:
+                digits = ((receipt.get("paymentMethod") or {}).get("lastFourDigitsOfCardNumber") or "")[-4:]
+                match = [c for c in cards if digits and (c.get("maskedCardNumber") or "").endswith(digits)]
+                if match:
+                    return {"paymentAccountId": match[0]["paymentAccountId"]}
+    except Exception as e:  # a convenience: never block the window for it
+        log.info("last card unknown: %s", str(e)[:300])
+    return {"paymentAccountId": None}
+
+
 @app.get("/api/last-rate")
 def last_rate(location: str, plate: str, pbb_session: str = Cookie(None)):
     """The rate this car used last, from PayByPhone's history: in this zone first, otherwise anywhere."""

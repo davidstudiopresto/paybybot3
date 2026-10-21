@@ -324,6 +324,12 @@ function RiverainDialog({
       },
     )
     setPayment(cards.find((p) => p.id === last.paymentAccountId)?.id ?? cards[0]?.id ?? '')
+    // Then the card PayByPhone was last paid with, when there is a choice.
+    if (cards.length > 1)
+      api.lastCard().then(
+        (r) => r.paymentAccountId && cards.some((p) => p.id === r.paymentAccountId) && setPayment(r.paymentAccountId),
+        () => {},
+      )
     // Only when it opens: a refresh of the account behind it must not wipe the price or a message on screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])

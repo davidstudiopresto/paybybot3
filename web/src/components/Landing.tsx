@@ -74,10 +74,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
           two lines (the first in the brand gradient), then the call to action. */}
       <section className="rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-20">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center text-center">
-          <p className="mb-8 inline-flex max-w-full items-center gap-2.5 rounded-full border border-ink/10 bg-white px-4 py-2 text-[0.7rem] font-medium tracking-[0.12em] text-ink/80 uppercase shadow-[0_1px_2px_rgb(11_16_36/0.06)] sm:text-[0.78rem] lg:mb-10">
-            <span className="size-2 shrink-0 rounded-full bg-eu" aria-hidden />
-            100 % automatique • Même téléphone éteint • Plus besoin d’y penser
-          </p>
           <h1 className="font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
             <span className="block">de votre stationnement résident</span>

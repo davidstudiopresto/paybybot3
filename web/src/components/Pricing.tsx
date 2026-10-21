@@ -191,17 +191,20 @@ export function TrialBanner({
   trialEnd,
   plan,
   blocked = null,
+  graceEnd = null,
 }: {
   trialEnd: string | null
   plan: string | null
-  blocked?: 'unpaid' | 'trialOver' | null
+  blocked?: 'grace' | 'unpaid' | 'trialOver' | null
+  graceEnd?: string | null
 }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   // Failed charge: straight to the invoice to pay. No subscription: choose a plan.
+  const refused = blocked === 'grace' || blocked === 'unpaid'
   async function unlock() {
-    if (blocked !== 'unpaid') return setOpen(true)
+    if (!refused) return setOpen(true)
     setBusy(true)
     try {
       window.location.assign((await api.unlock()).url)
@@ -219,15 +222,23 @@ export function TrialBanner({
           className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-[linear-gradient(90deg,#5c0f12_0%,#9b1c1f_100%)] px-4 py-2.5 text-sm text-white"
         >
           <span className="font-semibold">
-            {blocked === 'unpaid' ? 'Paiement refusé : compte bloqué.' : 'Mois offert terminé : compte bloqué.'}{' '}
-            <span className="font-normal text-white/80">Le prochain renouvellement ne sera pas payé.</span>
+            {blocked === 'grace'
+              ? 'Paiement refusé.'
+              : blocked === 'unpaid'
+                ? 'Paiement refusé : renouvellement arrêté.'
+                : 'Mois offert terminé : compte bloqué.'}{' '}
+            <span className="font-normal text-white/80">
+              {blocked === 'grace'
+                ? `Vos renouvellements continuent jusqu'au ${graceDay(graceEnd)}, mettez à jour votre carte d'ici là.`
+                : 'Le prochain renouvellement ne sera pas payé.'}
+            </span>
           </span>
           <button
             onClick={unlock}
             disabled={busy}
             className="inline-flex items-center rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-white/90 disabled:opacity-60"
           >
-            {busy ? <Loader2 className="size-4 animate-spin" /> : 'Débloquer mon compte'}
+            {busy ? <Loader2 className="size-4 animate-spin" /> : refused ? 'Se régulariser' : 'Débloquer mon compte'}
           </button>
         </div>
         {open && (
@@ -263,8 +274,15 @@ export function TrialBanner({
   )
 }
 
-/** Full-page paywall: the offer and the way to pay on the left, the parking meter on the right. */
-function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
+/** « mardi 28 octobre » for the end of the grace week. */
+function graceDay(iso: string | null) {
+  if (!iso) return 'la fin de la semaine'
+  return new Date(iso).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })
+}
+
+/** Full-page paywall: the offer and the way to pay on the left, the parking meter on the right. onPay runs just
+ *  before leaving for Stripe. */
+export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; text: string; onPay?: () => void }) {
   const [plan, setPlan] = useState<Plan>('yearly')
   const [busy, setBusy] = useState(false)
   const [pricing] = usePricing(true)
@@ -273,7 +291,9 @@ function PlansDialog({ onClose, text }: { onClose: () => void; text: string }) {
   async function pay() {
     setBusy(true)
     try {
-      window.location.assign((await api.checkout(plan)).url)
+      const { url } = await api.checkout(plan)
+      onPay?.()
+      window.location.assign(url)
     } catch (e) {
       toast((e as Error).message)
       setBusy(false)

@@ -915,7 +915,7 @@ def with_details(row):
 
 ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "zone_found",
-                  "vehicle_zones")
+                  "vehicle_zones", "dunning")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -1076,7 +1076,7 @@ def process_renewal(row, refresh_token=None):
             # 2 hours, so the renewal resumes on its own once the subscription is paid.
             store("renewal_update", p_id=row["id"],
                   p_patch={"last_error": BLOCKED, "next_check": utc_iso(now + timedelta(hours=2))})
-            if previous_error != BLOCKED:
+            if previous_error != BLOCKED and state == "trial_over":  # unpaid: the dunning e-mails say it
                 notify_blocked(row, state)
             return "blocked"
     try:
@@ -1139,7 +1139,9 @@ def cron_renew(request: Request):
     if not cron_authorized(request):
         raise HTTPException(401, "Unauthorized")
     results = [process_renewal(row) for row in store("renewal_claim_due", p_limit=2)]
-    return {"processed": len(results), "outcomes": results}
+    # Once an hour (the scheduler calls every 5 minutes): the e-mails of the grace week after a refused charge.
+    dunned = run_dunning() if datetime.now(timezone.utc).minute < 5 else None
+    return {"processed": len(results), "outcomes": results, "dunning": dunned}
 
 
 # --------------------------------------------------------------------------
@@ -1925,9 +1927,13 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
         refresh = getattr(s.bot, "refresh_token", None)
         if not refresh:
             raise HTTPException(401, "Reconnectez-vous pour activer le renouvellement automatique.")
-        if billing_state(guarded(lambda: load_account(s)), owner_id(s.username)) in BLOCKED_STATES:
+        state = billing_state(guarded(lambda: load_account(s)), owner_id(s.username))
+        if state in BLOCKED_STATES:
             raise HTTPException(402, "Compte bloqué : débloquez-le (bandeau en haut de page) pour activer un "
                                      "renouvellement.")
+        if state == "trial":
+            raise HTTPException(402, "Choisissez votre offre pour activer le renouvellement : rien n'est prélevé "
+                                     "avant la fin de votre mois offert.")
 
         def save():
             row = store("renewal_save", p_row={
@@ -1971,12 +1977,16 @@ def get_account(pbb_session: str = Cookie(None)):
 
     account = guarded(load)
     start = parse_dt(account.get("trial_start"))
-    state = billing_state(account, owner_id(s.username)) if HOSTED and not s.demo else "ok"
+    state, grace_end = billing_status(account, owner_id(s.username)) if HOSTED and not s.demo else ("ok", None)
     return {"email": account.get("email") or "", "zone": account.get("zone") or None,
             "trialEnd": (start + timedelta(days=TRIAL_DAYS)).isoformat() if start else None,
             "plan": subscription_plan(account),
-            # Renewals stop while blocked: 'unpaid' (Stripe could not charge) or 'trialOver' (no subscription).
-            "blocked": {"unpaid": "unpaid", "trial_over": "trialOver"}.get(state)}
+            # 'grace': a charge was refused, renewals go on until graceEnd. Renewals stop while blocked:
+            # 'unpaid' (still not paid after the grace week) or 'trialOver' (no subscription).
+            "blocked": {"grace": "grace", "unpaid": "unpaid", "trial_over": "trialOver"}.get(state),
+            "graceEnd": grace_end.isoformat() if grace_end else None,
+            # A renewal is activated only with a subscription, chosen even during the free month.
+            "subscribed": state in ("ok", "grace")}
 
 
 class Checkout(BaseModel):
@@ -2019,6 +2029,8 @@ def subscription_plan(account):
 PAID_STATUSES = ("trialing", "active")
 UNPAID_STATUSES = ("past_due", "unpaid", "incomplete")
 BLOCKED_STATES = ("unpaid", "trial_over")
+GRACE_DAYS = 7  # after a refused charge, renewals keep going this long while the customer fixes the card
+DUNNING_DAYS = (0, 3, 6, 7)  # days after the refused charge an e-mail goes out; the last says renewals stopped
 BLOCKED = ("Compte bloqué : l'abonnement PaybyBot n'est pas réglé. Le ticket en cours reste valable, le suivant "
            "ne sera pas payé.")
 UNLOCK_TTL = 30 * 86400  # how long the "Débloquer mon compte" link of an e-mail works
@@ -2029,25 +2041,41 @@ def admin_owners():
     return {owner_id(c) for a in admins for c in login_candidates(a)}
 
 
-def billing_state(account, owner=None):
-    """'ok' (subscribed), 'trial' (free month running), or a blocked state: 'unpaid' (Stripe could not charge)
-    or 'trial_over' (free month ended without a subscription)."""
+def unpaid_since(invoice):
+    """When Stripe first tried to charge the invoice it could not collect (its finalization), or None."""
+    if not isinstance(invoice, dict):
+        return None
+    at = (invoice.get("status_transitions") or {}).get("finalized_at") or invoice.get("created")
+    return datetime.fromtimestamp(at, timezone.utc) if at else None
+
+
+def billing_status(account, owner=None):
+    """(state, end of the grace week or None). State: 'ok' (subscribed), 'trial' (free month running), 'grace'
+    (Stripe could not charge less than GRACE_DAYS ago: renewals go on), or a blocked state: 'unpaid' (still not
+    paid after the grace week) or 'trial_over' (free month ended without a subscription)."""
     if not account or (owner and owner in admin_owners()):
-        return "ok"  # the site owner, and renewals stored before accounts existed
+        return "ok", None  # the site owner, and renewals stored before accounts existed
     sub_id = account.get("stripe_subscription")
     if sub_id and os.environ.get("STRIPE_SECRET_KEY"):
         try:
-            status = stripe("GET", "subscriptions/" + sub_id).get("status")
+            sub = stripe("GET", "subscriptions/" + sub_id + "?expand[]=latest_invoice")
         except HTTPException:
-            status = "active" if account.get("plan") else None  # Stripe unreachable: trust the last known plan
+            sub = {"status": "active" if account.get("plan") else None}  # Stripe unreachable: trust the last plan
+        status = sub.get("status")
         if status in PAID_STATUSES:
-            return "ok"
+            return "ok", None
         if status in UNPAID_STATUSES:
-            return "unpaid"
+            since = unpaid_since(sub.get("latest_invoice"))
+            end = since + timedelta(days=GRACE_DAYS) if since else None
+            return ("grace" if end and end > datetime.now(timezone.utc) else "unpaid"), end
     start = parse_dt(account.get("trial_start"))
     if not start or start + timedelta(days=TRIAL_DAYS) > datetime.now(timezone.utc):
-        return "trial"  # no start yet: the free month begins when the account is first opened
-    return "trial_over"
+        return "trial", None  # no start yet: the free month begins when the account is first opened
+    return "trial_over", None
+
+
+def billing_state(account, owner=None):
+    return billing_status(account, owner)[0]
 
 
 def guarded_state(owner):
@@ -2084,6 +2112,93 @@ def notify_blocked(details, state):
                footer="Vous recevez cet e-mail parce que vous avez un renouvellement automatique sur PaybyBot.")
 
 
+def subscription_owner(sub):
+    """The PaybyBot owner a subscription belongs to: its metadata, else the Checkout session that created it (then
+    written on the subscription for next time)."""
+    owner = (sub.get("metadata") or {}).get("owner")
+    if owner:
+        return owner
+    found = stripe("GET", "checkout/sessions?limit=1&subscription=" + sub["id"]).get("data") or []
+    owner = found[0].get("client_reference_id") if found else None
+    if owner:
+        stripe("POST", "subscriptions/" + sub["id"], **{"metadata[owner]": owner})
+    return owner
+
+
+def notify_unpaid(to, link, step, end):
+    """The e-mails of the grace week (see DUNNING_DAYS), each with the link to pay."""
+    left = GRACE_DAYS - step
+    deadline = paris_text(end)
+    button = ("Régulariser mon paiement", link)
+    footer = "Vous recevez cet e-mail parce que vous avez un abonnement PaybyBot."
+    if step >= GRACE_DAYS:
+        send_email(to, "Renouvellement PaybyBot arrêté · paiement requis", "Renouvellement arrêté",
+                   ["Le paiement de votre abonnement PaybyBot n'a pas été régularisé : le renouvellement automatique "
+                    "est arrêté.",
+                    "Votre ticket en cours reste valable jusqu'à sa fin, mais le suivant ne sera pas payé.",
+                    "Régularisez : le renouvellement reprend tout seul dès que le paiement est fait."],
+                   button, footer=footer)
+        return
+    if step == 0:
+        subject, title = "Paiement PaybyBot refusé · mettez à jour votre carte", "Votre paiement n'est pas passé"
+        first = ("Le prélèvement de votre abonnement PaybyBot a été refusé (carte expirée, opposition ou plafond "
+                 "atteint, par exemple).")
+    elif left > 1:
+        subject, title = "Rappel · paiement PaybyBot en attente", "Plus que %d jours pour régulariser" % left
+        first = "Le paiement de votre abonnement PaybyBot est toujours en attente."
+    else:
+        subject, title = "Dernier jour · paiement PaybyBot en attente", "Dernier jour pour régulariser"
+        first = "Le paiement de votre abonnement PaybyBot est toujours en attente."
+    send_email(to, subject, title,
+               [first,
+                "Vos renouvellements continuent jusqu'au %s. Sans paiement d'ici là, ils s'arrêteront." % deadline,
+                "Mettez à jour votre carte en un clic : le paiement est fait aussitôt."],
+               button, footer=footer)
+
+
+def dun(sub, now):
+    """One failing subscription: send the grace-week e-mail due today, if not sent yet."""
+    invoice = sub.get("latest_invoice")
+    since = unpaid_since(invoice)
+    owner = subscription_owner(sub) if since else None
+    if not owner:
+        return
+    account = account_by_owner(owner)
+    if account.get("stripe_subscription") != sub["id"] or not account.get("email"):
+        return
+    due = [d for d in DUNNING_DAYS if d <= (now - since).days]
+    if not due:
+        return
+    dunning = account.get("dunning") or {}
+    if dunning.get("invoice") != invoice["id"]:
+        dunning = {"invoice": invoice["id"], "sent": []}
+    if due[-1] in dunning["sent"]:
+        return
+    notify_unpaid(account["email"], unlock_link(owner), due[-1], since + timedelta(days=GRACE_DAYS))
+    save_account_by_owner(owner, {"dunning": {**dunning, "sent": dunning["sent"] + [due[-1]]}})
+    log.info("grace-week e-mail sent (day %d)", due[-1])
+
+
+def run_dunning():
+    """The subscriptions Stripe could not charge, each with the e-mail of its grace-week day. Never raises."""
+    if not os.environ.get("STRIPE_SECRET_KEY"):
+        return 0
+    now, count = datetime.now(timezone.utc), 0
+    for status in ("past_due", "unpaid"):
+        try:
+            subs = stripe("GET", "subscriptions?limit=100&expand[]=data.latest_invoice&status=" + status).get("data")
+        except Exception as e:
+            log.warning("dunning: subscriptions unavailable: %s", str(e)[:200])
+            continue
+        for sub in subs or []:
+            try:
+                dun(sub, now)
+                count += 1
+            except Exception as e:
+                log.warning("dunning failed for one subscription: %s", str(e)[:200])
+    return count
+
+
 def checkout_url(owner, account, plan, success_url):
     """A Stripe Checkout page for the plan; while the free month runs, the first charge waits for its end."""
     base = APP_URL.rstrip("/")
@@ -2094,7 +2209,7 @@ def checkout_url(owner, account, plan, success_url):
             "line_items[0][price_data][currency]": "eur", "line_items[0][price_data][unit_amount]": amount,
             "line_items[0][price_data][recurring][interval]": interval,
             "line_items[0][price_data][product_data][name]": name,
-            "client_reference_id": owner, "metadata[plan]": plan,
+            "client_reference_id": owner, "metadata[plan]": plan, "subscription_data[metadata][owner]": owner,
             "metadata[weeklies]": ",".join(str(w) for w in weeklies),
             "success_url": success_url,
             "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true",

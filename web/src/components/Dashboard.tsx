@@ -8,7 +8,7 @@ import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
-import { CardGate, ManageRenewal, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf } from '@/components/Riverain'
+import { CardGate, ManageRenewal, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
 import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -95,9 +95,18 @@ export function Dashboard({
     const done = window.location.hash.match(/session_id=(cs_[A-Za-z0-9_]+)/)
     const confirm = done
       ? api.confirmCheckout(done[1]).then(
-          (r) => {
+          async (r) => {
             history.replaceState(null, '', window.location.pathname)
-            toast.success(`Offre ${r.plan === 'yearly' ? 'annuelle' : 'mensuelle'} activée.`)
+            const offer = `Offre ${r.plan === 'yearly' ? 'annuelle' : 'mensuelle'} activée.`
+            // The renewal chosen just before Stripe is activated now.
+            const { done: renewed, failed } = await runPendingRenewals()
+            if (renewed) {
+              toast.success(renewed > 1 ? `Renouvellement activé pour ${renewed} véhicules.` : 'Renouvellement activé.', {
+                description: offer + " Rien n'est prélevé avant la fin de votre mois offert.",
+              })
+              onRefresh()
+            } else toast.success(offer)
+            if (failed.length) toast.error(failed.join('\n'))
           },
           (e) => toast.error((e as Error).message),
         )
@@ -129,7 +138,12 @@ export function Dashboard({
         // No card saved on PayByPhone (removed since, Apple Pay only): PaybyBot cannot pay, so it is not usable.
         data && !me.demo && !data.payments.some((p) => p.kind === 'card') && <CardGate />
       )}
-      <TrialBanner trialEnd={account?.trialEnd ?? null} plan={account?.plan ?? null} blocked={account?.blocked ?? null} />
+      <TrialBanner
+        trialEnd={account?.trialEnd ?? null}
+        plan={account?.plan ?? null}
+        blocked={account?.blocked ?? null}
+        graceEnd={account?.graceEnd ?? null}
+      />
       <TopBar>
         {me.demo && (
           <span className="inline-flex h-9 items-center rounded-full bg-amber/25 px-3 text-sm font-semibold text-ink sm:h-10 sm:px-4 sm:text-[0.95rem]">

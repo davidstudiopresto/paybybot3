@@ -5,11 +5,53 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { NoPayment } from '@/components/NoPayment'
 import { arrondissement, Plate, withPayByPhone, ZonePlate } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
+import { PlansDialog } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, clock, money, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, clock, money, type Account, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
+
+/** The renewals chosen just before leaving for Stripe, activated on the way back (kept one hour). */
+const PENDING_KEY = 'pbb-pending-renewals'
+
+function savePending(items: Parking[]) {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ at: Date.now(), items }))
+  } catch {
+    // no storage: the renewal is simply activated again by hand after the payment page
+  }
+}
+
+function clearPending() {
+  try {
+    localStorage.removeItem(PENDING_KEY)
+  } catch {
+    // nothing to clear
+  }
+}
+
+/** Back from Stripe with a subscription: activate the renewals chosen before leaving. */
+export async function runPendingRenewals(): Promise<{ done: number; failed: string[] }> {
+  let items: Parking[] = []
+  try {
+    const saved = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null')
+    if (saved && Date.now() - saved.at < 3_600_000 && Array.isArray(saved.items)) items = saved.items
+  } catch {
+    // unreadable: nothing pending
+  }
+  clearPending()
+  const failed: string[] = []
+  for (const p of items) {
+    try {
+      await api.addAutopilot({ ...p, label: WEEKLY_LABEL })
+      saveLast(p)
+    } catch (e) {
+      failed.push(`${p.plate} : ${(e as Error).message}`)
+    }
+  }
+  return { done: items.length - failed.length, failed }
+}
 const WEEK_DAYS = 7
 
 export const isWeekly = (ap: Autopilot) => ap.label === WEEKLY_LABEL
@@ -187,7 +229,7 @@ export function RiverainCard({
             Renouveler un autre véhicule
           </button>
         )}
-        <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />
+        <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />
       </section>
     )
   }
@@ -199,7 +241,7 @@ export function RiverainCard({
           Activer le renouvellement résident
         </button>
       </section>
-      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} />}
+      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
     </>
   )
 }
@@ -213,12 +255,14 @@ function RiverainDialog({
   data,
   onDone,
   hosted,
+  demo = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   data: Overview
   onDone: () => void
   hosted: boolean
+  demo?: boolean
 }) {
   const [plates, setPlates] = useState<string[] | null>(null) // the « riverain » vehicles (null: looking)
   const [selected, setSelected] = useState<string[]>([])
@@ -228,6 +272,13 @@ function RiverainDialog({
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Online, a renewal needs a subscription, chosen on Stripe even during the free month (nothing charged before
+  // it ends): without one, « Activer » opens the offer choice first.
+  const [account, setAccount] = useState<Account | null>(null)
+  const [paywall, setPaywall] = useState(false)
+  useEffect(() => {
+    if (open && hosted && !demo) api.account().then(setAccount, () => {})
+  }, [open, hosted, demo])
 
   const covered = new Set(data.autopilots.filter(isWeekly).map((a) => a.plate))
   // Renewals pay with a saved card only (PayPal or the phone bill are not offered for them).
@@ -313,6 +364,10 @@ function RiverainDialog({
 
   async function activate() {
     if (!ok.length) return
+    if (account && !account.subscribed && !account.blocked) {
+      setPaywall(true)
+      return
+    }
     setSaving(true)
     setError(null)
     const failed: string[] = []
@@ -472,6 +527,16 @@ function RiverainDialog({
           </p>
         </div>
       </DialogContent>
+      {paywall && (
+        <PlansDialog
+          text="Rien n'est prélevé avant la fin de votre mois offert. Le renouvellement s'active dès votre retour."
+          onPay={() => savePending(ok.map((plate) => parking(found[plate].rate!, plate)))}
+          onClose={() => {
+            clearPending()
+            setPaywall(false)
+          }}
+        />
+      )}
     </Dialog>
   )
 }

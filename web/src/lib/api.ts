@@ -56,8 +56,12 @@ export type Account = {
   zone: string | null
   trialEnd?: string | null
   plan?: string | null
-  /** Renewals stop while blocked: 'unpaid' (Stripe could not charge) or 'trialOver' (no subscription). */
-  blocked?: 'unpaid' | 'trialOver' | null
+  /** 'grace': a charge was refused, renewals go on until graceEnd. Renewals stop while blocked: 'unpaid' (still not
+   *  paid after the grace week) or 'trialOver' (no subscription). */
+  blocked?: 'grace' | 'unpaid' | 'trialOver' | null
+  graceEnd?: string | null
+  /** A subscription is running: needed to activate a renewal, even during the free month. */
+  subscribed?: boolean
 }
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
 

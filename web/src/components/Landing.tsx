@@ -258,8 +258,7 @@ const QUESTIONS: [string, ReactNode][] = [
     'Combien ça coûte ?',
     <>
       Le prix dépend de votre véhicule et de votre zone de résidence : il est calculé à partir de votre compte{' '}
-      <PayByPhone /> et affiché avant tout paiement. Le premier mois est offert, sans carte bancaire, et l'offre annuelle
-      coûte 20 % de moins.
+      <PayByPhone /> et affiché avant tout paiement. Le premier mois est offert, et l'offre annuelle coûte 20 % de moins.
       <a href="#/tarifs" className={cn(ui.primary, 'mt-5 h-12 w-fit px-6 text-base no-underline! hover:text-white! hover:no-underline!')}>
         Découvrir mon prix <ArrowRight className="size-5" />
       </a>
@@ -267,26 +266,13 @@ const QUESTIONS: [string, ReactNode][] = [
   ],
   [
     'Quelles informations me demandez-vous ?',
-    <>
-      Rien de ce que <PayByPhone /> sait déjà : votre numéro, vos véhicules, votre carte et votre zone de résidence
-      viennent de votre compte. On vous demande seulement votre e-mail, pour les confirmations. Si votre zone n'y figure
-      pas, vous choisissez simplement votre arrondissement en activant le renouvellement.
-    </>,
-  ],
-  [
-    'Pourquoi mes identifiants PayByPhone ?',
-    <>
-      Pour payer à votre place, PaybyBot passe par votre compte <PayByPhone />, comme l'application. Votre mot de passe
-      n'est jamais enregistré : seule une clé de reconnexion est gardée, chiffrée, et effacée dès que vous arrêtez.{' '}
-      <a href="#/securite">Sécurité et données</a>
-    </>,
+    <>PaybyBot récupère uniquement les informations de votre compte <PayByPhone />.</>,
   ],
   [
     'Mes données sont-elles protégées ?',
     <>
       Oui. Votre mot de passe n'est jamais enregistré et aucun numéro de carte n'est gardé : le paiement est fait par{' '}
-      <PayByPhone />. Le peu qui est conservé pour le renouvellement est chiffré et hébergé en France. Pas de publicité,
-      pas de traceur, et un clic suffit pour tout effacer.{' '}
+      <PayByPhone />. Pas de publicité, pas de traceur, et un clic suffit pour tout effacer.{' '}
       <a href="#/securite">Tout le détail sur la sécurité</a>
     </>,
   ],
@@ -300,17 +286,6 @@ const QUESTIONS: [string, ReactNode][] = [
       Depuis le tableau de bord, « Gérer » puis « Arrêter le renouvellement ». Le ticket en cours reste valable jusqu'à
       sa fin, et ce qui était gardé pour ce renouvellement est effacé.
     </>,
-  ],
-  [
-    'Et si un paiement échoue ?',
-    <>
-      Vous recevez un e-mail (si vous en avez donné un) et le tableau de bord vous le signale. Dans le doute, PaybyBot ne
-      repaie jamais à l'aveugle : vous ne payez pas deux fois.
-    </>,
-  ],
-  [
-    'Est-ce un service officiel de PayByPhone ?',
-    <>Non. PaybyBot est un service indépendant, édité par Studio Presto, qui utilise votre compte <PayByPhone />.</>,
   ],
 ]
 

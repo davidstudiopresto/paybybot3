@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { ArrowRight, CarFront, ChevronDown, Link2, Mail, Moon, Pause, Plus, RefreshCw, ShieldCheck, type LucideIcon } from 'lucide-react'
+import { ArrowRight, ChevronDown, Link2, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -9,14 +9,26 @@ import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/
 
 
 
-/** What PayByBot does, each true today. */
-const FEATURES: [LucideIcon, string, string][] = [
-  [RefreshCw, 'Renouvellement chaque semaine', 'Votre forfait résident est repris avant la fin du précédent, sans que vous y pensiez.'],
-  [Pause, 'Pause pour les vacances', 'Entre deux dates ou sans date de fin. Rien n’est payé pendant la pause.'],
-  [Mail, 'Prévenu à chaque fois', 'Un e-mail à chaque paiement, et la raison si un renouvellement n’aboutit pas.'],
-  [Moon, 'Même téléphone éteint', 'Tout part de nos serveurs : pas besoin d’ouvrir l’application.'],
-  [CarFront, 'Plusieurs véhicules', 'Chaque véhicule de votre compte PayByPhone a son propre renouvellement.'],
-  [ShieldCheck, 'Mot de passe jamais gardé', 'Aucun numéro de carte enregistré, et tout s’efface en un clic.'],
+/** Prunoo's four features, said only as far as PayByBot does them. */
+const FEATURES: Question[] = [
+  [
+    'Renouvellement automatique',
+    <>Votre stationnement résident est renouvelé chaque semaine, avant chaque expiration, même téléphone éteint.</>,
+  ],
+  [
+    'Pause en 1 clic',
+    <>Vous partez en vacances ? Mettez le renouvellement en pause entre deux dates, ou sans date de fin. Rien n'est payé pendant la pause.</>,
+  ],
+  [
+    'Alertes par e-mail',
+    <>Un e-mail à chaque paiement. Si un renouvellement n'aboutit pas, vous êtes prévenu avec la raison et vous relancez en un clic.</>,
+  ],
+  [
+    'Support',
+    <>
+      Une question ? Écrivez-nous à <a href="mailto:contact@paybybot.fr">contact@paybybot.fr</a>.
+    </>,
+  ],
 ]
 
 const STEP_ICONS = [Link2, RefreshCw, ShieldCheck]
@@ -142,19 +154,9 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
         <section id="fonctionnalites" className="flex scroll-mt-16 flex-col justify-center py-24 lg:min-h-[calc(100dvh-4rem)] lg:py-20">
           <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
-            Tout est prévu
+            Fonctionnalités
           </h2>
-          <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:mt-20 lg:grid-cols-3 lg:gap-5">
-            {FEATURES.map(([Icon, title, text]) => (
-              <li key={title} className="rounded-2xl border border-ink/[0.08] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--eu)_4%,white),white)] p-7 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_color-mix(in_srgb,var(--eu)_50%,transparent)]">
-                <span className="grid size-12 place-items-center rounded-xl bg-[linear-gradient(135deg,var(--eu)_0%,#2a66d1_100%)] text-white shadow-[0_8px_20px_-10px_var(--eu)]">
-                  <Icon className="size-6" strokeWidth={1.75} />
-                </span>
-                <strong className="mt-6 block font-heading text-lg text-[#2b2f3a] lg:text-xl">{title}</strong>
-                <span className="mt-2 block leading-relaxed text-ink/60">{withPayByPhone(text)}</span>
-              </li>
-            ))}
-          </ul>
+          <Rows items={FEATURES} className="mt-12 lg:mt-16" />
         </section>
 
         <Testimonials />
@@ -264,29 +266,31 @@ function FaqTitle({ as: Tag = 'h1' }: { as?: 'h1' | 'h2' }) {
   )
 }
 
-/** One question per line, a hairline between them, "+" turning into "×" when open. */
-function Faq({ className }: { className?: string }) {
+/** One row per item, a hairline between them, "+" turning into "×" when open; one open at a time, its title in bold. */
+function Rows({ items, className }: { items: Question[]; className?: string }) {
   return (
     <Accordion className={cn('border-t border-ink/12', className)}>
-      {QUESTIONS.map(([q, a]) => (
+      {items.map(([q, a]) => (
         <AccordionItem key={q} value={q} className="border-b border-ink/12 not-last:border-b">
-          <AccordionTrigger className="group/q items-center gap-6 rounded-none py-6 text-[1.05rem] font-normal text-ink hover:no-underline focus-visible:ring-0 sm:text-[1.15rem] **:data-[slot=accordion-trigger-icon]:hidden">
-            <span className="underline-offset-[6px] decoration-ink/60 group-hover/q:underline group-aria-expanded/accordion-trigger:underline">
-              {withBrands(q)}
-            </span>
+          <AccordionTrigger className="group/q items-center gap-6 rounded-none py-6 text-[1.05rem] font-normal text-ink/70 transition-colors hover:text-ink hover:no-underline focus-visible:ring-0 aria-expanded:font-semibold aria-expanded:text-ink sm:text-[1.15rem] **:data-[slot=accordion-trigger-icon]:hidden">
+            <span>{withBrands(q)}</span>
             <Plus
               aria-hidden
               strokeWidth={1.5}
               className="size-5 shrink-0 text-ink transition-transform duration-300 group-aria-expanded/accordion-trigger:rotate-45"
             />
           </AccordionTrigger>
-          <AccordionContent className="max-w-[46rem] pb-8 text-[1.02rem] leading-[1.7] text-ink/75 sm:text-[1.08rem]">
+          <AccordionContent className="max-w-[46rem] pb-8 text-[1.02rem] leading-[1.7] text-ink/60 sm:text-[1.08rem]">
             {brandNodes(a)}
           </AccordionContent>
         </AccordionItem>
       ))}
     </Accordion>
   )
+}
+
+function Faq({ className }: { className?: string }) {
+  return <Rows items={QUESTIONS} className={className} />
 }
 
 export function FaqView({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {

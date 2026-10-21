@@ -101,7 +101,7 @@ export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; 
       return onChanged()
     }
     // Relaunch: the server tries the payment right away and answers with the outcome (up to about a minute).
-    const waiting = toast.loading('Relance en cours…', { description: 'PaybyBot vérifie votre compte PayByPhone et paie si besoin.' })
+    const waiting = toast.loading('Relance en cours…', { description: 'PayByBot vérifie votre compte PayByPhone et paie si besoin.' })
     try {
       const after = await api.resumeAutopilot(ap.id)
       if (after.lastError) toast.error('Renouvellement non effectué', { id: waiting, description: after.lastError, duration: 15000 })
@@ -572,8 +572,8 @@ function RiverainDialog({
           </button>
           <p className="-mt-3 text-center text-sm text-ink/50">
             {hosted
-              ? withPayByPhone("Fonctionne en ligne, même appareil éteint. Pour payer à votre place, PaybyBot garde de quoi se reconnecter à PayByPhone, chiffré, et l'efface dès que vous arrêtez.")
-              : 'Laissez PaybyBot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.'}
+              ? withPayByPhone("Fonctionne en ligne, même appareil éteint. Pour payer à votre place, PayByBot garde de quoi se reconnecter à PayByPhone, chiffré, et l'efface dès que vous arrêtez.")
+              : 'Laissez PayByBot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.'}
           </p>
         </div>
       </DialogContent>
@@ -864,7 +864,7 @@ function ManageDialog({
 export type ResidentStatus = { zone: string | null; resident: boolean | null }
 
 /**
- * No resident rate on PayByPhone: PaybyBot cannot be used. Full screen over the blurred page, with a way to check
+ * No resident rate on PayByPhone: PayByBot cannot be used. Full screen over the blurred page, with a way to check
  * again once the rate is granted, to correct the arrondissement, or to leave.
  */
 export function ResidentGate({
@@ -910,8 +910,8 @@ export function ResidentGate({
   )
 }
 
-/** Full screen over the blurred page: PaybyBot needs a vehicle with the resident rate; what to do, then the actions. */
-/** Full screen over the blurred page: what PaybyBot needs and what to do, then the actions (children). */
+/** Full screen over the blurred page: PayByBot needs a vehicle with the resident rate; what to do, then the actions. */
+/** Full screen over the blurred page: what PayByBot needs and what to do, then the actions (children). */
 function FullScreenNotice({ title, intro, steps, children }: { title: string; intro: ReactNode; steps: string[]; children: ReactNode }) {
   return (
     <div
@@ -942,7 +942,7 @@ function FullScreenNotice({ title, intro, steps, children }: { title: string; in
   )
 }
 
-/** PaybyBot needs a vehicle with the resident rate. */
+/** PayByBot needs a vehicle with the resident rate. */
 export function ResidentRequired({
   zone = null,
   vehicles = 2,
@@ -958,7 +958,7 @@ export function ResidentRequired({
       title="Stationnement résident requis"
       intro={
         <>
-          Pour accéder aux services PaybyBot,{' '}
+          Pour accéder aux services PayByBot,{' '}
           {vehicles === 1 ? 'votre véhicule doit' : 'au moins un de vos véhicules doit'} bénéficier du tarif résident sur
           votre compte {withPayByPhone('PayByPhone')}
           {where ? ` (${where})` : ''}.{' '}
@@ -968,7 +968,7 @@ export function ResidentRequired({
       steps={[
         'Faites votre demande de stationnement résident pour obtenir le forfait résident.',
         'Vérifiez que le tarif résident apparaît dans votre application PayByPhone.',
-        'Revenez ici : l’accès à PaybyBot s’ouvre dès que le tarif résident est actif.',
+        'Revenez ici : l’accès à PayByBot s’ouvre dès que le tarif résident est actif.',
       ]}
     >
       {children}
@@ -976,17 +976,17 @@ export function ResidentRequired({
   )
 }
 
-/** Sign-up: PaybyBot pays with a card saved on PayByPhone. */
+/** Sign-up: PayByBot pays with a card saved on PayByPhone. */
 export const CARD_NOTE = 'Une carte bancaire enregistrée dans PayByPhone est nécessaire.'
 
-/** PaybyBot pays with a card saved on PayByPhone. */
+/** PayByBot pays with a card saved on PayByPhone. */
 export function CardRequired({ children }: { children: ReactNode }) {
   return (
     <FullScreenNotice
       title="Carte bancaire requise"
       intro={
         <>
-          Pour renouveler votre forfait automatiquement, PaybyBot paie avec une carte bancaire enregistrée sur votre compte{' '}
+          Pour renouveler votre forfait automatiquement, PayByBot paie avec une carte bancaire enregistrée sur votre compte{' '}
           {withPayByPhone('PayByPhone')}. Aucune carte n’y est enregistrée pour le moment. Apple Pay et Google Pay ne
           permettent pas le paiement automatique : ils demandent une validation sur votre téléphone à chaque paiement.
         </>
@@ -994,7 +994,7 @@ export function CardRequired({ children }: { children: ReactNode }) {
       steps={[
         'Ouvrez l’application PayByPhone, rubrique Moyens de paiement.',
         'Ajoutez une carte bancaire.',
-        'Revenez ici : l’accès à PaybyBot s’ouvre dès que la carte est enregistrée.',
+        'Revenez ici : l’accès à PayByBot s’ouvre dès que la carte est enregistrée.',
       ]}
     >
       {children}
@@ -1002,7 +1002,7 @@ export function CardRequired({ children }: { children: ReactNode }) {
   )
 }
 
-/** Signed in without a saved card: PaybyBot is not usable until one is added (the page reloads to check). */
+/** Signed in without a saved card: PayByBot is not usable until one is added (the page reloads to check). */
 export function CardGate() {
   async function logout() {
     await api.logout().catch(() => {})

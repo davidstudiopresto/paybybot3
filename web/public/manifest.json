@@ -1,6 +1,6 @@
 {
-  "name": "PaybyBot",
-  "short_name": "PaybyBot",
+  "name": "PayByBot",
+  "short_name": "PayByBot",
   "description": "Renouvellement automatique de votre ticket de stationnement.",
   "lang": "fr",
   "start_url": "/",

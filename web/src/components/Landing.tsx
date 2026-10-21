@@ -5,10 +5,10 @@ import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
-import { PaybyBot, PayByPhone, withPayByPhone } from '@/components/signs'
+import { PayByBot, PayByPhone, withPayByPhone } from '@/components/signs'
 
 
-/** The 18-second loop (made with Remotion in marketing/video): starts only on play, the PaybyBot card until then;
+/** The 18-second loop (made with Remotion in marketing/video): starts only on play, the PayByBot card until then;
  *  the 4:5 cut on phones. */
 function DemoVideo() {
   const ref = useRef<HTMLVideoElement>(null)
@@ -37,7 +37,7 @@ function DemoVideo() {
         playsInline
         preload="none"
         onClick={toggle}
-        aria-label="Vidéo de 18 secondes : un forfait expiré, la connexion à PaybyBot, le renouvellement automatique activé, puis les paiements de chaque semaine"
+        aria-label="Vidéo de 18 secondes : un forfait expiré, la connexion à PayByBot, le renouvellement automatique activé, puis les paiements de chaque semaine"
         className="block aspect-[4/5] w-full cursor-pointer rounded-[20px] bg-[#0b1024] object-cover sm:aspect-video"
       />
       {/* Top right corner, always visible: play, then pause. */}
@@ -69,7 +69,7 @@ const STEPS = [
  */
 const TESTIMONIALS: [string, string][] = [
   ['Julie M.', 'J’oubliais tout le temps le ticket résident. Là au moins ça se renouvelle tout seul.'],
-  ['Thomas B.', 'Ma voiture reste parfois une semaine sans bouger et je pensais jamais à renouveler sur PayByPhone. Je m’en rappelais en passant devant le pare-brise… souvent trop tard. C’est surtout pour ça que j’ai pris PaybyBot.'],
+  ['Thomas B.', 'Ma voiture reste parfois une semaine sans bouger et je pensais jamais à renouveler sur PayByPhone. Je m’en rappelais en passant devant le pare-brise… souvent trop tard. C’est surtout pour ça que j’ai pris PayByBot.'],
   ['Sarah L.', 'Ça fait le boulot, rien à redire.'],
   ['Nicolas R.', 'J’avais mis un rappel sur mon téléphone. Sauf que quand il sonnait au boulot, je le repoussais et j’oubliais derrière. Le renouvellement automatique règle bien le problème.'],
   ['Camille D.', 'Enfin ! Depuis le temps que je voulais pouvoir automatiser ce truc.'],
@@ -122,7 +122,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
               <span className="lg:block">de votre stationnement résident</span>
             </h1>
             <p className={cn(ui.subtitle, 'lg:mt-10 lg:max-w-[32rem] lg:text-[clamp(1rem,min(1.1vw,2vh),1.2rem)] lg:leading-[1.7]')}>
-              <PaybyBot /> renouvelle votre ticket résident <PayByPhone /> dès qu’il expire. Fini les oublis, fini les
+              <PayByBot /> renouvelle votre ticket résident <PayByPhone /> dès qu’il expire. Fini les oublis, fini les
               amendes.
             </p>
             <a
@@ -225,7 +225,7 @@ const QUESTIONS: [string, ReactNode][] = [
   ],
   [
     'Quelles informations me demandez-vous ?',
-    <>PaybyBot récupère uniquement les informations de votre compte <PayByPhone />.</>,
+    <>PayByBot récupère uniquement les informations de votre compte <PayByPhone />.</>,
   ],
   [
     'Mes données sont-elles protégées ?',

@@ -131,11 +131,11 @@ export function Dashboard({
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
-      {/* No resident rate on PayByPhone: PaybyBot is not usable, the page stays blurred behind the notice. */}
+      {/* No resident rate on PayByPhone: PayByBot is not usable, the page stays blurred behind the notice. */}
       {resident?.resident === false && !me.demo ? (
         <ResidentGate zone={resident.zone} vehicles={data?.vehicles.length} onChecked={setResident} />
       ) : (
-        // No card saved on PayByPhone (removed since, Apple Pay only): PaybyBot cannot pay, so it is not usable.
+        // No card saved on PayByPhone (removed since, Apple Pay only): PayByBot cannot pay, so it is not usable.
         data && !me.demo && !data.payments.some((p) => p.kind === 'card') && <CardGate />
       )}
       <TrialBanner

@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
     return (
       <div className="flex min-h-dvh flex-col bg-white">
         <header className="flex h-16 items-center border-b border-ink/10 px-4 sm:px-8">
-          <a href="/" aria-label="PaybyBot, accueil">
+          <a href="/" aria-label="PayByBot, accueil">
             <Wordmark />
           </a>
         </header>

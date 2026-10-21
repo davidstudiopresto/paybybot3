@@ -46,10 +46,10 @@ function Row({
   )
 }
 
-/** First sign-in: everything PaybyBot found in the PayByPhone account, so the user can check it is right. */
+/** First sign-in: everything PayByBot found in the PayByPhone account, so the user can check it is right. */
 export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onContinue: () => void }) {
   // The « riverain » vehicles, each with the arrondissement PayByPhone gives it the resident rate in (found on
-  // PayByPhone, never typed); undefined: looking. None at all: PaybyBot cannot be used (resident notice).
+  // PayByPhone, never typed); undefined: looking. None at all: PayByBot cannot be used (resident notice).
   const [status, setStatus] = useState<ResidentStatus | null>(null)
   const [vehicles, setVehicles] = useState<PricedVehicle[] | undefined>(undefined)
   useEffect(() => {
@@ -62,7 +62,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
     )
   }, [me.demo])
 
-  // PaybyBot pays with a card saved on PayByPhone: without one it cannot be used.
+  // PayByBot pays with a card saved on PayByPhone: without one it cannot be used.
   const cards = data.payments.filter((p) => p.kind === 'card')
 
   const step = 140
@@ -83,7 +83,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             Bienvenue{me.firstName ? `, ${me.firstName}` : ''}.
           </h1>
           <p className={cn(ui.subtitle, 'rise')}>
-            Voici ce que PaybyBot a retrouvé dans votre compte <PayByPhone />. Vérifiez que tout est juste.
+            Voici ce que PayByBot a retrouvé dans votre compte <PayByPhone />. Vérifiez que tout est juste.
           </p>
 
           <ul className="mt-6 divide-y divide-ink/10 border-y border-ink/10">
@@ -158,7 +158,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
 
           <p className="rise mt-5 text-sm leading-relaxed text-ink/55" style={{ animationDelay: `${next()}ms` }}>
             Rien n’a été modifié dans votre compte <PayByPhone />, et votre mot de passe n’est pas enregistré. Un véhicule
-            ou une carte à changer ? Faites-le dans l’application <PayByPhone /> : PaybyBot suit automatiquement.
+            ou une carte à changer ? Faites-le dans l’application <PayByPhone /> : PayByBot suit automatiquement.
           </p>
 
           <button

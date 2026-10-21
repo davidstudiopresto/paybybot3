@@ -9,7 +9,7 @@ import { useTurnstile } from '@/lib/turnstile'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
-/** PaybyBot is for Paris residents: French numbers only (calling code and flag stripes). */
+/** PayByBot is for Paris residents: French numbers only (calling code and flag stripes). */
 const COUNTRIES = [
   { id: 'FR', name: 'France', code: '33', placeholder: '6 12 34 56 78', flag: ['v', '#0055a4', '#ffffff', '#ef4135'] },
 ] as const
@@ -65,7 +65,7 @@ export function LoginView({
   onLogin: (me: Me) => void
   hosted: boolean
   signup?: boolean
-  title?: ReactNode // instead of « Inscription » / « Connexion à PaybyBot » (the Tarifs page asks to sign up)
+  title?: ReactNode // instead of « Inscription » / « Connexion à PayByBot » (the Tarifs page asks to sign up)
 }) {
   const [mode, setMode] = useState<'phone' | 'email'>('phone') // PayByPhone identifier: phone number by default
   const country = 'FR'
@@ -83,7 +83,7 @@ export function LoginView({
   const [loading, setLoading] = useState<'login' | 'demo' | null>(null)
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
   const human = useTurnstile()
-  const EXISTS = 'Un compte PaybyBot existe déjà pour ce compte PayByPhone.'
+  const EXISTS = 'Un compte PayByBot existe déjà pour ce compte PayByPhone.'
 
   // Sign-up: say right away, once the number is typed, that it is already signed up.
   useEffect(() => {
@@ -190,7 +190,7 @@ export function LoginView({
               title ? 'text-[2rem] sm:text-[2.2rem]' : 'text-[2.6rem]',
             )}
           >
-            {title ?? (signup ? 'Inscription' : 'Connexion à PaybyBot')}
+            {title ?? (signup ? 'Inscription' : 'Connexion à PayByBot')}
           </h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
             {withPayByPhone(signup ? 'Avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.')}{' '}

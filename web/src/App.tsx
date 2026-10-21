@@ -56,7 +56,7 @@ export default function App() {
     if (me === null) api.login('demo', 'demo').then((m) => setMe(m as Me), (e) => toast.error((e as Error).message))
   }, [route, me])
 
-  // #/bienvenue: show the welcome page again (what PaybyBot found in PayByPhone), once signed in.
+  // #/bienvenue: show the welcome page again (what PayByBot found in PayByPhone), once signed in.
   useEffect(() => {
     if (route !== 'bienvenue' || !me) return
     history.replaceState(null, '', window.location.pathname)

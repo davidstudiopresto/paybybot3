@@ -7,7 +7,7 @@ export function TopBar({ center, children }: { center?: ReactNode; children?: Re
   return (
     <header className="sticky top-0 z-30 border-b border-ink/10 bg-white/90 backdrop-blur-md">
       <div className="grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:px-8">
-        <a href="#/" aria-label="PaybyBot, accueil" className="shrink-0 justify-self-start">
+        <a href="#/" aria-label="PayByBot, accueil" className="shrink-0 justify-self-start">
           <Wordmark />
         </a>
         <nav className="flex items-center gap-1 sm:gap-3" aria-label="Pages">

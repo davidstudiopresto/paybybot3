@@ -18,7 +18,7 @@ export function HostedFooter({ className }: { className?: string; hosted?: boole
           </a>
         ))}
       </nav>
-      <p>© PaybyBot 2026</p>
+      <p>© PayByBot 2026</p>
     </footer>
   )
 }

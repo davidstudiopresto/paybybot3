@@ -87,7 +87,7 @@ export function Wordmark() {
   return (
     <span className="font-heading text-[1.4rem] leading-none font-semibold tracking-[-0.025em] text-ink">
       Pay
-      <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">by</span>
+      <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">By</span>
       Bot
     </span>
   )
@@ -153,12 +153,12 @@ export function ActionTile({
   )
 }
 
-/** PaybyBot's name in running text, « by » in the wordmark's blue. */
-export function PaybyBot() {
+/** PayByBot's name in running text, « by » in the wordmark's blue. */
+export function PayByBot() {
   return (
     <span className="whitespace-nowrap">
       Pay
-      <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">by</span>
+      <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">By</span>
       Bot
     </span>
   )

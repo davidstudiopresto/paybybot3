@@ -7,7 +7,7 @@ import { api, type Account, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
-/** "Mon compte" in the top bar: what PaybyBot reads from the PayByPhone account, the home zone and e-mail. */
+/** "Mon compte" in the top bar: what PayByBot reads from the PayByPhone account, the home zone and e-mail. */
 export function AccountButton({
   data,
   onDeleted,
@@ -81,7 +81,7 @@ function AccountDialog({
         <div className="px-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Mon compte</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">
-            Ce que PaybyBot lit dans votre compte <PayByPhone />.
+            Ce que PayByBot lit dans votre compte <PayByPhone />.
           </DialogDescription>
         </div>
 
@@ -166,7 +166,7 @@ function AccountDialog({
   )
 }
 
-/** Validation before erasing everything PaybyBot keeps; a confirmation e-mail follows. */
+/** Validation before erasing everything PayByBot keeps; a confirmation e-mail follows. */
 function DeleteConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDeleted: () => void }) {
   const [busy, setBusy] = useState(false)
 
@@ -174,7 +174,7 @@ function DeleteConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDelete
     setBusy(true)
     try {
       await api.deleteData()
-      toast.success('Votre compte PaybyBot est supprimé.', {
+      toast.success('Votre compte PayByBot est supprimé.', {
         description: 'Une confirmation vous est envoyée par e-mail.',
       })
       onDeleted() // straight back to the home page, without reloading
@@ -190,7 +190,7 @@ function DeleteConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDelete
         <div className="p-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Supprimer votre compte ?</DialogTitle>
           <DialogDescription className="mt-2 leading-relaxed text-ink/65">
-            Tout ce que PaybyBot garde est effacé, et votre compte <PayByPhone /> n’est pas touché. Vous recevrez une
+            Tout ce que PayByBot garde est effacé, et votre compte <PayByPhone /> n’est pas touché. Vous recevrez une
             confirmation par e-mail.
           </DialogDescription>
           <p role="note" className="mt-4 rounded-xl bg-amber/20 px-4 py-3 text-sm leading-relaxed text-ink">

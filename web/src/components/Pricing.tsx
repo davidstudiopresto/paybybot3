@@ -178,7 +178,7 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
           <PlanCards signedIn={signedIn} />
         </div>
         <p className="mt-8 text-center text-sm text-ink/50">
-          Un seul oubli coûte plus cher que 3 mois de PaybyBot. Prix TTC, sans engagement.
+          Un seul oubli coûte plus cher que 3 mois de PayByBot. Prix TTC, sans engagement.
         </p>
       </main>
       <HostedFooter className="px-6 pb-8" hosted={hosted} />

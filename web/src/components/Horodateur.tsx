@@ -1,6 +1,6 @@
 import { useId } from 'react'
 
-/** A friendly Paris parking meter (the "bot" of PaybyBot) handing out a ticket that renews itself. */
+/** A friendly Paris parking meter (the "bot" of PayByBot) handing out a ticket that renews itself. */
 export function Horodateur({ className }: { className?: string }) {
   // Unique gradient ids: a hidden copy of the drawing (other screen size) must not own the ones in use.
   const id = useId().replace(/:/g, '')

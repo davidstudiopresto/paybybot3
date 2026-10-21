@@ -50,7 +50,7 @@ export type Overview = {
 export type SignupPending = { pending: true; email: string }
 export const isPending = (x: Me | SignupPending): x is SignupPending => 'pending' in x
 
-/** The PaybyBot account: e-mail given at sign-up, home zone added by hand. */
+/** The PayByBot account: e-mail given at sign-up, home zone added by hand. */
 export type Account = {
   email: string
   zone: string | null
@@ -107,7 +107,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       credentials: 'same-origin',
     })
   } catch {
-    throw new ApiError(0, "L'application PaybyBot ne répond plus. Est-elle toujours lancée ?")
+    throw new ApiError(0, "L'application PayByBot ne répond plus. Est-elle toujours lancée ?")
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))

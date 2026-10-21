@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { ArrowRight, ChevronDown, Plus } from 'lucide-react'
+import { ArrowRight, ChevronDown, Link2, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -8,6 +8,8 @@ import { ui } from '@/lib/styles'
 import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/components/signs'
 
 
+
+const STEP_ICONS = [Link2, RefreshCw, ShieldCheck]
 
 const STEPS = [
   ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
@@ -103,22 +105,29 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24 sm:px-8">
 
-        <section id="comment" className="mt-24 scroll-mt-20 lg:mt-36">
-          <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+        {/* Almost a full screen on a computer: three centered steps, each an icon in a ring with its number,
+            joined by a thin line. */}
+        <section id="comment" className="flex scroll-mt-16 flex-col justify-center py-24 lg:min-h-[calc(100dvh-4rem)] lg:py-20">
+          <h2 className="text-center font-heading text-[2.4rem] leading-[1.08] font-bold tracking-[-0.04em] text-[#2b2f3a] sm:text-[3.2rem] lg:text-[4rem]">
             Comment ça marche
           </h2>
-          <ol className="mt-12 grid gap-6 lg:grid-cols-3 lg:gap-10">
-            {STEPS.map(([title, text], i) => (
-              <li key={title} className="flex gap-4 lg:flex-col lg:gap-4 lg:border-t lg:border-border lg:pt-6">
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-eu/[0.08] font-heading font-bold text-eu">
-                  {i + 1}
-                </span>
-                <span>
-                  <strong className="block text-ink lg:text-lg">{withPayByPhone(title)}</strong>
-                  <span className="text-ink/60">{withPayByPhone(text)}</span>
-                </span>
-              </li>
-            ))}
+          <ol className="relative mt-16 grid gap-14 lg:mt-24 lg:grid-cols-3 lg:gap-12">
+            <span aria-hidden className="absolute top-10 right-[16.7%] left-[16.7%] hidden h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--eu)_25%,transparent)_15%,color-mix(in_srgb,var(--eu)_25%,transparent)_85%,transparent)] lg:block" />
+            {STEPS.map(([title, text], i) => {
+              const Icon = STEP_ICONS[i]
+              return (
+                <li key={title} className="relative flex flex-col items-center text-center">
+                  <span className="relative grid size-20 place-items-center rounded-full border border-eu/15 bg-white text-eu shadow-[0_10px_30px_-12px_color-mix(in_srgb,var(--eu)_45%,transparent)]">
+                    <Icon className="size-8" strokeWidth={1.75} />
+                    <span className="absolute -top-1.5 -right-1.5 grid size-8 place-items-center rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] font-heading text-sm font-bold text-white ring-4 ring-white">
+                      {i + 1}
+                    </span>
+                  </span>
+                  <strong className="mt-8 block font-heading text-xl text-[#2b2f3a] lg:text-2xl">{withPayByPhone(title)}</strong>
+                  <span className="mt-3 max-w-[22rem] text-[1.05rem] leading-relaxed text-ink/60 lg:text-lg">{withPayByPhone(text)}</span>
+                </li>
+              )
+            })}
           </ol>
         </section>
 

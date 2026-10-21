@@ -68,22 +68,22 @@ const STEPS = [
  * The section stays hidden while the list is empty.
  */
 const TESTIMONIALS: [string, string][] = [
-  ['Julie M.', 'J’oubliais tout le temps le ticket résident. Là au moins ça se renouvelle tout seul.'],
-  ['Thomas B.', 'Ma voiture reste parfois une semaine sans bouger et je pensais jamais à renouveler sur PayByPhone. Je m’en rappelais en passant devant le pare-brise… souvent trop tard. C’est surtout pour ça que j’ai pris PayByBot.'],
+  ['Julie M.', 'J’oubliais toujours le ticket résident. Là, ça se renouvelle tout seul.'],
+  ['Thomas B.', 'Ma voiture bouge peu et j’oubliais de renouveler. Plus maintenant.'],
   ['Sarah L.', 'Ça fait le boulot, rien à redire.'],
-  ['Nicolas R.', 'J’avais mis un rappel sur mon téléphone. Sauf que quand il sonnait au boulot, je le repoussais et j’oubliais derrière. Le renouvellement automatique règle bien le problème.'],
-  ['Camille D.', 'Enfin ! Depuis le temps que je voulais pouvoir automatiser ce truc.'],
-  ['Antoine P.', 'Pris après une énième amende pour un ticket oublié. Je paye déjà pour stationner devant chez moi, donc repayer parce que j’ai oublié de cliquer dans une appli, ça commençait à m’énerver.'],
-  ['Léa F.', 'C’est mon conjoint qui gérait les tickets avant. Chacun pensait que l’autre l’avait fait, bref… maintenant c’est automatique.'],
-  ['Marc V.', 'Un peu hésitant au départ, j’ai quand même vérifié sur PayByPhone les premières fois pour voir si le ticket était bien pris. Oui, il y était. Depuis je laisse faire.'],
+  ['Nicolas R.', 'Mon rappel sonnait au boulot, je l’oubliais. L’automatique règle ça.'],
+  ['Camille D.', 'Enfin ! Depuis le temps que je voulais automatiser ce truc.'],
+  ['Antoine P.', 'Pris après une énième amende pour un ticket oublié. Plus jamais.'],
+  ['Léa F.', 'Avec mon conjoint, chacun croyait que l’autre l’avait fait. Plus maintenant.'],
+  ['Marc V.', 'J’ai vérifié les premières fois : le ticket était bien pris. Je laisse faire.'],
 ]
 
 function Testimonials() {
   if (!TESTIMONIALS.length) return null
   const card = (name: string, text: string, key: string, copy = false) => (
-    <li key={key} aria-hidden={copy || undefined} className="w-[18rem] shrink-0 rounded-2xl sm:w-[22rem] border border-ink/10 bg-ink/[0.02] p-6">
+    <li key={key} aria-hidden={copy || undefined} className="w-[22rem] shrink-0 rounded-2xl border border-ink/10 bg-ink/[0.02] p-6">
       <p className="font-semibold text-ink">{name}</p>
-      <p className="mt-3 leading-relaxed text-ink/70">{withPayByPhone(text)}</p>
+      <p title={text} className="mt-3 line-clamp-2 leading-relaxed text-ink/70">{withPayByPhone(text)}</p>
     </li>
   )
   return (

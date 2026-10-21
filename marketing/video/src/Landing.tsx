@@ -271,30 +271,6 @@ function Problem() {
 
 // ---------------------------------------------------------------- Scene 2: the one-time set-up
 
-/** A finger tap: comes in, presses at `at`, leaves. */
-function Finger({ x, y, at }: { x: number; y: number; at: number }) {
-  const frame = useCurrentFrame()
-  const inP = enter(frame, at - 24, 20)
-  const out = interpolate(frame, [at + 12, at + 22], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
-  const pressed = frame >= at - 2 && frame < at + 6
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: x - 26,
-        top: y - 26 + (1 - inP) * 120,
-        width: 52,
-        height: 52,
-        borderRadius: '50%',
-        background: 'rgba(17,17,17,0.22)',
-        border: '3px solid rgba(255,255,255,0.95)',
-        opacity: Math.min(inP, out),
-        transform: `scale(${pressed ? 0.82 : 1})`,
-      }}
-    />
-  )
-}
-
 function Ripple({ frame, at }: { frame: number; at: number }) {
   const r = interpolate(frame, [at, at + 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
   return (
@@ -400,8 +376,6 @@ function SetUpScreen() {
           </span>
         </div>
       </div>
-      <Finger x={195} y={462} at={LOGIN_TAP} />
-      {frame > LOGIN_TAP + 20 && <Finger x={250} y={440} at={RENEW_TAP} />}
       {/* toast */}
       <div
         style={{

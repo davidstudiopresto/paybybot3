@@ -427,11 +427,6 @@ export function LoginView({
             )}
           </p>
 
-          <p className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-ink/50">
-            <button type="button" onClick={() => submit(true)} disabled={loading !== null} className={link}>
-              {loading === 'demo' ? 'Ouverture…' : 'Essayer la démo, sans compte'}
-            </button>
-          </p>
         </form>
       </main>
 

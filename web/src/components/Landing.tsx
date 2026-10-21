@@ -156,8 +156,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
       <section className="rise relative mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:max-w-[min(110rem,calc((100dvh-4rem)*1.9))] lg:items-center lg:py-20 lg:pr-[50px] lg:pl-[78px]">
         <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="@container max-w-[40rem] lg:max-w-none">
-            {/* Sized to its column (cqw), so « de votre stationnement résident » keeps to one line. */}
-            <p className={cn(KICKER, 'mb-5 lg:mb-7')}>100 % automatique • Même téléphone éteint • Plus besoin d’y penser</p>
+            {/* Sized to its column (cqw), so the kicker and « de votre stationnement résident » keep to one line. */}
+            <p className={cn(KICKER, 'mb-5 sm:text-[min(0.78rem,2.25cqw)] sm:tracking-[0.1em] sm:whitespace-nowrap lg:mb-7 @[35rem]:text-[min(0.78rem,1.95cqw)] @[35rem]:tracking-[0.19em]')}>100 % automatique • Même téléphone éteint • Plus besoin d’y penser</p>
             <h1 className={cn(ui.title, 'font-medium text-[#2b2f3a] lg:text-[clamp(2.5rem,min(7.3cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
               <span className="lg:block">Renouvellement automatique</span>{' '}
               <span className="lg:block">de votre stationnement résident</span>

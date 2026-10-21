@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { ArrowRight, ChevronDown, Link2, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
+import { ArrowRight, CarFront, ChevronDown, Link2, Mail, Moon, Pause, Plus, RefreshCw, ShieldCheck, type LucideIcon } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -8,6 +8,16 @@ import { ui } from '@/lib/styles'
 import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/components/signs'
 
 
+
+/** What PayByBot does, each true today. */
+const FEATURES: [LucideIcon, string, string][] = [
+  [RefreshCw, 'Renouvellement chaque semaine', 'Votre forfait résident est repris avant la fin du précédent, sans que vous y pensiez.'],
+  [Pause, 'Pause pour les vacances', 'Entre deux dates ou sans date de fin. Rien n’est payé pendant la pause.'],
+  [Mail, 'Prévenu à chaque fois', 'Un e-mail à chaque paiement, et la raison si un renouvellement n’aboutit pas.'],
+  [Moon, 'Même téléphone éteint', 'Tout part de nos serveurs : pas besoin d’ouvrir l’application.'],
+  [CarFront, 'Plusieurs véhicules', 'Chaque véhicule de votre compte PayByPhone a son propre renouvellement.'],
+  [ShieldCheck, 'Mot de passe jamais gardé', 'Aucun numéro de carte enregistré, et tout s’efface en un clic.'],
+]
 
 const STEP_ICONS = [Link2, RefreshCw, ShieldCheck]
 
@@ -129,6 +139,23 @@ export function Landing({ hosted }: { hosted: boolean }) {
           </ol>
         </section>
 
+
+        <section id="fonctionnalites" className="flex scroll-mt-16 flex-col justify-center py-24 lg:min-h-[calc(100dvh-4rem)] lg:py-20">
+          <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
+            Tout est prévu
+          </h2>
+          <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:mt-20 lg:grid-cols-3 lg:gap-5">
+            {FEATURES.map(([Icon, title, text]) => (
+              <li key={title} className="rounded-2xl border border-ink/[0.08] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--eu)_4%,white),white)] p-7 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_color-mix(in_srgb,var(--eu)_50%,transparent)]">
+                <span className="grid size-12 place-items-center rounded-xl bg-[linear-gradient(135deg,var(--eu)_0%,#2a66d1_100%)] text-white shadow-[0_8px_20px_-10px_var(--eu)]">
+                  <Icon className="size-6" strokeWidth={1.75} />
+                </span>
+                <strong className="mt-6 block font-heading text-lg text-[#2b2f3a] lg:text-xl">{title}</strong>
+                <span className="mt-2 block leading-relaxed text-ink/60">{withPayByPhone(text)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         <Testimonials />
 

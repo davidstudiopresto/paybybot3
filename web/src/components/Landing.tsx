@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { ArrowRight, ChevronDown, Pause, Play, Plus } from 'lucide-react'
+import { ArrowRight, ChevronDown, Plus } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -8,54 +8,6 @@ import { ui } from '@/lib/styles'
 import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/components/signs'
 
 
-/** The 18-second loop (made with Remotion in marketing/video): starts only on play, the PayByBot card until then;
- *  the 4:5 cut on phones. */
-function DemoVideo() {
-  const ref = useRef<HTMLVideoElement>(null)
-  const [mobile] = useState(() => window.matchMedia('(max-width: 639px)').matches)
-  const [playing, setPlaying] = useState(false)
-  const src = mobile ? '/video/paybybot-18s-v3-mobile' : '/video/paybybot-18s-v3'
-
-  function toggle() {
-    const v = ref.current
-    if (!v) return
-    if (v.paused) v.play().then(() => setPlaying(true), () => {})
-    else {
-      v.pause()
-      setPlaying(false)
-    }
-  }
-
-  return (
-    <div className="group relative w-full rounded-[23px] bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] p-[3px] shadow-[0_40px_80px_-35px_rgb(11_16_36/0.6)]">
-      <video
-        ref={ref}
-        src={src + '.mp4'}
-        poster={src + '-poster.jpg'}
-        muted
-        loop
-        playsInline
-        preload="none"
-        onClick={toggle}
-        aria-label="Vidéo de 18 secondes : un forfait expiré, la connexion à PayByBot, le renouvellement automatique activé, puis les paiements de chaque semaine"
-        className="block aspect-[4/5] w-full cursor-pointer rounded-[20px] bg-[#0b1024] object-cover sm:aspect-video"
-      />
-      {/* Top right corner, always visible: play, then pause. */}
-      <button
-        onClick={toggle}
-        aria-label={playing ? 'Mettre la vidéo en pause' : 'Lire la vidéo'}
-        className={cn(
-          'absolute top-4 right-4 grid size-14 place-items-center text-white drop-shadow-[0_2px_8px_rgb(0_0_0/0.5)] transition duration-300 hover:scale-110 focus-visible:opacity-100 sm:top-6 sm:right-6 sm:size-16',
-        )}
-      >
-        {playing ? <Pause className="size-7 fill-white sm:size-8" /> : <Play className="size-7 fill-white sm:size-8" />}
-      </button>
-    </div>
-  )
-}
-
-/** Small capitals above a title, like a launch page's kicker. */
-const KICKER = 'text-[0.78rem] font-medium tracking-[0.19em] text-[#2a66d1] uppercase'
 
 const STEPS = [
   ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
@@ -109,37 +61,35 @@ export function Landing({ hosted }: { hosted: boolean }) {
     <div className="flex min-h-dvh flex-col overflow-x-clip bg-white pb-20 lg:pb-0">
       <PublicTopBar />
 
-      {/* Hero laid out like a product launch page: text left (573), video right (675), 64 apart at 1440. */}
-      {/* On a computer it fills the window (under the 4rem top bar): « Comment ça marche » starts below the fold,
-          the title and video grow with the screen, and an arrow at the bottom invites to scroll. */}
-      <section className="rise relative mx-auto w-full max-w-[90rem] px-6 pt-12 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:max-w-[min(110rem,calc((100dvh-4rem)*1.9))] lg:items-center lg:py-20 lg:pr-[50px] lg:pl-[78px]">
-        <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
-          <div className="@container max-w-[40rem] lg:max-w-none">
-            {/* Sized to its column (cqw), so the kicker and « de votre stationnement résident » keep to one line. */}
-            <p className={cn(KICKER, 'mb-5 sm:text-[min(0.78rem,2.25cqw)] sm:tracking-[0.1em] sm:whitespace-nowrap lg:mb-7 @[35rem]:text-[min(0.78rem,1.95cqw)] @[35rem]:tracking-[0.19em]')}>100 % automatique • Même téléphone éteint • Plus besoin d’y penser</p>
-            <h1 className={cn(ui.title, 'font-medium text-[#2b2f3a] lg:text-[clamp(2.5rem,min(7.3cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
-              <span className="lg:block">Renouvellement automatique</span>{' '}
-              <span className="lg:block">de votre stationnement résident</span>
-            </h1>
-            <p className={cn(ui.subtitle, 'lg:mt-10 lg:max-w-[32rem] lg:text-[clamp(1rem,min(1.1vw,2vh),1.2rem)] lg:leading-[1.7]')}>
-              <PayByBot /> renouvelle votre ticket résident <PayByPhone /> dès qu’il expire. Fini les oublis, fini les
-              amendes.
-            </p>
-            <a
-              ref={cta}
-              href="#/inscription"
-              className={cn('mt-9 lg:mt-10 lg:h-13 lg:w-fit lg:rounded-[10px] lg:px-8 lg:text-base', ui.primary)}
-            >
-              Essayer gratuitement <ArrowRight className="size-5" />
+      {/* Centered hero filling the window on a computer (under the 4rem top bar): the kicker as a pill, the title on
+          two lines (the first in the brand gradient), then the call to action. */}
+      <section className="rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-20">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
+          <p className="mb-8 inline-flex max-w-full items-center gap-2.5 rounded-full border border-ink/10 bg-white px-4 py-2 text-[0.7rem] font-medium tracking-[0.12em] text-ink/80 uppercase shadow-[0_1px_2px_rgb(11_16_36/0.06)] sm:text-[0.78rem] lg:mb-10">
+            <span className="size-2 shrink-0 rounded-full bg-eu" aria-hidden />
+            100 % automatique • Même téléphone éteint • Plus besoin d’y penser
+          </p>
+          <h1 className="font-heading text-[2.4rem] leading-[1.08] font-bold tracking-[-0.04em] text-[#2b2f3a] sm:text-[3.4rem] lg:text-[clamp(3.5rem,min(5.6vw,9vh),5.5rem)]">
+            <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
+            <span className="block">de votre stationnement résident</span>
+          </h1>
+          <p className="mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]">
+            <PayByBot /> renouvelle votre ticket résident <PayByPhone /> dès qu’il expire. Fini les oublis, fini les
+            amendes.
+          </p>
+          <a
+            ref={cta}
+            href="#/inscription"
+            className={cn('mt-10 w-full sm:px-10 shadow-[0_14px_30px_-12px_var(--eu)] sm:w-fit lg:mt-12 lg:h-14 lg:rounded-[12px] lg:px-10 lg:text-lg', ui.primary)}
+          >
+            Essayer gratuitement <ArrowRight className="size-5" />
+          </a>
+          <p className="mt-4 text-sm text-ink/50">
+            Déjà inscrit ?{' '}
+            <a href="#/connexion" className={ui.link}>
+              Se connecter
             </a>
-            <p className="mt-4 text-center text-sm text-ink/50 lg:text-left">
-              Déjà inscrit ?{' '}
-              <a href="#/connexion" className={ui.link}>
-                Se connecter
-              </a>
-            </p>
-          </div>
-          <DemoVideo />
+          </p>
         </div>
         <button
           type="button"

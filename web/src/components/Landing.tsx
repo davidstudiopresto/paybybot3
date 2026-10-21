@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
-import { ArrowRight, ChevronDown, CreditCard, EyeOff, KeyRound, Lock, MapPin, Pause, Play, Plus, Power, X } from 'lucide-react'
+import { ArrowRight, ChevronDown, Pause, Play, Plus, X } from 'lucide-react'
 import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
@@ -113,46 +113,6 @@ const STEPS = [
   ['Vous êtes tranquilles', 'Le forfait résident est repayé à chaque échéance, même téléphone éteint.'],
 ]
 
-const GUARANTEES = [
-  [Lock, 'Mot de passe jamais enregistré', 'Il sert seulement à vous connecter à PayByPhone. Il n’est écrit nulle part.'],
-  [CreditCard, 'Aucun numéro de carte', 'Le paiement est fait par PayByPhone, avec la carte de votre compte, au même tarif que dans l’application.'],
-  [KeyRound, 'Tout est chiffré', 'Le peu qui est gardé pour le renouvellement est chiffré, avec une clé différente pour chaque usage.'],
-  [MapPin, 'Hébergé à Paris', 'Serveurs et base de données en France, dans l’Union européenne.'],
-  [EyeOff, 'Aucun traceur', 'Ni publicité, ni revente de données, ni outil de mesure d’audience.'],
-  [Power, 'Vous gardez la main', 'Vos tickets restent dans l’application PayByPhone. Un clic pour tout arrêter et tout effacer.'],
-] as const
-
-/** What makes PaybyBot safe to hand a PayByPhone login to: only claims the security page backs up. */
-function Security() {
-  return (
-    <section className="mt-24 lg:mt-36">
-      <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
-        Vos données, protégées.
-      </h2>
-      <p className="mx-auto mt-4 max-w-[36rem] text-center text-[1.05rem] text-ink/60 lg:text-lg">
-        PaybyBot agit sur votre compte <PayByPhone /> sans jamais garder votre mot de passe ni votre carte.
-      </p>
-      <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-ink/10 bg-ink/10 sm:grid-cols-2 lg:grid-cols-3">
-        {GUARANTEES.map(([Icon, title, text]) => (
-          <li key={title} className="bg-white p-6 lg:p-8">
-            <span className="grid size-10 place-items-center rounded-full bg-eu/[0.08] text-eu">
-              <Icon className="size-5" />
-            </span>
-            <strong className="mt-4 block text-lg font-semibold text-ink">{title}</strong>
-            <span className="mt-1 block text-ink/60">{withPayByPhone(text)}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-6 flex flex-col items-center gap-2 text-center text-sm text-ink/55 sm:flex-row sm:justify-center sm:gap-4">
-        <span>Édité par Studio Presto, société française basée à Paris.</span>
-        <a href="#/securite" className={ui.link}>
-          Tout le détail sur la sécurité
-        </a>
-      </p>
-    </section>
-  )
-}
-
 /**
  * Real users' feedback only, given with their consent: [first name and last name, short quote].
  * The section stays hidden while the list is empty.
@@ -253,7 +213,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
           </ol>
         </section>
 
-        <Security />
 
         <Testimonials />
 
@@ -320,6 +279,15 @@ const QUESTIONS: [string, ReactNode][] = [
       Pour payer à votre place, PaybyBot passe par votre compte <PayByPhone />, comme l'application. Votre mot de passe
       n'est jamais enregistré : seule une clé de reconnexion est gardée, chiffrée, et effacée dès que vous arrêtez.{' '}
       <a href="#/securite">Sécurité et données</a>
+    </>,
+  ],
+  [
+    'Mes données sont-elles protégées ?',
+    <>
+      Oui. Votre mot de passe n'est jamais enregistré et aucun numéro de carte n'est gardé : le paiement est fait par{' '}
+      <PayByPhone />. Le peu qui est conservé pour le renouvellement est chiffré et hébergé en France. Pas de publicité,
+      pas de traceur, et un clic suffit pour tout effacer.{' '}
+      <a href="#/securite">Tout le détail sur la sécurité</a>
     </>,
   ],
   [

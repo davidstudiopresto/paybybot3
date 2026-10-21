@@ -12,7 +12,7 @@ import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/
 const STEP_ICONS = [Link2, RefreshCw, ShieldCheck]
 
 const STEPS = [
-  ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
+  ['Connectez PayByPhone', 'Reliez votre compte PayByPhone existant.'],
   ['Activez le renouvellement', 'Votre plaque et votre carte sont retrouvées toutes seules. Rien à saisir.'],
   ['Vous êtes tranquilles', 'Le forfait résident est repayé à chaque échéance, même téléphone éteint.'],
 ]

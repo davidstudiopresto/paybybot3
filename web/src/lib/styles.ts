@@ -10,9 +10,9 @@ export const ui = {
     'flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-ink/[0.06] text-lg font-bold text-ink transition hover:bg-ink/[0.1] active:scale-[0.99] disabled:opacity-50',
   /** Top bar buttons: a grey pill and a blue one (slight gradient). */
   pillGray:
-    'inline-flex h-9 items-center rounded-full bg-ink/[0.06] px-3 text-sm sm:h-10 sm:px-4 sm:text-[0.95rem] font-semibold whitespace-nowrap text-ink transition hover:bg-ink/[0.1]',
+    'inline-flex h-9 items-center rounded-[10px] bg-ink/[0.06] px-3 text-sm sm:h-10 sm:px-4 sm:text-[0.95rem] font-semibold whitespace-nowrap text-ink transition hover:bg-ink/[0.1]',
   pillBlue:
-    'inline-flex h-9 items-center rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-3 text-sm font-semibold whitespace-nowrap text-white sm:h-10 sm:px-4 sm:text-[0.95rem] transition hover:brightness-110',
+    'inline-flex h-9 items-center rounded-[10px] bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-3 text-sm font-semibold whitespace-nowrap text-white sm:h-10 sm:px-4 sm:text-[0.95rem] transition hover:brightness-110',
   /** A secondary action, outlined. */
   secondary:
     'flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-eu/30 bg-white font-bold text-eu transition hover:border-eu disabled:opacity-50',

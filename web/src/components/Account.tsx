@@ -155,7 +155,7 @@ function AccountDialog({
           {!demo && (
             <button
               onClick={() => setDeleting(true)}
-              className="inline-flex h-10 items-center rounded-full border border-destructive/30 px-4 text-sm font-semibold text-destructive transition hover:bg-destructive/5"
+              className="inline-flex h-10 items-center rounded-[10px] border border-destructive/30 px-4 text-sm font-semibold text-destructive transition hover:bg-destructive/5"
             >
               Supprimer mon compte
             </button>

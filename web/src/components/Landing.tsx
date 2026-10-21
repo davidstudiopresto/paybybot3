@@ -174,7 +174,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
             <a
               ref={cta}
               href="#/inscription"
-              className={cn('mt-9 lg:mt-10 lg:h-13 lg:w-fit lg:rounded-full lg:px-8 lg:text-base', ui.primary)}
+              className={cn('mt-9 lg:mt-10 lg:h-13 lg:w-fit lg:rounded-[10px] lg:px-8 lg:text-base', ui.primary)}
             >
               Essayer gratuitement <ArrowRight className="size-5" />
             </a>

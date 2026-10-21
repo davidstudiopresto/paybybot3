@@ -195,7 +195,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
           <div className="@container max-w-[40rem] lg:max-w-none">
             {/* Sized to its column (cqw), so « de votre stationnement résident » keeps to one line. */}
             {/* Like a launch page: the problem in black, then « on s'en occupe » in the logo's blue, a size smaller. */}
-            <h1 className={cn(ui.title, 'font-medium lg:text-[clamp(2.75rem,min(7.3cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
+            <h1 className={cn(ui.title, 'font-medium lg:text-[clamp(2.5rem,min(7.3cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
               <span className="lg:block">Renouvellement automatique</span>{' '}
               <span className="lg:block">de votre stationnement résident</span>
               <span className="mt-[0.33em] block w-fit bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] box-decoration-clone bg-clip-text text-[0.83em] leading-[1.17] text-transparent lg:mt-[0.6em] lg:leading-[1.3]">

@@ -75,6 +75,7 @@ function pauseState(ap: Autopilot, now = Date.now()) {
 export function RenewalNote({ ap }: { ap: Autopilot }) {
   const { start, end, paused, later } = pauseState(ap)
   if (ap.lastError) return <span className="text-destructive">{ap.lastError}</span>
+  if (!ap.enabled) return <span className="text-destructive">Renouvellement suspendu : vérifiez dans l'application PayByPhone, puis relancez-le depuis « Gérer ».</span>
   if (paused) return <>Renouvellement en pause {end ? `jusqu'au ${dayText(end - 1)} inclus` : 'sans date de fin'}</>
   return (
     <>
@@ -92,7 +93,9 @@ export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; 
   async function resume() {
     try {
       await api.resumeAutopilot(ap.id)
-      toast.success('Renouvellement repris.')
+      toast.success(ap.enabled ? 'Renouvellement repris.' : 'Renouvellement relancé.', {
+        description: ap.enabled ? undefined : 'Si un ticket est déjà en cours, il prendra le relais à sa fin.',
+      })
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -215,7 +218,7 @@ export function RiverainCard({
                       <ZonePlate zone={ap.location} />
                     </span>
                     <p className="mt-2 text-sm text-ink/60">
-                      {ap.lastError || paused ? <RenewalNote ap={ap} /> : <>Paiement en cours…</>}
+                      {ap.lastError || paused || !ap.enabled ? <RenewalNote ap={ap} /> : <>Paiement en cours…</>}
                     </p>
                   </div>
                   <ManageRenewal ap={ap} onChanged={onChanged} demo={demo} />
@@ -783,7 +786,11 @@ function ManageDialog({
           <DialogTitle className="text-base font-bold">Renouvellement zone {ap.location}</DialogTitle>
           <DialogDescription className="sr-only">Options du renouvellement</DialogDescription>
         </div>
-        {pauseSet ? (
+        {!ap.enabled ? (
+          <button onClick={onResume} className={row}>
+            <Play className="size-5" /> Relancer le renouvellement
+          </button>
+        ) : pauseSet ? (
           <button onClick={onResume} className={row}>
             <Play className="size-5" /> {start! <= now ? 'Reprendre maintenant' : 'Annuler la pause prévue'}
           </button>

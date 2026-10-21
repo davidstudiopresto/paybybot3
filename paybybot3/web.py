@@ -500,8 +500,45 @@ class Unconfirmed(Exception):
     """PayByPhone accepted the payment request but no parking session showed up."""
 
 
+BANK_CHECK = ("Votre banque a demandé de valider ce paiement (3-D Secure) : PaybyBot ne peut pas le faire à votre "
+              "place. Si vous l'avez validé dans l'application de votre banque, le ticket apparaîtra dans PayByPhone. "
+              "Sinon, choisissez dans PayByPhone une carte qui ne demande pas de validation à chaque paiement, puis "
+              "relancez le renouvellement.")
+NO_CARD = ("Aucune carte bancaire dans votre compte PayByPhone : ajoutez-en une dans l'application PayByPhone, "
+           "puis relancez le renouvellement.")
+RESIDENT_REFUSED = ("PayByPhone n'accepte plus le tarif résident pour ce véhicule dans cette zone%s. Vérifiez votre "
+                    "carte résident dans l'application PayByPhone.")
+
+
+class BankCheck(Unconfirmed):
+    """The bank asked the card holder to confirm the payment (3-D Secure): nothing can be done unattended."""
+
+
 UNCONFIRMED = ("PayByPhone n'a pas confirmé ce stationnement. Vérifiez dans l'application PayByPhone "
                "avant de réessayer, pour ne pas payer deux fois.")
+
+
+def suspended_message(e):
+    return str(e) if isinstance(e, BankCheck) else UNCONFIRMED + " Renouvellement suspendu."
+
+
+class NotPayable(Exception):
+    """Known before paying that PayByPhone will refuse: resident rate no longer granted, no card."""
+
+
+def check_payable(session, location, rate, plate, payment_account_id):
+    """The two usual reasons a renewal cannot be paid, checked before paying: the resident rate is no longer
+    offered for this car here (permit expired), or the account has no card left. Returns the card to use: the
+    renewal's own, else another card of the account if that one was removed."""
+    rates = session.call("get_rate_options", location, plate) or []
+    chosen = next((r for r in rates if str(r.get("ratePolicyId")) == str(rate)), None)
+    if not chosen or chosen.get("parkingNotAllowedReason"):
+        reason = (chosen or {}).get("parkingNotAllowedReason")
+        raise NotPayable(RESIDENT_REFUSED % (" (motif PayByPhone : %s)" % reason if reason else ""))
+    cards = [p["id"] for p in normalize_accounts(session.call("get_payment_accounts") or {})]
+    if not cards:
+        raise NotPayable(NO_CARD)
+    return payment_account_id if payment_account_id in cards else cards[0]
 
 
 def pay_and_confirm(session, location, rate, duration, unit, plate, paymentAccountId, attempts=10, delay=3):
@@ -538,6 +575,8 @@ def pay_and_confirm(session, location, rate, duration, unit, plate, paymentAccou
                 result.get("jobStatus"), result.get("jobStages"))
     session.unconfirmed[(plate, location)] = time.time()
     log_diagnosis(session)
+    if any("authenticationChallenge" in str(st.get("status")) for st in result.get("jobStages") or []):
+        raise BankCheck(BANK_CHECK)
     raise Unconfirmed(UNCONFIRMED)
 
 
@@ -798,10 +837,10 @@ def run_autopilot(session, ap, now=None):
         ap["lastPayment"] = now.isoformat()
         ap["lastError"] = None
         session.log("success", "Renouvellement automatique : zone %s, %s" % (ap["location"], ap["plate"]))
-    except Unconfirmed:
+    except Unconfirmed as e:
         # Never retry blindly: the payment may have gone through, retrying could pay twice.
         ap["enabled"] = False
-        ap["lastError"] = UNCONFIRMED + " Renouvellement suspendu."
+        ap["lastError"] = suspended_message(e)
         session.log("error", ap["lastError"])
     except Exception as e:
         ap["lastError"] = friendly_error(e)
@@ -1104,17 +1143,22 @@ def process_renewal(row, refresh_token=None):
             patch.update(next_check=utc_iso(next_check or now + timedelta(days=30)), last_error=None)
             outcome = "active"
         else:
+            card = check_payable(session, row["location"], row["rate"], row["plate"], row["payment_account_id"])
             result, found = pay_and_confirm(session, row["location"], row["rate"], fmt_qty(row["duration"]),
-                                            row["unit"], row["plate"], row["payment_account_id"])
+                                            row["unit"], row["plate"], card)
             expire = covered_until(found)
             next_check = schedule.next_slot(rule, now) if rule else expire + timedelta(seconds=30)
             patch.update(last_payment=utc_iso(now), next_check=utc_iso(next_check or now + timedelta(days=30)),
                          last_error=None)
             outcome = "paid"
-    except Unconfirmed:
-        # Never retry blindly: the payment may have gone through, retrying could pay twice.
-        patch.update(enabled=False, last_error=UNCONFIRMED + " Renouvellement suspendu.")
+    except Unconfirmed as e:
+        # Never retry blindly: the payment may have gone through, retrying could pay twice (and a bank that asks
+        # to confirm every payment would ask again at every try).
+        patch.update(enabled=False, last_error=suspended_message(e))
         outcome = "unconfirmed"
+    except NotPayable as e:  # nothing was paid: tell the user, look again in 6 hours
+        patch.update(last_error=str(e), next_check=utc_iso(now + timedelta(hours=6)))
+        outcome = "not_payable"
     except Exception as e:
         if "VehicleAlreadyParked" in str(e):  # a ticket PayByPhone knows of but did not list: wait, not an error
             patch.update(last_error=None, next_check=utc_iso(now + timedelta(minutes=30)))
@@ -2643,13 +2687,15 @@ def pause_autopilot(ap_id: str, body: Pause, pbb_session: str = Cookie(None)):
 def resume_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
     if HOSTED and not s.demo:
-        # Check right away: a ticket may be needed now.
-        return update_own_renewal(s, ap_id, {"paused_from": None, "paused_until": None,
-                                             "next_check": utc_iso(datetime.now(timezone.utc))})
+        # Ends a pause, or relaunches a suspended renewal; checked right away: a ticket may be needed now (a ticket
+        # already running is never paid twice: the renewal waits for its end).
+        return update_own_renewal(s, ap_id, {"paused_from": None, "paused_until": None, "enabled": True,
+                                             "last_error": None, "next_check": utc_iso(datetime.now(timezone.utc))})
     ap = s.autopilots.get(ap_id)
     if not ap:
         raise HTTPException(404, "Renouvellement introuvable.")
-    ap.update(pausedFrom=None, pausedUntil=None)
+    ap.update(pausedFrom=None, pausedUntil=None, enabled=True, lastError=None)
+    s.unconfirmed.pop((ap["plate"], ap["location"]), None)
     if HOSTED:
         run_autopilot(s, ap)
     return ap

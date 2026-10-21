@@ -21,16 +21,19 @@ class RunningTicket(unittest.TestCase):
     def tearDown(self):
         self.env.stop()
 
-    def session(self, tickets):
+    def session(self, tickets, rates=None, cards=("c",)):
+        rates = [{"ratePolicyId": "101", "name": "Résident", "type": "Resident"}] if rates is None else rates
+        answers = {"get_parking_sessions": tickets, "get_rate_options": rates,
+                   "get_payment_accounts": {"paymentCards": [{"paymentAccountId": c} for c in cards]}}
         s = MagicMock()
-        s.call.side_effect = lambda name, *a, **k: tickets if name == "get_parking_sessions" else None
+        s.call.side_effect = lambda name, *a, **k: answers.get(name)
         return s
 
     def test_any_zone_and_plate_spelling_count(self):
         s = self.session([ticket("FT-630-FH", "75015"), ticket("ZZ999ZZ", "75005"), ticket("FT630FH", "75005", -1)])
         self.assertEqual([x["locationId"] for x in web.running_for(s, "FT630FH")], ["75015"])
 
-    def run_renewal(self, tickets, pay_error=None):
+    def run_renewal(self, tickets, pay_error=None, **account):
         row = {"id": "r1", "owner": "o", "plate": "FT630FH", "location": "75005", "rate": "101", "duration": 7,
                "unit": "Days", "payment_account_id": "c", "last_error": None}
         stored = []
@@ -40,7 +43,7 @@ class RunningTicket(unittest.TestCase):
                 patch.object(web, "store", side_effect=lambda *a, **k: stored.append(k)), \
                 patch.object(web, "notify") as mail, \
                 patch.object(web.Bot, "from_refresh_token", return_value=bot), \
-                patch.object(web.UserSession, "for_bot", return_value=self.session(tickets)), \
+                patch.object(web.UserSession, "for_bot", return_value=self.session(tickets, **account)), \
                 patch.object(web, "pay_and_confirm", side_effect=pay_error or AssertionError("must not pay")) as pay:
             outcome = web.process_renewal(row, refresh_token="t")
         return outcome, stored[-1]["p_patch"], mail, pay
@@ -77,6 +80,30 @@ class RunningTicket(unittest.TestCase):
         self.assertEqual(web.known_price(session([week]), body), ({"amount": 9.5, "currency": "EUR"}, "history"))
         self.assertEqual(web.known_price(session([]), body), (web.PARIS_RESIDENT_WEEK, "paris"))
         self.assertEqual(web.known_price(session([]), body.model_copy(update={"location": "69001"})), (None, None))
+
+    def test_bank_asking_to_confirm_suspends_with_its_reason(self):
+        outcome, patch_, mail, _ = self.run_renewal([], pay_error=web.BankCheck(web.BANK_CHECK))
+        self.assertEqual(outcome, "unconfirmed")
+        self.assertFalse(patch_["enabled"])
+        self.assertIn("3-D Secure", patch_["last_error"])
+        mail.assert_called_once()
+
+    def test_resident_rate_refused_is_said_before_paying(self):
+        refused = [{"ratePolicyId": "101", "name": "Résident", "parkingNotAllowedReason": "PermitExpired"}]
+        outcome, patch_, _, pay = self.run_renewal([], rates=refused)
+        self.assertEqual(outcome, "not_payable")
+        pay.assert_not_called()
+        self.assertIn("PermitExpired", patch_["last_error"])
+
+    def test_no_card_is_said_before_paying(self):
+        outcome, patch_, _, pay = self.run_renewal([], cards=())
+        self.assertEqual(outcome, "not_payable")
+        pay.assert_not_called()
+        self.assertEqual(patch_["last_error"], web.NO_CARD)
+
+    def test_a_removed_card_falls_back_to_another(self):
+        s = self.session([], cards=("other",))
+        self.assertEqual(web.check_payable(s, "75005", "101", "FT630FH", "c"), "other")
 
 
 if __name__ == "__main__":

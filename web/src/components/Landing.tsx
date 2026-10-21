@@ -10,18 +10,13 @@ import { ui } from '@/lib/styles'
 import { PaybyBot, PayByPhone, withPayByPhone } from '@/components/signs'
 
 
-/** The 18-second loop (made with Remotion in marketing/video): muted autoplay like a GIF; the 4:5 cut on phones. */
+/** The 18-second loop (made with Remotion in marketing/video): starts only on play, the PaybyBot card until then;
+ *  the 4:5 cut on phones. */
 function DemoVideo() {
   const ref = useRef<HTMLVideoElement>(null)
   const [mobile] = useState(() => window.matchMedia('(max-width: 639px)').matches)
-  const [still] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-  const [playing, setPlaying] = useState(!still)
+  const [playing, setPlaying] = useState(false)
   const src = mobile ? '/video/paybybot-18s-v2-mobile' : '/video/paybybot-18s-v2'
-
-  useEffect(() => {
-    const v = ref.current
-    if (v && !still) v.play().catch(() => setPlaying(false))
-  }, [still])
 
   const [full, setFull] = useState(false)
 
@@ -50,13 +45,14 @@ function DemoVideo() {
       <video
         ref={ref}
         src={src + '.mp4'}
-        poster={src + '-cover.jpg'}
+        poster={src + '-poster.jpg'}
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="none"
+        onClick={toggle}
         aria-label="Vidéo de 18 secondes : un forfait expiré, la connexion à PaybyBot, le renouvellement automatique activé, puis les paiements de chaque semaine"
-        className="block aspect-[4/5] w-full rounded-[20px] bg-[#0b1024] object-cover sm:aspect-video"
+        className="block aspect-[4/5] w-full cursor-pointer rounded-[20px] bg-[#0b1024] object-cover sm:aspect-video"
       />
       <button
         onClick={toggle}
@@ -67,7 +63,7 @@ function DemoVideo() {
       </button>
       <button
         onClick={openFull}
-        className="absolute bottom-4 left-4 inline-flex h-11 items-center gap-2.5 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-5 text-[0.95rem] font-semibold text-white shadow-lg transition hover:brightness-110 sm:bottom-6 sm:left-6"
+        className="absolute bottom-4 left-4 inline-flex h-11 items-center gap-2.5 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-5 text-[0.95rem] font-semibold text-white shadow-lg transition hover:brightness-110 sm:bottom-6 sm:left-6"
       >
         <Play className="size-4 fill-white" /> Découvrir PaybyBot
       </button>
@@ -86,7 +82,7 @@ function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
           <DialogTitle className="sr-only">Découvrir PaybyBot</DialogTitle>
           <video
             src={src + '.mp4'}
-            poster={src + '-cover.jpg'}
+            poster={src + '-poster.jpg'}
             autoPlay
             controls
             playsInline

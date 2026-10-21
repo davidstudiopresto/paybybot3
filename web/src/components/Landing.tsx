@@ -64,7 +64,7 @@ function Testimonials() {
     </li>
   )
   return (
-    <section className="flex flex-col justify-center py-24 lg:min-h-[calc(100dvh-4rem)] lg:py-20" aria-label="Ils nous font confiance">
+    <section className="flex flex-col justify-center pt-10 pb-24 lg:min-h-[calc(85dvh-4rem)] lg:pt-12 lg:pb-20" aria-label="Ils nous font confiance">
       <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
         Ils nous font confiance.
       </h2>
@@ -127,7 +127,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
         {/* Almost a full screen on a computer: three centered steps, each an icon in a ring with its number,
             joined by a thin line. */}
-        <section id="comment" className="flex scroll-mt-16 flex-col justify-center py-24 lg:min-h-[calc(100dvh-4rem)] lg:py-20">
+        <section id="comment" className="flex scroll-mt-16 flex-col justify-center pt-24 pb-10 lg:min-h-[calc(85dvh-4rem)] lg:pt-20 lg:pb-12">
           <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
             Comment ça marche
           </h2>
@@ -152,7 +152,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
         </section>
 
 
-        <section id="fonctionnalites" className="flex scroll-mt-16 flex-col justify-center py-24 lg:min-h-[calc(100dvh-4rem)] lg:py-20">
+        <section id="fonctionnalites" className="scroll-mt-16 py-10 lg:py-12">
           <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
             Fonctionnalités
           </h2>

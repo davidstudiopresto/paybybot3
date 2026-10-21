@@ -14,7 +14,7 @@ function DemoVideo() {
   const ref = useRef<HTMLVideoElement>(null)
   const [mobile] = useState(() => window.matchMedia('(max-width: 639px)').matches)
   const [playing, setPlaying] = useState(false)
-  const src = mobile ? '/video/paybybot-18s-v2-mobile' : '/video/paybybot-18s-v2'
+  const src = mobile ? '/video/paybybot-18s-v3-mobile' : '/video/paybybot-18s-v3'
 
   function toggle() {
     const v = ref.current

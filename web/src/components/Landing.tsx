@@ -45,7 +45,7 @@ function DemoVideo() {
         onClick={toggle}
         aria-label={playing ? 'Mettre la vidéo en pause' : 'Lire la vidéo'}
         className={cn(
-          'absolute top-1/2 left-1/2 grid size-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur transition duration-300 hover:scale-105 hover:bg-black/60 focus-visible:opacity-100 sm:size-24',
+          'absolute top-1/2 left-1/2 grid size-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white/70 bg-transparent text-white drop-shadow-[0_2px_10px_rgb(0_0_0/0.45)] transition duration-300 hover:scale-105 hover:border-white hover:bg-white/10 focus-visible:opacity-100 sm:size-24',
           playing ? 'opacity-0 group-hover:opacity-100' : 'opacity-100',
         )}
       >

@@ -74,8 +74,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
             <span className="block">de votre stationnement résident</span>
           </h1>
           <p className="mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]">
-            <PayByBot /> renouvelle votre ticket résident <PayByPhone /> dès qu’il expire. Fini les oublis, fini les
-            amendes.
+            <PayByBot /> renouvelle votre stationnement résident sur <PayByPhone />, sans interruption. Zéro oubli, zéro
+            amende.
           </p>
           <a
             ref={cta}

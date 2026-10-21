@@ -133,7 +133,7 @@ class RunningTicket(unittest.TestCase):
     def test_check_before_the_offer_rejects_a_card_that_needs_3d_secure(self):
         answer, _ = self.check(pay=lambda *a, **k: ({"challenged": True}, [ticket("FT630FH", "75005")]))
         self.assertEqual(answer.status_code, 409)
-        self.assertIn("3-D Secure", answer.detail)
+        self.assertIn("banque a refusé", answer.detail)
 
     def test_check_before_the_offer_pays_the_first_week(self):
         answer, paid = self.check(pay=lambda *a, **k: ({"challenged": False, "cost": None}, [ticket("FT630FH", "75005")]))

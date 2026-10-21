@@ -2014,11 +2014,7 @@ def debug(pbb_session: str = Cookie(None)):
     return report
 
 
-CARD_NEEDS_CHECK = ("Votre banque n'a pas accepté ce paiement automatique : soit elle demande de valider chaque "
-                    "paiement (3-D Secure), soit la carte n'est plus utilisable (bloquée, opposée, plafond atteint…). "
-                    "Le renouvellement automatique ne peut pas fonctionner ainsi. Vérifiez votre carte ou ajoutez-en "
-                    "une autre dans l'application PayByPhone, puis réessayez. Si vous avez validé ce paiement, votre "
-                    "ticket de cette semaine est bien pris.")
+CARD_NEEDS_CHECK = "Votre banque a refusé ce paiement automatique : vérifiez votre carte dans l'application PayByPhone."
 
 
 def mail_check_failed(s, plate, message):

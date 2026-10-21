@@ -288,7 +288,7 @@ function RiverainDialog({
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // The bank asks to confirm every payment: trying again would only send it another request.
-  const cardRefused = !!error && /3-D Secure/.test(error)
+  const cardRefused = !!error && /3-D Secure|banque a refusé/.test(error)
   // Online, a renewal needs a subscription, chosen on Stripe even during the free month (nothing charged before
   // it ends): without one, « Activer » opens the offer choice first.
   const [account, setAccount] = useState<Account | null>(null)

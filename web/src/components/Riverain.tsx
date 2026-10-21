@@ -311,7 +311,6 @@ function RiverainDialog({
   const [found, setFound] = useState<Record<string, Found>>({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [checking, setChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // The bank asks to confirm every payment: trying again would only send it another request.
   const cardRefused = !!error && /3-D Secure|banque a refusé/.test(error)
@@ -417,22 +416,8 @@ function RiverainDialog({
   async function activate() {
     if (!ok.length) return
     if (account && !account.subscribed && !account.blocked) {
-      // Before the offer page, make sure PayByPhone can be paid on its own for each car: resident rate, card, and
-      // (no ticket running) the first week paid now, which shows whether the bank asks to confirm every payment.
-      setChecking(true)
-      setError(null)
-      const problems: string[] = []
-      let paid = false
-      for (const plate of ok) {
-        try {
-          paid = (await api.renewalCheck(parking(found[plate].rate!, plate))).paid || paid
-        } catch (e) {
-          problems.push(ok.length > 1 ? `${plate} : ${(e as Error).message}` : (e as Error).message)
-        }
-      }
-      setChecking(false)
-      if (paid) onDone() // a first week was paid: show its ticket behind
-      if (problems.length) return setError(problems.join('\n'))
+      // No subscription yet: the offer screen first. The renewal is activated on the way back from Stripe, and
+      // that is when the first payment (or the extension) happens.
       setPaywall(true)
       return
     }
@@ -606,16 +591,12 @@ function RiverainDialog({
               setError(null)
               activate()
             }}
-            disabled={!ok.length || loading || saving || checking}
+            disabled={!ok.length || loading || saving}
             className={ui.primary}
           >
-            {cardRefused && !checking ? (
+            {cardRefused ? (
               <>
                 <RotateCw className="size-5" /> Réessayer
-              </>
-            ) : checking ? (
-              <>
-                <Loader2 className="size-5 animate-spin" /> Vérification du paiement avec PayByPhone…
               </>
             ) : saving ? (
               <Loader2 className="size-5 animate-spin" />

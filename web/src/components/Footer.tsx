@@ -5,6 +5,7 @@ const LINKS = [
   ['#/confidentialite', 'Confidentialité'],
   ['#/cgu', "Conditions d'utilisation"],
   ['#/mentions-legales', 'Mentions légales'],
+  ['mailto:contact@paybybot.fr', 'contact@paybybot.fr'],
 ]
 
 /** Legal links everywhere. */

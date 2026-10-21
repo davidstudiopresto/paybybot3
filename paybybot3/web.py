@@ -530,7 +530,9 @@ class BankCheck(Unconfirmed):
     """The bank asked the card holder to confirm the payment (3-D Secure): nothing can be done unattended."""
 
 
-PAYBYPHONE_URL = "https://m.paybyphone.com/"  # the e-mails' button: fix the card or the payment there
+# The e-mails' button: fix the card or the payment there. PayByPhone's own app link (AppsFlyer OneLink, declared
+# for its iOS and Android apps): opens the app when installed, else the App Store / Play Store, or its site on a computer.
+PAYBYPHONE_URL = "https://paybyphone.onelink.me/ZQkh/"
 RETRY_AFTER = timedelta(hours=1)  # a renewal that could not pay is tried again this long after
 
 UNCONFIRMED = ("PayByPhone n'a pas confirmé ce stationnement. Vérifiez dans l'application PayByPhone "

@@ -878,9 +878,8 @@ export function ResidentRequired({
   )
 }
 
-/** Why a card: Apple Pay and Google Pay need the phone at each payment, so they cannot pay automatically. */
-export const CARD_NOTE =
-  'Une carte bancaire enregistrée dans PayByPhone est nécessaire : Apple Pay et Google Pay demandent une validation sur votre téléphone à chaque paiement et ne permettent pas le paiement automatique.'
+/** Sign-up: PaybyBot pays with a card saved on PayByPhone. */
+export const CARD_NOTE = 'Une carte bancaire enregistrée dans PayByPhone est nécessaire.'
 
 /** PaybyBot pays with a card saved on PayByPhone. */
 export function CardRequired({ children }: { children: ReactNode }) {

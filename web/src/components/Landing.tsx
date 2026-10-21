@@ -94,12 +94,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
           >
             Essayer gratuitement <ArrowRight className="size-5" />
           </a>
-          <p className="mt-4 text-sm text-ink/50">
-            Déjà inscrit ?{' '}
-            <a href="#/connexion" className={ui.link}>
-              Se connecter
-            </a>
-          </p>
         </div>
         <button
           type="button"

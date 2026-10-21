@@ -117,7 +117,16 @@ const STEPS = [
  * Real users' feedback only, given with their consent: [first name and last-name initial, e.g. « Charles H. », one sentence].
  * The section stays hidden while the list is empty.
  */
-const TESTIMONIALS: [string, string][] = []
+const TESTIMONIALS: [string, string][] = [
+  // Placeholders, to replace with real reviews.
+  ['Prénom N.', 'Avis client à venir.'],
+  ['Prénom N.', 'Avis client à venir.'],
+  ['Prénom N.', 'Avis client à venir.'],
+  ['Prénom N.', 'Avis client à venir.'],
+  ['Prénom N.', 'Avis client à venir.'],
+  ['Prénom N.', 'Avis client à venir.'],
+  ['Prénom N.', 'Avis client à venir.'],
+]
 
 function Testimonials() {
   if (!TESTIMONIALS.length) return null

@@ -237,14 +237,10 @@ export function Landing({ hosted }: { hosted: boolean }) {
         <div className="grid w-full items-center gap-12 lg:grid-cols-[573fr_675fr] lg:gap-16">
           <div className="@container max-w-[40rem] lg:max-w-none">
             {/* Sized to its column (cqw), so « de votre stationnement résident » keeps to one line. */}
-            {/* Like a launch page: the problem in black, then « on s'en occupe » in the logo's blue, a size smaller. */}
             <p className={cn(KICKER, 'mb-5 lg:mb-7')}>100 % automatique • Même téléphone éteint • Fini les oublis</p>
             <h1 className={cn(ui.title, 'font-medium text-[#2b2f3a] lg:text-[clamp(2.5rem,min(7.3cqw,7.5vh),4.75rem)] lg:leading-[1.2] lg:tracking-[-0.045em]')}>
               <span className="lg:block">Renouvellement automatique</span>{' '}
               <span className="lg:block">de votre stationnement résident</span>
-              <span className="mt-[0.33em] block w-fit bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] box-decoration-clone bg-clip-text text-[0.83em] leading-[1.17] text-transparent lg:mt-[0.6em] lg:leading-[1.3]">
-                PaybyBot s'en <span className="lg:block">occupe pour vous</span>
-              </span>
             </h1>
             <p className={cn(ui.subtitle, 'lg:mt-10 lg:max-w-[32rem] lg:text-[clamp(1rem,min(1.1vw,2vh),1.2rem)] lg:leading-[1.7]')}>
               Votre ticket expire, PaybyBot le renouvelle sur votre compte <PayByPhone />. Vous partez en vacances, il se met

@@ -98,7 +98,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             )}
             <Row
               icon={<Car className="size-5" />}
-              label={vehicles && vehicles.length > 1 ? `${vehicles.length} véhicules riverains` : 'Véhicule riverain'}
+              label={vehicles && vehicles.length > 1 ? `${vehicles.length} véhicules résidents` : 'Véhicule résident'}
               delay={next()}
               found={!!vehicles?.length}
             >

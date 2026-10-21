@@ -433,7 +433,7 @@ function RiverainDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={ui.dialog}>
         <div className="px-6 pt-7">
-          <DialogTitle className={ui.dialogTitle}>Renouvellement riverain</DialogTitle>
+          <DialogTitle className={ui.dialogTitle}>Renouvellement résident</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">
             Choisissez les véhicules à renouveler, vérifiez, puis activez. On s'occupe du reste.
           </DialogDescription>
@@ -441,7 +441,7 @@ function RiverainDialog({
 
         <div className="space-y-6 p-6">
           <div>
-            <p className={ui.label}>{plates && plates.length > 1 ? 'Véhicules riverains' : 'Véhicule riverain'}</p>
+            <p className={ui.label}>{plates && plates.length > 1 ? 'Véhicules résidents' : 'Véhicule résident'}</p>
             {plates === null ? (
               <div className="h-12 animate-pulse rounded-xl bg-ink/[0.05]" />
             ) : (

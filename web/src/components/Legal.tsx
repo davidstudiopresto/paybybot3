@@ -104,11 +104,11 @@ export function SecurityDetails() {
         <DataTable
           rows={[
             ['Jetons de connexion PayByPhone', 'Dans votre navigateur (cookie)', 'Chiffrés avec une clé que seul le serveur possède', '12 h sans activité, 24 h au plus'],
-            ['Renouvellement riverain : jeton de reconnexion PayByPhone', 'Base de données à Paris', 'Chiffré ; la clé est conservée ailleurs', 'Jusqu’à ce que vous l’arrêtiez'],
-            ['Renouvellement riverain : plaque, zone, tarif, durée, moyen de paiement choisi', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à ce que vous l’arrêtiez'],
+            ['Renouvellement résident : jeton de reconnexion PayByPhone', 'Base de données à Paris', 'Chiffré ; la clé est conservée ailleurs', 'Jusqu’à ce que vous l’arrêtiez'],
+            ['Renouvellement résident : plaque, zone, tarif, durée, moyen de paiement choisi', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Compte PaybyBot : e-mail et zone de résidence', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à la suppression du compte'],
-            ['Renouvellement riverain : e-mail pour les confirmations', 'Base de données à Paris', 'Chiffré', 'Jusqu’à ce que vous le retiriez ou arrêtiez'],
-            ['Renouvellement riverain : dates de pause, de vérification et de paiement', 'Base de données à Paris', 'Dates seules, sans lien lisible avec vous', 'Jusqu’à ce que vous l’arrêtiez'],
+            ['Renouvellement résident : e-mail pour les confirmations', 'Base de données à Paris', 'Chiffré', 'Jusqu’à ce que vous le retiriez ou arrêtiez'],
+            ['Renouvellement résident : dates de pause, de vérification et de paiement', 'Base de données à Paris', 'Dates seules, sans lien lisible avec vous', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Identifiant de votre compte', 'Base de données à Paris', 'Seulement une empreinte : le numéro n’y figure pas', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Tentatives de connexion (anti-piratage)', 'Base de données à Paris', 'Empreintes de l’appareil et du compte, jamais l’adresse IP ni l’identifiant en clair', '24 h au plus'],
             ['Journaux techniques', 'Hébergeur (Vercel)', 'Identifiant et plaque masqués', 'Durée limitée fixée par l’hébergeur'],
@@ -142,10 +142,10 @@ export function SecurityDetails() {
       <Section title="Garder la main">
         <ul>
           <li>Tous vos tickets restent visibles et gérables dans l’application <PayByPhone />.</li>
-          <li>Le lien « Arrêter » sur la carte riverain supprime le renouvellement et le jeton gardé.</li>
+          <li>Le lien « Arrêter » sur la carte résident supprime le renouvellement et le jeton gardé.</li>
           <li>La « Pause vacances » suspend les paiements entre deux dates, sans rien supprimer.</li>
           <li>
-            Les e-mails de confirmation sont facultatifs : retirez votre adresse à tout moment depuis la carte riverain. Ils
+            Les e-mails de confirmation sont facultatifs : retirez votre adresse à tout moment depuis la carte résident. Ils
             ne contiennent aucun suivi d’ouverture ni de clic.
           </li>
           <li>
@@ -237,7 +237,7 @@ function Privacy() {
             identifiants de client et d’abonnement Stripe, chiffrés.
           </li>
           <li>
-            <strong>Renouvellement riverain (si vous l’activez) :</strong> un jeton de reconnexion <PayByPhone />, la plaque,
+            <strong>Renouvellement résident (si vous l’activez) :</strong> un jeton de reconnexion <PayByPhone />, la plaque,
             la zone, le tarif, la durée et le moyen de paiement choisis, tous chiffrés ; une empreinte de votre identifiant ;
             les dates des dernières vérifications et du dernier paiement, les dates de pause éventuelles, et le dernier
             message d’erreur éventuel, et l’e-mail des confirmations, chiffré lui aussi.
@@ -313,7 +313,7 @@ function Privacy() {
             souvenir de moi ».
           </li>
           <li>Compte PaybyBot (e-mail, zone de résidence) : jusqu’à la suppression du compte.</li>
-          <li>Renouvellement riverain, y compris l’e-mail : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
+          <li>Renouvellement résident, y compris l’e-mail : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
           <li>Tentatives de connexion : 24 heures au plus.</li>
           <li>E-mails envoyés : conservés par Resend pour une durée limitée, le temps d’assurer leur bonne livraison.</li>
           <li>Journaux techniques : durée limitée fixée par l’hébergeur.</li>
@@ -348,7 +348,7 @@ function Privacy() {
         <p>
           Vous pouvez demander l’accès à vos données, leur rectification, leur effacement, la limitation de leur traitement
           ou leur portabilité, et vous opposer à un traitement fondé sur l’intérêt légitime. Écrivez à <Mailto /> : nous
-          répondons sous un mois. Arrêter votre renouvellement riverain efface immédiatement les données correspondantes.
+          répondons sous un mois. Arrêter votre renouvellement résident efface immédiatement les données correspondantes.
         </p>
         <p>
           Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL (
@@ -396,7 +396,7 @@ function Terms() {
       <Section title="3. Mandat">
         <p>
           En utilisant PaybyBot, vous l’autorisez à transmettre en votre nom à <PayByPhone /> les demandes que vous faites
-          (paiement, prolongation) et, si vous activez le renouvellement riverain, à prendre automatiquement un nouveau
+          (paiement, prolongation) et, si vous activez le renouvellement résident, à prendre automatiquement un nouveau
           ticket à l’expiration du précédent, avec le véhicule, la zone, le tarif, la durée et le moyen de paiement que vous
           avez choisis, jusqu’à ce que vous l’arrêtiez.
         </p>
@@ -425,7 +425,7 @@ function Terms() {
         </ul>
       </Section>
 
-      <Section title="6. Renouvellement riverain">
+      <Section title="6. Renouvellement résident">
         <p>
           Une fois activé, le renouvellement paie automatiquement, sans nouvelle confirmation, une semaine au tarif résident
           à chaque expiration, tant que vous ne l’arrêtez pas. Il ne paie pas si un ticket est déjà en cours pour le même

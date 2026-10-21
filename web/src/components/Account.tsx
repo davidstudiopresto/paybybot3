@@ -87,7 +87,7 @@ function AccountDialog({
 
         <dl className="mx-6 mt-5 divide-y divide-ink/10 border-y border-ink/10">
           <div className={row}>
-            <dt className={label}>{vehicles && vehicles.length > 1 ? 'Véhicules riverains' : 'Véhicule riverain'}</dt>
+            <dt className={label}>{vehicles && vehicles.length > 1 ? 'Véhicules résidents' : 'Véhicule résident'}</dt>
             <dd className="flex flex-col items-end gap-2">
               {vehicles === undefined ? (
                 <span className="inline-block h-5 w-32 animate-pulse rounded bg-ink/10" />

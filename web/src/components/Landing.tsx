@@ -108,9 +108,9 @@ function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
 const KICKER = 'text-[0.78rem] font-medium tracking-[0.19em] text-[#2a66d1] uppercase'
 
 const STEPS = [
-  ['Connectez PayByPhone', 'Avec vos identifiants habituels : pas de nouveau mot de passe à retenir.'],
-  ['Vérifiez', 'Véhicule et carte sont retrouvés dans votre compte PayByPhone.'],
-  ["C'est tout", 'Le forfait résident est repayé à chaque échéance, même téléphone éteint.'],
+  ['Connectez PayByPhone', 'Vos identifiants habituels suffisent. Votre mot de passe n’est jamais enregistré.'],
+  ['Activez le renouvellement', 'Votre plaque et votre carte sont retrouvées toutes seules. Rien à saisir.'],
+  ['Vous êtes tranquille', 'Chaque ticket est repris dès qu’il expire, jour et nuit, même téléphone éteint.'],
 ]
 
 const GUARANTEES = [
@@ -236,7 +236,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
         <section id="comment" className="mt-24 scroll-mt-20 lg:mt-36">
           <h2 className="text-center font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
-            Comment ça marche.
+            Deux minutes, et vous n’y pensez plus.
           </h2>
           <ol className="mt-12 grid gap-6 lg:grid-cols-3 lg:gap-10">
             {STEPS.map(([title, text], i) => (

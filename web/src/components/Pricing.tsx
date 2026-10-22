@@ -183,7 +183,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
             className={cn(
               'relative flex flex-col rounded-3xl border bg-white p-7 text-center',
               c.popular
-                ? 'border-eu shadow-[0_30px_60px_-30px_color-mix(in_srgb,var(--eu)_55%,transparent)] ring-1 ring-eu md:py-10'
+                ? 'order-first border-eu shadow-[0_30px_60px_-30px_color-mix(in_srgb,var(--eu)_55%,transparent)] ring-1 ring-eu md:order-none md:py-10'
                 : 'border-ink/10',
             )}
           >

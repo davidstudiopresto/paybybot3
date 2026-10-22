@@ -418,7 +418,7 @@ export function LoginView({
         </form>
       </main>
 
-      <HostedFooter className="px-6 pb-8" hosted={hosted} />
+      <HostedFooter className="px-6 pb-8" hosted={hosted} linksOnly={signup} />
     </div>
   )
 }
@@ -528,7 +528,7 @@ function CodeStep({
           <p className="mt-4 text-center text-sm text-ink/45">Pensez à regarder dans vos courriers indésirables.</p>
         </form>
       </main>
-      <HostedFooter className="px-6 pb-8" hosted={hosted} />
+      <HostedFooter className="px-6 pb-8" hosted={hosted} linksOnly />
     </div>
   )
 }

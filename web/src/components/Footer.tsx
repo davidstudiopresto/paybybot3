@@ -9,7 +9,7 @@ const LINKS = [
 ]
 
 /** Legal links everywhere. */
-export function HostedFooter({ className }: { className?: string; hosted?: boolean }) {
+export function HostedFooter({ className, linksOnly = false }: { className?: string; hosted?: boolean; linksOnly?: boolean }) {
   return (
     <footer className={cn('space-y-2 text-center text-sm text-muted-foreground', className)}>
       <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1" aria-label="Informations">
@@ -19,8 +19,12 @@ export function HostedFooter({ className }: { className?: string; hosted?: boole
           </a>
         ))}
       </nav>
-      <p className="text-xs">PayByBot n’est pas affilié à PayByPhone. Édité par Studio Presto (SAS), 47 rue Vivienne, 75002 Paris.</p>
-      <p>© PayByBot 2026</p>
+      {!linksOnly && (
+        <>
+          <p className="text-xs">PayByBot n’est pas affilié à PayByPhone. Édité par Studio Presto (SAS), 47 rue Vivienne, 75002 Paris.</p>
+          <p>© PayByBot 2026</p>
+        </>
+      )}
     </footer>
   )
 }

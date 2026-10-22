@@ -20,8 +20,8 @@ const FEATURES: Question[] = [
     <>Vous partez en vacances ? Mettez le renouvellement en pause entre deux dates, ou sans date de fin. Rien n'est payé pendant la pause.</>,
   ],
   [
-    'Alertes par e-mail',
-    <>Un e-mail à chaque paiement. Si un renouvellement n'aboutit pas, vous êtes prévenu avec la raison et vous relancez en un clic.</>,
+    'Alertes intelligentes',
+    <>En cas d'échec de paiement, vous êtes prévenu par e-mail avec la raison (carte refusée, droit résident expiré…), et vous relancez en un clic.</>,
   ],
   [
     'Support',

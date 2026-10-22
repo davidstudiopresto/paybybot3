@@ -12,28 +12,13 @@ import { api, type Pricing } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
-export type Plan = 'monthly' | 'yearly'
-
-const PLANS: { id: Plan; name: string; popular?: boolean }[] = [
-  { id: 'monthly', name: 'Mensuel' },
-  { id: 'yearly', name: 'Annuel', popular: true },
-]
-
 const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
 
-/** What a plan shows: the account's own price when known, else the rule with an example. */
-function planText(id: Plan, pricing?: Pricing | null) {
-  const monthly = pricing?.monthly
-  const yearly = pricing?.yearly
-  if (monthly != null && yearly != null) {
-    return id === 'monthly'
-      ? { price: euros(monthly), per: '/ mois', note: 'Sans engagement' }
-      : { price: euros(yearly), per: '/ an', note: `Soit ${euros(Math.round(yearly / 12))} par mois` }
-  }
-  return id === 'monthly'
-    ? { price: 'Par mois', per: '', note: 'Prix selon votre véhicule et votre zone de résidence, affiché avant tout paiement. Sans engagement.' }
-    : { price: '-20 %', per: 'à l’année', note: 'Payé une fois par an, 20 % de moins que le mensuel.' }
-}
+/** The grid, by vehicle type and Paris zone (the server's MONTHLY_PRICES). */
+const GRID: [string, number, number][] = [
+  ['Voiture', 990, 690],
+  ['Deux-roues', 690, 490],
+]
 
 /** The signed-in account's prices (null while loading). */
 function usePricing(enabled: boolean) {
@@ -41,14 +26,42 @@ function usePricing(enabled: boolean) {
   const load = useCallback(() => {
     if (!enabled) return
     setPricing(null)
-    api.pricing().then(setPricing, () => setPricing({ zone: null, weekly: null, monthly: null, yearly: null }))
+    api.pricing().then(setPricing, () => setPricing({ zone: null, monthly: null }))
   }, [enabled])
   useEffect(load, [load])
   return [pricing, load] as const
 }
 
+/** The monthly price by vehicle type and zone. */
+function PriceGrid({ className }: { className?: string }) {
+  return (
+    <table className={cn('w-full text-left text-[0.95rem]', className)}>
+      <thead>
+        <tr className="text-sm text-ink/50">
+          <th className="pb-3 font-normal" />
+          <th className="pb-3 font-normal">
+            Zone 1 <span className="block text-xs">arr. 1 à 11</span>
+          </th>
+          <th className="pb-3 font-normal">
+            Zone 2 <span className="block text-xs">arr. 12 à 20</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {GRID.map(([name, z1, z2]) => (
+          <tr key={name} className="border-t border-ink/10">
+            <td className="py-3 font-semibold text-ink">{name}</td>
+            <td className="py-3 text-ink tabular-nums">{euros(z1)} <span className="text-ink/50">/ mois</span></td>
+            <td className="py-3 text-ink tabular-nums">{euros(z2)} <span className="text-ink/50">/ mois</span></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 /** One price per « riverain » vehicle (plate), and what the subscription covers. */
-function VehiclePrices({ plan, pricing, className }: { plan: Plan; pricing: Pricing | null; className?: string }) {
+function VehiclePrices({ pricing, className }: { pricing: Pricing | null; className?: string }) {
   const vehicles = pricing?.vehicles ?? []
   if (vehicles.length < 2) return null
   const billed = pricing?.billed?.length ?? 1
@@ -58,9 +71,7 @@ function VehiclePrices({ plan, pricing, className }: { plan: Plan; pricing: Pric
         {vehicles.map((v) => (
           <li key={v.plate} className="flex items-center justify-between gap-3 text-sm">
             <Plate plate={v.plate} size="sm" />
-            <span className="text-ink/70 tabular-nums">
-              {euros(plan === 'monthly' ? v.monthly : v.yearly)} {plan === 'monthly' ? '/ mois' : '/ an'}
-            </span>
+            <span className="text-ink/70 tabular-nums">{euros(v.monthly)} / mois</span>
           </li>
         ))}
       </ul>
@@ -79,58 +90,48 @@ const INCLUDED = [
   'Annulable à tout moment',
 ]
 
-/** The two plans side by side; the yearly one is put forward. */
+/** The monthly offer: the account's own price once signed in, else the grid. */
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
-  const [busy, setBusy] = useState<Plan | null>(null)
+  const [busy, setBusy] = useState(false)
   const [pricing] = usePricing(signedIn)
 
-  async function choose(plan: Plan) {
+  async function choose() {
     if (!signedIn) {
       window.location.hash = '#/inscription'
       return
     }
-    setBusy(plan)
+    setBusy(true)
     try {
-      const { url } = await api.checkout(plan)
+      const { url } = await api.checkout('monthly')
       window.location.assign(url)
     } catch (e) {
       toast((e as Error).message)
-      setBusy(null)
+      setBusy(false)
     }
   }
 
   return (
     <>
-    {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
-    {signedIn && !pricing ? (
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="h-96 animate-pulse rounded-2xl bg-ink/[0.05]" />
-        <div className="h-96 animate-pulse rounded-2xl bg-ink/[0.05]" />
-      </div>
-    ) : (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {PLANS.map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
-        <div
-          key={p.id}
-          className={cn(
-            'relative flex flex-col rounded-2xl border p-6 sm:p-7',
-            p.popular ? 'border-eu ring-1 ring-eu' : 'border-ink/10',
+      {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
+      {signedIn && !pricing ? (
+        <div className="mx-auto h-96 max-w-md animate-pulse rounded-2xl bg-ink/[0.05]" />
+      ) : (
+        <div className="mx-auto flex max-w-md flex-col rounded-2xl border border-eu p-6 ring-1 ring-eu sm:p-7">
+          <p className="font-semibold text-ink">Mensuel</p>
+          {signedIn && pricing?.monthly != null ? (
+            <>
+              <p className="mt-4 font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
+                {euros(pricing.monthly)} <span className="text-base font-normal text-ink/50">/ mois</span>
+              </p>
+              <p className="mt-2 text-sm text-ink/55">Sans engagement</p>
+              <VehiclePrices pricing={pricing} className="mt-5 border-t border-ink/10 pt-4" />
+            </>
+          ) : (
+            <>
+              <PriceGrid className="mt-4" />
+              <p className="mt-2 text-sm text-ink/55">Votre prix est calculé tout seul avec votre compte <PayByPhone />. Sans engagement.</p>
+            </>
           )}
-        >
-          {p.popular && (
-            <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-3 py-1 text-xs font-semibold text-white">
-              <Sparkles className="size-3.5" /> Plus populaire
-            </span>
-          )}
-          <p className="flex items-center justify-between font-semibold text-ink">
-            {p.name}
-            {p.popular && <span className="rounded-full bg-eu/[0.08] px-2 py-0.5 text-xs font-semibold text-eu">-20 %</span>}
-          </p>
-          <p className="mt-4 font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
-            {p.price} <span className="text-base font-normal text-ink/50">{p.per}</span>
-          </p>
-          <p className="mt-2 text-sm text-ink/55">{p.note}</p>
-          {signedIn && <VehiclePrices plan={p.id} pricing={pricing} className="mt-5 border-t border-ink/10 pt-4" />}
           <ul className="mt-6 space-y-2 text-[0.95rem] text-ink/70">
             {INCLUDED.map((x) => (
               <li key={x} className="flex items-start gap-2">
@@ -138,23 +139,11 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
               </li>
             ))}
           </ul>
-          <button
-            onClick={() => choose(p.id)}
-            disabled={busy !== null}
-            className={cn('mt-7', p.popular ? ui.primary : ui.primaryGray)}
-          >
-            {busy === p.id ? (
-              <Loader2 className="size-5 animate-spin" />
-            ) : signedIn ? (
-              p.popular ? 'Choisir l’annuel' : 'Choisir le mensuel'
-            ) : (
-              'Commencer mon mois offert'
-            )}
+          <button onClick={choose} disabled={busy} className={cn('mt-7', ui.primary)}>
+            {busy ? <Loader2 className="size-5 animate-spin" /> : signedIn ? 'Choisir le mensuel' : 'Commencer mon mois offert'}
           </button>
         </div>
-      ))}
-    </div>
-    )}
+      )}
     </>
   )
 }
@@ -171,7 +160,7 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
         </h1>
         {signedIn && (
           <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
-            Un prix par véhicule résident, selon votre zone de résidence.
+            Un prix par véhicule résident, selon son type et sa zone.
           </p>
         )}
         <div className="mt-12">
@@ -283,7 +272,6 @@ function graceDay(iso: string | null) {
 /** Full-page paywall: the offer and the way to pay on the left, the parking meter on the right. onPay runs just
  *  before leaving for Stripe. */
 export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; text: string; onPay?: () => void }) {
-  const [plan, setPlan] = useState<Plan>('yearly')
   const [busy, setBusy] = useState(false)
   const [pricing] = usePricing(true)
   const locked = pricing?.resident === false
@@ -291,7 +279,7 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
   async function pay() {
     setBusy(true)
     try {
-      const { url } = await api.checkout(plan)
+      const { url } = await api.checkout('monthly')
       onPay?.()
       window.location.assign(url)
     } catch (e) {
@@ -326,50 +314,29 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
                 aria-hidden={locked || undefined}
                 className={cn(locked && 'pointer-events-none select-none opacity-50 blur-[2px] grayscale')}
               >
-              <div role="radiogroup" aria-label="Offre" className="mt-8 space-y-3">
+              <div className="mt-8 space-y-3">
                 {pricing && pricing.monthly == null && !locked && (
                   <p className="rounded-2xl border border-ink/10 p-4 text-sm text-ink/60">
                     Votre prix n’a pas pu être calculé avec <PayByPhone /> pour le moment. Réessayez dans quelques minutes.
                   </p>
                 )}
                 {!pricing && <div className="h-40 animate-pulse rounded-2xl bg-ink/[0.05]" />}
-                {(pricing?.monthly != null || locked) && [...PLANS].reverse().map((plan) => ({ ...plan, ...planText(plan.id, pricing) })).map((p) => (
-                  <button
-                    key={p.id}
-                    role="radio"
-                    aria-checked={plan === p.id}
-                    onClick={() => setPlan(p.id)}
-                    className={cn(
-                      'flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition',
-                      plan === p.id ? 'border-eu bg-eu/[0.04] ring-1 ring-eu' : 'border-ink/15 hover:border-ink/30',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'grid size-5 shrink-0 place-items-center rounded-full border-2',
-                        plan === p.id ? 'border-eu' : 'border-ink/25',
-                      )}
-                    >
-                      {plan === p.id && <span className="size-2.5 rounded-full bg-eu" />}
-                    </span>
+                {pricing?.monthly != null && (
+                  <div className="flex w-full items-center gap-4 rounded-2xl border border-eu bg-eu/[0.04] p-4 ring-1 ring-eu">
                     <span className="flex-1">
-                      <span className="flex items-center gap-2 font-semibold text-ink">
-                        {p.name}
-                        {p.popular && (
-                          <span className="rounded-full bg-eu/[0.08] px-2 py-0.5 text-xs font-semibold text-eu">-20 %</span>
-                        )}
-                      </span>
-                      <span className="block text-sm text-ink/55">{p.note}</span>
+                      <span className="block font-semibold text-ink">Mensuel</span>
+                      <span className="block text-sm text-ink/55">Sans engagement</span>
                     </span>
                     <span className="text-right">
-                      <span className="font-heading text-xl font-semibold text-ink">{p.price}</span>{' '}
-                      <span className="text-sm text-ink/50">{p.per}</span>
+                      <span className="font-heading text-xl font-semibold text-ink">{euros(pricing.monthly)}</span>{' '}
+                      <span className="text-sm text-ink/50">/ mois</span>
                     </span>
-                  </button>
-                ))}
+                  </div>
+                )}
+                {locked && <PriceGrid className="rounded-2xl border border-ink/10 p-4" />}
               </div>
 
-              <VehiclePrices plan={plan} pricing={pricing} className="mt-5 rounded-2xl bg-ink/[0.03] p-4" />
+              <VehiclePrices pricing={pricing} className="mt-5 rounded-2xl bg-ink/[0.03] p-4" />
               <ul className="mt-6 grid gap-2 text-[0.95rem] text-ink/70 sm:grid-cols-2">
                 {INCLUDED.map((x) => (
                   <li key={x} className="flex items-start gap-2">

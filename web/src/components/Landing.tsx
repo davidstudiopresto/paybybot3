@@ -222,7 +222,7 @@ const QUESTIONS: Question[] = [
   [
     'Combien coûte l’abonnement ?',
     <>
-      Le prix est affiché avant tout paiement. Le premier mois est offert, et l'offre annuelle coûte 20 % de moins.
+      Voiture : 9,90 €/mois en zone 1 (arr. 1 à 11), 6,90 € en zone 2 (arr. 12 à 20). Deux-roues : 6,90 € et 4,90 €. Premier mois offert, sans engagement.
       <a href="#/tarifs" className={cn(ui.primary, 'mt-5 h-12 w-fit px-6 text-base no-underline! hover:text-white! hover:no-underline!')}>
         Découvrir mon prix <ArrowRight className="size-5" />
       </a>

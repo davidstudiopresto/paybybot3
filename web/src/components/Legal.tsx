@@ -490,13 +490,12 @@ function Terms() {
             carte bancaire.
           </li>
           <li>
-            <strong>Offres et prix :</strong> Mensuel ou Annuel, TTC. Le prix dépend du type de véhicule et de la zone de
-            résidence. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte bancaire, via notre
+            <strong>Offres et prix :</strong> abonnement mensuel, TTC, par véhicule : voiture 9,90 € en zone 1
+            (arrondissements 1 à 11) et 6,90 € en zone 2 (12 à 20) ; deux-roues 6,90 € et 4,90 €. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte bancaire, via notre
             prestataire de paiement Stripe ; PayByBot ne voit ni ne conserve votre numéro de carte.
           </li>
           <li>
-            <strong>Changement de prix :</strong> si votre zone de résidence ou votre véhicule change, ou si le tarif
-            résident de votre zone évolue, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
+            <strong>Changement de prix :</strong> si votre zone de résidence ou votre véhicule change, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
             effet sur la période déjà payée. Vous pouvez résilier à tout moment depuis « Mon compte ».
           </li>
           <li>

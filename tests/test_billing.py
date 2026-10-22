@@ -35,28 +35,29 @@ class Billing(unittest.TestCase):
                 "customer": "cus_1", "subscription": "sub_1"}
 
     def test_checkout_waits_for_the_end_of_the_free_month(self):
-        self.s.account["weekly_cents"] = 900  # a 9,00 € resident week
-        with patch.object(web, "account_pricing", return_value={"weekly": 900}):
-            r = web.billing_checkout(web.Checkout(plan="yearly"), None, "t")
+        self.s.account["monthlies"] = [990]  # a car in zone 1
+        with patch.object(web, "account_pricing", return_value={"monthly": 990}):
+            r = web.billing_checkout(web.Checkout(plan="yearly"), None, "t")  # the yearly plan is no longer offered
         self.assertEqual(r["url"], "https://checkout.stripe.com/x")
         data = self.calls[0][2]
         self.assertEqual((data["line_items[0][price_data][unit_amount]"],
-                          data["line_items[0][price_data][recurring][interval]"]), (17280, "year"))
+                          data["line_items[0][price_data][recurring][interval]"]), (990, "month"))
         self.assertNotIn("subscription_data[trial_end]", data)  # no Stripe trial: the free month already runs
         self.assertEqual((data["adaptive_pricing[enabled]"], data["payment_method_types[0]"]), ("false", "card"))
         self.assertEqual(data["subscription_data[proration_behavior]"], "none")
         trial_end = datetime.fromtimestamp(data["subscription_data[billing_cycle_anchor]"], timezone.utc)
         self.assertAlmostEqual((trial_end - datetime.now(timezone.utc)).days, 29, delta=1)
 
-    def test_price_is_twice_the_resident_week_and_20_percent_off_per_year(self):
-        self.assertEqual(web.plan_cents(900, "monthly"), 1800)
-        self.assertEqual(web.plan_cents(900, "yearly"), 17280)
+    def test_price_by_vehicle_type_and_zone(self):
+        self.assertEqual(web.monthly_cents("Car", "75006"), 990)  # zone 1: arrondissements 1 to 11
+        self.assertEqual(web.monthly_cents("Car", "75011"), 990)
+        self.assertEqual(web.monthly_cents("Car", "75012"), 690)  # zone 2: 12 to 20
+        self.assertEqual(web.monthly_cents("Motorcycle", "75008"), 690)
+        self.assertEqual(web.monthly_cents("Scooter", "75017"), 490)
+        self.assertEqual(web.monthly_cents("Car", None), 990)  # unknown zone: zone 1
 
-    def test_floor_of_4_90_a_month_even_for_a_free_resident_week(self):
-        for weekly in (0, 100, 245):
-            self.assertEqual(web.plan_cents(weekly, "monthly"), 490)
-            self.assertEqual(web.plan_cents(weekly, "yearly"), 4704)  # still 20 % off twelve months
-        self.assertEqual(web.plan_cents(246, "monthly"), 492)
+    def test_yearly_kept_for_older_subscriptions(self):
+        self.assertEqual(web.plan_total([990], "yearly"), 9504)  # twelve months, 20 % off
 
     def test_no_zone_no_checkout(self):
         with patch.object(web, "account_pricing", return_value=None), \
@@ -80,10 +81,10 @@ class Billing(unittest.TestCase):
             self.assertEqual(web.resident_status(None), {"zone": "75011", "resident": True})
 
     def test_a_move_reprices_from_the_next_billing_date(self):
-        account = {"stripe_subscription": "sub_1", "weekly_cents": 1050, "billed_weekly_cents": 900,
+        account = {"stripe_subscription": "sub_1", "monthlies": [690], "billed_monthlies": [990],
                    "plan": "monthly", "email": "a@b.fr", "price_zone": "75015"}
         sub = {"status": "active", "current_period_end": 1800000000,
-               "items": {"data": [{"id": "si_1", "price": {"product": "prod_1", "unit_amount": 1800,
+               "items": {"data": [{"id": "si_1", "price": {"product": "prod_1", "unit_amount": 990,
                                                            "recurring": {"interval": "month"}}}]}}
         calls = []
 
@@ -95,30 +96,28 @@ class Billing(unittest.TestCase):
             self.assertTrue(web.reprice(account, "o"))
         mail.assert_not_called()  # no e-mail on a zone change
         update = calls[-1][2]
-        self.assertEqual((update["items[0][price_data][unit_amount]"], update["proration_behavior"]), (2100, "none"))
-        saved.assert_called_with("o", {"billed_weeklies": [1050]})
+        self.assertEqual((update["items[0][price_data][unit_amount]"], update["proration_behavior"]), (690, "none"))
+        saved.assert_called_with("o", {"billed_monthlies": [690]})
 
     def test_one_price_per_vehicle_and_the_subscription_for_the_renewed_ones(self):
-        self.assertEqual(web.plan_total([900, 900], "monthly"), 3600)
-        self.assertEqual(web.plan_total([900, 0], "monthly"), 1800 + 490)  # the floor is per vehicle
-        self.assertEqual(web.plan_total([900, 900], "yearly"), 34560)
-        prices = [{"plate": "AB-123-CD", "type": "Car", "zone": "75015", "weekly": 900},
-                  {"plate": "EF-456-GH", "type": "Car", "zone": "75011", "weekly": 450}]
-        with patch.object(web, "vehicle_prices", return_value=prices), \
+        self.assertEqual(web.plan_total([990, 490]), 1480)
+        found = [({"licensePlate": "AB-123-CD", "type": "Car"}, "75006", {}),
+                 ({"licensePlate": "EF-456-GH", "type": "Scooter"}, "75015", {})]
+        with patch.object(web, "vehicle_zones", return_value=found), \
                 patch.object(web, "load_account", return_value={}), \
                 patch.object(web, "save_account", side_effect=lambda s, p: p), patch.object(web, "reprice"):
             with patch.object(web, "renewed_plates", return_value=set()):  # none renewed yet: the first one
                 p = web.account_pricing(self.s)
-                self.assertEqual((p["billed"], p["monthly"]), (["AB-123-CD"], 1800))
+                self.assertEqual((p["billed"], p["monthly"]), (["AB-123-CD"], 990))
             with patch.object(web, "renewed_plates", return_value={"AB123CD", "EF456GH"}):
                 p = web.account_pricing(self.s)
-                self.assertEqual((p["monthly"], [v["monthly"] for v in p["vehicles"]]), (2700, [1800, 900]))
+                self.assertEqual((p["monthly"], [v["monthly"] for v in p["vehicles"]]), (1480, [990, 490]))
 
     def test_checkout_bills_every_renewed_vehicle(self):
-        self.assertEqual(web.account_weeklies({"weeklies": [900, 450]}), [900, 450])
-        self.assertEqual(web.account_weeklies({"weekly_cents": 900}), [900])  # accounts priced before
-        self.assertEqual(web.weeklies_from({"weeklies": "450,900"}), [450, 900])
-        self.assertEqual(web.weeklies_from({"weekly_cents": "900"}), [900])
+        self.assertEqual(web.account_monthlies({"monthlies": [990, 490]}), [990, 490])
+        self.assertEqual(web.account_monthlies({"weekly_cents": 900}), [990])  # not priced with the grid yet
+        self.assertEqual(web.monthlies_from({"monthlies": "490,990"}), [490, 990])
+        self.assertIsNone(web.billed_monthlies({"billed_weeklies": [900]}))  # the old rule: repriced
 
     def test_confirm_records_the_plan(self):
         self.owner = web.owner_id(self.s.username)

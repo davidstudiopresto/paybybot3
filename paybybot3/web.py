@@ -1086,7 +1086,7 @@ def with_details(row):
 
 
 ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
-                  "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "zone_found",
+                  "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "zone_found",
                   "vehicle_zones", "dunning", "check_mailed")
 TRIAL_DAYS = 30  # one free month for every new account
 
@@ -1841,23 +1841,30 @@ def known_price(s, body):
 
 WEEK = timedelta(days=7)
 
-# The subscription follows what the resident pays PayByPhone: per month, twice the weekly resident ticket of the
-# home zone, never under 4.90 € (some residents pay nothing a week); per year, twelve months with 20 % off. The
-# weekly price comes from PayByPhone (quote, then history), else the Paris resident rate.
+# The subscription: a monthly price per renewed vehicle, by vehicle type and Paris zone (zone 1: arrondissements 1
+# to 11, zone 2: 12 to 20), the same grid as Frequens. Both are known from PayByPhone, never asked. The yearly plan
+# is no longer offered; it is kept only for subscriptions taken before (twelve months, 20 % off).
 YEARLY_DISCOUNT = 0.20
-MIN_MONTHLY_CENTS = 490
-DEFAULT_WEEKLY_CENTS = int(PARIS_RESIDENT_WEEK["amount"] * 100)
+MONTHLY_PRICES = {("car", 1): 990, ("car", 2): 690, ("two", 1): 690, ("two", 2): 490}
+DEFAULT_MONTHLY_CENTS = MONTHLY_PRICES[("car", 1)]
 
 
-def plan_total(weeklies, plan):
-    """The subscription for several vehicles: each one per month twice its resident week, never under 4.90 €;
-    per year twelve months with 20 % off."""
-    monthly = sum(max(2 * int(w), MIN_MONTHLY_CENTS) for w in weeklies) or MIN_MONTHLY_CENTS
+def paris_zone(zone):
+    """1 for arrondissements 1 to 11 (750xx), 2 for 12 to 20; 1 when unknown."""
+    m = re.fullmatch(r"750(\d\d)", str(zone or ""))
+    return 2 if m and int(m.group(1)) >= 12 else 1
+
+
+def monthly_cents(vehicle_type, zone):
+    kind = "two" if TWO_WHEELS.search(str(vehicle_type or "")) else "car"
+    return MONTHLY_PRICES[(kind, paris_zone(zone))]
+
+
+def plan_total(monthlies, plan="monthly"):
+    """The subscription for several vehicles: the sum of their monthly prices (per year, for older yearly plans:
+    twelve months with 20 % off)."""
+    monthly = sum(int(m) for m in monthlies) or DEFAULT_MONTHLY_CENTS
     return monthly if plan == "monthly" else int(round(monthly * 12 * (1 - YEARLY_DISCOUNT)))
-
-
-def plan_cents(weekly_cents, plan):
-    return plan_total([weekly_cents], plan)
 
 
 def plate_key(plate):
@@ -1952,14 +1959,6 @@ def vehicle_zones(s, keep=True):
     return found
 
 
-def vehicle_prices(s):
-    """Per riverain vehicle (one plate): its arrondissement and its resident week there, in cents (None if unknown)."""
-    found = vehicle_zones(s)
-    payments = normalize_accounts(s.call("get_payment_accounts") or {}) if found else []
-    return [{"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
-             "weekly": week_price(s, zone, v["licensePlate"], rate, payments)} for v, zone, rate in found]
-
-
 def renewed_plates(s):
     """Plates with an active resident renewal: the subscription is for these vehicles."""
     if HOSTED and not s.demo:
@@ -1994,26 +1993,23 @@ def week_price(s, zone, plate, rate, payments=None):
 
 
 def account_pricing(s):
-    """The account's prices: one price per riverain vehicle (in its own arrondissement), and the subscription, for
-    the vehicles with a renewal (the first one while none has). The billed weeks are kept on the account for checkout
-    and the e-mail links. None without a priced riverain vehicle."""
-    vehicles = [v for v in vehicle_prices(s) if v["weekly"] is not None]
+    """The account's prices: one monthly price per riverain vehicle (its type, its arrondissement's zone), and the
+    subscription, for the vehicles with a renewal (the first one while none has). The billed prices are kept on the
+    account for checkout and the e-mail links. None without a riverain vehicle."""
+    vehicles = [{"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
+                 "monthly": monthly_cents(v.get("type"), zone)} for v, zone, _ in vehicle_zones(s)]
     if not vehicles:
         return None
     zone = vehicles[0]["zone"]
     renewed = renewed_plates(s)
     billed = [v for v in vehicles if plate_key(v["plate"]) in renewed] or vehicles[:1]
-    weeklies = sorted(v["weekly"] for v in billed)
+    monthlies = sorted(v["monthly"] for v in billed)
     account = load_account(s)
-    if account.get("weeklies") != weeklies or account.get("price_zone") != zone:
-        account = save_account(s, {"weeklies": weeklies, "weekly_cents": weeklies[0], "price_zone": zone})
+    if account.get("monthlies") != monthlies or account.get("price_zone") != zone:
+        account = save_account(s, {"monthlies": monthlies, "price_zone": zone})
         reprice(account, owner_id(s.username) if HOSTED and not s.demo else None)
-    return {"zone": zone, "weekly": weeklies[0],
-            "monthly": plan_total(weeklies, "monthly"), "yearly": plan_total(weeklies, "yearly"),
-            "billed": [v["plate"] for v in billed],
-            "vehicles": [{"plate": v["plate"], "type": v["type"], "zone": v["zone"], "weekly": v["weekly"],
-                          "monthly": plan_cents(v["weekly"], "monthly"), "yearly": plan_cents(v["weekly"], "yearly"),
-                          "renewed": plate_key(v["plate"]) in renewed} for v in vehicles]}
+    return {"zone": zone, "monthly": plan_total(monthlies), "billed": [v["plate"] for v in billed],
+            "vehicles": [{**v, "renewed": plate_key(v["plate"]) in renewed} for v in vehicles]}
 
 
 def follow_renewals(s):
@@ -2027,24 +2023,22 @@ def follow_renewals(s):
         log.warning("subscription not updated for the renewed vehicles: %s", type(e).__name__)
 
 
-def account_weeklies(account):
-    """The resident weeks the subscription is for (older accounts: one week kept as weekly_cents)."""
-    if account.get("weeklies"):
-        return [int(w) for w in account["weeklies"]]
-    return [int(DEFAULT_WEEKLY_CENTS if account.get("weekly_cents") is None else account["weekly_cents"])]
+def account_monthlies(account):
+    """The monthly prices the subscription is for (not priced yet: one car in zone 1)."""
+    if account.get("monthlies"):
+        return [int(m) for m in account["monthlies"]]
+    return [DEFAULT_MONTHLY_CENTS]
 
 
-def billed_weeklies(account):
-    """The weeks the running Stripe subscription was last priced with (None: not recorded)."""
-    if account.get("billed_weeklies"):
-        return [int(w) for w in account["billed_weeklies"]]
-    return None if account.get("billed_weekly_cents") is None else [int(account["billed_weekly_cents"])]
+def billed_monthlies(account):
+    """The monthly prices the running subscription was last billed with (None: not recorded, e.g. the old rule)."""
+    return [int(m) for m in account["billed_monthlies"]] if account.get("billed_monthlies") else None
 
 
-def weeklies_from(metadata):
-    """The weeks a Checkout session was priced with, from its metadata."""
-    text = (metadata or {}).get("weeklies") or (metadata or {}).get("weekly_cents") or ""
-    return [int(w) for w in str(text).split(",") if w.strip().isdigit()] or None
+def monthlies_from(metadata):
+    """The monthly prices a Checkout session was priced with, from its metadata."""
+    text = (metadata or {}).get("monthlies") or ""
+    return [int(m) for m in str(text).split(",") if m.strip().isdigit()] or None
 
 
 def fmt_qty(value):
@@ -2306,7 +2300,7 @@ class CheckoutDone(BaseModel):
 
 
 ACTIVE_STATUSES = ("trialing", "active", "past_due")
-PLANS = {"monthly": ("month", "PayByBot · Mensuel"), "yearly": ("year", "PayByBot · Annuel")}  # price: plan_cents
+PLANS = {"monthly": ("month", "PayByBot · Mensuel"), "yearly": ("year", "PayByBot · Annuel")}  # price: plan_total
 
 
 def stripe(method, path, **data):
@@ -2533,14 +2527,14 @@ def checkout_url(owner, account, plan, success_url):
     """A Stripe Checkout page for the plan; while the free month runs, the first charge waits for its end."""
     base = APP_URL.rstrip("/")
     interval, name = PLANS[plan]
-    weeklies = account_weeklies(account)
-    amount = plan_total(weeklies, plan)
+    monthlies = account_monthlies(account)
+    amount = plan_total(monthlies, plan)
     data = {"mode": "subscription", "line_items[0][quantity]": 1,
             "line_items[0][price_data][currency]": "eur", "line_items[0][price_data][unit_amount]": amount,
             "line_items[0][price_data][recurring][interval]": interval,
             "line_items[0][price_data][product_data][name]": name,
             "client_reference_id": owner, "metadata[plan]": plan, "subscription_data[metadata][owner]": owner,
-            "metadata[weeklies]": ",".join(str(w) for w in weeklies),
+            "metadata[monthlies]": ",".join(str(m) for m in monthlies),
             "success_url": success_url,
             "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true",
             # A simple page: euros only (no currency switch) and cards only (Apple Pay / Google Pay included,
@@ -2597,8 +2591,8 @@ def reprice(account, owner):
     sub_id = account.get("stripe_subscription")
     if not (owner and sub_id and os.environ.get("STRIPE_SECRET_KEY")):
         return False
-    weeklies, billed = account_weeklies(account), billed_weeklies(account)
-    if billed is not None and sorted(billed) == sorted(weeklies):
+    monthlies, billed = account_monthlies(account), billed_monthlies(account)
+    if billed is not None and sorted(billed) == sorted(monthlies):
         return False
     try:
         sub = stripe("GET", "subscriptions/" + sub_id)
@@ -2606,33 +2600,33 @@ def reprice(account, owner):
             return False
         item = sub["items"]["data"][0]
         plan = account.get("plan") or ("yearly" if item["price"]["recurring"]["interval"] == "year" else "monthly")
-        new = plan_total(weeklies, plan)
+        new = plan_total(monthlies, plan)
         if billed is None and item["price"].get("unit_amount") == new:  # already right, just not recorded
-            save_account_by_owner(owner, {"billed_weeklies": weeklies})
+            save_account_by_owner(owner, {"billed_monthlies": monthlies})
             return False
         stripe("POST", "subscriptions/" + sub_id, **{
             "items[0][id]": item["id"], "items[0][price_data][currency]": "eur",
             "items[0][price_data][product]": item["price"]["product"],
             "items[0][price_data][unit_amount]": new,
             "items[0][price_data][recurring][interval]": item["price"]["recurring"]["interval"],
-            "proration_behavior": "none", "metadata[weeklies]": ",".join(str(w) for w in weeklies)})
+            "proration_behavior": "none", "metadata[monthlies]": ",".join(str(m) for m in monthlies)})
     except (HTTPException, KeyError, IndexError) as e:
         log.warning("reprice failed: %s", str(e)[:200])
         return False
-    save_account_by_owner(owner, {"billed_weeklies": weeklies})
-    log.info("subscription repriced (%s, %d vehicle(s))", plan, len(weeklies))
+    save_account_by_owner(owner, {"billed_monthlies": monthlies})
+    log.info("subscription repriced (%s, %d vehicle(s))", plan, len(monthlies))
     return True
 
 
 @app.get("/api/pricing")
 def pricing(pbb_session: str = Cookie(None)):
-    """The account's prices: twice its weekly resident ticket per month, 20 % off per year. No zone: zone None."""
+    """The account's monthly prices, by vehicle type and zone. No riverain vehicle: zone and prices None."""
     s = current(pbb_session)
     found = guarded(lambda: account_pricing(s))
     if found:
         return {**found, "resident": True}
     status = guarded(lambda: resident_status(s))
-    return {"zone": status["zone"], "weekly": None, "monthly": None, "yearly": None, "resident": status["resident"]}
+    return {"zone": status["zone"], "monthly": None, "resident": status["resident"]}
 
 
 def resident_status(s):
@@ -2652,7 +2646,7 @@ def resident_status_route(pbb_session: str = Cookie(None)):
 
 @app.post("/api/billing/checkout")
 def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie(None)):
-    """Stripe Checkout for the monthly or yearly plan; nothing is charged before the free month ends."""
+    """Stripe Checkout for the monthly plan (the only one offered); nothing is charged before the free month ends."""
     s = current(pbb_session)
     if s.demo:
         raise HTTPException(400, "Le paiement n'est pas disponible en mode démo.")
@@ -2664,7 +2658,7 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
                                      "disponible pour l'instant.")
         raise HTTPException(400, "Choisissez d'abord votre arrondissement : le prix dépend de votre zone de résidence.")
     account = guarded(lambda: load_account(s))
-    url = checkout_url(owner_id(s.username), account, body.plan,
+    url = checkout_url(owner_id(s.username), account, "monthly",
                        APP_URL.rstrip("/") + "/#/abonnement?session_id={CHECKOUT_SESSION_ID}")
     return {"url": url}
 
@@ -2700,11 +2694,11 @@ def billing_unlocked(session_id: str = ""):
     owner = session.get("client_reference_id")
     if session.get("status") != "complete" or not owner:
         return RedirectResponse(home + "/#/tarifs", 303)
-    billed = weeklies_from(session.get("metadata"))
+    billed = monthlies_from(session.get("metadata"))
     guarded(lambda: save_account_by_owner(owner, {"plan": (session.get("metadata") or {}).get("plan"),
                                                   "stripe_customer": session.get("customer"),
                                                   "stripe_subscription": session.get("subscription"),
-                                                  "billed_weeklies": billed}))
+                                                  "billed_monthlies": billed}))
     guarded(lambda: resume_renewals(owner))
     log.info("account unblocked from the e-mail link")
     return RedirectResponse(home + "/#/debloque", 303)
@@ -2718,10 +2712,10 @@ def billing_confirm(body: CheckoutDone, pbb_session: str = Cookie(None)):
     if session.get("client_reference_id") != owner_id(s.username) or session.get("status") != "complete":
         raise HTTPException(400, "Ce paiement n'a pas abouti.")
     plan = (session.get("metadata") or {}).get("plan")
-    billed = weeklies_from(session.get("metadata"))
+    billed = monthlies_from(session.get("metadata"))
     account = guarded(lambda: save_account(s, {"plan": plan, "stripe_customer": session.get("customer"),
                                                "stripe_subscription": session.get("subscription"),
-                                               "billed_weeklies": billed}))
+                                               "billed_monthlies": billed}))
     if HOSTED and not s.demo:
         guarded(lambda: resume_renewals(owner_id(s.username)))
     log.info("subscription started (%s)", plan)

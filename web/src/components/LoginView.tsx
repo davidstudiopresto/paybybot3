@@ -3,7 +3,7 @@ import { ArrowRight, Eye, EyeOff, Loader2, Lock } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { CARD_NOTE, ResidentRequired } from '@/components/Riverain'
-import { PayByBot, withPayByPhone } from '@/components/signs'
+import { PayByBot, PayByPhone, withPayByPhone } from '@/components/signs'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 import { cn } from '@/lib/utils'
@@ -187,13 +187,13 @@ export function LoginView({
           <h1
             className={cn(
               'font-heading leading-[1.05] font-medium tracking-[-0.035em] text-ink',
-              title ? 'text-[2rem] sm:text-[2.2rem]' : 'text-[2.6rem]',
+              title || signup ? 'text-[2rem] sm:text-[2.2rem]' : 'text-[2.6rem]',
             )}
           >
-            {title ?? (signup ? 'Inscription' : <>Connexion à <PayByBot /></>)}
+            {title ?? (signup ? <>Inscrivez-vous avec vos identifiants <PayByPhone /></> : <>Connexion à <PayByBot /></>)}
           </h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
-            {withPayByPhone(signup ? 'Inscription en 2 minutes, avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.')}{' '}
+            {withPayByPhone(signup ? 'Inscription avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.')}{' '}
             {hosted ? 'Mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}{' '}
             <a href="#/securite" target="_blank" rel="noopener" className={link}>
               En savoir plus
@@ -335,12 +335,8 @@ export function LoginView({
               </div>
             )}
           </div>
-          {signup && (
-            <p className="mt-2 text-sm text-ink/50">
-              {mode === 'email'
-                ? 'Cette adresse reçoit aussi les confirmations de paiement et les alertes. Gardée chiffrée.'
-                : 'Pour les confirmations de paiement et les alertes. Gardé chiffré.'}
-            </p>
+          {signup && mode === 'email' && (
+            <p className="mt-2 text-sm text-ink/50">Cette adresse reçoit aussi les confirmations de paiement et les alertes. Gardée chiffrée.</p>
           )}
           {signup && <p className="mt-4 text-sm leading-relaxed text-ink/50">{withPayByPhone(CARD_NOTE)}</p>}
 

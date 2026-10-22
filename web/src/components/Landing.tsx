@@ -221,7 +221,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
       {/* Phones: the main action stays at hand once the hero button has scrolled away. */}
       <div
         className={cn(
-          'fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-white/90 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md transition duration-300 lg:hidden',
+          'fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-white/90 pr-20 pl-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md transition duration-300 lg:hidden',
           sticky ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-full opacity-0',
         )}
         aria-hidden={!sticky}

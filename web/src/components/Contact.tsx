@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowUp, Loader2, X } from 'lucide-react'
+import { ArrowUp, Loader2, MessageCircle, X } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -8,17 +8,41 @@ type Bubble = { from: 'us' | 'you'; text: string }
 
 const HELLO = 'Bonjour ! Une question sur PayByBot ? Écrivez-nous ici : nous vous répondons dans les plus brefs délais.'
 
-/** « Contact » in the top bar: a small chat-like window whose message is e-mailed to us. */
+const TOGGLE = 'paybybot:contact'
+const toggleContact = () => window.dispatchEvent(new Event(TOGGLE))
+
+/** « Contact » in the top bar: opens the chat-like window (shown by ContactBubble). */
 export function ContactLink({ className }: { className?: string }) {
+  return (
+    <button type="button" onClick={toggleContact} className={className}>
+      Contact
+    </button>
+  )
+}
+
+/** The chat button, fixed bottom right on every page, and the one contact window (also opened by « Contact »). */
+export function ContactBubble() {
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
-  return (
-    <>
-      <button type="button" onClick={() => setOpen((o) => !o)} className={className} aria-expanded={open}>
-        Contact
+  useEffect(() => {
+    const toggle = () => setOpen((o) => !o)
+    window.addEventListener(TOGGLE, toggle)
+    return () => window.removeEventListener(TOGGLE, toggle)
+  }, [])
+  return createPortal(
+    open ? (
+      <ContactWindow onClose={close} />
+    ) : (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Nous écrire"
+        className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 grid size-14 place-items-center rounded-full bg-[linear-gradient(135deg,var(--eu)_0%,#2a66d1_100%)] text-white shadow-[0_12px_30px_-8px_rgb(29_78_163/0.6)] transition hover:scale-105 active:scale-95 sm:right-6 sm:bottom-6"
+      >
+        <MessageCircle className="size-6" strokeWidth={2} />
       </button>
-      {open && createPortal(<ContactWindow onClose={close} />, document.body)}
-    </>
+    ),
+    document.body,
   )
 }
 

@@ -9,6 +9,7 @@ import { PayWizard } from '@/components/PayWizard'
 import { SecurityPage } from '@/components/SecurityPage'
 import { AdminPage } from '@/components/Admin'
 import { PricingPage } from '@/components/Pricing'
+import { ContactBubble } from '@/components/Contact'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { NotFoundPage } from '@/components/NotFound'
 import { Welcome } from '@/components/Welcome'
@@ -148,6 +149,7 @@ export default function App() {
   return (
     <>
       <Toaster />
+      <ContactBubble />
       {!['/', '/index.html'].includes(window.location.pathname) ? (
         <NotFoundPage hosted={hosted} />
       ) : legal ? (

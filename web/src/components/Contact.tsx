@@ -37,6 +37,7 @@ export function ContactBubble() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Nous écrire"
+        data-contact-bubble
         className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 grid size-14 place-items-center rounded-full bg-[linear-gradient(135deg,var(--eu)_0%,#2a66d1_100%)] text-white shadow-[0_12px_30px_-8px_rgb(29_78_163/0.6)] transition hover:scale-105 active:scale-95 sm:right-6 sm:bottom-6"
       >
         <MessageCircle className="size-6" strokeWidth={2} />

@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/overpass";
 @import "@fontsource-variable/figtree";
+@import "@fontsource-variable/newsreader";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -11,6 +12,8 @@
     --font-heading: 'Figtree Variable', sans-serif;
     --font-sans: 'Figtree Variable', sans-serif;
     --font-plate: 'Overpass Variable', sans-serif;
+    /* The home page only: a quiet book serif, like a note on paper. */
+    --font-serif: 'Newsreader Variable', Georgia, serif;
     --color-eu: var(--eu);
     --color-signal: var(--signal);
     --color-signal-deep: var(--signal-deep);
@@ -194,3 +197,6 @@
 @media (prefers-reduced-motion: reduce) {
   .loading-bar::after { animation: none; width: 100%; opacity: 0.5; }
 }
+
+/* The home page is one sentence and one link: no chat button there. */
+body.home-page [data-contact-bubble] { display: none; }

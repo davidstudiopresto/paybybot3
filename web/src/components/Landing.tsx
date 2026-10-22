@@ -381,9 +381,6 @@ const QUESTIONS: Question[] = [
     'Combien coûte l’abonnement ?',
     <>
       Voiture : 9,90 €/mois en zone 1 (arr. 1 à 11), 6,90 € en zone 2 (arr. 12 à 20). Deux-roues : 6,90 € et 4,90 €. À l'année : 20 % de remise. Premier mois offert.
-      <a href="#/tarifs" className={cn(ui.primary, 'mt-5 h-12 w-fit px-6 text-base no-underline! hover:text-white! hover:no-underline!')}>
-        Découvrir mon prix <ArrowRight className="size-5" />
-      </a>
     </>,
   ],
   [
@@ -460,9 +457,6 @@ export function FaqView({ hosted, signedIn = false }: { hosted: boolean; signedI
           <FaqTitle />
         </div>
         <Faq className="mt-10 lg:mt-14" />
-        <a href="#/inscription" className={cn('mx-auto mt-14 max-w-sm', ui.primary)}>
-          {TRY_LABEL} <ArrowRight className="size-5" />
-        </a>
       </main>
       <HostedFooter className="px-6 pb-8" hosted={hosted} />
     </div>

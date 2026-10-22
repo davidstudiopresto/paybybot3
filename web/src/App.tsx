@@ -175,8 +175,8 @@ export default function App() {
         <Loading />
       ) : route === 'admin' ? (
         <AdminPage signedIn={!!me} />
-      ) : route === 'tarifs' ? (
-        // Signed out: the grid by vehicle and zone; signed in: the account's own price.
+      ) : route === 'tarifs' && me ? (
+        // Signed in only (where the offer is chosen): the public price page is hidden for now.
         <PricingPage hosted={hosted} signedIn={!!me} />
       ) : route === 'faq' ? (
         <FaqView hosted={hosted} signedIn={!!me} />

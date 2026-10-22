@@ -55,7 +55,7 @@ function Ticket({
         {remaining(left)}
       </p>
       {/* No renewal yet: the end of the ticket in red, to urge setting one up. */}
-      <p className={`mt-2 ${renewal ? 'text-muted-foreground' : 'font-medium text-[#741b11]'}`}>Expire {clock(session.expire)}</p>
+      <p className={`mt-2 ${renewal ? 'text-muted-foreground' : 'font-medium text-destructive'}`}>Expire {clock(session.expire)}</p>
       <div className="mt-5 h-1 overflow-hidden rounded-full bg-muted" aria-hidden>
         <div
           className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-eu'}`}

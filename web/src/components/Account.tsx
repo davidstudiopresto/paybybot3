@@ -3,7 +3,7 @@ import { Loader2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { arrondissement, PayByPhone, Plate, ZonePlate } from '@/components/signs'
-import { api, type Account, type Overview, type PricedVehicle } from '@/lib/api'
+import { api, clock, type Account, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
@@ -73,7 +73,7 @@ function AccountDialog({
   const row = 'flex items-start justify-between gap-6 py-4'
   const label = 'shrink-0 pt-1 text-sm text-ink/55'
 
-  if (deleting) return <DeleteConfirm onCancel={() => setDeleting(false)} onDeleted={onDeleted} />
+  if (deleting) return <DeleteConfirm data={data} onCancel={() => setDeleting(false)} onDeleted={onDeleted} />
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -170,7 +170,8 @@ function AccountDialog({
 }
 
 /** Validation before erasing everything PayByBot keeps; a confirmation e-mail follows. */
-function DeleteConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDeleted: () => void }) {
+function DeleteConfirm({ data, onCancel, onDeleted }: { data: Overview; onCancel: () => void; onDeleted: () => void }) {
+  const running = data.sessions.filter((s) => new Date(s.expire).getTime() > Date.now())
   const [busy, setBusy] = useState(false)
 
   async function erase() {
@@ -196,10 +197,26 @@ function DeleteConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDelete
             Tout ce que PayByBot garde est effacé, et votre compte <PayByPhone /> n’est pas touché. Vous recevrez une
             confirmation par e-mail.
           </DialogDescription>
-          <p role="note" className="mt-4 rounded-xl bg-amber/20 px-4 py-3 text-sm leading-relaxed text-ink">
-            Votre forfait en cours reste valable jusqu’à sa fin, au plus tard en fin de semaine. Ensuite, votre
-            stationnement ne sera plus ni renouvelé ni prolongé.
-          </p>
+          {/* Which ticket stays valid, and until when: plate, zone, end. */}
+          <div role="note" className="mt-4 rounded-xl bg-amber/20 px-4 py-3 text-sm leading-relaxed text-ink">
+            {running.length ? (
+              <>
+                <p>{running.length > 1 ? 'Vos tickets en cours restent valables jusqu’à leur fin :' : 'Votre ticket en cours reste valable jusqu’à sa fin :'}</p>
+                <ul className="mt-3 space-y-2">
+                  {running.map((t) => (
+                    <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <Plate plate={t.plate} size="sm" />
+                      <ZonePlate zone={t.location} />
+                      <span className="text-ink/70">expire {clock(t.expire)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3">Ensuite, {running.length > 1 ? 'ils ne seront' : 'il ne sera'} plus renouvelé{running.length > 1 ? 's' : ''}.</p>
+              </>
+            ) : (
+              <p>Aucun ticket en cours : plus aucun stationnement ne sera renouvelé.</p>
+            )}
+          </div>
           <div className="mt-7 grid gap-3">
             <button
               onClick={erase}

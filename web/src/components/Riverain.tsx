@@ -933,13 +933,13 @@ function ManageDialog({
   const start = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
   const end = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
   const pauseSet = start !== null && (end === null || now < end)
-  const row = 'flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-base font-bold transition hover:bg-muted'
+  const row = 'flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-base font-normal transition hover:bg-muted'
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="gap-0 rounded-2xl bg-white p-2 sm:max-w-sm">
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <Plate plate={ap.plate} size="sm" />
-          <DialogTitle className="text-base font-bold">Renouvellement zone {ap.location}</DialogTitle>
+          <DialogTitle className="text-base font-normal">Renouvellement zone {ap.location}</DialogTitle>
           <DialogDescription className="sr-only">Options du renouvellement</DialogDescription>
         </div>
         {!ap.enabled ? (
@@ -962,7 +962,7 @@ function ManageDialog({
             <span className="block truncate text-sm font-normal text-muted-foreground">{ap.email || 'Désactivées'}</span>
           </span>
         </button>
-        <button onClick={onStop} className={`${row} text-destructive hover:bg-destructive/10`}>
+        <button onClick={onStop} className={`${row} font-bold text-destructive hover:bg-destructive/10`}>
           <Repeat className="size-5" /> Arrêter le renouvellement
         </button>
       </DialogContent>

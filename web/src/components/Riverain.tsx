@@ -435,6 +435,7 @@ function RiverainDialog({
   const [plates, setPlates] = useState<string[] | null>(null) // the « riverain » vehicles (null: looking)
   const [selected, setSelected] = useState<string[]>([])
   const [zones, setZones] = useState<Record<string, string>>({}) // each riverain vehicle's arrondissement, from PayByPhone
+  const [weeks, setWeeks] = useState<Record<string, number | null>>({}) // the resident week's price, in cents
   const [payment, setPayment] = useState('')
   const [found, setFound] = useState<Record<string, Found>>({})
   const [loading, setLoading] = useState(false)
@@ -468,6 +469,7 @@ function RiverainDialog({
       (p) => {
         const riverain = (p.vehicles ?? []).filter((v) => v.zone)
         setZones(Object.fromEntries(riverain.map((v) => [v.plate, v.zone])))
+        setWeeks(Object.fromEntries(riverain.map((v) => [v.plate, v.weekly ?? null])))
         setPlates(riverain.map((v) => v.plate))
         const same = (x: string) => !plate || x.replace(/[^0-9a-z]/gi, '').toUpperCase() === plate.replace(/[^0-9a-z]/gi, '').toUpperCase()
         setSelected(riverain.map((v) => v.plate).filter((x) => !covered.has(x) && same(x)))
@@ -590,11 +592,13 @@ function RiverainDialog({
         <div className="px-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Renouvellement résident</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">
-            Choisissez les véhicules à renouveler, vérifiez, puis activez. On s'occupe du reste.
+            {plate ? 'Vérifiez, puis activez. On s’occupe du reste.' : "Choisissez les véhicules à renouveler, vérifiez, puis activez. On s'occupe du reste."}
           </DialogDescription>
         </div>
 
         <div className="space-y-6 p-6">
+          {/* Opened from a car's card: that car only, nothing to choose. */}
+          {!plate && (
           <div>
             <p className={ui.label}>{plates && plates.length > 1 ? 'Véhicules résidents' : 'Véhicule résident'}</p>
             {plates === null ? (
@@ -629,6 +633,7 @@ function RiverainDialog({
               </div>
             )}
           </div>
+          )}
 
           {!allCards.length && <NoPayment compact onRefresh={async () => onDone()} />}
           {allCards.length > 0 && !cards.length && (
@@ -667,15 +672,19 @@ function RiverainDialog({
               <ul className="space-y-3">
                 {selected.map((plate) => {
                   const f = found[plate]
+                  const cents = weeks[plate] ?? (f?.quote?.cost ? Math.round(f.quote.cost.amount * 100) : null)
                   return (
-                    <li key={plate} className="flex items-start justify-between gap-3">
-                      <span className="min-w-0">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <Plate plate={plate} size="sm" />
-                          {zones[plate] && <ZonePlate zone={zones[plate]} />}
-                        </span>
-                        {f?.error && <span className="mt-1 block text-sm text-destructive">{f.error}</span>}
+                    <li key={plate} className="min-w-0">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Plate plate={plate} size="sm" />
+                        {zones[plate] && <ZonePlate zone={zones[plate]} />}
                       </span>
+                      {cents != null && !f?.error && (
+                        <span className="mt-3 block text-ink/60">
+                          Abonnement résident : <span className="text-ink">{(cents / 100).toFixed(2).replace('.', ',')} € / semaine</span>
+                        </span>
+                      )}
+                      {f?.error && <span className="mt-1 block text-sm text-destructive">{f.error}</span>}
                     </li>
                   )
                 })}

@@ -218,7 +218,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
           </div>
         ))}
       </div>
-      <FinesNote className="mx-auto mt-10 max-w-3xl" />
+      <FinesNote zone={zone} className="mx-auto mt-10 max-w-3xl" />
     </>
   )
 }
@@ -273,30 +273,37 @@ function OwnPlan({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void }) 
           </button>
         </div>
       )}
-      <FinesNote className="mx-auto mt-6 max-w-xl" />
+      <FinesNote zone={own?.zone && Number(String(own.zone).slice(-2)) >= 12 ? 2 : 1} className="mx-auto mt-6 max-w-xl" />
     </>
   )
 }
 
-/** What one forgotten ticket costs, to compare with the price above. */
-const FINES: [LucideIcon, string, string][] = [
-  [Bike, 'Scooter', '87,50 €'],
-  [Car, 'Voiture', '125 €'],
-  [CarFront, 'SUV', '275 €'],
+/** What one forgotten ticket costs once majoré (paris.fr: FPS of 6 hours + 50 € after 3 months unpaid), by zone, to
+ *  compare with the price above. Two-wheelers: half the light-vehicle FPS; « SUV »: heavy vehicles (over 1.6 t,
+ *  2 t if low-emission). */
+const FINES: [LucideIcon, string, Record<1 | 2, string>][] = [
+  [Bike, 'Scooter', { 1: '87,50 €', 2: '75 €' }],
+  [Car, 'Voiture', { 1: '125 €', 2: '100 €' }],
+  [CarFront, 'SUV', { 1: '275 €', 2: '200 €' }],
 ]
 
-function FinesNote({ className }: { className?: string }) {
+function FinesNote({ zone, className }: { zone: 1 | 2; className?: string }) {
   return (
     <div className={cn('rounded-2xl border border-ink/10 px-5 py-5 text-center', className)}>
-      <p className="font-heading text-lg font-medium tracking-[-0.02em] text-ink">Bon à savoir : montant des amendes à Paris (majorées)</p>
+      <p className="font-heading text-lg font-medium tracking-[-0.02em] text-ink">
+        Bon à savoir : montant des amendes majorées à Paris (zone {zone})
+      </p>
       <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-[0.95rem] text-ink/60">
         {FINES.map(([Icon, name, amount]) => (
           <li key={name} className="flex items-center gap-2">
             <Icon className="size-4 text-eu" strokeWidth={1.75} /> {name}{' '}
-            <span className="text-ink tabular-nums">{amount}</span>
+            <span className="text-ink tabular-nums">{amount[zone]}</span>
           </li>
         ))}
       </ul>
+      <p className="mt-3 text-xs text-ink/45">
+        Source : paris.fr, forfait post-stationnement non payé sous 3 mois (+50 €).
+      </p>
     </div>
   )
 }

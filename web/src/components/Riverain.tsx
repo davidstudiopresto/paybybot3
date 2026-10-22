@@ -307,7 +307,7 @@ export function RiverainCard({
   return (
     <>
       <section className="rise">
-        <ShinyButton onClick={() => setOpen(true)} disabled={!data} className={cn(ui.primary, 'border-0 px-6 py-0')}>
+        <ShinyButton onClick={() => setOpen(true)} disabled={!data} className="flex h-14 w-full items-center justify-center rounded-xl border border-eu/30 bg-eu/[0.07] px-6 text-lg font-bold text-eu hover:bg-eu/[0.1] disabled:opacity-50">
           Activer le renouvellement résident
         </ShinyButton>
       </section>

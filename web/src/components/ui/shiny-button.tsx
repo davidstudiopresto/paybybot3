@@ -61,7 +61,7 @@ export const ShinyButton = React.forwardRef<
           WebkitMask:
             "linear-gradient(rgb(0,0,0), rgb(0,0,0)) content-box exclude,linear-gradient(rgb(0,0,0), rgb(0,0,0))",
           backgroundImage:
-            "linear-gradient(-75deg,rgb(255 255 255 / 0.1) calc(var(--x) + 20%),rgb(255 255 255 / 0.7) calc(var(--x) + 25%),rgb(255 255 255 / 0.1) calc(var(--x) + 100%))",
+            "linear-gradient(-75deg,color-mix(in srgb,var(--eu) 15%,transparent) calc(var(--x) + 20%),var(--eu) calc(var(--x) + 25%),color-mix(in srgb,var(--eu) 15%,transparent) calc(var(--x) + 100%))",
         }}
         className="absolute inset-0 z-10 block rounded-[inherit] p-px"
       />

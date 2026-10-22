@@ -2059,10 +2059,20 @@ def account_pricing(s):
     found = vehicle_zones(s)
     account = load_account(s)
     suvs = set(account.get("suv_plates") or [])
+    payments = normalize_accounts(s.call("get_payment_accounts") or {}) if found else []
+
+    def weekly(zone, plate, rate):  # the resident week PayByPhone charges for this car (shown, never billed by us)
+        try:
+            return week_price(s, zone, plate, rate, payments)
+        except Exception as e:
+            log.info("weekly price unavailable: %s", str(e)[:200])
+            return None
+
     vehicles = [{"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
                  "suv": plate_key(v["licensePlate"]) in suvs,
-                 "monthly": monthly_cents(v.get("type"), zone, plate_key(v["licensePlate"]) in suvs)}
-                for v, zone, _ in found]
+                 "monthly": monthly_cents(v.get("type"), zone, plate_key(v["licensePlate"]) in suvs),
+                 "weekly": weekly(zone, v["licensePlate"], rate)}
+                for v, zone, rate in found]
     if not vehicles:
         return None
     zone = vehicles[0]["zone"]

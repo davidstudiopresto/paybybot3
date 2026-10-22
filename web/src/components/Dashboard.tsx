@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Infinity as Endless, LogOut } from 'lucide-react'
-import { Plate, vehicleType, ZonePlate, withPayByPhone } from '@/components/signs'
+import { arrondissement, Plate, vehicleType, ZonePlate, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
@@ -70,6 +70,59 @@ function Ticket({
       )}
       {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} className="mt-4" />}
     </article>
+  )
+}
+
+/** The cars with no ticket: plate, type, zone and the resident week's price, one card each. */
+function IdleVehicles({ data }: { data: Overview }) {
+  const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
+  const [weeks, setWeeks] = useState<Record<string, number | null>>({})
+  useEffect(() => {
+    let cancelled = false
+    api.pricing().then(
+      (p) => !cancelled && setWeeks(Object.fromEntries((p.vehicles ?? []).map((v) => [key(v.plate), v.weekly ?? null]))),
+      () => {},
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [data.vehicles.length])
+  const renewed = new Set(data.autopilots.filter((ap) => ap.label === WEEKLY_LABEL).map((ap) => key(ap.plate)))
+  const cars = data.vehicles.filter((v) => !renewed.has(key(v.plate)))
+  if (!cars.length) return null
+  const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
+  return (
+    <div className="mt-6 space-y-3">
+      {cars.map((v) => {
+        const week = weeks[key(v.plate)]
+        const place = v.zone ? arrondissement(v.zone) : null
+        return (
+          <div key={v.plate} className="rounded-2xl border border-border p-5">
+            <Plate plate={v.plate} />
+            <dl className="mt-4 space-y-1 text-[0.95rem] text-ink/60">
+              {vehicleTypeLabel(v.type) && (
+                <div>
+                  <dt className="inline">Véhicule : </dt>
+                  <dd className="inline text-ink">{vehicleTypeLabel(v.type)}</dd>
+                </div>
+              )}
+              {v.zone && (
+                <div>
+                  <dt className="inline">Zone : </dt>
+                  <dd className="inline text-ink">{place ? `${place} (${v.zone})` : v.zone}</dd>
+                </div>
+              )}
+              {week != null && (
+                <div>
+                  <dt className="inline">Abonnement : </dt>
+                  <dd className="inline text-ink">{euros(week)} / semaine</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -170,27 +223,8 @@ export function Dashboard({
               : "Aucun véhicule n'est couvert en ce moment."}
         </p>
 
-        {/* No ticket: still show the car(s), the ones a renewal does not already list below. */}
-        {data && sessions.length === 0 && (() => {
-          const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
-          const renewed = new Set(data.autopilots.filter((ap) => ap.label === WEEKLY_LABEL).map((ap) => key(ap.plate)))
-          const cars = data.vehicles.filter((v) => !renewed.has(key(v.plate)))
-          return cars.length > 0 ? (
-            <div className="mt-6 flex flex-wrap gap-3">
-              {cars.map((v) => (
-                <div key={v.plate}>
-                  <Plate plate={v.plate} />
-                  {vehicleTypeLabel(v.type) && <p className="mt-2 text-sm text-ink/55">Véhicule : {vehicleTypeLabel(v.type)}</p>}
-                  {v.zone && (
-                    <p className="text-sm text-ink/55">
-                      Zone : {v.zone} (Zone {Number(v.zone.slice(-2)) >= 12 ? 2 : 1})
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : null
-        })()}
+        {/* No ticket: one card per car (the ones a renewal does not already list below). */}
+        {data && sessions.length === 0 && <IdleVehicles data={data} />}
 
         {data && sessions.length > 0 && (
           <div className="mt-6 space-y-3">

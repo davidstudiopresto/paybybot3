@@ -91,6 +91,8 @@ export type PricedVehicle = {
   monthly: number
   yearly: number
   renewed: boolean
+  /** The resident week PayByPhone charges for it, in cents (null if unknown). */
+  weekly?: number | null
 }
 
 export class ApiError extends Error {

@@ -546,10 +546,11 @@ class NotPayable(Exception):
     """Known before paying that PayByPhone will refuse: resident rate no longer granted, no card."""
 
 
-def check_payable(session, location, rate, plate, payment_account_id):
+def check_payable(session, location, rate, plate, payment_account_id, avoid=False):
     """The two usual reasons a renewal cannot be paid, checked before paying: the resident rate is no longer
     offered for this car here (permit expired), or the account has no card left. Returns the card to use: the
-    renewal's own, else another card of the account if that one was removed."""
+    renewal's own, else another card of the account if that one was removed. avoid: the renewal's card was just
+    refused, so another valid card of the account is tried first (e.g. one the user added in PayByPhone since)."""
     rates = session.call("get_rate_options", location, plate) or []
     chosen = next((r for r in rates if str(r.get("ratePolicyId")) == str(rate)), None)
     if not chosen or chosen.get("parkingNotAllowedReason"):
@@ -562,6 +563,8 @@ def check_payable(session, location, rate, plate, payment_account_id):
     if not valid:  # every card is past its expiry date: the payment would be refused
         chosen = next((p for p in cards if p["id"] == payment_account_id), cards[0])
         raise NotPayable(CARD_EXPIRED % chosen["label"].split("—")[-1].strip())
+    if avoid and payment_account_id in valid and len(valid) > 1:
+        return next(p for p in valid if p != payment_account_id)
     return payment_account_id if payment_account_id in valid else valid[0]
 
 
@@ -1215,7 +1218,7 @@ def utc_iso(dt):
     return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
 
 
-def process_renewal(row, refresh_token=None, activating=False):
+def process_renewal(row, refresh_token=None, activating=False, refused=False):
     """Check one stored renewal and pay for it if no session is active. Never raises."""
     now = datetime.now(timezone.utc)
     patch = {}
@@ -1226,6 +1229,7 @@ def process_renewal(row, refresh_token=None, activating=False):
         store("renewal_update", p_id=row["id"], p_patch={"enabled": False, "last_error": RELOGIN})
         return "unreadable"
     previous_error = row.get("last_error")
+    refused = refused or bool(previous_error)  # the last try failed: another card of the account goes first
     rule = rule_of(row)
     if rule:
         # Precise days: no PayByPhone login at all outside the ticket windows.
@@ -1305,13 +1309,17 @@ def process_renewal(row, refresh_token=None, activating=False):
             patch.update(next_check=utc_iso(next_check or now + timedelta(days=30)), last_error=None)
             outcome = "active"
         else:
-            card = check_payable(session, row["location"], row["rate"], row["plate"], row["payment_account_id"])
+            card = check_payable(session, row["location"], row["rate"], row["plate"], row["payment_account_id"],
+                                 avoid=refused)
             result, found = pay_and_confirm(session, row["location"], row["rate"], fmt_qty(row["duration"]),
                                             row["unit"], row["plate"], card)
             expire = covered_until(found)
             next_check = schedule.next_slot(rule, now) if rule else extension_time(expire)
             patch.update(last_payment=utc_iso(now), next_check=utc_iso(next_check or now + timedelta(days=30)),
                          last_error=None)
+            if card != row["payment_account_id"]:  # paid with another card: it becomes the renewal's card
+                patch["data"] = encrypt_details({**row, "payment_account_id": card})
+                log.info("renewal %s: now paid with another card of the account", row["id"])
             outcome = "paid"
     except Unconfirmed as e:
         # One more try an hour later, time to fix the card in PayByPhone: the active ticket is looked for first, so
@@ -3012,7 +3020,8 @@ def resume_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
                                          "renouvellement.")
             row = next((r for r in store("renewal_list", p_owner=owner) if r["id"] == ap_id), None)
             if row:
-                process_renewal({**row, "owner": owner}, refresh_token=refresh)
+                process_renewal({**row, "owner": owner}, refresh_token=refresh,
+                                refused=bool(before.get("last_error")))
                 row = next((r for r in store("renewal_list", p_owner=owner) if r["id"] == ap_id), row)
                 result = with_next_ticket(stored_to_autopilot(row))
         return result

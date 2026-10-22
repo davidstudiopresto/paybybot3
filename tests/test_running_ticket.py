@@ -163,6 +163,13 @@ class RunningTicket(unittest.TestCase):
             web.check_payable(self.accounts(old), "75005", "101", "FT630FH", "c")
         self.assertIn("exp. 01/20", str(refused.exception))
 
+    def test_after_a_refusal_a_card_added_since_goes_first(self):
+        old = {"paymentAccountId": "c", "cardType": "Visa", "maskedCardNumber": "1111", "expiryMonth": 1, "expiryYear": 2099}
+        new = {"paymentAccountId": "n", "cardType": "Visa", "maskedCardNumber": "2222", "expiryMonth": 1, "expiryYear": 2099}
+        self.assertEqual(web.check_payable(self.accounts(old, new), "75005", "101", "FT630FH", "c"), "c")  # still fine
+        self.assertEqual(web.check_payable(self.accounts(old, new), "75005", "101", "FT630FH", "c", avoid=True), "n")
+        self.assertEqual(web.check_payable(self.accounts(old), "75005", "101", "FT630FH", "c", avoid=True), "c")  # no other
+
     def test_a_card_is_valid_until_the_end_of_its_month(self):
         until = web.card_valid_until({"expiryMonth": 2, "expiryYear": 28})
         self.assertEqual((until.year, until.month, until.day), (2028, 2, 29))

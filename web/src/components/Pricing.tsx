@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Loader2, Lock, Sparkles, X } from 'lucide-react'
+import { Bike, Car, CarFront, Check, Loader2, Lock, Sparkles, X, type LucideIcon } from 'lucide-react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
@@ -195,7 +195,31 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
           Votre prix est calculé tout seul avec votre compte <PayByPhone />.
         </p>
       )}
+      <FinesNote className="mx-auto mt-8 max-w-xl" />
     </>
+  )
+}
+
+/** What one forgotten ticket costs, to compare with the price above. */
+const FINES: [LucideIcon, string, string][] = [
+  [Bike, 'Scooter', '87,50 €'],
+  [Car, 'Voiture', '125 €'],
+  [CarFront, 'SUV', '275 €'],
+]
+
+function FinesNote({ className }: { className?: string }) {
+  return (
+    <div className={cn('rounded-2xl border border-ink/[0.08] bg-ink/[0.025] px-5 py-5 text-center', className)}>
+      <p className="font-semibold text-ink">Bon à savoir : montant des amendes à Paris (majorées)</p>
+      <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-ink/70">
+        {FINES.map(([Icon, name, amount]) => (
+          <li key={name} className="flex items-center gap-2">
+            <Icon className="size-4 text-eu" strokeWidth={1.75} /> {name}{' '}
+            <strong className="font-semibold text-ink tabular-nums">{amount}</strong>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

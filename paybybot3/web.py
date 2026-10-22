@@ -1900,13 +1900,15 @@ def known_price(s, body):
 
 WEEK = timedelta(days=7)
 
-# The subscription: a monthly price per renewed vehicle, by vehicle type and Paris zone (zone 1: arrondissements 1
-# to 11, zone 2: 12 to 20), the same grid as Frequens. Both are known from PayByPhone, never asked. Per year:
-# twelve months with 20 % off.
+# The subscription: a monthly price per renewed resident vehicle, twice the resident week PayByPhone charges it
+# (the same everywhere in Paris), never under a floor (free weeks: electric two-wheelers…). Per year: twelve months
+# with 20 % off.
 YEARLY_DISCOUNT = 0.20
-MONTHLY_PRICES = {("car", 1): 990, ("car", 2): 690, ("two", 1): 690, ("two", 2): 490,
-                  ("suv", 1): 1490, ("suv", 2): 990}  # SUV: ticked by the user (PayByPhone does not say)
-DEFAULT_MONTHLY_CENTS = MONTHLY_PRICES[("car", 1)]
+MONTHLY_FLOOR = 450
+# The Paris resident week when PayByPhone does not give it: car (any weight) 9 €, two-wheeler 4.50 €, electric free.
+RESIDENT_WEEK = {"car": 900, "two": 450, "electric": 0}
+ELECTRIC_TWO_WHEELS = re.compile(r"electric\s*motorcycle|deux[\s-]*roues\s*[ée]lectrique", re.I)
+DEFAULT_MONTHLY_CENTS = 2 * RESIDENT_WEEK["car"]
 
 
 def paris_zone(zone):
@@ -1915,10 +1917,17 @@ def paris_zone(zone):
     return 2 if m and int(m.group(1)) >= 12 else 1
 
 
-def monthly_cents(vehicle_type, zone, suv=False):
-    # No SUV price any more: a resident SUV pays the same resident ticket as any car.
-    kind = "two" if TWO_WHEELS.search(str(vehicle_type or "")) else "car"
-    return MONTHLY_PRICES[(kind, paris_zone(zone))]
+def resident_week(vehicle_type):
+    """The official Paris resident week for this vehicle type, in cents."""
+    t = str(vehicle_type or "")
+    return RESIDENT_WEEK["electric" if ELECTRIC_TWO_WHEELS.search(t) else "two" if TWO_WHEELS.search(t) else "car"]
+
+
+def monthly_cents(vehicle_type, zone=None, suv=False, weekly=None):
+    """Twice the resident week (PayByPhone's own price for this vehicle, else the official one), at least the floor.
+    The zone and SUV no longer change it: the resident ticket is the same for any car anywhere in Paris."""
+    week = weekly if weekly is not None else resident_week(vehicle_type)
+    return max(2 * int(week), MONTHLY_FLOOR)
 
 
 def plan_total(monthlies, plan="monthly"):
@@ -2068,11 +2077,12 @@ def account_pricing(s):
             log.info("weekly price unavailable: %s", str(e)[:200])
             return None
 
-    vehicles = [{"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
-                 "suv": plate_key(v["licensePlate"]) in suvs,
-                 "monthly": monthly_cents(v.get("type"), zone, plate_key(v["licensePlate"]) in suvs),
-                 "weekly": weekly(zone, v["licensePlate"], rate)}
-                for v, zone, rate in found]
+    vehicles = []
+    for v, zone, rate in found:
+        week = weekly(zone, v["licensePlate"], rate)
+        vehicles.append({"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
+                         "suv": plate_key(v["licensePlate"]) in suvs,
+                         "monthly": monthly_cents(v.get("type"), zone, weekly=week), "weekly": week})
     if not vehicles:
         return None
     zone = vehicles[0]["zone"]

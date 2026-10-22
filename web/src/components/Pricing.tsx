@@ -22,10 +22,11 @@ const PLANS: { id: Plan; name: string; popular?: boolean }[] = [
 const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
 const yearOf = (monthly: number) => Math.round(monthly * 12 * 0.8)
 
-/** The grid, by vehicle type and Paris zone (the server's MONTHLY_PRICES). */
-const GRID: [string, number, number][] = [
-  ['Voiture', 990, 690],
-  ['Deux-roues', 690, 490],
+/** The grid: twice the Paris resident week, at least 4,50 € (the server's monthly_cents). */
+const GRID: [string, number][] = [
+  ['Voiture', 1800],
+  ['Deux-roues', 900],
+  ['Deux-roues électrique', 450],
 ]
 
 /** The signed-in account's prices (null while loading). */
@@ -40,7 +41,7 @@ function usePricing(enabled: boolean) {
   return [pricing, load] as const
 }
 
-/** The price by vehicle type and zone, per month or per year. */
+/** The price by vehicle type (the same in every zone), per month or per year. */
 function PriceGrid({ plan, className }: { plan: Plan; className?: string }) {
   const price = (m: number) => (plan === 'monthly' ? euros(m) : euros(yearOf(m)))
   const per = plan === 'monthly' ? '/ mois' : '/ an'
@@ -50,20 +51,14 @@ function PriceGrid({ plan, className }: { plan: Plan; className?: string }) {
         <tr className="text-sm text-ink/50">
           <th className="pb-3 text-left text-xs font-normal sm:hidden">{plan === 'monthly' ? 'Par mois' : 'Par an'}</th>
           <th className="hidden pb-3 font-normal sm:table-cell" />
-          <th className="pb-3 text-center font-normal">
-            Zone 1 <span className="block text-xs">arr. 1 à 11</span>
-          </th>
-          <th className="pb-3 text-center font-normal">
-            Zone 2 <span className="block text-xs">arr. 12 à 20</span>
-          </th>
+          <th className="hidden pb-3 text-right font-normal sm:table-cell">{plan === 'monthly' ? 'Par mois' : 'Par an'}</th>
         </tr>
       </thead>
       <tbody>
-        {GRID.map(([name, z1, z2]) => (
+        {GRID.map(([name, m]) => (
           <tr key={name} className="border-t border-ink/10">
             <td className="py-3 font-semibold text-ink">{name}</td>
-            <td className="py-3 text-center text-ink tabular-nums">{price(z1)} <span className="hidden text-ink/50 sm:inline">{per}</span></td>
-            <td className="py-3 text-center text-ink tabular-nums">{price(z2)} <span className="hidden text-ink/50 sm:inline">{per}</span></td>
+            <td className="py-3 text-right text-ink tabular-nums">{price(m)} <span className="hidden text-ink/50 sm:inline">{per}</span></td>
           </tr>
         ))}
       </tbody>
@@ -111,45 +106,18 @@ const INCLUDED = [
   'Annulable à tout moment',
 ]
 
-/** Zone 1 / Zone 2, with their arrondissements. */
-function ZoneSwitch({ zone, onChange }: { zone: 1 | 2; onChange: (z: 1 | 2) => void }) {
-  return (
-    <div role="radiogroup" aria-label="Zone" className="flex rounded-full bg-ink/[0.06] p-1">
-      {([1, 2] as const).map((z) => (
-        <button
-          key={z}
-          role="radio"
-          aria-checked={zone === z}
-          onClick={() => onChange(z)}
-          className={cn(
-            'rounded-full px-4 py-1.5 text-sm font-semibold transition',
-            zone === z ? 'bg-white text-ink shadow-[0_1px_3px_rgb(11_16_36/0.12)]' : 'text-ink/50 hover:text-ink',
-          )}
-        >
-          Zone {z} <span className="font-normal text-ink/45">· arr. {z === 1 ? '1–11' : '12–20'}</span>
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/** The public offer: two cards (two-wheeler, car — the car one put forward) for the chosen zone, per month or per
- *  year. Signed in, the account's own price instead (OwnPlan). */
+/** The public offer: two cards (two-wheeler, car — the car one put forward), the same in every zone. Signed in, the
+ *  account's own price instead (OwnPlan). */
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
   // The Tarifs show the monthly price only (the yearly plan stays offered at payment).
-  const [zone, setZone] = useState<1 | 2>(1)
   if (signedIn) return <OwnPlan plan="monthly" />
   const cards: { name: string; who: string; monthly: number; popular?: boolean }[] = [
-    { name: 'Deux-roues', who: 'Scooter, moto', monthly: GRID[1][zone] },
-    { name: 'Voiture', who: 'Voiture, utilitaire', monthly: GRID[0][zone], popular: true },
+    { name: 'Deux-roues', who: 'Scooter, moto', monthly: GRID[1][1] },
+    { name: 'Voiture', who: 'Voiture, utilitaire', monthly: GRID[0][1], popular: true },
   ]
   return (
     <>
-      <div className="flex flex-col items-center gap-4">
-        <ZoneSwitch zone={zone} onChange={setZone} />
-        <p className="text-xs text-ink/45">Votre zone est détectée toute seule à l’inscription.</p>
-      </div>
-      <div className="mx-auto mt-10 grid max-w-3xl items-center gap-5 md:grid-cols-2">
+      <div className="mx-auto grid max-w-3xl items-center gap-5 md:grid-cols-2">
         {cards.map((c) => (
           <div
             key={c.name}
@@ -181,7 +149,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
           </div>
         ))}
       </div>
-      <FinesNote zone={zone} className="mx-auto mt-10 max-w-3xl" />
+      <FinesNote zone={1} className="mx-auto mt-10 max-w-3xl" />
     </>
   )
 }

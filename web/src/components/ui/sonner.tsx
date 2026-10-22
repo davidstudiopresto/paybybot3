@@ -4,7 +4,7 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 const Toaster = (props: ToasterProps) => (
   <Sonner
     theme="light"
-    position="top-center"
+    position="top-right"
     richColors
     className="toaster group"
     toastOptions={{ style: { fontFamily: "var(--font-sans)", fontSize: "1rem" } }}

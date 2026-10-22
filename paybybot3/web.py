@@ -879,8 +879,8 @@ def activation_message(case, expire, next_payment):
     if case == "later":
         return ("Votre ticket court jusqu'au %s." % paris_text(expire),
                 "Nous paierons la semaine suivante la veille, le %s." % paris_text(next_payment))
-    return ("Votre ticket en cours se termine le %s." % paris_text(expire),
-            "Nous achèterons votre semaine résidente à sa fin.")
+    return ("Votre ticket se termine le %s." % paris_text(expire),
+            "La semaine suivante sera achetée à sa fin.")
 
 
 def activation_case(outcome, before, after, row, now=None):

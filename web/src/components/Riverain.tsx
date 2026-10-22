@@ -44,12 +44,8 @@ export function activationToast(activation: Activation, plate?: string) {
     return
   }
   toast.success(plate ? `${plate} : ${activation.title}` : activation.title, {
-    description: (
-      <>
-        {activation.text}
-        <span className="mt-1.5 block font-medium">{activation.payYourself}</span>
-      </>
-    ),
+    // Short on screen: what happens if a payment fails is in the e-mail.
+    description: activation.text,
     duration: 6_000,
   })
 }

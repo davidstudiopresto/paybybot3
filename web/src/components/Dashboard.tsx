@@ -181,7 +181,12 @@ export function Dashboard({
               {cars.map((v) => (
                 <div key={v.plate}>
                   <Plate plate={v.plate} />
-                  {vehicleTypeLabel(v.type) && <p className="mt-1.5 text-sm text-ink/55">{vehicleTypeLabel(v.type)}</p>}
+                  {vehicleTypeLabel(v.type) && <p className="mt-2 text-sm text-ink/55">Véhicule : {vehicleTypeLabel(v.type)}</p>}
+                  {v.zone && (
+                    <p className="text-sm text-ink/55">
+                      Zone : {v.zone} (Zone {Number(v.zone.slice(-2)) >= 12 ? 2 : 1})
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

@@ -1709,9 +1709,13 @@ def overview(pbb_session: str = Cookie(None)):
             # Only types and counts, never card details: helps spot a payment type we don't handle yet.
             log.info("no usable payment method; PayByPhone returned %s",
                      {k: len(v) if isinstance(v, list) else type(v).__name__ for k, v in accounts.items()})
+        try:  # each vehicle's resident arrondissement, as found on PayByPhone and kept (see vehicle_zones)
+            kept = load_account(s).get("vehicle_zones") or {}
+        except Exception:
+            kept = {}
         return {
-            "vehicles": [{"plate": v["licensePlate"], "country": v.get("country"), "type": v.get("type")}
-                         for v in vehicles],
+            "vehicles": [{"plate": v["licensePlate"], "country": v.get("country"), "type": v.get("type"),
+                          "zone": (kept.get(plate_key(v["licensePlate"])) or {}).get("z")} for v in vehicles],
             "payments": payments,
             "sessions": [serialize_session(x) for x in s.call("get_parking_sessions")],
             "autopilots": ([stored_to_autopilot(r) for r in store("renewal_list", p_owner=owner_id(s.username))]

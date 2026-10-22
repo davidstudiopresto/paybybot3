@@ -158,7 +158,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
           two lines (the first in the brand gradient), then the call to action. */}
       <section className="rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-20">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center text-center">
-          <h1 className="font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+          <h1 className="font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
             <span className="block">de votre stationnement résident</span>
             <span className="block">sur <PayByPhone /></span>

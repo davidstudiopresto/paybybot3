@@ -66,6 +66,8 @@ export type Account = {
   graceEnd?: string | null
   /** A subscription is running: needed to activate a renewal, even during the free month. */
   subscribed?: boolean
+  /** Plates the user ticked as SUV (PayByPhone does not say): the SUV price applies. */
+  suvPlates?: string[]
 }
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
 
@@ -85,6 +87,7 @@ export type PricedVehicle = {
   plate: string
   type?: string | null
   zone: string // the arrondissement PayByPhone gives it the resident rate in (never typed)
+  suv?: boolean
   monthly: number
   yearly: number
   renewed: boolean
@@ -149,6 +152,8 @@ export const api = {
       ...(signup ? { signup: true, ...signup } : {}),
     }),
   account: () => request<Account>('/api/account'),
+  setSuv: (plate: string, suv: boolean) =>
+    request<Pricing>('/api/vehicles/suv', { method: 'PUT', body: JSON.stringify({ plate, suv }) }),
   updateAccount: (patch: Partial<Account>) =>
     request<Account>('/api/account', { method: 'PUT', body: JSON.stringify(patch) }),
   logout: () => post('/api/logout'),

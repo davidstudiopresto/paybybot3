@@ -1085,7 +1085,7 @@ def with_details(row):
 
 
 ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
-                  "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "zone_found",
+                  "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "suv_plates", "zone_found",
                   "vehicle_zones", "dunning", "check_mailed")
 TRIAL_DAYS = 30  # one free month for every new account
 
@@ -1848,7 +1848,8 @@ WEEK = timedelta(days=7)
 # to 11, zone 2: 12 to 20), the same grid as Frequens. Both are known from PayByPhone, never asked. Per year:
 # twelve months with 20 % off.
 YEARLY_DISCOUNT = 0.20
-MONTHLY_PRICES = {("car", 1): 990, ("car", 2): 690, ("two", 1): 690, ("two", 2): 490}
+MONTHLY_PRICES = {("car", 1): 990, ("car", 2): 690, ("two", 1): 690, ("two", 2): 490,
+                  ("suv", 1): 1490, ("suv", 2): 990}  # SUV: ticked by the user (PayByPhone does not say)
 DEFAULT_MONTHLY_CENTS = MONTHLY_PRICES[("car", 1)]
 
 
@@ -1858,8 +1859,8 @@ def paris_zone(zone):
     return 2 if m and int(m.group(1)) >= 12 else 1
 
 
-def monthly_cents(vehicle_type, zone):
-    kind = "two" if TWO_WHEELS.search(str(vehicle_type or "")) else "car"
+def monthly_cents(vehicle_type, zone, suv=False):
+    kind = "two" if TWO_WHEELS.search(str(vehicle_type or "")) else "suv" if suv else "car"
     return MONTHLY_PRICES[(kind, paris_zone(zone))]
 
 
@@ -1998,15 +1999,19 @@ def account_pricing(s):
     """The account's prices: one monthly price per riverain vehicle (its type, its arrondissement's zone), and the
     subscription, for the vehicles with a renewal (the first one while none has). The billed prices are kept on the
     account for checkout and the e-mail links. None without a riverain vehicle."""
+    found = vehicle_zones(s)
+    account = load_account(s)
+    suvs = set(account.get("suv_plates") or [])
     vehicles = [{"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
-                 "monthly": monthly_cents(v.get("type"), zone)} for v, zone, _ in vehicle_zones(s)]
+                 "suv": plate_key(v["licensePlate"]) in suvs,
+                 "monthly": monthly_cents(v.get("type"), zone, plate_key(v["licensePlate"]) in suvs)}
+                for v, zone, _ in found]
     if not vehicles:
         return None
     zone = vehicles[0]["zone"]
     renewed = renewed_plates(s)
     billed = [v for v in vehicles if plate_key(v["plate"]) in renewed] or vehicles[:1]
     monthlies = sorted(v["monthly"] for v in billed)
-    account = load_account(s)
     if account.get("monthlies") != monthlies or account.get("price_zone") != zone:
         account = save_account(s, {"monthlies": monthlies, "price_zone": zone})
         reprice(account, owner_id(s.username) if HOSTED and not s.demo else None)
@@ -2292,7 +2297,26 @@ def get_account(pbb_session: str = Cookie(None)):
             "blocked": {"grace": "grace", "unpaid": "unpaid", "trial_over": "trialOver"}.get(state),
             "graceEnd": grace_end.isoformat() if grace_end else None,
             # A renewal is activated only with a subscription, chosen even during the free month.
-            "subscribed": state in ("ok", "grace")}
+            "subscribed": state in ("ok", "grace"),
+            "suvPlates": list(account.get("suv_plates") or [])}
+
+
+class SuvChoice(BaseModel):
+    plate: str = Field(max_length=20)
+    suv: bool
+
+
+@app.put("/api/vehicles/suv")
+def set_suv(body: SuvChoice, pbb_session: str = Cookie(None)):
+    """« Mon véhicule est un SUV »: PayByPhone does not tell, the user ticks it; the price follows (from the next
+    billing date for a running subscription)."""
+    s = current(pbb_session)
+    key = plate_key(body.plate)
+    suvs = set(guarded(lambda: load_account(s)).get("suv_plates") or [])
+    suvs = suvs | {key} if body.suv else suvs - {key}
+    guarded(lambda: save_account(s, {"suv_plates": sorted(suvs)}))
+    found = guarded(lambda: account_pricing(s))
+    return found or {"zone": None, "monthly": None, "yearly": None}
 
 
 class Checkout(BaseModel):

@@ -108,7 +108,6 @@ const INCLUDED = [
   'Renouvellement automatique du forfait résident',
   'Pause en un clic, reprise automatique',
   'Alertes en cas d’échec',
-  'Support 24h/24',
   'Annulable à tout moment',
 ]
 

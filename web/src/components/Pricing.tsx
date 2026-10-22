@@ -106,7 +106,7 @@ function planText(id: Plan, pricing: Pricing) {
 
 const INCLUDED = [
   'Renouvellement automatique du forfait résident',
-  'Pause vacances',
+  'Pause en un clic, reprise automatique',
   'Alertes en cas d’échec',
   'Support 24h/24',
   'Annulable à tout moment',
@@ -481,9 +481,14 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
                         {plan === p.id && <span className="size-2.5 rounded-full bg-eu" />}
                       </span>
                       <span className="flex-1">
-                        <span className="flex items-center gap-2 font-semibold text-ink">
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-ink">
                           {p.name}
-                          {p.popular && <span className="rounded-full bg-eu/[0.08] px-2 py-0.5 text-xs font-semibold text-eu">-20 %</span>}
+                          {p.popular && (
+                            <>
+                              <span className="rounded-full bg-eu px-2 py-0.5 text-xs font-semibold text-white">Offre populaire</span>
+                              <span className="rounded-full bg-eu/[0.08] px-2 py-0.5 text-xs font-semibold text-eu">-20 %</span>
+                            </>
+                          )}
                         </span>
                         <span className="block text-sm text-ink/55">{p.note}</span>
                       </span>

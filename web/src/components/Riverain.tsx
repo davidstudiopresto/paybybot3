@@ -145,7 +145,7 @@ export function PlannedPause({ ap, className }: { ap: Autopilot; className?: str
   )
 }
 
-export function RenewalNote({ ap, onChanged, next }: { ap: Autopilot; onChanged?: () => void; next?: string }) {
+export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () => void; next?: string }) {
   const { end, paused } = pauseState(ap)
   if (ap.lastError)
     return (
@@ -154,17 +154,72 @@ export function RenewalNote({ ap, onChanged, next }: { ap: Autopilot; onChanged?
         {onChanged && <span className="block"><RetryButton ap={ap} onChanged={onChanged} /></span>}
       </>
     )
-  if (!ap.enabled) return <span className="text-destructive">Renouvellement suspendu : vérifiez dans l'application PayByPhone, puis relancez-le depuis « Gérer ».</span>
+  if (!ap.enabled)
+    return (
+      <>
+        <span className="text-destructive">Renouvellement suspendu : vérifiez dans l'application PayByPhone, puis relancez-le.</span>
+        {onChanged && <span className="block"><RetryButton ap={ap} onChanged={onChanged} /></span>}
+      </>
+    )
   if (paused) return <>Renouvellement en pause {end ? `jusqu'au ${dayText(end - 1)} inclus` : 'sans date de fin'}</>
-  // The next renewal: when the running ticket ends, or when a planned pause covering that moment is over.
-  let nextAt = next ? new Date(next).getTime() : null
-  const from = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
-  const to = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
-  if (nextAt && from !== null && from <= nextAt && (to === null || to > nextAt)) nextAt = to
+  return <>Renouvellement du ticket programmé</>
+}
+
+/** Under a ticket: the vacation pause (planned, or a link to plan one), then the way to stop, in red. */
+export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; onChanged: () => void; className?: string }) {
+  const [pausing, setPausing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const { later, paused } = pauseState(ap)
+
+  useEffect(() => {
+    if (!confirming) return
+    const id = setTimeout(() => setConfirming(false), 5000)
+    return () => clearTimeout(id)
+  }, [confirming])
+
+  async function resume() {
+    try {
+      await api.resumeAutopilot(ap.id)
+      toast.success(paused ? 'Renouvellement repris.' : 'Pause annulée.')
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+    onChanged()
+  }
+
+  async function stop() {
+    await api.deleteAutopilot(ap.id)
+    toast.success('Renouvellement arrêté.', { description: 'Le ticket en cours reste valable.' })
+    onChanged()
+  }
+
+  if (!ap.enabled) return null
   return (
-    <>
-      {nextAt !== null ? `Prochain renouvellement ${clock(new Date(nextAt).toISOString())}` : 'Renouvellement automatique'}
-    </>
+    <div className={cn('space-y-3 text-sm', className)}>
+      {later ? (
+        <div className="flex items-center justify-between gap-3">
+          <PlannedPause ap={ap} className="flex-1" />
+          <button onClick={resume} className={cn('shrink-0', ui.link)}>
+            Annuler
+          </button>
+        </div>
+      ) : paused ? (
+        <button onClick={resume} className={cn('flex items-center gap-2', ui.link)}>
+          <Play className="size-4" /> Reprendre maintenant
+        </button>
+      ) : (
+        <button onClick={() => setPausing(true)} className={cn('flex items-center gap-2', ui.link)}>
+          <Pause className="size-4" /> Pause vacances
+        </button>
+      )}
+      <button
+        onClick={() => (confirming ? stop() : setConfirming(true))}
+        className="font-semibold text-destructive underline decoration-destructive/30 underline-offset-[3px] hover:decoration-destructive"
+      >
+        {confirming ? 'Confirmer l’arrêt du renouvellement' : 'Arrêter le renouvellement'}
+      </button>
+      {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
+    </div>
   )
 }
 

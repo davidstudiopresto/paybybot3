@@ -8,8 +8,8 @@ import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
-import { CardGate, ManageRenewal, PlannedPause, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
-import { api, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
+import { CardGate, RenewalActions, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
+import { api, clock, remaining, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -25,7 +25,6 @@ function Ticket({
   now,
   data,
   onRefresh,
-  demo,
 }: {
   session: Session
   now: number
@@ -48,10 +47,11 @@ function Ticket({
           <ZonePlate zone={session.location} />
         </span>
       </div>
-      <p className={`mt-5 font-heading text-[2.6rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
+      <p className="mt-5 text-sm text-ink/55">Temps restant</p>
+      <p className={`mt-1 font-heading text-[2.6rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
         {remaining(left)}
       </p>
-      <p className="mt-2 text-muted-foreground">{until(session.expire)}</p>
+      <p className="mt-2 text-muted-foreground">Expire {clock(session.expire)}</p>
       <div className="mt-5 h-1 overflow-hidden rounded-full bg-muted" aria-hidden>
         <div
           className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-eu'}`}
@@ -66,10 +66,9 @@ function Ticket({
               <RenewalNote ap={renewal} onChanged={onRefresh} next={session.expire} />
             </span>
           </p>
-          <ManageRenewal ap={renewal} onChanged={onRefresh} demo={demo} />
         </div>
       )}
-      {renewal && <PlannedPause ap={renewal} className="mt-4" />}
+      {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} className="mt-4" />}
     </article>
   )
 }

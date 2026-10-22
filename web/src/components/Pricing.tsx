@@ -422,7 +422,7 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
   return (
     <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogPortal>
-        <DialogPrimitive.Popup className="fixed inset-0 z-50 grid overflow-y-auto bg-white outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 lg:grid-cols-2">
+        <DialogPrimitive.Popup className="fixed inset-0 z-[70] grid overflow-y-auto bg-white outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 lg:grid-cols-2">
           <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,8vw,8rem)]">
             <div className="flex items-center justify-between">
               <Wordmark />

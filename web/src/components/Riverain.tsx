@@ -166,6 +166,8 @@ export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () =
 }
 
 /** Under a ticket: the vacation pause (planned, or a link to plan one), then the way to stop, in red. */
+const actionBtn = 'flex h-11 w-full items-center justify-center gap-2 rounded-xl border font-semibold transition active:scale-[0.99] sm:w-auto sm:px-5'
+
 export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; onChanged: () => void; className?: string }) {
   const [pausing, setPausing] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -195,7 +197,7 @@ export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; on
 
   if (!ap.enabled) return null
   return (
-    <div className={cn('space-y-3 text-sm', className)}>
+    <div className={cn('space-y-3 text-[0.95rem]', className)}>
       {later ? (
         <div className="flex items-center justify-between gap-3">
           <PlannedPause ap={ap} className="flex-1" />
@@ -204,20 +206,28 @@ export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; on
           </button>
         </div>
       ) : paused ? (
-        <button onClick={resume} className={cn('flex items-center gap-2', ui.link)}>
+        <button onClick={resume} className={cn(actionBtn, 'border-ink/15 text-ink hover:border-ink/40')}>
           <Play className="size-4" /> Reprendre maintenant
         </button>
-      ) : (
-        <button onClick={() => setPausing(true)} className={cn('flex items-center gap-2', ui.link)}>
-          <Pause className="size-4" /> Pause vacances
+      ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        {!later && !paused && (
+          <button onClick={() => setPausing(true)} className={cn(actionBtn, 'border-ink/15 text-ink hover:border-ink/40')}>
+            <Pause className="size-4" /> Programmer une pause
+          </button>
+        )}
+        <button
+          onClick={() => (confirming ? stop() : setConfirming(true))}
+          className={cn(
+            actionBtn,
+            confirming
+              ? 'border-destructive bg-destructive text-white'
+              : 'border-destructive/30 text-destructive hover:border-destructive',
+          )}
+        >
+          {confirming ? 'Confirmer l’arrêt' : 'Arrêter le renouvellement'}
         </button>
-      )}
-      <button
-        onClick={() => (confirming ? stop() : setConfirming(true))}
-        className="font-semibold text-destructive underline decoration-destructive/30 underline-offset-[3px] hover:decoration-destructive"
-      >
-        {confirming ? 'Confirmer l’arrêt du renouvellement' : 'Arrêter le renouvellement'}
-      </button>
+      </div>
       {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
     </div>
   )
@@ -927,7 +937,7 @@ function PauseDialog({ ap, onClose, onDone }: { ap: Autopilot; onClose: () => vo
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className={ui.dialog}>
         <div className="px-6 pt-7">
-          <DialogTitle className={ui.dialogTitle}>Pause vacances</DialogTitle>
+          <DialogTitle className={ui.dialogTitle}>Programmer une pause</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">
             Aucun forfait ne sera payé pendant la pause. Un ticket déjà en cours reste valable jusqu’à sa fin.
           </DialogDescription>

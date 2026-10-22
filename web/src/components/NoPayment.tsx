@@ -1,17 +1,35 @@
-import { useState } from 'react'
-import { CreditCard, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { CreditCard, ExternalLink, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PayByPhone } from '@/components/signs'
 
-/** Shown when the PayByPhone account has no saved payment method we can use. */
-export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Promise<void>; compact?: boolean }) {
-  const [checking, setChecking] = useState(false)
+const EVERY = 5_000 // how often PayByPhone is asked again while the card is awaited
+const FOR = 10 * 60_000 // then only when the page comes back to the front
 
-  async function check() {
-    setChecking(true)
-    await onRefresh()
-    setChecking(false)
-  }
+/** Shown when the PayByPhone account has no saved payment method we can use. PayByBot looks again by itself (every
+ *  few seconds, and as soon as the page is back in front): once a card is there, the parent shows the next step. */
+export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Promise<void>; compact?: boolean }) {
+  const refresh = useRef(onRefresh)
+  refresh.current = onRefresh
+
+  useEffect(() => {
+    let busy = false
+    const started = Date.now()
+    const look = () => {
+      if (busy || document.visibilityState !== 'visible') return
+      busy = true
+      refresh.current().finally(() => (busy = false))
+    }
+    const id = setInterval(() => Date.now() - started < FOR && look(), EVERY)
+    const onFront = () => look()
+    document.addEventListener('visibilitychange', onFront)
+    window.addEventListener('focus', onFront)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onFront)
+      window.removeEventListener('focus', onFront)
+    }
+  }, [])
 
   return (
     <div className={compact ? 'rounded-xl border border-border p-4' : 'rounded-2xl border border-border p-6'}>
@@ -35,10 +53,7 @@ export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Pro
           )}
         </div>
       </div>
-      <div className="mt-5 flex flex-wrap gap-3">
-        <Button onClick={check} disabled={checking} className="h-12 rounded-xl bg-eu px-5 font-bold text-white hover:bg-eu/90">
-          {checking ? <Loader2 className="size-5 animate-spin" /> : <RefreshCw className="size-5" />} J'ai ajouté une carte
-        </Button>
+      <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
         <Button
           variant="outline"
           className="h-12 rounded-xl border-ink/20 bg-white px-5"
@@ -46,6 +61,9 @@ export function NoPayment({ onRefresh, compact = false }: { onRefresh: () => Pro
         >
           Ouvrir <PayByPhone /> <ExternalLink className="size-4" />
         </Button>
+        <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
+          <Loader2 className="size-4 animate-spin" /> En attente de votre carte…
+        </p>
       </div>
     </div>
   )

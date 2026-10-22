@@ -54,7 +54,7 @@ function phoneUsername(national: string, code: string) {
 }
 
 const fieldBox =
-  'flex h-14 items-center rounded-xl border border-ink/20 bg-white transition focus-within:border-eu focus-within:ring-3 focus-within:ring-eu/15'
+  'flex h-14 items-center rounded-xl border border-ink/20 bg-white transition focus-within:border-eu focus-within:ring-3 focus-within:ring-eu/15 overflow-hidden'
 
 export function LoginView({
   onLogin,

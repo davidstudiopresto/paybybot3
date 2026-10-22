@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Bike, Car, CarFront, Check, Loader2, Lock, Sparkles, X, type LucideIcon } from 'lucide-react'
+import { Bike, Car, CarFront, Check, Star, Loader2, Lock, Sparkles, X, type LucideIcon } from 'lucide-react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
@@ -106,23 +106,133 @@ function planText(id: Plan, pricing: Pricing) {
 const INCLUDED = [
   'Renouvellement automatique du forfait résident',
   'Pause vacances',
-  'Confirmation par e-mail à chaque paiement',
+  'Alertes en cas d’échec',
+  'Support 24h/24',
   'Annulable à tout moment',
 ]
 
-/** One card, a Mensuel / Annuel switch on top (the yearly one with its 20 % off): the account's own price once signed
- *  in, else the grid. */
+/** Mensuel / Annuel as a sliding switch, « -20 % » next to Annuel. */
+function PlanSwitch({ plan, onChange }: { plan: Plan; onChange: (p: Plan) => void }) {
+  const yearly = plan === 'yearly'
+  return (
+    <div className="flex items-center gap-3 text-[0.95rem] font-semibold">
+      <button type="button" onClick={() => onChange('monthly')} className={yearly ? 'text-ink/45' : 'text-ink'}>
+        Mensuel
+      </button>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={yearly}
+        aria-label="Facturation annuelle"
+        onClick={() => onChange(yearly ? 'monthly' : 'yearly')}
+        className={cn('relative h-7 w-12 rounded-full transition-colors', yearly ? 'bg-eu' : 'bg-ink/15')}
+      >
+        <span className={cn('absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform', yearly && 'translate-x-5')} />
+      </button>
+      <button type="button" onClick={() => onChange('yearly')} className={cn('flex items-center gap-2', yearly ? 'text-ink' : 'text-ink/45')}>
+        Annuel <span className="rounded-full bg-eu/[0.1] px-2 py-0.5 text-xs text-eu">-20 %</span>
+      </button>
+    </div>
+  )
+}
+
+/** Zone 1 / Zone 2, with their arrondissements. */
+function ZoneSwitch({ zone, onChange }: { zone: 1 | 2; onChange: (z: 1 | 2) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Zone" className="flex rounded-full bg-ink/[0.06] p-1">
+      {([1, 2] as const).map((z) => (
+        <button
+          key={z}
+          role="radio"
+          aria-checked={zone === z}
+          onClick={() => onChange(z)}
+          className={cn(
+            'rounded-full px-4 py-1.5 text-sm font-semibold transition',
+            zone === z ? 'bg-white text-ink shadow-[0_1px_3px_rgb(11_16_36/0.12)]' : 'text-ink/50 hover:text-ink',
+          )}
+        >
+          Zone {z} <span className="font-normal text-ink/45">· arr. {z === 1 ? '1–11' : '12–20'}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** The public offer: two cards (two-wheeler, car — the car one put forward) for the chosen zone, per month or per
+ *  year. Signed in, the account's own price instead (OwnPlan). */
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
   const [plan, setPlan] = useState<Plan>('monthly')
+  const [zone, setZone] = useState<1 | 2>(1)
+  if (signedIn) return <OwnPlan plan={plan} setPlan={setPlan} />
+  const yearly = plan === 'yearly'
+  const cards: { name: string; who: string; monthly: number; popular?: boolean }[] = [
+    { name: 'Deux-roues', who: 'Scooter, moto', monthly: GRID[1][zone] },
+    { name: 'Voiture', who: 'Voiture, utilitaire', monthly: GRID[0][zone], popular: true },
+  ]
+  return (
+    <>
+      <div className="flex flex-col items-center gap-4">
+        <PlanSwitch plan={plan} onChange={setPlan} />
+        <ZoneSwitch zone={zone} onChange={setZone} />
+        <p className="text-xs text-ink/45">Votre zone est détectée toute seule à l’inscription.</p>
+      </div>
+      <div className="mx-auto mt-10 grid max-w-3xl items-center gap-5 md:grid-cols-2">
+        {cards.map((c) => (
+          <div
+            key={c.name}
+            className={cn(
+              'relative flex flex-col rounded-3xl border bg-white p-7 text-center',
+              c.popular
+                ? 'border-eu shadow-[0_30px_60px_-30px_color-mix(in_srgb,var(--eu)_55%,transparent)] ring-1 ring-eu md:py-10'
+                : 'border-ink/10',
+            )}
+          >
+            {c.popular && (
+              <span className="absolute -top-3.5 right-6 inline-flex items-center gap-1 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-3 py-1 text-xs font-semibold text-white">
+                <Star className="size-3.5 fill-current" strokeWidth={0} /> Le plus choisi
+              </span>
+            )}
+            <p className="text-sm font-semibold tracking-[0.12em] text-ink/55 uppercase">{c.name}</p>
+            <p className="mt-5 font-heading leading-none font-semibold tracking-tight text-ink">
+              <span className="text-[3.2rem]">{euros(yearly ? yearOf(c.monthly) : c.monthly).replace(' €', '')}</span>
+              <span className="text-[2rem]"> €</span>
+              <span className="ml-1.5 text-base font-normal text-ink/50">{yearly ? '/ an' : '/ mois'}</span>
+            </p>
+            <p className="mt-2 text-sm text-ink/50">
+              {yearly ? (
+                <>
+                  <span className="line-through">{euros(c.monthly * 12)}</span> · soit {euros(Math.round(yearOf(c.monthly) / 12))} par mois
+                </>
+              ) : (
+                'facturé chaque mois'
+              )}
+            </p>
+            <ul className="mt-7 space-y-2.5 border-t border-ink/10 pt-6 text-left text-[0.95rem] text-ink/75">
+              {INCLUDED.map((x) => (
+                <li key={x} className="flex items-start gap-2">
+                  <Check className="mt-0.5 size-4 shrink-0 text-eu" /> {x}
+                </li>
+              ))}
+            </ul>
+            <a href="#/inscription" className={cn('mt-7', c.popular ? ui.primary : ui.primaryGray)}>
+              {TRY_LABEL}
+            </a>
+            <p className="mt-4 text-sm text-ink/45">{c.who}</p>
+          </div>
+        ))}
+      </div>
+      <FinesNote className="mx-auto mt-10 max-w-3xl" />
+    </>
+  )
+}
+
+/** Signed in: one card with the account's own price, monthly or yearly. */
+function OwnPlan({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void }) {
   const [busy, setBusy] = useState(false)
-  const [pricing] = usePricing(signedIn)
-  const own = signedIn && pricing?.monthly != null && pricing.yearly != null ? pricing : null
+  const [pricing] = usePricing(true)
+  const own = pricing?.monthly != null && pricing.yearly != null ? pricing : null
 
   async function choose() {
-    if (!signedIn) {
-      window.location.hash = '#/inscription'
-      return
-    }
     setBusy(true)
     try {
       const { url } = await api.checkout(plan)
@@ -135,28 +245,14 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
 
   return (
     <>
-      {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
-      <div role="radiogroup" aria-label="Offre" className="mx-auto mb-6 flex w-fit rounded-full bg-ink/[0.06] p-1">
-        {(['monthly', 'yearly'] as Plan[]).map((id) => (
-          <button
-            key={id}
-            role="radio"
-            aria-checked={plan === id}
-            onClick={() => setPlan(id)}
-            className={cn(
-              'flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition',
-              plan === id ? 'bg-white text-ink shadow-[0_1px_3px_rgb(11_16_36/0.12)]' : 'text-ink/55 hover:text-ink',
-            )}
-          >
-            {id === 'monthly' ? 'Mensuel' : 'Annuel'}
-            {id === 'yearly' && <span className="rounded-full bg-eu/[0.1] px-2 py-0.5 text-xs text-eu">-20 %</span>}
-          </button>
-        ))}
+      {pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
+      <div className="mb-6 flex justify-center">
+        <PlanSwitch plan={plan} onChange={setPlan} />
       </div>
-      {signedIn && !pricing ? (
-        <div className="mx-auto h-96 max-w-xl animate-pulse rounded-2xl bg-ink/[0.05]" />
+      {!pricing ? (
+        <div className="mx-auto h-96 max-w-xl animate-pulse rounded-3xl bg-ink/[0.05]" />
       ) : (
-        <div className="mx-auto flex max-w-xl flex-col rounded-2xl border border-eu p-6 ring-1 ring-eu sm:p-7">
+        <div className="mx-auto flex max-w-xl flex-col rounded-3xl border border-eu p-7 ring-1 ring-eu">
           {own ? (
             <>
               <p className="font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
@@ -166,12 +262,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
               <VehiclePrices plan={plan} pricing={own} className="mt-5 border-t border-ink/10 pt-4" />
             </>
           ) : (
-            <>
-              <PriceGrid plan={plan} />
-              <p className="mt-2 text-sm text-ink/55">
-                {plan === 'yearly' ? 'Payé une fois par an, 20 % de moins que le mensuel.' : 'Sans engagement.'}
-              </p>
-            </>
+            <PriceGrid plan={plan} />
           )}
           <ul className="mt-5 grid gap-x-6 gap-y-2 text-[0.95rem] text-ink/70 sm:grid-cols-2">
             {INCLUDED.map((x) => (
@@ -181,13 +272,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
             ))}
           </ul>
           <button onClick={choose} disabled={busy} className={cn('mt-7', ui.primary)}>
-            {busy ? (
-              <Loader2 className="size-5 animate-spin" />
-            ) : signedIn ? (
-              plan === 'yearly' ? 'Choisir l’annuel' : 'Choisir le mensuel'
-            ) : (
-              TRY_LABEL
-            )}
+            {busy ? <Loader2 className="size-5 animate-spin" /> : plan === 'yearly' ? 'Choisir l’annuel' : 'Choisir le mensuel'}
           </button>
         </div>
       )}

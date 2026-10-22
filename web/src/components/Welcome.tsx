@@ -13,6 +13,8 @@ function phoneText(username: string) {
   return m ? `+33 ${m.slice(1).join(' ')}` : username
 }
 
+const samePlate = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCase() === b.replace(/[^0-9a-z]/gi, '').toUpperCase()
+
 function Row({
   icon,
   label,
@@ -31,7 +33,7 @@ function Row({
 }) {
   return (
     <li
-      className={cn('rise flex items-start gap-4 py-4', highlight && 'my-3 rounded-2xl border-2 border-eu bg-eu/[0.03] px-4')}
+      className={cn('rise flex items-start gap-4 py-4', highlight && '-mx-4 my-3 rounded-2xl border-2 border-eu bg-eu/[0.03] px-[14px]')}
       style={{ animationDelay: `${delay}ms` }}
     >
       <span className="grid size-10 shrink-0 place-items-center rounded-full bg-eu/[0.08] text-eu">{icon}</span>
@@ -113,13 +115,24 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                 <span className="inline-block h-5 w-40 animate-pulse rounded bg-ink/10" />
               ) : vehicles.length ? (
                 <span className="flex flex-col gap-2 pt-0.5">
-                  {vehicles.map((v) => (
-                    <span key={v.plate} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <Plate plate={v.plate} size="sm" />
-                      {arrondissement(v.zone) && <span className="font-semibold">{arrondissement(v.zone)}</span>}
-                      <ZonePlate zone={v.zone} />
-                    </span>
-                  ))}
+                  {vehicles.map((v) => {
+                    // Its running ticket, if any, right under the car.
+                    const ticket = data.sessions.find((s) => samePlate(s.plate, v.plate) && new Date(s.expire).getTime() > Date.now())
+                    return (
+                      <span key={v.plate} className="flex flex-col gap-1.5">
+                        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <Plate plate={v.plate} size="sm" />
+                          {arrondissement(v.zone) && <span className="font-semibold">{arrondissement(v.zone)}</span>}
+                          <ZonePlate zone={v.zone} />
+                        </span>
+                        {ticket && (
+                          <span className="flex items-center gap-1.5 text-sm text-ink/70">
+                            <Ticket className="size-4 text-eu" /> Ticket en cours {until(ticket.expire)}
+                          </span>
+                        )}
+                      </span>
+                    )
+                  })}
                 </span>
               ) : (
                 <span className="text-ink/60">
@@ -147,16 +160,6 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                 <span className="text-ink/60">{withPayByPhone('Aucune carte : ajoutez-en une dans l’application PayByPhone.')}</span>
               )}
             </Row>
-            {data.sessions.length > 0 && (
-              <Row icon={<Ticket className="size-5" />} label="Ticket en cours" delay={next()}>
-                {data.sessions.map((s) => (
-                  <span key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <Plate plate={s.plate} size="sm" />
-                    <span className="text-ink/70">{until(s.expire)}</span>
-                  </span>
-                ))}
-              </Row>
-            )}
           </ul>
 
           <p className="rise mt-5 text-sm leading-relaxed text-ink/55" style={{ animationDelay: `${next()}ms` }}>

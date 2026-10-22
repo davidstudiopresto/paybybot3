@@ -211,3 +211,10 @@ input:-webkit-autofill:focus {
   caret-color: var(--ink, #111);
   transition: background-color 600000s 0s;
 }
+
+/* Chrome previews an autofill suggestion in its own smaller font, then switches to ours on click (the text seems
+   to grow): give the preview the field's own font and size. */
+input:-webkit-autofill::first-line {
+  font-family: 'Newsreader Variable', Georgia, serif;
+  font-size: 1.125rem;
+}

@@ -36,7 +36,7 @@ export function Home() {
     <div className="flex min-h-dvh flex-col bg-white px-6 py-8 text-[#1c1b19] sm:px-12 sm:py-12">
       <header className="rise">
         {/* The logo in the page's serif, « By » in PayByBot's blue. */}
-        <span className="font-serif text-[1.6rem] leading-none tracking-[-0.01em]">
+        <span className="font-serif text-[1.6rem] leading-none font-semibold tracking-[-0.01em]">
           Pay<span className="text-[var(--eu)]">By</span>Bot
         </span>
       </header>

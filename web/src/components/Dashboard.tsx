@@ -28,6 +28,8 @@ function Ticket({
   hosted,
   demo,
   autoOpen = false,
+  locked = false,
+  onLogout,
 }: {
   session: Session
   now: number
@@ -36,6 +38,8 @@ function Ticket({
   hosted: boolean
   demo: boolean
   autoOpen?: boolean
+  locked?: boolean
+  onLogout?: () => void
 }) {
   const renewal = renewalOf(data, session)
   const start = new Date(session.start).getTime()
@@ -77,7 +81,7 @@ function Ticket({
       {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} className="mt-4" />}
       {!renewal && (
         <div className="mt-5">
-          <ActivateRenewal data={data} onChanged={onRefresh} hosted={hosted} demo={demo} plate={session.plate} label="Automatiser le renouvellement" autoOpen={autoOpen} />
+          <ActivateRenewal data={data} onChanged={onRefresh} hosted={hosted} demo={demo} plate={session.plate} label="Automatiser le renouvellement" autoOpen={autoOpen} locked={autoOpen && locked} onLogout={onLogout} />
         </div>
       )}
     </article>
@@ -87,7 +91,7 @@ function Ticket({
 /** The cars with no ticket: plate, type, zone and the resident week's price, one card each. */
 const sameCar = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCase() === b.replace(/[^0-9a-z]/gi, '').toUpperCase()
 
-function IdleVehicles({ data, onChanged, hosted, demo, autoPlate }: { data: Overview; onChanged: () => void; hosted: boolean; demo?: boolean; autoPlate?: string | null }) {
+function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogout }: { data: Overview; onChanged: () => void; hosted: boolean; demo?: boolean; autoPlate?: string | null; locked?: boolean; onLogout?: () => void }) {
   const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
   const [weeks, setWeeks] = useState<Record<string, number | null>>({})
   useEffect(() => {
@@ -134,7 +138,7 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate }: { data: Over
               )}
             </dl>
             <div className="mt-5">
-              <ActivateRenewal data={data} onChanged={onChanged} hosted={hosted} demo={demo} plate={v.plate} autoOpen={!!autoPlate && key(autoPlate) === key(v.plate)} />
+              <ActivateRenewal data={data} onChanged={onChanged} hosted={hosted} demo={demo} plate={v.plate} autoOpen={!!autoPlate && key(autoPlate) === key(v.plate)} locked={!!locked && !!autoPlate && key(autoPlate) === key(v.plate)} onLogout={onLogout} />
             </div>
           </div>
         )
@@ -195,8 +199,10 @@ export function Dashboard({
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
   // Right after the welcome page, nothing renewed yet: the renewal of the car with a ticket (else the first car)
   // opens by itself, then the offer comes when it is activated.
+  // Online, no offer chosen yet: PayByBot is not usable before choosing one, the renewal dialog stays open.
+  const locked = !!me.hosted && !me.demo && !!account && !account.subscribed && !account.blocked && !renewing
   const autoPlate =
-    autoRenew && data && !renewing
+    (autoRenew || locked) && data && !renewing
       ? (data.sessions.find((s) => new Date(s.expire).getTime() > Date.now())?.plate ?? data.vehicles[0]?.plate ?? null)
       : null
 
@@ -252,14 +258,14 @@ export function Dashboard({
         {data && sessions.length > 0 && (
           <div className="mt-6 space-y-3">
             {sessions.map((s) => (
-              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} hosted={!!me.hosted} demo={me.demo} autoOpen={!!autoPlate && sameCar(autoPlate, s.plate)} />
+              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} hosted={!!me.hosted} demo={me.demo} autoOpen={!!autoPlate && sameCar(autoPlate, s.plate)} locked={locked} onLogout={onLogout} />
             ))}
           </div>
         )}
 
         {/* The renewal is the one action of the app: no one-off payment button. */}
         {/* The cars with neither a ticket nor a renewal: one card each, with its button. */}
-        {data && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} autoPlate={autoPlate} />}
+        {data && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} autoPlate={autoPlate} locked={locked} onLogout={onLogout} />}
 
         {/* Every car's card has its own button: this block only lists renewals without a ticket (or offers one
             when PayByPhone lists no car). */}

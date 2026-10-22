@@ -388,6 +388,8 @@ export function ActivateRenewal({
   plate,
   label = 'Activer le renouvellement résident',
   autoOpen = false,
+  locked = false,
+  onLogout,
 }: {
   data: Overview | null
   onChanged: () => void
@@ -398,14 +400,21 @@ export function ActivateRenewal({
   label?: string
   /** Just signed up: the dialog opens by itself, like Frequens (then the offer, then the renewal). */
   autoOpen?: boolean
+  /** No offer chosen yet: the dialog cannot be closed (only left by signing out). */
+  locked?: boolean
+  onLogout?: () => void
 }) {
   const [open, setOpen] = useState(!!autoOpen && !!data)
+  // The account (and so the lock) arrives after the first render.
+  useEffect(() => {
+    if ((autoOpen || locked) && data) setOpen(true)
+  }, [autoOpen, locked, !!data]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       <ShinyButton onClick={() => setOpen(true)} disabled={!data} className="flex h-14 w-full items-center justify-center rounded-xl border border-eu/30 bg-eu/[0.07] px-6 text-lg font-bold text-eu hover:bg-eu/[0.1] disabled:opacity-50">
         {label}
       </ShinyButton>
-      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} plate={plate} />}
+      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} plate={plate} locked={locked} onLogout={onLogout} />}
     </>
   )
 }
@@ -421,6 +430,8 @@ function RiverainDialog({
   hosted,
   demo = false,
   plate,
+  locked = false,
+  onLogout,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -430,6 +441,8 @@ function RiverainDialog({
   demo?: boolean
   /** Opened from a car's card: only that car is ticked. */
   plate?: string
+  locked?: boolean
+  onLogout?: () => void
 }) {
   const [plates, setPlates] = useState<string[] | null>(null) // the « riverain » vehicles (null: looking)
   const [selected, setSelected] = useState<string[]>([])
@@ -586,8 +599,8 @@ function RiverainDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={ui.dialog}>
+    <Dialog open={open} onOpenChange={(o) => (o || !locked) && onOpenChange(o)}>
+      <DialogContent className={ui.dialog} showCloseButton={!locked}>
         <div className="px-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Renouvellement résident</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">
@@ -722,6 +735,11 @@ function RiverainDialog({
               'Activer le renouvellement automatique'
             )}
           </button>
+          {locked && onLogout && (
+            <button onClick={onLogout} className={cn('mx-auto block text-sm', ui.link)}>
+              Se déconnecter
+            </button>
+          )}
         </div>
       </DialogContent>
       {paywall && (

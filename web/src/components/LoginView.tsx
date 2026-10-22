@@ -345,7 +345,7 @@ export function LoginView({
           {signup && <p className="mt-4 text-sm leading-relaxed text-ink/50">{withPayByPhone(CARD_NOTE)}</p>}
 
 
-          {signup ? (
+          {signup && (
             <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-ink/70">
               <input
                 type="checkbox"
@@ -366,18 +366,6 @@ export function LoginView({
                 .
               </span>
             </label>
-          ) : (
-            <p className="mt-6 text-sm leading-relaxed text-ink/50">
-              En cliquant sur « Se connecter », j'accepte les{' '}
-              <a href="#/cgu" target="_blank" rel="noopener" className={link}>
-                conditions d'utilisation
-              </a>{' '}
-              et la{' '}
-              <a href="#/confidentialite" target="_blank" rel="noopener" className={link}>
-                politique de confidentialité
-              </a>
-              .
-            </p>
           )}
 
           <div ref={human.box} className="mt-5 empty:hidden" />

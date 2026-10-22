@@ -735,7 +735,6 @@ function RiverainDialog({
       </DialogContent>
       {paywall && (
         <PlansDialog
-          text="Rien n'est prélevé avant la fin de votre mois offert. Le renouvellement s'active dès votre retour."
           onPay={() => savePending(ok.map((plate) => parking(found[plate].rate!, plate)))}
           onClose={() => {
             clearPending()

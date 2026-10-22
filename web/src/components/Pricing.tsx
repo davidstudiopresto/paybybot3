@@ -390,7 +390,7 @@ function graceDay(iso: string | null) {
 
 /** Full-page paywall: the offer and the way to pay on the left, the parking meter on the right. onPay runs just
  *  before leaving for Stripe. */
-export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; text: string; onPay?: () => void }) {
+export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; text?: string; onPay?: () => void }) {
   const [plan, setPlan] = useState<Plan>('yearly')
   const [busy, setBusy] = useState(false)
   const [pricing] = usePricing(true)
@@ -437,7 +437,7 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
             <Horodateur className={cn('mx-auto mt-6 h-44 lg:hidden', locked && 'opacity-50 grayscale')} />
             <div className="mx-auto w-full max-w-md lg:my-auto lg:pt-10">
               <DialogTitle className={cn(ui.title, 'mt-6 lg:mt-0')}>Choisissez votre offre</DialogTitle>
-              <DialogDescription className={ui.subtitle}>{text}</DialogDescription>
+              {text && <DialogDescription className={ui.subtitle}>{text}</DialogDescription>}
               {trialEnd && (
                 <div className="mt-6 flex items-center gap-3 rounded-2xl bg-[#e7f6ec] px-4 py-3.5 text-[#14703a]">
                   <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#1a9a4a] text-white">

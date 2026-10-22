@@ -145,7 +145,7 @@ export function PlannedPause({ ap, className }: { ap: Autopilot; className?: str
   )
 }
 
-export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () => void }) {
+export function RenewalNote({ ap, onChanged, next }: { ap: Autopilot; onChanged?: () => void; next?: string }) {
   const { end, paused } = pauseState(ap)
   if (ap.lastError)
     return (
@@ -156,9 +156,17 @@ export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () =
     )
   if (!ap.enabled) return <span className="text-destructive">Renouvellement suspendu : vérifiez dans l'application PayByPhone, puis relancez-le depuis « Gérer ».</span>
   if (paused) return <>Renouvellement en pause {end ? `jusqu'au ${dayText(end - 1)} inclus` : 'sans date de fin'}</>
+  // The next renewal: when the running ticket ends, or when a planned pause covering that moment is over.
+  let nextAt = next ? new Date(next).getTime() : null
+  const from = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
+  const to = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
+  if (nextAt && from !== null && from <= nextAt && (to === null || to > nextAt)) nextAt = to
   return (
     <>
-      Renouvelé automatiquement
+      Renouvelé chaque semaine, sans date de fin
+      {nextAt !== null && (
+        <span className="block text-ink/50">Prochain renouvellement {clock(new Date(nextAt).toISOString())}</span>
+      )}
     </>
   )
 }

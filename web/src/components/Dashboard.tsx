@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { LogOut, Repeat } from 'lucide-react'
+import { Infinity as Endless, LogOut } from 'lucide-react'
 import { Plate, vehicleType, ZonePlate, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { AccountButton } from '@/components/Account'
@@ -61,9 +61,9 @@ function Ticket({
       {renewal && (
         <div className="mt-4 flex items-start justify-between gap-4">
           <p className="flex gap-2 text-sm text-ink/70">
-            <Repeat className="mt-0.5 size-4 shrink-0 text-eu" />
+            <Endless className="mt-0.5 size-4 shrink-0 text-eu" strokeWidth={2.25} />
             <span>
-              <RenewalNote ap={renewal} onChanged={onRefresh} />
+              <RenewalNote ap={renewal} onChanged={onRefresh} next={session.expire} />
             </span>
           </p>
           <ManageRenewal ap={renewal} onChanged={onRefresh} demo={demo} />

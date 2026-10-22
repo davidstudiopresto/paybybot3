@@ -246,16 +246,21 @@ function Testimonials() {
 }
 
 /** Public home page: one message, the automatic renewal. */
-export function Landing({ hosted }: { hosted: boolean }) {
+/** The home page: the v1 hero alone (no sections below). */
+export function Home({ hosted }: { hosted: boolean }) {
+  return <Landing hosted={hosted} heroOnly />
+}
+
+export function Landing({ hosted, heroOnly = false }: { hosted: boolean; heroOnly?: boolean }) {
   const cta = useRef<HTMLAnchorElement>(null)
   const sticky = useStickyCta(cta)
   return (
-    <div className="flex min-h-dvh flex-col overflow-x-clip bg-white pb-20 lg:pb-0">
+    <div className={cn("flex min-h-dvh flex-col overflow-x-clip bg-white lg:pb-0", !heroOnly && "pb-20")}>
       <PublicTopBar />
 
       {/* Centered hero filling the window on a computer (under the 4rem top bar): the kicker as a pill, the title on
           two lines (the first in the brand gradient), then the call to action. */}
-      <section className="rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-20">
+      <section className={cn("rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-20", heroOnly && "flex flex-1 items-center pb-16")}>
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center text-center">
           <h1 className="font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
@@ -280,6 +285,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
         </div>
       </section>
 
+      {!heroOnly && (
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24 sm:px-8">
 
         <HowItWorks />
@@ -324,10 +330,12 @@ export function Landing({ hosted }: { hosted: boolean }) {
           <Faq className="mt-10 lg:mt-14" />
         </section>
       </main>
+      )}
 
       <HostedFooter className="px-6 pb-8" hosted={hosted} />
 
       {/* Phones: the main action stays at hand once the hero button has scrolled away. */}
+      {!heroOnly && (
       <div
         className={cn(
           'fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-white/90 pr-20 pl-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md transition duration-300 lg:hidden',
@@ -339,6 +347,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
           {TRY_LABEL} <ArrowRight className="size-5" />
         </a>
       </div>
+      )}
     </div>
   )
 }

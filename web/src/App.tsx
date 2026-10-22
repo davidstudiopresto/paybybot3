@@ -4,8 +4,7 @@ import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import { Dashboard } from '@/components/Dashboard'
 import { LoginView } from '@/components/LoginView'
-import { FaqView } from '@/components/Landing'
-import { Home } from '@/components/Home'
+import { FaqView, Home } from '@/components/Landing'
 import { PayWizard } from '@/components/PayWizard'
 import { SecurityPage } from '@/components/SecurityPage'
 import { AdminPage } from '@/components/Admin'
@@ -200,7 +199,7 @@ export default function App() {
             }}
           />
         ) : (
-          <Home />
+          <Home hosted={hosted} />
         )
       ) : (onboarding && (!data || !zoneReady)) || !data ? (
         <Loading

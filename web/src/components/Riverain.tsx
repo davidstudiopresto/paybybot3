@@ -390,18 +390,21 @@ export function ActivateRenewal({
   hosted = false,
   demo = false,
   plate,
+  label = 'Activer le renouvellement résident',
 }: {
   data: Overview | null
   onChanged: () => void
   hosted?: boolean
   demo?: boolean
   plate?: string
+  /** A ticket is running: the renewal only takes over when it ends. */
+  label?: string
 }) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <ShinyButton onClick={() => setOpen(true)} disabled={!data} className="flex h-14 w-full items-center justify-center rounded-xl border border-eu/30 bg-eu/[0.07] px-6 text-lg font-bold text-eu hover:bg-eu/[0.1] disabled:opacity-50">
-        Activer le renouvellement résident
+        {label}
       </ShinyButton>
       {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} plate={plate} />}
     </>

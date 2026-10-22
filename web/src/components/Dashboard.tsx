@@ -25,11 +25,14 @@ function Ticket({
   now,
   data,
   onRefresh,
+  hosted,
+  demo,
 }: {
   session: Session
   now: number
   data: Overview
   onRefresh: () => Promise<void>
+  hosted: boolean
   demo: boolean
 }) {
   const renewal = renewalOf(data, session)
@@ -69,6 +72,11 @@ function Ticket({
         </div>
       )}
       {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} className="mt-4" />}
+      {!renewal && (
+        <div className="mt-5">
+          <ActivateRenewal data={data} onChanged={onRefresh} hosted={hosted} demo={demo} plate={session.plate} label="Automatiser le renouvellement" />
+        </div>
+      )}
     </article>
   )
 }
@@ -88,7 +96,8 @@ function IdleVehicles({ data, onChanged, hosted, demo }: { data: Overview; onCha
     }
   }, [data.vehicles.length])
   const renewed = new Set(data.autopilots.filter((ap) => ap.label === WEEKLY_LABEL).map((ap) => key(ap.plate)))
-  const cars = data.vehicles.filter((v) => !renewed.has(key(v.plate)))
+  const parked = new Set(data.sessions.filter((s) => new Date(s.expire).getTime() > Date.now()).map((s) => key(s.plate)))
+  const cars = data.vehicles.filter((v) => !renewed.has(key(v.plate)) && !parked.has(key(v.plate)))
   if (!cars.length) return null
   const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
   return (
@@ -226,20 +235,21 @@ export function Dashboard({
               : "Aucun véhicule n'est couvert en ce moment."}
         </p>
 
-        {/* No ticket: one card per car (the ones a renewal does not already list below). */}
-        {data && sessions.length === 0 && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />}
-
         {data && sessions.length > 0 && (
           <div className="mt-6 space-y-3">
             {sessions.map((s) => (
-              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} demo={me.demo} />
+              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} hosted={!!me.hosted} demo={me.demo} />
             ))}
           </div>
         )}
 
         {/* The renewal is the one action of the app: no one-off payment button. */}
-        {/* Without a ticket nor a renewal, each car's card already has the button. */}
-        {!(data && sessions.length === 0 && !renewing && data.vehicles.length > 0) && (
+        {/* The cars with neither a ticket nor a renewal: one card each, with its button. */}
+        {data && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />}
+
+        {/* Every car's card has its own button: this block only lists renewals without a ticket (or offers one
+            when PayByPhone lists no car). */}
+        {(renewing || !data?.vehicles.length) && (
           <div className={renewing ? 'mt-6' : 'mt-10 border-t border-border pt-8'}>
             <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
           </div>

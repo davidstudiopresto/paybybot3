@@ -700,9 +700,9 @@ function RiverainDialog({
                         // Its running ticket, in red: when it ends and the hours left, to show why to activate now.
                         const t = data.sessions.find((x) => samePlate(x.plate, plate) && new Date(x.expire).getTime() > Date.now())
                         return t ? (
-                          <span className="mt-2 flex items-center gap-1.5 text-sm font-medium text-destructive">
-                            <Ticket className="size-4 shrink-0" /> Ticket en cours : expire {clock(t.expire)} · encore{' '}
-                            {remaining(new Date(t.expire).getTime() - Date.now())}
+                          <span className="mt-2 flex items-center gap-1.5 text-[0.8rem] font-medium text-destructive">
+                            <Ticket className="size-4 shrink-0" /> Ticket en cours : expire {clock(t.expire)} ·{' '}
+                            {remaining(new Date(t.expire).getTime() - Date.now()).replace(/ h /, 'h').replace(/ /g, '\u00a0')} restant
                           </span>
                         ) : null
                       })()}

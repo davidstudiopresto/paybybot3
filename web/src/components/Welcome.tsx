@@ -113,7 +113,6 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                       <ZonePlate zone={v.zone} />
                     </span>
                   ))}
-                  <span className="text-sm text-ink/55">Arrondissement trouvé sur votre compte <PayByPhone /></span>
                 </span>
               ) : (
                 <span className="text-ink/60">

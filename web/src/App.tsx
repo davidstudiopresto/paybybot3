@@ -37,6 +37,7 @@ export default function App() {
   const [route, setRoute] = useState(() => routeFromHash(window.location.hash))
   // Right after "S'inscrire": open the renewal setup on the dashboard.
   const [onboarding, setOnboarding] = useState(false)
+  const [autoRenew, setAutoRenew] = useState(false) // past the welcome page: the renewal opens by itself
   const [zoneReady, setZoneReady] = useState(true)
 
   useEffect(() => {
@@ -212,7 +213,14 @@ export default function App() {
           }}
         />
       ) : onboarding ? (
-        <Welcome me={me} data={data} onContinue={() => setOnboarding(false)} />
+        <Welcome
+          me={me}
+          data={data}
+          onContinue={() => {
+            setOnboarding(false)
+            setAutoRenew(true)
+          }}
+        />
       ) : (
         <>
           <Dashboard
@@ -225,6 +233,7 @@ export default function App() {
               setMe(null)
             }}
             me={me}
+            autoRenew={autoRenew}
             data={data}
             onRefresh={refresh}
             onPay={() => setPaying(true)}

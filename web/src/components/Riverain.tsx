@@ -387,6 +387,7 @@ export function ActivateRenewal({
   demo = false,
   plate,
   label = 'Activer le renouvellement résident',
+  autoOpen = false,
 }: {
   data: Overview | null
   onChanged: () => void
@@ -395,8 +396,10 @@ export function ActivateRenewal({
   plate?: string
   /** A ticket is running: the renewal only takes over when it ends. */
   label?: string
+  /** Just signed up: the dialog opens by itself, like Frequens (then the offer, then the renewal). */
+  autoOpen?: boolean
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(!!autoOpen && !!data)
   return (
     <>
       <ShinyButton onClick={() => setOpen(true)} disabled={!data} className="flex h-14 w-full items-center justify-center rounded-xl border border-eu/30 bg-eu/[0.07] px-6 text-lg font-bold text-eu hover:bg-eu/[0.1] disabled:opacity-50">

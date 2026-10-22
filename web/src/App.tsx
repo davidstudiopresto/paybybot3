@@ -13,7 +13,7 @@ import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal
 import { NotFoundPage } from '@/components/NotFound'
 import { Welcome } from '@/components/Welcome'
 import { InviteGate } from '@/components/InviteGate'
-import { captureInvite, forgetInvite } from '@/lib/invite'
+import { captureInvite, forgetInvite, isMember, markMember } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
@@ -94,6 +94,11 @@ export default function App() {
     history.replaceState(null, '', window.location.pathname)
     toast.success('Compte débloqué : le renouvellement reprend.')
   }, [])
+
+  // Signed in (not the demo): this device may sign in again later without an invitation link.
+  useEffect(() => {
+    if (me && !me.demo) markMember()
+  }, [me])
 
   useEffect(() => {
     api.me().then(setMe, () => setMe(null))
@@ -194,8 +199,9 @@ export default function App() {
         legal === 'securite' ? <SecurityPage hosted={hosted} signedIn={!!me} /> : <LegalView page={legal} hosted={hosted} signedIn={!!me} />
       ) : me === undefined || (inviteOnly && !me && invited === null) ? (
         <Loading />
-      ) : inviteOnly && !me && invited !== 'yes' ? (
-        // Not invited: the home page, blurred, asks for a user's link (signing in too goes through one).
+      ) : inviteOnly && !me && invited !== 'yes' && (!isMember() || route === 'inscription') ? (
+        // Not invited: the home page, blurred, asks for a user's link. A device signed in before stays open to sign
+        // in again, but signing up always needs a link.
         <InviteGate hosted={hosted} invalid={invited === 'invalid'} />
       ) : route === 'admin' ? (
         <AdminPage signedIn={!!me} />

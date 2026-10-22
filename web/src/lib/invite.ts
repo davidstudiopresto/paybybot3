@@ -33,3 +33,22 @@ export function forgetInvite() {
     // nothing kept
   }
 }
+
+/** This device has been signed in before: the site stays open to sign in again (signing up still needs a link). */
+const MEMBER = 'pbb_member'
+
+export function markMember() {
+  try {
+    localStorage.setItem(MEMBER, '1')
+  } catch {
+    // private window: nothing kept
+  }
+}
+
+export function isMember(): boolean {
+  try {
+    return localStorage.getItem(MEMBER) === '1'
+  } catch {
+    return false
+  }
+}

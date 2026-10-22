@@ -3,7 +3,7 @@ import { Check, Loader2, Mail, Pause, Play, Repeat, RotateCw } from 'lucide-reac
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
-import { arrondissement, Plate, withPayByPhone, ZonePlate } from '@/components/signs'
+import { arrondissement, PayByBot, Plate, withPayByPhone, ZonePlate } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { PlansDialog } from '@/components/Pricing'
 import { ShinyButton } from '@/components/ui/shiny-button'
@@ -1183,7 +1183,7 @@ export function ResidentRequired({
       title="Stationnement résident requis"
       intro={
         <>
-          Pour accéder aux services PayByBot,{' '}
+          Pour accéder aux services <PayByBot />,{' '}
           {vehicles === 1 ? 'votre véhicule doit' : 'au moins un de vos véhicules doit'} bénéficier du tarif résident sur
           votre compte {withPayByPhone('PayByPhone')}
           {where ? ` (${where})` : ''}.{' '}
@@ -1211,7 +1211,7 @@ export function CardRequired({ children }: { children: ReactNode }) {
       title="Carte bancaire requise"
       intro={
         <>
-          Pour renouveler votre forfait automatiquement, PayByBot paie avec une carte bancaire enregistrée sur votre compte{' '}
+          Pour renouveler votre forfait automatiquement, <PayByBot /> paie avec une carte bancaire enregistrée sur votre compte{' '}
           {withPayByPhone('PayByPhone')}. Aucune carte n’y est enregistrée pour le moment. Apple Pay et Google Pay ne
           permettent pas le paiement automatique : ils demandent une validation sur votre téléphone à chaque paiement.
         </>

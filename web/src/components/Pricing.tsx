@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
 import { NoResidentStatus } from '@/components/Riverain'
-import { PayByPhone, Plate, Wordmark } from '@/components/signs'
+import { PayByBot, PayByPhone, Plate, Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { api, type Pricing } from '@/lib/api'
@@ -285,7 +285,7 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
           <PlanCards signedIn={signedIn} />
         </div>
         <p className="mt-8 text-center text-sm text-ink/50">
-          Un seul oubli coûte plus cher que 3 mois de PayByBot. Prix TTC, sans engagement.
+          Un seul oubli coûte plus cher que 3 mois de <PayByBot />. Prix TTC, sans engagement.
         </p>
       </main>
       <HostedFooter className="px-6 pb-8" hosted={hosted} />

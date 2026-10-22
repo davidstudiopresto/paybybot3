@@ -227,7 +227,7 @@ function Testimonials() {
         Ils nous font confiance.
       </h2>
       <p className="mt-5 text-center text-lg text-ink/60">
-        <CountUp to={100} className="font-heading text-2xl font-semibold text-eu" /> résidents parisiens utilisent PayByBot
+        <CountUp to={100} className="font-heading text-2xl font-semibold text-eu" /> résidents parisiens utilisent <PayByBot />
       </p>
       <div className="relative left-1/2 mt-16 w-screen lg:mt-24 -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
         <ul className="marquee flex w-max gap-4">
@@ -278,10 +278,14 @@ export function Landing({ hosted, heroOnly = false }: { hosted: boolean; heroOnl
           >
             {TRY_LABEL} <ArrowRight className="size-5" />
           </a>
-          <p className="mt-4 text-sm text-ink/55">
-            Une amende : jusqu’à 125 €. <PayByBot /> : dès 4,90 €/mois.
-          </p>
-          <TrustRow className="mt-14 lg:mt-20" />
+          {!heroOnly && (
+            <>
+              <p className="mt-4 text-sm text-ink/55">
+                Une amende : jusqu’à 125 €. <PayByBot /> : dès 4,90 €/mois.
+              </p>
+              <TrustRow className="mt-14 lg:mt-20" />
+            </>
+          )}
         </div>
       </section>
 

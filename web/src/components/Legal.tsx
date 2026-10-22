@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { ArrowLeft, Check, X } from 'lucide-react'
-import { PayByPhone, withPayByPhone } from '@/components/signs'
+import { PayByBot, PayByPhone, withPayByPhone } from '@/components/signs'
 
 /** Who publishes paybybot. Shown in the legal pages. */
 export const PUBLISHER = {
@@ -101,7 +101,7 @@ export function SecurityDetails() {
           données, ni fichier, ni journal.
         </p>
         <p>
-          Pour payer, PayByBot demande à <PayByPhone /> de prendre le ticket avec la carte enregistrée dans votre compte
+          Pour payer, <PayByBot /> demande à <PayByPhone /> de prendre le ticket avec la carte enregistrée dans votre compte
           <PayByPhone />. Le paiement est fait par <PayByPhone />, au même tarif que dans son application. Le ticket apparaît dans
           votre application <PayByPhone /> comme si vous l’aviez pris vous-même.
         </p>
@@ -123,10 +123,10 @@ export function SecurityDetails() {
         />
         <p>
           Vos véhicules, vos tickets et vos moyens de paiement ne sont pas copiés : ils sont lus chez <PayByPhone /> au moment
-          où vous ouvrez PayByBot, pour les afficher.
+          où vous ouvrez <PayByBot />, pour les afficher.
         </p>
         <p>
-          Sur votre appareil, PayByBot retient aussi votre dernière zone, dernier véhicule et dernière carte pour pré-remplir le prochain
+          Sur votre appareil, <PayByBot /> retient aussi votre dernière zone, dernier véhicule et dernière carte pour pré-remplir le prochain
           paiement. Elles ne quittent pas votre navigateur.
         </p>
       </Section>
@@ -135,9 +135,9 @@ export function SecurityDetails() {
         <ul>
           <li>Connexion chiffrée (HTTPS) partout, imposée par le navigateur.</li>
           <li>Une clé de chiffrement différente pour chaque usage : une fuite de l’une ne débloque pas les autres.</li>
-          <li>Base de données fermée : elle n’est accessible qu’au serveur de PayByBot, avec un jeton secret.</li>
+          <li>Base de données fermée : elle n’est accessible qu’au serveur de <PayByBot />, avec un jeton secret.</li>
           <li>Nombre de tentatives de connexion limité, pour empêcher de deviner des mots de passe.</li>
-          <li>Requêtes venant d’un autre site refusées, et PayByBot ne peut pas être affiché dans la page d’un autre site.</li>
+          <li>Requêtes venant d’un autre site refusées, et <PayByBot /> ne peut pas être affiché dans la page d’un autre site.</li>
           <li>
             Renouvellement automatique prudent : si <PayByPhone /> ne confirme pas un paiement, il se met en pause au lieu de
             réessayer, pour ne jamais payer deux fois.
@@ -156,7 +156,7 @@ export function SecurityDetails() {
             ne contiennent aucun suivi d’ouverture ni de clic.
           </li>
           <li>
-            Changer votre mot de passe <PayByPhone /> met fin à l’accès de PayByBot : il faudra vous reconnecter pour l’utiliser
+            Changer votre mot de passe <PayByPhone /> met fin à l’accès de <PayByBot /> : il faudra vous reconnecter pour l’utiliser
             à nouveau.
           </li>
           <li>
@@ -209,13 +209,13 @@ function Privacy() {
   return (
     <>
       <p>
-        Cette politique est propre à PayByBot. Elle explique quelles données le service traite, pourquoi, combien de temps,
+        Cette politique est propre à <PayByBot />. Elle explique quelles données le service traite, pourquoi, combien de temps,
         et quels sont vos droits, au sens du Règlement général sur la protection des données (RGPD).
       </p>
 
       <Section title="1. Qui est responsable">
         <p>
-          PayByBot appartient à {PUBLISHER.name}, responsable du traitement au sens du RGPD (coordonnées dans les{' '}
+          <PayByBot /> appartient à {PUBLISHER.name}, responsable du traitement au sens du RGPD (coordonnées dans les{' '}
           <a href="#/mentions-legales" className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
             mentions légales
           </a>
@@ -239,7 +239,7 @@ function Privacy() {
             <PayByPhone /> pour prendre le ticket.
           </li>
           <li>
-            <strong>Compte PayByBot :</strong> votre e-mail, vérifié par un code à l’inscription, et votre zone de
+            <strong>Compte <PayByBot /> :</strong> votre e-mail, vérifié par un code à l’inscription, et votre zone de
             résidence, chiffrés ; une empreinte de votre identifiant ; si vous vous abonnez, l’offre choisie et les
             identifiants de client et d’abonnement Stripe, chiffrés.
           </li>
@@ -258,7 +258,7 @@ function Privacy() {
             plaque masqués.
           </li>
         </ul>
-        <p>PayByBot ne conserve ni nom, ni adresse postale, et ne voit jamais votre numéro de carte.</p>
+        <p><PayByBot /> ne conserve ni nom, ni adresse postale, et ne voit jamais votre numéro de carte.</p>
       </Section>
 
       <Section title="3. Pourquoi, et sur quelle base">
@@ -274,7 +274,7 @@ function Privacy() {
           </li>
           <li>
             <strong>Sécuriser le service</strong> (limite de tentatives, journaux, prévention des paiements en double) :
-            intérêt légitime de PayByBot à protéger ses utilisateurs (article 6.1.f).
+            intérêt légitime de <PayByBot /> à protéger ses utilisateurs (article 6.1.f).
           </li>
         </ul>
         <p>
@@ -302,7 +302,7 @@ function Privacy() {
           </li>
           <li>
             <strong>Stripe</strong>, pour le paiement de l’abonnement : il reçoit votre e-mail et les données de votre
-            carte, que PayByBot ne voit jamais, et conserve les factures selon ses obligations légales.
+            carte, que <PayByBot /> ne voit jamais, et conserve les factures selon ses obligations légales.
           </li>
         </ul>
         <p>
@@ -319,7 +319,7 @@ function Privacy() {
             Jetons de connexion (cookie) : 12 heures sans activité, 24 heures au plus ; 30 jours si vous cochez « Se
             souvenir de moi ».
           </li>
-          <li>Compte PayByBot (e-mail, zone de résidence) : jusqu’à la suppression du compte.</li>
+          <li>Compte <PayByBot /> (e-mail, zone de résidence) : jusqu’à la suppression du compte.</li>
           <li>Renouvellement résident, y compris l’e-mail : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
           <li>Tentatives de connexion : 24 heures au plus.</li>
           <li>E-mails envoyés : conservés par Resend pour une durée limitée, le temps d’assurer leur bonne livraison.</li>
@@ -329,9 +329,9 @@ function Privacy() {
 
       <Section title="6. Cookies et stockage local">
         <p>
-          PayByBot utilise le cookie <strong>pbb_session</strong>, strictement nécessaire pour rester connecté, et,
+          <PayByBot /> utilise le cookie <strong>pbb_session</strong>, strictement nécessaire pour rester connecté, et,
           pendant l’inscription, <strong>pbb_pending</strong> (10 minutes, le temps de saisir le code). Ils ne servent
-          pas au suivi et ne nécessitent donc pas de consentement. PayByBot n’utilise aucun cookie publicitaire ni outil
+          pas au suivi et ne nécessitent donc pas de consentement. <PayByBot /> n’utilise aucun cookie publicitaire ni outil
           de mesure d’audience.
         </p>
         <p>
@@ -373,13 +373,13 @@ function Terms() {
   return (
     <>
       <p>
-        Ces conditions encadrent l’utilisation de PayByBot. En vous connectant avec votre compte <PayByPhone />, vous les
+        Ces conditions encadrent l’utilisation de <PayByBot />. En vous connectant avec votre compte <PayByPhone />, vous les
         acceptez.
       </p>
 
       <Section title="1. Le service">
         <p>
-          PayByBot, service appartenant à {PUBLISHER.name}, est une interface qui permet de piloter son propre compte <PayByPhone /> :
+          <PayByBot />, service appartenant à {PUBLISHER.name}, est une interface qui permet de piloter son propre compte <PayByPhone /> :
           payer un stationnement, prolonger un ticket en cours et, si vous l’activez, renouveler automatiquement un forfait
           résident chaque semaine. Le service est payant après un mois offert (voir « Abonnement et paiement »).
         </p>
@@ -387,7 +387,7 @@ function Terms() {
 
       <Section title="2. Indépendance vis-à-vis de PayByPhone">
         <p>
-          PayByBot est un service indépendant, non affilié à <PayByPhone />, ni approuvé ou soutenu par <PayByPhone />. Les noms et
+          <PayByBot /> est un service indépendant, non affilié à <PayByPhone />, ni approuvé ou soutenu par <PayByPhone />. Les noms et
           marques cités appartiennent à leurs propriétaires. Votre compte, vos tickets et vos paiements restent soumis aux
           conditions de <PayByPhone />, que vous acceptez directement auprès de <PayByPhone />.
         </p>
@@ -395,14 +395,14 @@ function Terms() {
 
       <Section title="3. Mandat">
         <p>
-          En utilisant PayByBot, vous l’autorisez à transmettre en votre nom à <PayByPhone /> les demandes que vous faites
+          En utilisant <PayByBot />, vous l’autorisez à transmettre en votre nom à <PayByPhone /> les demandes que vous faites
           (paiement, prolongation) et, si vous activez le renouvellement résident, à prendre automatiquement un nouveau
           ticket à l’expiration du précédent, avec le véhicule, la zone, le tarif, la durée et le moyen de paiement que vous
           avez choisis, jusqu’à ce que vous l’arrêtiez.
         </p>
         <p>
-          Les tickets sont achetés par vous, depuis votre compte <PayByPhone />, au tarif de <PayByPhone />. PayByBot n’encaisse pas
-          le prix des tickets : seul l’abonnement à PayByBot est facturé (voir « Abonnement et paiement »).
+          Les tickets sont achetés par vous, depuis votre compte <PayByPhone />, au tarif de <PayByPhone />. <PayByBot /> n’encaisse pas
+          le prix des tickets : seul l’abonnement à <PayByBot /> est facturé (voir « Abonnement et paiement »).
         </p>
       </Section>
 
@@ -435,18 +435,18 @@ function Terms() {
         </p>
         <p>
           Vous pouvez le mettre en pause entre deux dates, ou sans date de fin : aucun paiement n’est fait pendant la pause, et
-          il reprend tout seul à la fin. Une semaine déjà payée avant le début de la pause n’est pas remboursée. PayByBot vous envoie par e-mail une confirmation à chaque paiement et
+          il reprend tout seul à la fin. Une semaine déjà payée avant le début de la pause n’est pas remboursée. <PayByBot /> vous envoie par e-mail une confirmation à chaque paiement et
           une alerte en cas de problème ; ces e-mails sont informatifs et ne remplacent pas la vérification de votre
           stationnement.
         </p>
         <p>
           Il peut ne pas aboutir, par exemple si votre connexion <PayByPhone /> a expiré, si votre carte est refusée, si votre
-          droit au tarif résident a pris fin ou si <PayByPhone /> modifie son service. Dans ces cas, PayByBot l’indique sur votre
+          droit au tarif résident a pris fin ou si <PayByPhone /> modifie son service. Dans ces cas, <PayByBot /> l’indique sur votre
           tableau de bord, vous prévient par e-mail et réessaie automatiquement. Si votre banque refuse à nouveau, ou si un
           paiement n’est pas confirmé par <PayByPhone />, le renouvellement est suspendu pour éviter un double paiement.
         </p>
         <p>
-          En cas d’échec d’un paiement, PayByBot vous en informera par e-mail. Le paiement de votre stationnement restera
+          En cas d’échec d’un paiement, <PayByBot /> vous en informera par e-mail. Le paiement de votre stationnement restera
           sous votre responsabilité : il vous appartiendra de le régler vous-même dans l’application <PayByPhone />.
         </p>
       </Section>
@@ -457,8 +457,8 @@ function Terms() {
           fonctionnement de <PayByPhone />, qui peut évoluer à tout moment, et peut être interrompu ou arrêté.
         </p>
         <p>
-          Dans les limites permises par la loi, PayByBot et son propriétaire ne sont pas responsables des amendes ou forfaits
-          post-stationnement, des paiements refusés ou non réalisés, ni des indisponibilités de <PayByPhone /> ou de PayByBot.
+          Dans les limites permises par la loi, <PayByBot /> et son propriétaire ne sont pas responsables des amendes ou forfaits
+          post-stationnement, des paiements refusés ou non réalisés, ni des indisponibilités de <PayByPhone /> ou de <PayByBot />.
           Cette limitation ne s’applique pas en cas de faute lourde ou intentionnelle.
         </p>
       </Section>
@@ -475,7 +475,7 @@ function Terms() {
 
       <Section title="9. Code source">
         <p>
-          Le code de PayByBot est libre, sous licence MIT, et public sur{' '}
+          Le code de <PayByBot /> est libre, sous licence MIT, et public sur{' '}
           <a href={REPO_URL} target="_blank" rel="noreferrer" className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
             GitHub
           </a>
@@ -492,17 +492,17 @@ function Terms() {
           <li>
             <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC, par véhicule et par mois : voiture 9,90 € en zone 1
             (arrondissements 1 à 11) et 6,90 € en zone 2 (12 à 20) ; deux-roues 6,90 € et 4,90 €. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte bancaire, via notre
-            prestataire de paiement Stripe ; PayByBot ne voit ni ne conserve votre numéro de carte.
+            prestataire de paiement Stripe ; <PayByBot /> ne voit ni ne conserve votre numéro de carte.
           </li>
           <li>
             <strong>Changement de prix :</strong> si votre zone de résidence ou votre véhicule change, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
             effet sur la période déjà payée. Vous pouvez résilier à tout moment depuis « Mon compte ».
           </li>
           <li>
-            <strong>Arrêt d’un ticket dans PayByPhone :</strong> PayByBot n’est pas informé quand vous arrêtez vous-même
-            un ticket dans l’application <PayByPhone /> avant sa fin. Tant que le renouvellement est actif dans PayByBot,
+            <strong>Arrêt d’un ticket dans PayByPhone :</strong> <PayByBot /> n’est pas informé quand vous arrêtez vous-même
+            un ticket dans l’application <PayByPhone /> avant sa fin. Tant que le renouvellement est actif dans <PayByBot />,
             une nouvelle semaine est achetée à son prochain passage, et elle reste due. Pour ne plus rien payer, mettez
-            le renouvellement en pause ou arrêtez-le depuis PayByBot (« Gérer »). PayByBot conserve, comme justificatif,
+            le renouvellement en pause ou arrêtez-le depuis <PayByBot /> (« Gérer »). <PayByBot /> conserve, comme justificatif,
             la date et l’état de fin des tickets arrêtés avant leur terme, tels que <PayByPhone /> les indique.
           </li>
           <li>
@@ -532,7 +532,7 @@ function Terms() {
 
       <Section title="11. Arrêt, modification, droit applicable">
         <p>
-          Vous pouvez cesser d’utiliser PayByBot à tout moment. Ces conditions peuvent être modifiées ; la version en vigueur
+          Vous pouvez cesser d’utiliser <PayByBot /> à tout moment. Ces conditions peuvent être modifiées ; la version en vigueur
           est celle publiée sur cette page. Elles sont soumises au droit français. En cas de difficulté, écrivez d’abord à{' '}
           <Mailto /> pour trouver une solution amiable.
         </p>
@@ -545,7 +545,7 @@ function Notice() {
   return (
     <>
       <Section title="Propriétaire et éditeur">
-        <p>PayByBot est un service appartenant à :</p>
+        <p><PayByBot /> est un service appartenant à :</p>
         <p>
           {PUBLISHER.name}, {PUBLISHER.form}
           {PUBLISHER.capital ? ` au capital de ${PUBLISHER.capital}` : ''}
@@ -573,7 +573,7 @@ function Notice() {
       </Section>
       <Section title="Propriété intellectuelle">
         <p>
-          Le code de PayByBot est publié sous licence MIT. <PayByPhone /> est une marque de son propriétaire ; PayByBot n’est pas
+          Le code de <PayByBot /> est publié sous licence MIT. <PayByPhone /> est une marque de son propriétaire ; <PayByBot /> n’est pas
           affilié à <PayByPhone />.
         </p>
       </Section>

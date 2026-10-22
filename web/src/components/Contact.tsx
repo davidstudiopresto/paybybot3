@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowUp, Loader2, MessageCircle, X } from 'lucide-react'
+import { PayByBot } from '@/components/signs'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -103,7 +104,7 @@ function ContactWindow({ onClose }: { onClose: () => void }) {
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white">
           <img src="/favicon.svg" alt="" className="size-5" />
         </span>
-        <span className="min-w-0 flex-1 font-heading text-[0.98rem] leading-tight font-semibold">Contact PayByBot</span>
+        <span className="min-w-0 flex-1 font-heading text-[0.98rem] leading-tight font-semibold">Contact <PayByBot /></span>
         <button
           type="button"
           onClick={onClose}

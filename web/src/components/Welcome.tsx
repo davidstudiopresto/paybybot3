@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Car, Check, CreditCard, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
 import { CardGate, ResidentGate, type ResidentStatus } from '@/components/Riverain'
-import { arrondissement, PayByPhone, Plate, withPayByPhone, Wordmark, ZonePlate } from '@/components/signs'
+import { arrondissement, PayByBot, PayByPhone, Plate, withPayByPhone, Wordmark, ZonePlate } from '@/components/signs'
 import { api, until, type Me, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
@@ -19,15 +19,21 @@ function Row({
   children,
   delay,
   found = true,
+  highlight = false,
 }: {
   icon: ReactNode
   label: string
   children: ReactNode
   delay: number
   found?: boolean
+  /** The resident vehicle, what the whole service is about: framed in blue. */
+  highlight?: boolean
 }) {
   return (
-    <li className="rise flex items-start gap-4 py-4" style={{ animationDelay: `${delay}ms` }}>
+    <li
+      className={cn('rise flex items-start gap-4 py-4', highlight && 'my-3 rounded-2xl border-2 border-eu bg-eu/[0.03] px-4')}
+      style={{ animationDelay: `${delay}ms` }}
+    >
       <span className="grid size-10 shrink-0 place-items-center rounded-full bg-eu/[0.08] text-eu">{icon}</span>
       <div className="min-w-0 flex-1">
         <p className="text-sm text-ink/55">{label}</p>
@@ -83,7 +89,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             Bienvenue{me.firstName ? `, ${me.firstName}` : ''}.
           </h1>
           <p className={cn(ui.subtitle, 'rise')}>
-            Voici ce que PayByBot a retrouvé dans votre compte <PayByPhone />. Vérifiez que tout est juste.
+            Voici ce que <PayByBot /> a retrouvé dans votre compte <PayByPhone />. Vérifiez que tout est juste.
           </p>
 
           <ul className="mt-6 divide-y divide-ink/10 border-y border-ink/10">
@@ -101,6 +107,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               label={vehicles && vehicles.length > 1 ? `${vehicles.length} véhicules résidents` : 'Véhicule résident'}
               delay={next()}
               found={!!vehicles?.length}
+              highlight
             >
               {vehicles === undefined ? (
                 <span className="inline-block h-5 w-40 animate-pulse rounded bg-ink/10" />
@@ -135,9 +142,6 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                       <span key={p.id}>{p.label}</span>
                     ))}
                   </span>
-                  <span className="mt-1 block text-sm text-ink/55">
-                    Utilisée pour vos renouvellements. Apple Pay et Google Pay ne permettent pas le paiement automatique.
-                  </span>
                 </>
               ) : (
                 <span className="text-ink/60">{withPayByPhone('Aucune carte : ajoutez-en une dans l’application PayByPhone.')}</span>
@@ -157,7 +161,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
 
           <p className="rise mt-5 text-sm leading-relaxed text-ink/55" style={{ animationDelay: `${next()}ms` }}>
             Rien n’a été modifié dans votre compte <PayByPhone />, et votre mot de passe n’est pas enregistré. Un véhicule
-            ou une carte à changer ? Faites-le dans l’application <PayByPhone /> : PayByBot suit automatiquement.
+            ou une carte à changer ? Faites-le dans l’application <PayByPhone /> : <PayByBot /> suit automatiquement.
           </p>
 
           <button

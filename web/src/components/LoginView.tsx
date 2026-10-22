@@ -3,7 +3,7 @@ import { ArrowRight, Eye, EyeOff, Loader2, Lock } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { CARD_NOTE, ResidentRequired } from '@/components/Riverain'
-import { withPayByPhone } from '@/components/signs'
+import { PayByBot, withPayByPhone } from '@/components/signs'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 import { cn } from '@/lib/utils'
@@ -190,7 +190,7 @@ export function LoginView({
               title ? 'text-[2rem] sm:text-[2.2rem]' : 'text-[2.6rem]',
             )}
           >
-            {title ?? (signup ? 'Inscription' : 'Connexion à PayByBot')}
+            {title ?? (signup ? 'Inscription' : <>Connexion à <PayByBot /></>)}
           </h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
             {withPayByPhone(signup ? 'Inscription en 2 minutes, avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.')}{' '}

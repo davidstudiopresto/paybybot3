@@ -143,7 +143,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
                       {i + 1}
                     </span>
                   </span>
-                  <strong className="mt-8 block font-heading text-xl text-[#2b2f3a] lg:text-2xl">{withPayByPhone(title)}</strong>
+                  <strong className="mt-8 block font-heading text-xl font-semibold tracking-[-0.02em] text-ink lg:text-2xl">{withPayByPhone(title)}</strong>
                   <span className="mt-3 max-w-[22rem] text-[1.05rem] leading-relaxed text-ink/60 lg:text-lg">{withPayByPhone(text)}</span>
                 </li>
               )

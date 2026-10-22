@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Bike, Car, CarFront, Check, Loader2, Lock, Sparkles, X, type LucideIcon } from 'lucide-react'
+import { Bike, Car, CarFront, Check, Gift, Loader2, Lock, Sparkles, X, type LucideIcon } from 'lucide-react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
@@ -100,7 +100,8 @@ function VehiclePrices({ plan, pricing, className }: { plan: Plan; pricing: Pric
 function planText(id: Plan, pricing: Pricing) {
   return id === 'monthly'
     ? { price: euros(pricing.monthly!), per: '/ mois', note: 'Sans engagement' }
-    : { price: euros(pricing.yearly!), per: '/ an', note: `Soit ${euros(Math.round(pricing.yearly! / 12))} par mois` }
+    : // The yearly plan shown per month (what people compare), the yearly total small underneath.
+      { price: euros(Math.round(pricing.yearly! / 12)), per: '/ mois', note: `Soit ${euros(pricing.yearly!)} / an` }
 }
 
 const INCLUDED = [
@@ -394,6 +395,17 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
   const [busy, setBusy] = useState(false)
   const [pricing] = usePricing(true)
   const locked = pricing?.resident === false
+  // Still in the free month: nothing is charged before its end (Stripe starts billing then).
+  const [trialEnd, setTrialEnd] = useState<Date | null>(null)
+  useEffect(() => {
+    api.account().then(
+      (a) => {
+        const end = a.trialEnd ? new Date(a.trialEnd) : null
+        setTrialEnd(end && end.getTime() > Date.now() ? end : null)
+      },
+      () => {},
+    )
+  }, [])
 
   async function pay() {
     setBusy(true)
@@ -426,6 +438,19 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
             <div className="mx-auto w-full max-w-md lg:my-auto lg:pt-10">
               <DialogTitle className={cn(ui.title, 'mt-6 lg:mt-0')}>Choisissez votre offre</DialogTitle>
               <DialogDescription className={ui.subtitle}>{text}</DialogDescription>
+              {trialEnd && (
+                <div className="mt-6 flex items-center gap-3 rounded-2xl bg-[#e7f6ec] px-4 py-3.5 text-[#14703a]">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#1a9a4a] text-white">
+                    <Gift className="size-5" />
+                  </span>
+                  <span>
+                    <span className="block font-heading text-lg leading-tight font-bold">1er mois offert</span>
+                    <span className="block text-sm text-[#14703a]/80">
+                      Rien à payer avant le {trialEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
+                    </span>
+                  </span>
+                </div>
+              )}
 
               {locked && <NoResidentStatus zone={pricing.zone} className="mt-8" />}
               {/* No resident status on PayByPhone: the offer stays visible but greyed and out of reach. */}

@@ -1,11 +1,9 @@
 import { Mail } from 'lucide-react'
 import { Home } from '@/components/Landing'
 import { PayByBot } from '@/components/signs'
-import { ui } from '@/lib/styles'
-import { cn } from '@/lib/utils'
 
-/** Word of mouth only: without a user's link, the home page stays blurred behind this card. Existing users still
- *  sign in. */
+/** Word of mouth only: without a user's link, the home page stays blurred behind this card (no way in, not even to
+ *  sign in: the link is kept on the device once opened). */
 export function InviteGate({ hosted, invalid = false }: { hosted: boolean; invalid?: boolean }) {
   return (
     <div className="relative min-h-dvh overflow-hidden">
@@ -28,9 +26,6 @@ export function InviteGate({ hosted, invalid = false }: { hosted: boolean; inval
             )}{' '}
             Demandez son lien d’invitation à un proche qui l’utilise déjà.
           </p>
-          <a href="#/connexion" className={cn('mt-6', ui.primaryGray)}>
-            Déjà inscrit ? Se connecter
-          </a>
         </div>
       </div>
     </div>

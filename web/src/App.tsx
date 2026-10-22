@@ -194,8 +194,8 @@ export default function App() {
         legal === 'securite' ? <SecurityPage hosted={hosted} signedIn={!!me} /> : <LegalView page={legal} hosted={hosted} signedIn={!!me} />
       ) : me === undefined || (inviteOnly && !me && invited === null) ? (
         <Loading />
-      ) : inviteOnly && !me && invited !== 'yes' && route !== 'connexion' ? (
-        // Not invited: the home page, blurred, asks for a user's link; signing in stays open.
+      ) : inviteOnly && !me && invited !== 'yes' ? (
+        // Not invited: the home page, blurred, asks for a user's link (signing in too goes through one).
         <InviteGate hosted={hosted} invalid={invited === 'invalid'} />
       ) : route === 'admin' ? (
         <AdminPage signedIn={!!me} />

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { ArrowRight, BellRing, CreditCard, Headset, Pause, Link2, Plus, RefreshCw, ShieldCheck, Trash2, type LucideIcon } from 'lucide-react'
+import { ArrowRight, BellRing, Star, CreditCard, Headset, Pause, Link2, Plus, RefreshCw, ShieldCheck, Trash2, type LucideIcon } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -34,8 +34,11 @@ const STEPS = [
 
 /**
  * Real users' feedback only, given with their consent: [first name and last-name initial, e.g. « Charles H. », one sentence].
- * The section stays hidden while the list is empty.
+ * The section stays hidden while the list is empty. A photo goes in TESTIMONIAL_PHOTOS under the same name (a file in
+ * web/public/avis/, e.g. '/avis/julie.jpg'); without one, the initials are shown.
  */
+const TESTIMONIAL_PHOTOS: Record<string, string> = {}
+
 const TESTIMONIALS: [string, string, string][] = [
   ['Julie M.', 'Résident Paris 6', 'J’oubliais toujours le ticket résident. Là, ça se renouvelle tout seul.'],
   ['Thomas B.', 'Résident Paris 8', 'Ma voiture bouge peu et j’oubliais de renouveler. Plus maintenant.'],
@@ -197,9 +200,25 @@ function Testimonials() {
   if (!SHOW_TESTIMONIALS || !TESTIMONIALS.length) return null
   const card = (name: string, place: string, text: string, key: string, copy = false) => (
     <li key={key} aria-hidden={copy || undefined} className="w-[22rem] shrink-0 rounded-2xl border border-ink/10 bg-ink/[0.02] p-6">
-      <p className="font-semibold text-ink">{name}</p>
-      {place && <p className="text-sm text-ink/50">{place}</p>}
-      <p title={text} className="mt-3 line-clamp-2 leading-relaxed text-ink/70">{withPayByPhone(text)}</p>
+      <div className="flex items-center gap-3">
+        {TESTIMONIAL_PHOTOS[name] ? (
+          <img src={TESTIMONIAL_PHOTOS[name]} alt="" className="size-11 shrink-0 rounded-full object-cover" />
+        ) : (
+          <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-full bg-eu/[0.08] font-heading text-sm font-semibold text-eu">
+            {name.replace(/[^A-ZÀ-Ý]/g, '').slice(0, 2)}
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="font-semibold text-ink">{name}</p>
+          {place && <p className="text-sm text-ink/50">{place}</p>}
+        </div>
+      </div>
+      <p className="mt-3 flex gap-0.5 text-[#f5b301]" aria-label="5 étoiles sur 5">
+        {Array.from({ length: 5 }, (_, i) => (
+          <Star key={i} className="size-4 fill-current" strokeWidth={0} />
+        ))}
+      </p>
+      <p title={text} className="mt-2 line-clamp-2 leading-relaxed text-ink/70">{withPayByPhone(text)}</p>
     </li>
   )
   return (

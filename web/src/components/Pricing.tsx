@@ -48,7 +48,8 @@ function PriceGrid({ plan, className }: { plan: Plan; className?: string }) {
     <table className={cn('w-full text-left text-[0.95rem]', className)}>
       <thead>
         <tr className="text-sm text-ink/50">
-          <th className="pb-3 font-normal" />
+          <th className="pb-3 text-left text-xs font-normal sm:hidden">{plan === 'monthly' ? 'Par mois' : 'Par an'}</th>
+          <th className="hidden pb-3 font-normal sm:table-cell" />
           <th className="pb-3 font-normal">
             Zone 1 <span className="block text-xs">arr. 1 à 11</span>
           </th>
@@ -61,8 +62,8 @@ function PriceGrid({ plan, className }: { plan: Plan; className?: string }) {
         {GRID.map(([name, z1, z2]) => (
           <tr key={name} className="border-t border-ink/10">
             <td className="py-3 font-semibold text-ink">{name}</td>
-            <td className="py-3 text-ink tabular-nums">{price(z1)} <span className="text-ink/50">{per}</span></td>
-            <td className="py-3 text-ink tabular-nums">{price(z2)} <span className="text-ink/50">{per}</span></td>
+            <td className="py-3 text-ink tabular-nums">{price(z1)} <span className="hidden text-ink/50 sm:inline">{per}</span></td>
+            <td className="py-3 text-ink tabular-nums">{price(z2)} <span className="hidden text-ink/50 sm:inline">{per}</span></td>
           </tr>
         ))}
       </tbody>

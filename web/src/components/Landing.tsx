@@ -174,8 +174,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
           >
             {TRY_LABEL} <ArrowRight className="size-5" />
           </a>
-          <p className="mt-4 text-sm text-ink/55">Sans carte bancaire · Sans engagement</p>
-          <p className="mt-1 text-sm text-ink/55">
+          <p className="mt-4 text-sm text-ink/55">
             Une amende : jusqu’à 125 €. <PayByBot /> : dès 4,90 €/mois.
           </p>
           <TrustRow className="mt-8" />

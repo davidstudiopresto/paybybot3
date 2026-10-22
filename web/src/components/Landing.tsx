@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { ArrowRight, CreditCard, Link2, Plus, RefreshCw, ShieldCheck, Trash2, type LucideIcon } from 'lucide-react'
+import { ArrowRight, BellRing, CreditCard, Headset, Pause, Link2, Plus, RefreshCw, ShieldCheck, Trash2, type LucideIcon } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -31,6 +31,8 @@ const FEATURES: Question[] = [
     </>,
   ],
 ]
+
+const FEATURE_ICONS = [RefreshCw, Pause, BellRing, Headset]
 
 const STEP_ICONS = [Link2, RefreshCw, ShieldCheck]
 
@@ -282,7 +284,20 @@ export function Landing({ hosted }: { hosted: boolean }) {
           <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             Fonctionnalités
           </h2>
-          <Rows items={FEATURES} openFirst className="mt-12 lg:mt-16" />
+          <ul className="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4">
+            {FEATURES.map(([title, text], i) => {
+              const Icon = FEATURE_ICONS[i]
+              return (
+                <li key={title} className="flex flex-col items-center border-b border-ink/10 pb-8 text-center">
+                  <span className="grid size-16 place-items-center rounded-full bg-eu/[0.08] text-eu">
+                    <Icon className="size-6" strokeWidth={1.75} />
+                  </span>
+                  <strong className="mt-5 block font-heading text-xl font-semibold tracking-[-0.02em] text-ink">{title}</strong>
+                  <span className="mt-2 block max-w-[17rem] leading-relaxed text-ink/60">{text}</span>
+                </li>
+              )
+            })}
+          </ul>
         </section>
 
         <Testimonials />
@@ -405,9 +420,9 @@ function FaqTitle({ as: Tag = 'h1' }: { as?: 'h1' | 'h2' }) {
 }
 
 /** One row per item, a hairline between them, "+" turning into "×" when open; one open at a time, its title in bold. */
-function Rows({ items, className, openFirst = false }: { items: Question[]; className?: string; openFirst?: boolean }) {
+function Rows({ items, className }: { items: Question[]; className?: string }) {
   return (
-    <Accordion defaultValue={openFirst ? [items[0][0]] : []} className={cn('border-t border-ink/12', className)}>
+    <Accordion className={cn('border-t border-ink/12', className)}>
       {items.map(([q, a]) => (
         <AccordionItem key={q} value={q} className="border-b border-ink/12 not-last:border-b">
           <AccordionTrigger className="group/q items-center gap-6 rounded-none py-6 text-[1.05rem] font-normal text-ink/70 transition-colors hover:text-ink hover:no-underline focus-visible:ring-0 aria-expanded:font-semibold aria-expanded:text-ink sm:text-[1.15rem] **:data-[slot=accordion-trigger-icon]:hidden">

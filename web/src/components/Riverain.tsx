@@ -6,6 +6,7 @@ import { NoPayment } from '@/components/NoPayment'
 import { arrondissement, Plate, withPayByPhone, ZonePlate } from '@/components/signs'
 import { loadLast, saveLast } from '@/components/PayWizard'
 import { PlansDialog } from '@/components/Pricing'
+import { ShinyButton } from '@/components/ui/shiny-button'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
 import { api, clock, money, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
@@ -306,9 +307,9 @@ export function RiverainCard({
   return (
     <>
       <section className="rise">
-        <button onClick={() => setOpen(true)} disabled={!data} className={ui.primary}>
+        <ShinyButton onClick={() => setOpen(true)} disabled={!data} className={cn(ui.primary, 'border-0 px-6 py-0')}>
           Activer le renouvellement résident
-        </button>
+        </ShinyButton>
       </section>
       {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
     </>

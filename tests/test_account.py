@@ -47,31 +47,49 @@ class Account(unittest.TestCase):
                       None, Response())
         self.assertEqual(e.exception.status_code, 409)
 
+    def sign_up(self):
+        fresh = web.UserSession("demo", "", demo=True)
+        fresh.demo = False
+        codes, response = [], Response()
+        with patch.object(web, "UserSession", return_value=fresh), \
+                patch.object(web, "send_code", side_effect=lambda email, code: codes.append(code)):
+            result = web.login(web.Login(username="+33612345678", password="x", signup=True, email="c@d.fr",
+                                         zone="75017"), None, response)
+        token = response.headers["set-cookie"].split("pbb_pending=")[1].split(";")[0]
+        return fresh, result, codes[0], token
+
     def test_sign_up_without_a_saved_card_still_creates_the_account(self):
         # The account then shows « Carte bancaire requise » full screen until a card is added on PayByPhone.
         fresh = web.UserSession("demo", "", demo=True)
         fresh.demo = False
         fresh.bot.get_payment_accounts = lambda: {"paymentCards": [], "paypalAccounts": []}  # e.g. Apple Pay only
-        with patch.object(web, "UserSession", return_value=fresh):
+        with patch.object(web, "UserSession", return_value=fresh), patch.object(web, "send_code") as sent:
             result = web.login(web.Login(username="+33612345678", password="x", signup=True, email="c@d.fr"), None,
                                Response())
-        self.assertEqual(result["username"], fresh.username)
-        self.assertEqual(fresh.account["email"], "c@d.fr")
+        self.assertTrue(result["pending"])
+        sent.assert_called_once()
 
-    def test_sign_up_creates_the_account_at_once(self):
-        fresh = web.UserSession("demo", "", demo=True)
-        fresh.demo = False
-        response = Response()
-        with patch.object(web, "UserSession", return_value=fresh), patch.object(web, "send_email") as mail:
-            result = web.login(web.Login(username="+33612345678", password="x", signup=True, email="c@d.fr",
-                                         zone="75017"), None, response)
-        mail.assert_not_called()  # no code to confirm the e-mail
-        self.assertFalse(result["demo"])
-        self.assertIn("pbb_session=", response.headers["set-cookie"])
+    def test_sign_up_waits_for_the_code(self):
+        fresh, result, code, token = self.sign_up()
+        self.assertTrue(result["pending"])
+        self.assertEqual(result["email"], "c•••@d.fr")
+        self.assertEqual(fresh.account, {})  # nothing created before the code
+        web.verify_signup(web.CodeCheck(code=code[:3] + " " + code[3:]), Response(), token)
         # The zone comes from PayByPhone (the demo offers the resident rate everywhere: the 1st), not the form.
         self.assertEqual({k: fresh.account[k] for k in ("email", "zone", "zone_found")},
                          {"email": "c@d.fr", "zone": "75001", "zone_found": True})
         self.assertIn("trial_start", fresh.account)  # the free month starts at sign-up
+
+    def test_wrong_code_then_too_many_tries(self):
+        _, _, code, token = self.sign_up()
+        wrong = "%06d" % ((int(code) + 1) % 10 ** 6)
+        for _ in range(web.CODE_TRIES):
+            with self.assertRaises(HTTPException) as e:
+                web.verify_signup(web.CodeCheck(code=wrong), Response(), token)
+            self.assertEqual(e.exception.status_code, 400)
+        with self.assertRaises(HTTPException) as e:  # even the right code is refused now
+            web.verify_signup(web.CodeCheck(code=code), Response(), token)
+        self.assertEqual(e.exception.status_code, 429)
 
 
 class HostedLogin(unittest.TestCase):

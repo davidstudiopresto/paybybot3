@@ -12,24 +12,10 @@ import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/
 
 /** Prunoo's four features, said only as far as PayByBot does them. */
 const FEATURES: Question[] = [
-  [
-    'Renouvellement automatique',
-    <>Votre stationnement résident est renouvelé chaque semaine, avant chaque expiration, même téléphone éteint.</>,
-  ],
-  [
-    'Pause en 1 clic',
-    <>Vous partez en vacances ? Mettez le renouvellement en pause entre deux dates, ou sans date de fin. Rien n'est payé pendant la pause.</>,
-  ],
-  [
-    'Alertes intelligentes',
-    <>En cas d'échec de paiement, vous êtes prévenu par e-mail avec la raison (carte refusée, droit résident expiré…), et vous relancez en un clic.</>,
-  ],
-  [
-    'Support',
-    <>
-      Une question ? Écrivez-nous à <a href="mailto:contact@paybybot.fr">contact@paybybot.fr</a>, 7j/7.
-    </>,
-  ],
+  ['Renouvellement automatique', <>Votre forfait résident est renouvelé chaque semaine, avant l'expiration.</>],
+  ['Pause en 1 clic', <>Vacances ? Mettez en pause entre deux dates : rien n'est payé.</>],
+  ['Alertes intelligentes', <>Un e-mail avec la raison en cas d'échec, et une relance en un clic.</>],
+  ['Support 24h/24', <>Une question ? Écrivez-nous à <a href="mailto:contact@paybybot.fr">contact@paybybot.fr</a>, 7j/7.</>],
 ]
 
 const FEATURE_ICONS = [RefreshCw, Pause, BellRing, Headset]
@@ -292,8 +278,8 @@ export function Landing({ hosted }: { hosted: boolean }) {
                   <span className="grid size-16 place-items-center rounded-full bg-eu/[0.08] text-eu">
                     <Icon className="size-6" strokeWidth={1.75} />
                   </span>
-                  <strong className="mt-5 block font-heading text-xl font-semibold tracking-[-0.02em] text-ink">{title}</strong>
-                  <span className="mt-2 block max-w-[17rem] leading-relaxed text-ink/60">{text}</span>
+                  <strong className="mt-5 block font-heading text-lg font-semibold tracking-[-0.02em] whitespace-nowrap text-ink">{title}</strong>
+                  <span className="mt-2 block max-w-[15.5rem] leading-relaxed text-ink/60">{text}</span>
                 </li>
               )
             })}

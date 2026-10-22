@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { ChevronRight } from 'lucide-react'
-import { Wordmark } from '@/components/signs'
 
 /** A brush stroke under the link, drawn by hand rather than a CSS underline. */
 function BrushUnderline() {
@@ -36,7 +35,10 @@ export function Home() {
   return (
     <div className="flex min-h-dvh flex-col bg-white px-6 py-8 text-[#1c1b19] sm:px-12 sm:py-12">
       <header className="rise">
-        <Wordmark />
+        {/* The logo in the page's serif, « By » in PayByBot's blue. */}
+        <span className="font-serif text-[1.6rem] leading-none tracking-[-0.01em]">
+          Pay<span className="text-[var(--eu)]">By</span>Bot
+        </span>
       </header>
 
       <main className="flex flex-1 flex-col justify-center py-16 sm:justify-start sm:pt-[18vh]">

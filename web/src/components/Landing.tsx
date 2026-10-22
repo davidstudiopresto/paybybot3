@@ -260,7 +260,13 @@ export function Landing({ hosted, heroOnly = false }: { hosted: boolean; heroOnl
 
       {/* Centered hero filling the window on a computer (under the 4rem top bar): the kicker as a pill, the title on
           two lines (the first in the brand gradient), then the call to action. */}
-      <section className={cn("rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-20", heroOnly && "flex flex-1 items-center pb-16")}>
+      {/* Home (hero only): the page fits the window, the footer stays in view at the bottom. */}
+      <section
+        className={cn(
+          'rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:items-center lg:py-20',
+          heroOnly ? 'flex flex-1 items-center pb-16' : 'lg:min-h-[calc(100dvh-4rem)]',
+        )}
+      >
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center text-center">
           <h1 className="font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>

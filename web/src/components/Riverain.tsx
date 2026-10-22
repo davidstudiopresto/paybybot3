@@ -163,10 +163,7 @@ export function RenewalNote({ ap, onChanged, next }: { ap: Autopilot; onChanged?
   if (nextAt && from !== null && from <= nextAt && (to === null || to > nextAt)) nextAt = to
   return (
     <>
-      Renouvelé chaque semaine, sans date de fin
-      {nextAt !== null && (
-        <span className="block text-ink/50">Prochain renouvellement {clock(new Date(nextAt).toISOString())}</span>
-      )}
+      {nextAt !== null ? `Prochain renouvellement ${clock(new Date(nextAt).toISOString())}` : 'Renouvellement automatique'}
     </>
   )
 }

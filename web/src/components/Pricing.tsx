@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Bike, Car, CarFront, Check, Star, Loader2, Lock, Sparkles, X, type LucideIcon } from 'lucide-react'
+import { Bike, Car, CarFront, Check, Loader2, Lock, Sparkles, X, type LucideIcon } from 'lucide-react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'

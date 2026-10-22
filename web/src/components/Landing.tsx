@@ -177,7 +177,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
           <p className="mt-4 text-sm text-ink/55">
             Une amende : jusqu’à 125 €. <PayByBot /> : dès 4,90 €/mois.
           </p>
-          <TrustRow className="mt-8" />
+          <TrustRow className="mt-14 lg:mt-20" />
         </div>
       </section>
 

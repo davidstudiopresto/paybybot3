@@ -57,7 +57,7 @@ export function SecurityPage({ hosted, signedIn = false }: { hosted: boolean; si
       <PublicTopBar signedIn={signedIn} />
 
       <header className="mx-auto max-w-6xl px-6 pt-16 sm:px-8 lg:pt-24">
-        <h1 className="rise font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3.4rem]">
+        <h1 className="rise font-heading text-[2.4rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[3.4rem]">
           Sécurité et données
         </h1>
         <p className="mt-4 max-w-[38rem] text-[1.05rem] text-ink/60 sm:text-lg">

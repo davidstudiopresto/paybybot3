@@ -186,7 +186,7 @@ export function LoginView({
         >
           <h1
             className={cn(
-              'font-heading leading-[1.05] font-semibold tracking-[-0.035em] text-ink',
+              'font-heading leading-[1.05] font-medium tracking-[-0.035em] text-ink',
               title ? 'text-[2rem] sm:text-[2.2rem]' : 'text-[2.6rem]',
             )}
           >
@@ -482,7 +482,7 @@ function CodeStep({
             check()
           }}
         >
-          <h1 className="font-heading text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink">
+          <h1 className="font-heading text-[2.6rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink">
             Vérifiez votre e-mail
           </h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">

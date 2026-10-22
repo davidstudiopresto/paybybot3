@@ -158,7 +158,7 @@ export function Dashboard({
 
       <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-12 pb-16">
         <p className="rise text-lg text-ink/60">{me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}</p>
-        <h1 className="rise mt-1 font-heading text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.035em]">
+        <h1 className="rise mt-1 font-heading text-[2.6rem] leading-[1.05] font-medium tracking-[-0.035em]">
           {!data ? '…' : sessions.length ? 'Vous êtes en règle.' : 'Aucun ticket en cours.'}
         </h1>
         <p className="mt-3 text-[1.05rem] text-ink/60">

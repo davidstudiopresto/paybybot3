@@ -124,7 +124,7 @@ function Testimonials() {
   )
   return (
     <section className="flex flex-col justify-center pt-10 pb-24 lg:min-h-[calc(85dvh-4rem)] lg:pt-12 lg:pb-20" aria-label="Ils nous font confiance">
-      <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+      <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
         Ils nous font confiance.
       </h2>
       <p className="mt-5 text-center text-lg text-ink/60">
@@ -186,7 +186,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
         {/* Almost a full screen on a computer: three centered steps, each an icon in a ring with its number,
             joined by a thin line. */}
         <section id="comment" className="flex scroll-mt-16 flex-col justify-center pt-24 pb-10 lg:min-h-[calc(85dvh-4rem)] lg:pt-20 lg:pb-12">
-          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             Comment ça marche
           </h2>
           <ol className="relative mt-16 grid gap-14 lg:mt-24 lg:grid-cols-3 lg:gap-12">
@@ -211,7 +211,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
 
         <section id="fonctionnalites" className="scroll-mt-16 py-10 lg:py-12">
-          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             Fonctionnalités
           </h2>
           <Rows items={FEATURES} openFirst className="mt-12 lg:mt-16" />
@@ -220,7 +220,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
         <Testimonials />
 
         <section id="tarifs" className="scroll-mt-16 py-12 lg:py-16">
-          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             Tarifs
           </h2>
           <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
@@ -330,7 +330,7 @@ const FAQ_TITLE = 'Questions fréquentes.'
 
 function FaqTitle({ as: Tag = 'h1' }: { as?: 'h1' | 'h2' }) {
   return (
-    <Tag className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+    <Tag className="text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
       {FAQ_TITLE}
     </Tag>
   )

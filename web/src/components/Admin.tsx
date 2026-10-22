@@ -72,7 +72,7 @@ export function AdminPage({ signedIn = false }: { signedIn?: boolean }) {
       <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto max-w-4xl px-6 pt-12 pb-20">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink">Admin</h1>
+          <h1 className="font-heading text-[2.4rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink">Admin</h1>
           {stats && (
             <button onClick={logout} className={ui.pillGray}>
               Se déconnecter
@@ -147,7 +147,7 @@ function AdminLoginForm({ onDone }: { onDone: () => void }) {
           submit()
         }}
       >
-        <h1 className="font-heading text-[2.2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink">Admin</h1>
+        <h1 className="font-heading text-[2.2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink">Admin</h1>
         <div className="mt-8 space-y-3">
           <input
             type="email"

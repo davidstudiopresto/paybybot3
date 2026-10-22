@@ -179,7 +179,10 @@ export function Dashboard({
           return cars.length > 0 ? (
             <div className="mt-6 flex flex-wrap gap-3">
               {cars.map((v) => (
-                <Plate key={v.plate} plate={v.plate} />
+                <div key={v.plate}>
+                  <Plate plate={v.plate} />
+                  {vehicleTypeLabel(v.type) && <p className="mt-1.5 text-sm text-ink/55">{vehicleTypeLabel(v.type)}</p>}
+                </div>
               ))}
             </div>
           ) : null
@@ -202,4 +205,15 @@ export function Dashboard({
       <HostedFooter className="px-6 pb-8" hosted={!!me.hosted} />
     </div>
   )
+}
+
+/** PayByPhone's vehicle type, in French (unknown: as given). */
+function vehicleTypeLabel(type?: string) {
+  if (!type) return null
+  if (/scooter/i.test(type)) return 'Scooter'
+  if (/moto/i.test(type)) return 'Moto'
+  if (/2\s*roues|deux[\s-]*roues|two[\s-]*wheel/i.test(type)) return 'Deux-roues'
+  if (/van|utilit|truck|camion|large|heavy/i.test(type)) return 'Utilitaire'
+  if (/car|voiture|passenger|automobile/i.test(type)) return 'Voiture'
+  return type
 }

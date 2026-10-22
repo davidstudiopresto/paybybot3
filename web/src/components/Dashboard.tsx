@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LogOut, Repeat } from 'lucide-react'
-import { Plate, ZonePlate, withPayByPhone } from '@/components/signs'
+import { Plate, vehicleType, ZonePlate, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
@@ -216,10 +216,5 @@ export function Dashboard({
 /** PayByPhone's vehicle type, in French (unknown: as given). */
 function vehicleTypeLabel(type?: string) {
   if (!type) return null
-  if (/scooter/i.test(type)) return 'Scooter'
-  if (/moto/i.test(type)) return 'Moto'
-  if (/2\s*roues|deux[\s-]*roues|two[\s-]*wheel/i.test(type)) return 'Deux-roues'
-  if (/van|utilit|truck|camion|large|heavy/i.test(type)) return 'Utilitaire'
-  if (/car|voiture|passenger|automobile/i.test(type)) return 'Voiture'
-  return type
+  return vehicleType(type) ?? type
 }

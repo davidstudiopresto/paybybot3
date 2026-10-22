@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react'
-import { Check, Mail, X } from 'lucide-react'
-import { HostedFooter } from '@/components/Footer'
-import { PublicTopBar } from '@/components/TopBar'
+import { ArrowLeft, Check, X } from 'lucide-react'
 import { PayByPhone, withPayByPhone } from '@/components/signs'
 
 /** Who publishes paybybot. Shown in the legal pages. */
@@ -43,9 +41,9 @@ export const Mailto = () => (
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mt-10">
-      <h2 className="font-heading text-xl font-bold tracking-tight">{withPayByPhone(title)}</h2>
-      <div className="mt-3 space-y-3 text-[1.05rem] leading-relaxed text-ink/85 [&_li]:ml-5 [&_li]:list-disc [&_li]:pl-1 [&_strong]:text-ink [&_ul]:space-y-1.5">
+    <section className="mt-7">
+      <h2 className="text-[0.95rem] leading-[1.5] font-semibold text-ink">{withPayByPhone(title)}</h2>
+      <div className="mt-1.5 space-y-3 text-[0.95rem] leading-[1.5] text-ink/70 [&_li]:ml-5 [&_li]:list-disc [&_li]:pl-1 [&_strong]:font-semibold [&_strong]:text-ink [&_ul]:space-y-1">
         {children}
       </div>
     </section>
@@ -201,7 +199,7 @@ function Security() {
 function Privacy() {
   return (
     <>
-      <p className="text-lg text-muted-foreground">
+      <p>
         Cette politique est propre à PayByBot. Elle explique quelles données le service traite, pourquoi, combien de temps,
         et quels sont vos droits, au sens du Règlement général sur la protection des données (RGPD).
       </p>
@@ -372,7 +370,7 @@ function Privacy() {
 function Terms() {
   return (
     <>
-      <p className="text-lg text-muted-foreground">
+      <p>
         Ces conditions encadrent l’utilisation de PayByBot. En vous connectant avec votre compte <PayByPhone />, vous les
         acceptez.
       </p>
@@ -588,35 +586,23 @@ const CONTENT: Record<LegalPage, { title: string; body: () => ReactNode }> = {
   'mentions-legales': { title: 'Mentions légales', body: Notice },
 }
 
-export function LegalView({ page, hosted, signedIn = false }: { page: LegalPage; hosted: boolean; signedIn?: boolean }) {
+/** The legal pages, like a plain document: a way back, the title, the date, then small text in one narrow column. */
+export function LegalView({ page, signedIn = false }: { page: LegalPage; hosted: boolean; signedIn?: boolean }) {
   const { title, body: Body } = CONTENT[page]
   return (
-    <div className="min-h-dvh bg-white">
-      <PublicTopBar signedIn={signedIn} />
-      <main className="mx-auto max-w-3xl px-5 pt-10 pb-20">
-        <nav className="flex flex-wrap gap-2" aria-label="Pages d'information">
-          {LEGAL_PAGES.map((p) => (
-            <a
-              key={p.id}
-              href={`#/${p.id}`}
-              aria-current={p.id === page ? 'page' : undefined}
-              className={`rounded-full border px-3 py-1 text-sm font-bold transition ${
-                p.id === page ? 'border-eu bg-eu text-white' : 'border-ink/15 text-ink/70 hover:border-ink/40'
-              }`}
-            >
-              {p.label}
-            </a>
-          ))}
-        </nav>
-        <h1 className="mt-10 font-heading text-[2.2rem] leading-[1.05] font-bold tracking-[-0.03em] sm:text-[2.6rem]">{title}</h1>
-        <p className="mt-2 text-sm text-ink/50">Mise à jour : {LEGAL_UPDATED}</p>
-        <div className="mt-8">
+    <div className="min-h-dvh bg-white text-ink">
+      <main className="max-w-[34rem] px-4 pt-5 pb-20 sm:px-6">
+        <a href="#/" className="inline-flex items-center gap-1.5 text-[0.95rem] text-ink hover:text-ink/70">
+          <ArrowLeft className="size-4" strokeWidth={1.75} /> {signedIn ? 'Mon espace' : 'Accueil'}
+        </a>
+        <h1 className="mt-9 text-[1.6rem] leading-[1.3] font-semibold tracking-[-0.01em]">{title}</h1>
+        <p className="mt-4 text-[0.95rem] text-ink/60">Dernière mise à jour le {LEGAL_UPDATED}</p>
+        <div className="mt-4 text-[0.95rem] leading-[1.5] text-ink/70 [&>p]:mt-3">
           <Body />
         </div>
-        <p className="mt-14 flex items-center gap-2 border-t border-border pt-6 text-ink/60">
-          <Mail className="size-5 shrink-0" /> Une question ? <Mailto />
+        <p className="mt-10 text-[0.95rem] leading-[1.5] text-ink/70">
+          Une question ? <Mailto />
         </p>
-        <HostedFooter className="mt-12" hosted={hosted} />
       </main>
     </div>
   )

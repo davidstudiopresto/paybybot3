@@ -32,9 +32,11 @@ export function Plate({ plate, size = 'md', className }: { plate: string; size?:
 
 /** PayByPhone's vehicle type in plain French: « Voiture », « Deux-roues », « Utilitaire »; null when unknown. */
 export function vehicleType(type?: string | null) {
+  // PayByPhone's types: Car, Motorcycle, ElectricMotorcycle, HeavyGoodsVehicle.
   if (!type) return null
+  if (/electricmotorcycle/i.test(type)) return 'Deux-roues électrique'
   if (/moto|motor|scooter|two|2\s*roues|deux|bike|cycle/i.test(type)) return 'Deux-roues'
-  if (/truck|van|utilit|commercial|lorry/i.test(type)) return 'Utilitaire'
+  if (/heavy|goods|truck|van|utilit|commercial|lorry/i.test(type)) return 'Poids lourd'
   if (/car|auto|voiture|passenger/i.test(type)) return 'Voiture'
   return null
 }

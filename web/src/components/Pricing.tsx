@@ -109,89 +109,85 @@ const INCLUDED = [
   'Annulable à tout moment',
 ]
 
-function PopularBadge() {
-  return (
-    <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-3 py-1 text-xs font-semibold text-white">
-      <Sparkles className="size-3.5" /> Plus populaire
-    </span>
-  )
-}
-
-/** The two plans side by side, the yearly one put forward: the account's own prices once signed in, else the grid. */
+/** One card, a Mensuel / Annuel switch on top (the yearly one with its 20 % off): the account's own price once signed
+ *  in, else the grid. */
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
-  const [busy, setBusy] = useState<Plan | null>(null)
+  const [plan, setPlan] = useState<Plan>('monthly')
+  const [busy, setBusy] = useState(false)
   const [pricing] = usePricing(signedIn)
   const own = signedIn && pricing?.monthly != null && pricing.yearly != null ? pricing : null
 
-  async function choose(plan: Plan) {
+  async function choose() {
     if (!signedIn) {
       window.location.hash = '#/inscription'
       return
     }
-    setBusy(plan)
+    setBusy(true)
     try {
       const { url } = await api.checkout(plan)
       window.location.assign(url)
     } catch (e) {
       toast((e as Error).message)
-      setBusy(null)
+      setBusy(false)
     }
   }
 
   return (
     <>
       {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
+      <div role="radiogroup" aria-label="Offre" className="mx-auto mb-6 flex w-fit rounded-full bg-ink/[0.06] p-1">
+        {(['monthly', 'yearly'] as Plan[]).map((id) => (
+          <button
+            key={id}
+            role="radio"
+            aria-checked={plan === id}
+            onClick={() => setPlan(id)}
+            className={cn(
+              'flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition',
+              plan === id ? 'bg-white text-ink shadow-[0_1px_3px_rgb(11_16_36/0.12)]' : 'text-ink/55 hover:text-ink',
+            )}
+          >
+            {id === 'monthly' ? 'Mensuel' : 'Annuel'}
+            {id === 'yearly' && <span className="rounded-full bg-eu/[0.1] px-2 py-0.5 text-xs text-eu">-20 %</span>}
+          </button>
+        ))}
+      </div>
       {signedIn && !pricing ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="h-96 animate-pulse rounded-2xl bg-ink/[0.05]" />
-          <div className="h-96 animate-pulse rounded-2xl bg-ink/[0.05]" />
-        </div>
+        <div className="mx-auto h-96 max-w-xl animate-pulse rounded-2xl bg-ink/[0.05]" />
       ) : (
-        <div className="grid gap-5 md:grid-cols-2">
-          {PLANS.map((p) => (
-            <div
-              key={p.id}
-              className={cn('relative flex flex-col rounded-2xl border p-6 sm:p-7', p.popular ? 'border-eu ring-1 ring-eu' : 'border-ink/10')}
-            >
-              {p.popular && <PopularBadge />}
-              <p className="flex items-center justify-between font-semibold text-ink">
-                {p.name}
-                {p.popular && <span className="rounded-full bg-eu/[0.08] px-2 py-0.5 text-xs font-semibold text-eu">-20 %</span>}
+        <div className="mx-auto flex max-w-xl flex-col rounded-2xl border border-eu p-6 ring-1 ring-eu sm:p-7">
+          {own ? (
+            <>
+              <p className="font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
+                {planText(plan, own).price} <span className="text-base font-normal text-ink/50">{planText(plan, own).per}</span>
               </p>
-              {own ? (
-                <>
-                  <p className="mt-4 font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
-                    {planText(p.id, own).price} <span className="text-base font-normal text-ink/50">{planText(p.id, own).per}</span>
-                  </p>
-                  <p className="mt-2 text-sm text-ink/55">{planText(p.id, own).note}</p>
-                  <VehiclePrices plan={p.id} pricing={own} className="mt-5 border-t border-ink/10 pt-4" />
-                </>
-              ) : (
-                <>
-                  <PriceGrid plan={p.id} className="mt-4" />
-                  <p className="mt-2 text-sm text-ink/55">
-                    {p.id === 'yearly' ? 'Payé une fois par an, 20 % de moins que le mensuel.' : 'Sans engagement.'}
-                  </p>
-                </>
-              )}
-              <ul className="mt-6 space-y-2 text-[0.95rem] text-ink/70">
-                {INCLUDED.map((x) => (
-                  <li key={x} className="flex items-start gap-2">
-                    <Check className="mt-0.5 size-4 shrink-0 text-eu" /> {x}
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => choose(p.id)} disabled={busy !== null} className={cn('mt-7', p.popular ? ui.primary : ui.primaryGray)}>
-                {busy === p.id ? (
-                  <Loader2 className="size-5 animate-spin" />
-                ) : signedIn ? (
-                  p.popular ? 'Choisir l’annuel' : 'Choisir le mensuel'
-                ) : (
-                  'Commencer mon mois offert'
-                )}
-              </button>
-            </div>
-          ))}
+              <p className="mt-2 text-sm text-ink/55">{planText(plan, own).note}</p>
+              <VehiclePrices plan={plan} pricing={own} className="mt-5 border-t border-ink/10 pt-4" />
+            </>
+          ) : (
+            <>
+              <PriceGrid plan={plan} />
+              <p className="mt-2 text-sm text-ink/55">
+                {plan === 'yearly' ? 'Payé une fois par an, 20 % de moins que le mensuel.' : 'Sans engagement.'}
+              </p>
+            </>
+          )}
+          <ul className="mt-6 space-y-2 text-[0.95rem] text-ink/70">
+            {INCLUDED.map((x) => (
+              <li key={x} className="flex items-start gap-2">
+                <Check className="mt-0.5 size-4 shrink-0 text-eu" /> {x}
+              </li>
+            ))}
+          </ul>
+          <button onClick={choose} disabled={busy} className={cn('mt-7', ui.primary)}>
+            {busy ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : signedIn ? (
+              plan === 'yearly' ? 'Choisir l’annuel' : 'Choisir le mensuel'
+            ) : (
+              'Commencer mon mois offert'
+            )}
+          </button>
         </div>
       )}
       {!own && (

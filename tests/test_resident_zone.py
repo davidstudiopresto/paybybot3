@@ -50,6 +50,8 @@ class ResidentZone(unittest.TestCase):
             return [r for r in rates(zone, plate) if r["type"] != "Resident" or cards.get(plate) == zone]
         s.bot.get_rate_options = only_there
         s.bot.get_past_sessions = lambda limit=20: []
+        s.bot.get_vehicles = lambda: [{"vehicleId": "v1", "licensePlate": "AB123CD", "type": "Car"},
+                                      {"vehicleId": "v2", "licensePlate": "EF456GH", "type": "Car"}]
         found = web.vehicle_zones(s)
         self.assertEqual({v["licensePlate"]: z for v, z, _ in found}, cards)
         self.assertEqual(s.account["vehicle_zones"]["EF456GH"]["z"], "75017")

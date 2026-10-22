@@ -73,7 +73,6 @@ class DemoBot:
     def get_vehicles(self):
         return [
             {"vehicleId": "v1", "licensePlate": "AB123CD", "country": "FR", "type": "Car", "archived": False},
-            {"vehicleId": "v2", "licensePlate": "EF456GH", "country": "FR", "type": "Car", "archived": False},
         ]
 
     def get_payment_accounts(self):

@@ -2345,6 +2345,8 @@ def get_account(pbb_session: str = Cookie(None)):
         return account
 
     account = guarded(load)
+    if HOSTED and not s.demo:  # temporary, read only: how PayByPhone marks a ticket stopped early
+        log_history_statuses(s)
     start = parse_dt(account.get("trial_start"))
     state, grace_end = billing_status(account, owner_id(s.username)) if HOSTED and not s.demo else ("ok", None)
     return {"email": account.get("email") or "", "zone": account.get("zone") or None,

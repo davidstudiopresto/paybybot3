@@ -8,7 +8,7 @@ import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
-import { CardGate, ManageRenewal, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
+import { CardGate, ManageRenewal, PlannedPause, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
 import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -70,6 +70,7 @@ function Ticket({
           <ManageRenewal ap={renewal} onChanged={onRefresh} demo={demo} />
         </div>
       )}
+      {renewal && <PlannedPause ap={renewal} className="mt-4" />}
     </article>
   )
 }

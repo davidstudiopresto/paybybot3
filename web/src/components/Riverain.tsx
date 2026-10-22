@@ -131,8 +131,22 @@ function RetryButton({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }
   )
 }
 
+/** A vacation pause set for later, in its own box under the ticket or the vehicle. */
+export function PlannedPause({ ap, className }: { ap: Autopilot; className?: string }) {
+  const { start, end, later } = pauseState(ap)
+  if (!later || !ap.enabled) return null
+  return (
+    <p className={cn('flex items-center gap-2.5 rounded-xl border border-eu/15 bg-eu/[0.04] px-4 py-3 text-sm text-ink/75', className)}>
+      <Pause className="size-4 shrink-0 text-eu" />
+      <span>
+        Pause prévue du {dayText(start!)} {end ? `au ${dayText(end - 1)}` : 'sans date de fin'}
+      </span>
+    </p>
+  )
+}
+
 export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () => void }) {
-  const { start, end, paused, later } = pauseState(ap)
+  const { end, paused } = pauseState(ap)
   if (ap.lastError)
     return (
       <>
@@ -145,7 +159,6 @@ export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () =
   return (
     <>
       Renouvelé automatiquement
-      {later && <span className="block">Pause prévue du {dayText(start!)} {end ? `au ${dayText(end - 1)}` : 'sans date de fin'}</span>}
     </>
   )
 }
@@ -278,7 +291,8 @@ export function RiverainCard({
             {others.map((ap) => {
               const { paused } = pauseState(ap)
               return (
-                <li key={ap.id} className="flex items-start justify-between gap-4 py-4">
+                <li key={ap.id} className="py-4">
+                  <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <span className="flex items-center gap-3">
                       <Plate plate={ap.plate} size="sm" />
@@ -289,6 +303,8 @@ export function RiverainCard({
                     </p>
                   </div>
                   <ManageRenewal ap={ap} onChanged={onChanged} demo={demo} />
+                  </div>
+                  <PlannedPause ap={ap} className="mt-3" />
                 </li>
               )
             })}

@@ -64,7 +64,7 @@ function Ticket({
           <p className="flex gap-2 text-sm text-ink/70">
             <Repeat className="mt-0.5 size-4 shrink-0 text-eu" />
             <span>
-              <RenewalNote ap={renewal} />
+              <RenewalNote ap={renewal} onChanged={onRefresh} />
             </span>
           </p>
           <ManageRenewal ap={renewal} onChanged={onRefresh} demo={demo} />

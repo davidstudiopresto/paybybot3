@@ -3015,7 +3015,7 @@ def resume_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
         owner = owner_id(s.username)
         before = next((r for r in store("renewal_list", p_owner=owner) if r["id"] == ap_id), None)
         refresh = getattr(s.bot, "refresh_token", None)
-        relaunch = bool(before and not before.get("enabled") and refresh)
+        relaunch = bool(before and (not before.get("enabled") or before.get("last_error")) and refresh)  # suspended or failed
         # A relaunch is tried below, in this request: keep the scheduler off it meanwhile (never two payments at once).
         check = datetime.now(timezone.utc) + (timedelta(minutes=10) if relaunch else timedelta())
         result = update_own_renewal(s, ap_id, {"paused_from": None, "paused_until": None, "enabled": True,

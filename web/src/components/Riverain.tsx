@@ -31,24 +31,25 @@ function clearPending() {
   }
 }
 
-/** PayByPhone's own app link: opens the app on a phone, else its store or site. */
-const PAYBYPHONE_APP = 'https://paybyphone.onelink.me/ZQkh/'
 
 /** What the activation did for a car, as the e-mail says it, with who pays when a payment fails. */
 export function activationToast(activation: Activation, plate?: string) {
-  const show = activation.failed ? toast.error : toast.success
-  show(plate ? `${plate} : ${activation.title}` : activation.title, {
+  if (activation.failed) {
+    // The reason is long: it stays under the vehicle, with « Réessayer ».
+    toast.error(plate ? `${plate} : ${activation.title}` : activation.title, {
+      description: 'La raison est affichée sous votre véhicule.',
+      duration: 10_000,
+    })
+    return
+  }
+  toast.success(plate ? `${plate} : ${activation.title}` : activation.title, {
     description: (
       <>
         {activation.text}
         <span className="mt-1.5 block font-medium">{activation.payYourself}</span>
       </>
     ),
-    // A failed payment stays until read, with the way to pay.
-    duration: activation.failed ? Infinity : 15_000,
-    action: activation.failed
-      ? { label: 'Ouvrir PayByPhone', onClick: () => window.open(PAYBYPHONE_APP, '_blank', 'noopener') }
-      : undefined,
+    duration: 15_000,
   })
 }
 
@@ -98,9 +99,46 @@ function pauseState(ap: Autopilot, now = Date.now()) {
 }
 
 /** One line on what the renewal of a running ticket will do. */
-export function RenewalNote({ ap }: { ap: Autopilot }) {
+/** Relaunch a suspended or failed renewal: the server tries the payment right away and answers with the outcome. */
+async function relaunch(ap: Autopilot, onChanged: () => void) {
+  const waiting = toast.loading('Relance en cours…', { description: 'PayByBot vérifie votre compte PayByPhone et paie si besoin.' })
+  try {
+    const after = await api.resumeAutopilot(ap.id)
+    if (after.lastError) toast.error('Renouvellement non effectué', { id: waiting, description: 'La raison est affichée sous votre véhicule.', duration: 8000 })
+    else if (after.lastPayment) toast.success('Forfait renouvelé.', { id: waiting })
+    else toast.success('Renouvellement relancé.', { id: waiting, description: 'Un ticket est déjà en cours : il prendra le relais à sa fin.' })
+  } catch (e) {
+    toast.error((e as Error).message, { id: waiting })
+  }
+  onChanged()
+}
+
+function RetryButton({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  return (
+    <button
+      onClick={async () => {
+        setBusy(true)
+        await relaunch(ap, onChanged)
+        setBusy(false)
+      }}
+      disabled={busy}
+      className="mt-2 inline-flex items-center gap-1.5 rounded-[10px] bg-ink/[0.06] px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-ink/[0.1] disabled:opacity-60"
+    >
+      {busy ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />} Réessayer
+    </button>
+  )
+}
+
+export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () => void }) {
   const { start, end, paused, later } = pauseState(ap)
-  if (ap.lastError) return <span className="text-destructive">{ap.lastError}</span>
+  if (ap.lastError)
+    return (
+      <>
+        <span className="text-destructive">{ap.lastError}</span>
+        {onChanged && <span className="block"><RetryButton ap={ap} onChanged={onChanged} /></span>}
+      </>
+    )
   if (!ap.enabled) return <span className="text-destructive">Renouvellement suspendu : vérifiez dans l'application PayByPhone, puis relancez-le depuis « Gérer ».</span>
   if (paused) return <>Renouvellement en pause {end ? `jusqu'au ${dayText(end - 1)} inclus` : 'sans date de fin'}</>
   return (
@@ -127,16 +165,7 @@ export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; 
       return onChanged()
     }
     // Relaunch: the server tries the payment right away and answers with the outcome (up to about a minute).
-    const waiting = toast.loading('Relance en cours…', { description: 'PayByBot vérifie votre compte PayByPhone et paie si besoin.' })
-    try {
-      const after = await api.resumeAutopilot(ap.id)
-      if (after.lastError) toast.error('Renouvellement non effectué', { id: waiting, description: after.lastError, duration: 15000 })
-      else if (after.lastPayment) toast.success('Forfait renouvelé.', { id: waiting })
-      else toast.success('Renouvellement relancé.', { id: waiting, description: 'Un ticket est déjà en cours : il prendra le relais à sa fin.' })
-    } catch (e) {
-      toast.error((e as Error).message, { id: waiting })
-    }
-    onChanged()
+    await relaunch(ap, onChanged)
   }
 
   async function editEmail() {
@@ -255,7 +284,7 @@ export function RiverainCard({
                       <ZonePlate zone={ap.location} />
                     </span>
                     <p className="mt-2 text-sm text-ink/60">
-                      {ap.lastError || paused || !ap.enabled ? <RenewalNote ap={ap} /> : <>Paiement en cours…</>}
+                      {ap.lastError || paused || !ap.enabled ? <RenewalNote ap={ap} onChanged={onChanged} /> : <>Paiement en cours…</>}
                     </p>
                   </div>
                   <ManageRenewal ap={ap} onChanged={onChanged} demo={demo} />

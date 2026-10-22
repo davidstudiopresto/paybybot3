@@ -210,12 +210,12 @@ const FINES: [LucideIcon, string, string][] = [
 function FinesNote({ className }: { className?: string }) {
   return (
     <div className={cn('rounded-2xl border border-ink/[0.08] bg-ink/[0.025] px-5 py-5 text-center', className)}>
-      <p className="font-semibold text-ink">Bon à savoir : montant des amendes à Paris (majorées)</p>
-      <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-ink/70">
+      <p className="font-heading text-lg font-semibold tracking-[-0.02em] text-ink">Bon à savoir : montant des amendes à Paris (majorées)</p>
+      <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-[0.95rem] text-ink/60">
         {FINES.map(([Icon, name, amount]) => (
           <li key={name} className="flex items-center gap-2">
             <Icon className="size-4 text-eu" strokeWidth={1.75} /> {name}{' '}
-            <strong className="font-semibold text-ink tabular-nums">{amount}</strong>
+            <span className="text-ink tabular-nums">{amount}</span>
           </li>
         ))}
       </ul>

@@ -34,6 +34,10 @@ const FEATURES: Question[] = [
 
 const STEP_ICONS = [Link2, RefreshCw, ShieldCheck]
 
+/** Each step's screen (demo account, captured at one size: 1040 × 1100). */
+const STEP_SHOTS = ['/how/1-connexion.png', '/how/2-activation.png', '/how/3-tableau-de-bord.png']
+const STEP_MS = 5000
+
 const STEPS = [
   ['Connectez PayByPhone', 'Reliez votre compte PayByPhone existant.'],
   ['Activez le renouvellement', 'Choisissez votre véhicule et activez le renouvellement hebdomadaire en un clic.'],
@@ -54,6 +58,94 @@ const TESTIMONIALS: [string, string, string][] = [
   ['Léa F.', 'Résident Paris 2', 'Avec mon conjoint, chacun croyait que l’autre l’avait fait. Plus maintenant.'],
   ['Marc V.', 'Résident Paris 16', 'J’ai vérifié les premières fois : le ticket était bien pris. Je laisse faire.'],
 ]
+
+/** « Comment ça marche » : the three steps on the left, a line filling down the active one, and its screen on the
+ *  right. The steps take turns every 5 seconds (not with reduced motion); a click shows one at once. */
+function HowItWorks() {
+  const [active, setActive] = useState(0)
+  const [auto, setAuto] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  useEffect(() => {
+    if (!auto) return
+    const id = setTimeout(() => setActive((i) => (i + 1) % STEPS.length), STEP_MS)
+    return () => clearTimeout(id)
+  }, [active, auto])
+
+  return (
+    <section id="comment" className="flex scroll-mt-16 flex-col justify-center pt-24 pb-10 lg:min-h-[calc(100dvh-4rem)] lg:pt-20 lg:pb-12">
+      <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+        Comment ça marche
+      </h2>
+      <div className="mt-12 grid items-center gap-10 lg:mt-16 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
+        <ol className="space-y-2">
+          {STEPS.map(([title, text], i) => {
+            const Icon = STEP_ICONS[i]
+            const on = i === active
+            return (
+              <li key={title}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActive(i)
+                    setAuto(false)
+                  }}
+                  aria-current={on || undefined}
+                  className="group relative flex w-full gap-5 py-5 pl-6 text-left"
+                >
+                  {/* The line: grey, filling down in blue while the step is shown. */}
+                  <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 overflow-hidden rounded-full bg-ink/10">
+                    {on && (
+                      <span
+                        key={auto ? `run-${active}` : 'still'}
+                        className={cn('block h-full w-full origin-top bg-eu', auto && 'animate-[fill-down_5s_linear_forwards]')}
+                      />
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      'grid size-12 shrink-0 place-items-center rounded-full transition-colors',
+                      on ? 'bg-eu/[0.1] text-eu' : 'bg-ink/[0.04] text-ink/40 group-hover:text-ink/60',
+                    )}
+                  >
+                    <Icon className="size-5" strokeWidth={1.75} />
+                  </span>
+                  <span>
+                    <strong className={cn('block font-heading text-xl font-semibold tracking-[-0.02em] transition-colors lg:text-2xl', on ? 'text-ink' : 'text-ink/45')}>
+                      {i + 1}. {withPayByPhone(title)}
+                    </strong>
+                    <span className={cn('mt-1.5 block text-[1.05rem] leading-relaxed transition-colors lg:text-lg', on ? 'text-ink/65' : 'text-ink/35')}>
+                      {withPayByPhone(text)}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ol>
+        {/* The screen: a window frame, raised above the text, its picture changing with the step. */}
+        <div className="mx-auto w-full max-w-[34rem] overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-[0_40px_80px_-30px_rgb(11_16_36/0.35),0_12px_24px_-12px_rgb(11_16_36/0.12)]">
+          <div className="flex items-center gap-1.5 border-b border-ink/[0.06] bg-ink/[0.02] px-4 py-3" aria-hidden>
+            <span className="size-2.5 rounded-full bg-ink/15" />
+            <span className="size-2.5 rounded-full bg-ink/15" />
+            <span className="size-2.5 rounded-full bg-ink/15" />
+            <span className="ml-3 truncate text-xs text-ink/40">paybybot.fr</span>
+          </div>
+          <div className="relative aspect-[1040/1100]">
+            {STEP_SHOTS.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt={i === active ? STEPS[i][0] : ''}
+                aria-hidden={i !== active}
+                loading="lazy"
+                className={cn('absolute inset-0 size-full object-cover object-top transition-opacity duration-500', i === active ? 'opacity-100' : 'opacity-0')}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 /** The three worries about handing over a PayByPhone password, answered where the visitor decides. */
 export function TrustRow({ className }: { className?: string }) {
@@ -183,31 +275,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24 sm:px-8">
 
-        {/* Almost a full screen on a computer: three centered steps, each an icon in a ring with its number,
-            joined by a thin line. */}
-        <section id="comment" className="flex scroll-mt-16 flex-col justify-center pt-24 pb-10 lg:min-h-[calc(85dvh-4rem)] lg:pt-20 lg:pb-12">
-          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
-            Comment ça marche
-          </h2>
-          <ol className="relative mt-16 grid gap-14 lg:mt-24 lg:grid-cols-3 lg:gap-12">
-            <span aria-hidden className="absolute top-10 right-[16.7%] left-[16.7%] hidden h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--eu)_25%,transparent)_15%,color-mix(in_srgb,var(--eu)_25%,transparent)_85%,transparent)] lg:block" />
-            {STEPS.map(([title, text], i) => {
-              const Icon = STEP_ICONS[i]
-              return (
-                <li key={title} className="relative flex flex-col items-center text-center">
-                  <span className="relative grid size-20 place-items-center rounded-full border border-eu/15 bg-white text-eu shadow-[0_10px_30px_-12px_color-mix(in_srgb,var(--eu)_45%,transparent)]">
-                    <Icon className="size-8" strokeWidth={1.75} />
-                    <span className="absolute -top-1.5 -right-1.5 grid size-8 place-items-center rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] font-heading text-sm font-bold text-white ring-4 ring-white">
-                      {i + 1}
-                    </span>
-                  </span>
-                  <strong className="mt-8 block font-heading text-xl font-semibold tracking-[-0.02em] text-ink lg:text-2xl">{withPayByPhone(title)}</strong>
-                  <span className="mt-3 max-w-[22rem] text-[1.05rem] leading-relaxed text-ink/60 lg:text-lg">{withPayByPhone(text)}</span>
-                </li>
-              )
-            })}
-          </ol>
-        </section>
+        <HowItWorks />
 
 
         <section id="fonctionnalites" className="scroll-mt-16 py-10 lg:py-12">

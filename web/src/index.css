@@ -154,6 +154,7 @@
 @keyframes blink { 50% { opacity: .35; } }
 
 /* Home: the arrow under the hero moves down a little, inviting to scroll. */
+@keyframes fill-down { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes nudge { 50% { transform: translateY(4px); } }
 
 /* Testimonials: one row scrolling forever (the list is rendered twice, so -50% loops seamlessly). */

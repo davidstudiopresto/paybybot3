@@ -397,12 +397,6 @@ const QUESTIONS: Question[] = [
     </>,
   ],
   [
-    'Combien coûte l’abonnement ?',
-    <>
-      Voiture : 9,90 €/mois en zone 1 (arr. 1 à 11), 6,90 € en zone 2 (arr. 12 à 20). Deux-roues : 6,90 € et 4,90 €. À l'année : 20 % de remise. Premier mois offert.
-    </>,
-  ],
-  [
     'Mes identifiants PayByPhone sont-ils protégés ?',
     <>
       Oui. Votre mot de passe n'est jamais enregistré, ni votre numéro de carte : seule une clé de reconnexion chiffrée

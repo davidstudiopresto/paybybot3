@@ -117,10 +117,9 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
         <div className="mx-auto h-96 max-w-md animate-pulse rounded-2xl bg-ink/[0.05]" />
       ) : (
         <div className="mx-auto flex max-w-md flex-col rounded-2xl border border-eu p-6 ring-1 ring-eu sm:p-7">
-          <p className="font-semibold text-ink">Mensuel</p>
           {signedIn && pricing?.monthly != null ? (
             <>
-              <p className="mt-4 font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
+              <p className="font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
                 {euros(pricing.monthly)} <span className="text-base font-normal text-ink/50">/ mois</span>
               </p>
               <p className="mt-2 text-sm text-ink/55">Sans engagement</p>
@@ -128,7 +127,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
             </>
           ) : (
             <>
-              <PriceGrid className="mt-4" />
+              <PriceGrid />
               <p className="mt-2 text-sm text-ink/55">Votre prix est calculé tout seul avec votre compte <PayByPhone />. Sans engagement.</p>
             </>
           )}

@@ -223,8 +223,6 @@ export function Dashboard({
         data && !me.demo && !data.payments.some((p) => p.kind === 'card') && <CardGate />
       )}
       <TrialBanner
-        trialEnd={account?.trialEnd ?? null}
-        plan={account?.plan ?? null}
         blocked={account?.blocked ?? null}
         graceEnd={account?.graceEnd ?? null}
       />

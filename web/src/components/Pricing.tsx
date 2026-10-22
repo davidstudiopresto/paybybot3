@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Bike, Car, CarFront, Check, Gift, Loader2, Lock, Sparkles, X, type LucideIcon } from 'lucide-react'
+import { Bike, Car, CarFront, Check, Gift, Loader2, Lock, X, type LucideIcon } from 'lucide-react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
@@ -293,15 +293,11 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
   )
 }
 
-/** Dashboard banner: days left in the free month; a click opens the plans. */
+/** Dashboard banner, only when the account is blocked or a charge was refused: the way to pay. */
 export function TrialBanner({
-  trialEnd,
-  plan,
   blocked = null,
   graceEnd = null,
 }: {
-  trialEnd: string | null
-  plan: string | null
   blocked?: 'grace' | 'unpaid' | 'trialOver' | null
   graceEnd?: string | null
 }) {
@@ -355,30 +351,8 @@ export function TrialBanner({
     )
   }
 
-  if (plan || !trialEnd) return null
-  const left = Math.ceil((new Date(trialEnd).getTime() - Date.now()) / 86_400_000)
-  const ending = left <= 5
-  const text =
-    left <= 0
-      ? 'Votre mois offert est terminé.'
-      : `Mois offert : encore ${left} jour${left > 1 ? 's' : ''}.`
-  return (
-    <>
-      <div className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 bg-[linear-gradient(90deg,#0b1024_0%,#1d2a6b_45%,#4b2f86_100%)] px-4 py-2.5 text-sm text-white">
-        <span className="flex items-center gap-2">
-          <Sparkles className="size-4 text-white/80" />
-          <span className={left <= 0 ? 'font-semibold text-[#ffb4b4]' : ending ? 'font-semibold' : ''}>{text}</span>
-        </span>
-        <button
-          onClick={() => setOpen(true)}
-          className="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-white/90"
-        >
-          Choisir mon offre
-        </button>
-      </div>
-      {open && <PlansDialog onClose={() => setOpen(false)} text="Sans engagement." />}
-    </>
-  )
+  // During the free month, nothing: the offer is chosen when the renewal is activated (it cannot be skipped).
+  return null
 }
 
 /** « mardi 28 octobre » for the end of the grace week. */

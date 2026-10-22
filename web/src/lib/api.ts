@@ -51,8 +51,6 @@ export type Overview = {
   history: HistoryItem[]
 }
 /** Sign-up waiting for the 6-digit code sent to the e-mail. */
-export type SignupPending = { pending: true; email: string }
-export const isPending = (x: Me | SignupPending): x is SignupPending => 'pending' in x
 
 /** The PayByBot account: e-mail given at sign-up, home zone added by hand. */
 export type Account = {
@@ -138,7 +136,7 @@ export const api = {
     remember = false,
     turnstile = '',
   ) =>
-    post<Me | SignupPending>('/api/login', {
+    post<Me>('/api/login', {
       username,
       password,
       accepted,
@@ -162,8 +160,6 @@ export const api = {
   adminLogout: () => post('/api/admin/logout'),
   adminStats: () => request<import('@/components/Admin').AdminStats>('/api/admin/stats'),
   signupCheck: (username: string) => post<{ exists: boolean }>('/api/signup/check', { username }),
-  verifySignup: (code: string) => post<Me>('/api/signup/verify', { code }),
-  resendSignupCode: () => post<SignupPending>('/api/signup/resend'),
   deleteData: () => request('/api/me/data', { method: 'DELETE' }),
   overview: () => request<Overview>('/api/overview'),
   /** Home zone guessed from the PayByPhone history (null if none). */

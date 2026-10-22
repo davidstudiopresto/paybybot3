@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
 import { CardGate, ManageRenewal, PlannedPause, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
-import { api, money, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
+import { api, remaining, until, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -47,7 +47,6 @@ function Ticket({
           <Plate plate={session.plate} size="sm" />
           <ZonePlate zone={session.location} />
         </span>
-        <span className="text-sm text-muted-foreground">{money(session.cost)}</span>
       </div>
       <p className={`mt-5 font-heading text-[2.6rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
         {remaining(left)}

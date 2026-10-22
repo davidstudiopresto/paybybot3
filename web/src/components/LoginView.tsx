@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Loader2, Lock } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { CARD_NOTE, ResidentRequired } from '@/components/Riverain'
@@ -368,7 +368,6 @@ export function LoginView({
             </label>
           )}
 
-          <div ref={human.box} className="mt-5 empty:hidden" />
           {human.failed && !error && (
             <p role="alert" className="mt-5 rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
               {human.failed}
@@ -396,6 +395,13 @@ export function LoginView({
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}
           </button>
+          {/* Cloudflare's check runs unseen; its box only shows here when it needs a click. */}
+          <div ref={human.box} className="mt-4 empty:hidden" />
+          {human.enabled && (
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink/40">
+              <Lock className="size-3" /> Connexion protégée par Cloudflare
+            </p>
+          )}
 
           <p className="mt-6 text-center text-sm text-ink/50">
             {signup ? (

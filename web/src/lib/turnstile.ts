@@ -62,7 +62,7 @@ export function useTurnstile() {
         if (cancelled || !box.current) return
         const id = t.render(box.current, {
           sitekey: key,
-          appearance: 'always', // the Cloudflare box stays visible: visitors see they are checked
+          appearance: 'interaction-only', // invisible unless Cloudflare needs a click (a suspicious visitor)
           theme: 'light',
           language: 'fr',
           size: 'flexible',
@@ -104,5 +104,5 @@ export function useTurnstile() {
     return value
   }, [enabled])
 
-  return { box, token, failed: failed ? failure(failed) : null }
+  return { box, token, enabled, failed: failed ? failure(failed) : null }
 }

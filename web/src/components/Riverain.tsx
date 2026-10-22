@@ -596,7 +596,11 @@ function RiverainDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o || !locked) && onOpenChange(o)}>
-      <DialogContent className={ui.dialog} showCloseButton={!locked}>
+      {/* Locked: the top bar stays above it, so the dialog sits lower and scrolls within the space left. */}
+      <DialogContent
+        className={cn(ui.dialog, locked && 'top-[calc(50%+5rem)] max-h-[calc(100dvh-11rem)]')}
+        showCloseButton={!locked}
+      >
         <div className="px-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Renouvellement résident</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">

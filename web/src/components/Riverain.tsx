@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Check, Loader2, Mail, Pause, Play, Repeat, RotateCw } from 'lucide-react'
+import { Check, Loader2, Mail, Pause, Play, Repeat, RotateCw, Ticket } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
@@ -9,7 +9,7 @@ import { PlansDialog } from '@/components/Pricing'
 import { ShinyButton } from '@/components/ui/shiny-button'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, clock, remaining, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
 
@@ -696,6 +696,16 @@ function RiverainDialog({
                           Abonnement résident : <span className="text-ink">{(cents / 100).toFixed(2).replace('.', ',')} € / semaine</span>
                         </span>
                       )}
+                      {(() => {
+                        // Its running ticket, in red: when it ends and the hours left, to show why to activate now.
+                        const t = data.sessions.find((x) => samePlate(x.plate, plate) && new Date(x.expire).getTime() > Date.now())
+                        return t ? (
+                          <span className="mt-2 flex items-center gap-1.5 text-sm font-medium text-destructive">
+                            <Ticket className="size-4 shrink-0" /> Ticket en cours : expire {clock(t.expire)} · encore{' '}
+                            {remaining(new Date(t.expire).getTime() - Date.now())}
+                          </span>
+                        ) : null
+                      })()}
                       {f?.error && <span className="mt-1 block text-sm text-destructive">{f.error}</span>}
                     </li>
                   )

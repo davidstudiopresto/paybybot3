@@ -187,11 +187,6 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
                 : 'border-ink/10',
             )}
           >
-            {c.popular && (
-              <span className="absolute -top-3.5 right-6 inline-flex items-center gap-1 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-3 py-1 text-xs font-semibold text-white">
-                <Star className="size-3.5 fill-current" strokeWidth={0} /> Le plus choisi
-              </span>
-            )}
             <p className="text-sm font-semibold tracking-[0.12em] text-ink/55 uppercase">{c.name}</p>
             <p className="mt-5 font-heading leading-none font-semibold tracking-tight text-ink">
               <span className="text-[3.2rem]">{euros(yearly ? yearOf(c.monthly) : c.monthly).replace(' €', '')}</span>

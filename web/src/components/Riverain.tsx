@@ -9,7 +9,7 @@ import { PlansDialog } from '@/components/Pricing'
 import { ShinyButton } from '@/components/ui/shiny-button'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, clock, money, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
 
@@ -637,29 +637,8 @@ function RiverainDialog({
                           <Plate plate={plate} size="sm" />
                           {zones[plate] && <ZonePlate zone={zones[plate]} />}
                         </span>
-                        <span className="mt-1 block text-sm text-muted-foreground">
-                          {f?.error ? (
-                            <span className="text-destructive">{f.error}</span>
-                          ) : f?.rate ? (
-                            <>
-                              <Repeat className="mr-1 inline size-3.5" />
-                              {runningFor(plate)
-                                ? f.quote?.currentExpire
-                                  ? `Rien à payer maintenant : prend le relais ${clock(f.quote.currentExpire)}`
-                                  : 'Rien à payer maintenant : prend le relais à la fin du ticket en cours'
-                                : 'Première semaine payée tout de suite'}
-                            </>
-                          ) : null}
-                        </span>
+                        {f?.error && <span className="mt-1 block text-sm text-destructive">{f.error}</span>}
                       </span>
-                      {f?.quote?.cost ? (
-                        <span className="shrink-0 text-right">
-                          <span className="font-heading text-xl font-bold">{money(f.quote.cost)}</span>
-                          <span className="block text-xs text-muted-foreground">par semaine</span>
-                        </span>
-                      ) : f?.rate ? (
-                        <span className="shrink-0 text-right text-xs text-muted-foreground">Prix PayByPhone du tarif résident</span>
-                      ) : null}
                     </li>
                   )
                 })}
@@ -698,11 +677,6 @@ function RiverainDialog({
               'Activer le renouvellement automatique'
             )}
           </button>
-          <p className="-mt-3 text-center text-sm text-ink/50">
-            {hosted
-              ? withPayByPhone("Fonctionne en ligne, même appareil éteint. Pour payer à votre place, PayByBot garde de quoi se reconnecter à PayByPhone, chiffré, et l'efface dès que vous arrêtez.")
-              : 'Laissez PayByBot ouvert sur cet ordinateur. Vous pouvez arrêter à tout moment.'}
-          </p>
         </div>
       </DialogContent>
       {paywall && (

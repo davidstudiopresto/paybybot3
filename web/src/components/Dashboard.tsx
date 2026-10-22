@@ -29,6 +29,7 @@ function Ticket({
   demo,
   autoOpen = false,
   locked = false,
+  onLogout,
 }: {
   session: Session
   now: number
@@ -38,6 +39,7 @@ function Ticket({
   demo: boolean
   autoOpen?: boolean
   locked?: boolean
+  onLogout?: () => void
 }) {
   const renewal = renewalOf(data, session)
   const start = new Date(session.start).getTime()
@@ -79,7 +81,7 @@ function Ticket({
       {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} className="mt-4" />}
       {!renewal && (
         <div className="mt-5">
-          <ActivateRenewal data={data} onChanged={onRefresh} hosted={hosted} demo={demo} plate={session.plate} label="Automatiser le renouvellement" autoOpen={autoOpen} locked={autoOpen && locked} />
+          <ActivateRenewal data={data} onChanged={onRefresh} hosted={hosted} demo={demo} plate={session.plate} label="Automatiser le renouvellement" autoOpen={autoOpen} locked={autoOpen && locked} onLogout={onLogout} />
         </div>
       )}
     </article>
@@ -89,7 +91,7 @@ function Ticket({
 /** The cars with no ticket: plate, type, zone and the resident week's price, one card each. */
 const sameCar = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCase() === b.replace(/[^0-9a-z]/gi, '').toUpperCase()
 
-function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked }: { data: Overview; onChanged: () => void; hosted: boolean; demo?: boolean; autoPlate?: string | null; locked?: boolean }) {
+function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogout }: { data: Overview; onChanged: () => void; hosted: boolean; demo?: boolean; autoPlate?: string | null; locked?: boolean; onLogout?: () => void }) {
   const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
   const [weeks, setWeeks] = useState<Record<string, number | null>>({})
   useEffect(() => {
@@ -136,7 +138,7 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked }: { da
               )}
             </dl>
             <div className="mt-5">
-              <ActivateRenewal data={data} onChanged={onChanged} hosted={hosted} demo={demo} plate={v.plate} autoOpen={!!autoPlate && key(autoPlate) === key(v.plate)} locked={!!locked && !!autoPlate && key(autoPlate) === key(v.plate)} />
+              <ActivateRenewal data={data} onChanged={onChanged} hosted={hosted} demo={demo} plate={v.plate} autoOpen={!!autoPlate && key(autoPlate) === key(v.plate)} locked={!!locked && !!autoPlate && key(autoPlate) === key(v.plate)} onLogout={onLogout} />
             </div>
           </div>
         )
@@ -226,8 +228,7 @@ export function Dashboard({
         blocked={account?.blocked ?? null}
         graceEnd={account?.graceEnd ?? null}
       />
-      {/* Above the renewal dialog while it cannot be closed: « Mon compte » and « Déconnexion » stay reachable. */}
-      <TopBar className={locked ? 'z-[60] pointer-events-auto' : undefined}>
+      <TopBar>
         {me.demo && (
           <span className="inline-flex h-9 items-center rounded-full bg-amber/25 px-3 text-sm font-semibold text-ink sm:h-10 sm:px-4 sm:text-[0.95rem]">
             Démo
@@ -257,14 +258,14 @@ export function Dashboard({
         {data && sessions.length > 0 && (
           <div className="mt-6 space-y-3">
             {sessions.map((s) => (
-              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} hosted={!!me.hosted} demo={me.demo} autoOpen={!!autoPlate && sameCar(autoPlate, s.plate)} locked={locked} />
+              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} hosted={!!me.hosted} demo={me.demo} autoOpen={!!autoPlate && sameCar(autoPlate, s.plate)} locked={locked} onLogout={onLogout} />
             ))}
           </div>
         )}
 
         {/* The renewal is the one action of the app: no one-off payment button. */}
         {/* The cars with neither a ticket nor a renewal: one card each, with its button. */}
-        {data && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} autoPlate={autoPlate} locked={locked} />}
+        {data && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} autoPlate={autoPlate} locked={locked} onLogout={onLogout} />}
 
         {/* Every car's card has its own button: this block only lists renewals without a ticket (or offers one
             when PayByPhone lists no car). */}

@@ -55,6 +55,39 @@ const TESTIMONIALS: [string, string, string][] = [
   ['Marc V.', 'Résident Paris 16', 'J’ai vérifié les premières fois : le ticket était bien pris. Je laisse faire.'],
 ]
 
+/** « +0 » rising to « +100 » once on screen (at once when motion is reduced). */
+function CountUp({ to, className }: { to: number; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [value, setValue] = useState(0)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return setValue(to)
+    let frame = 0
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      observer.disconnect()
+      const start = performance.now()
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / 1600)
+        setValue(Math.round(to * (1 - (1 - t) ** 3)))
+        if (t < 1) frame = requestAnimationFrame(step)
+      }
+      frame = requestAnimationFrame(step)
+    }, { threshold: 0.6 })
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(frame)
+    }
+  }, [to])
+  return (
+    <span ref={ref} className={cn('tabular-nums', className)}>
+      +{value}
+    </span>
+  )
+}
+
 function Testimonials() {
   if (!TESTIMONIALS.length) return null
   const card = (name: string, place: string, text: string, key: string, copy = false) => (
@@ -69,6 +102,9 @@ function Testimonials() {
       <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
         Ils nous font confiance.
       </h2>
+      <p className="mt-5 text-center text-lg text-ink/60">
+        <CountUp to={100} className="font-heading text-2xl font-semibold text-eu" /> résidents parisiens utilisent PayByBot
+      </p>
       <div className="relative left-1/2 mt-16 w-screen lg:mt-24 -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
         <ul className="marquee flex w-max gap-4">
           {TESTIMONIALS.map(([name, place, text], i) => card(name, place, text, 'a' + i))}

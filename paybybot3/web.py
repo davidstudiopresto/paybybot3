@@ -1518,8 +1518,6 @@ def login(body: Login, request: Request, response: Response):
             log.warning("could not save the account e-mail: %s", e)
     set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
-    if HOSTED and not demo:  # temporary, read only: how PayByPhone marks a ticket stopped early
-        log_history_statuses(session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -2345,8 +2343,6 @@ def get_account(pbb_session: str = Cookie(None)):
         return account
 
     account = guarded(load)
-    if HOSTED and not s.demo:  # temporary, read only: how PayByPhone marks a ticket stopped early
-        log_history_statuses(s)
     start = parse_dt(account.get("trial_start"))
     state, grace_end = billing_status(account, owner_id(s.username)) if HOSTED and not s.demo else ("ok", None)
     return {"email": account.get("email") or "", "zone": account.get("zone") or None,
@@ -2844,20 +2840,6 @@ def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None and k != "zone"}
     account = guarded(lambda: save_account(s, patch))
     return {"email": account.get("email") or "", "zone": account.get("zone") or None}
-
-
-def log_history_statuses(session):
-    """Temporary: the status and length of the account's last tickets (no plate, no place, no id)."""
-    try:
-        rows = []
-        for x in session.call("get_past_sessions", limit=15) or []:
-            start, end = parse_dt(x.get("startTime")), parse_dt(x.get("expireTime"))
-            rows.append({"status": x.get("status"), "type": x.get("type"),
-                         "rate": (x.get("ratePolicy") or {}).get("type"), "renewable": x.get("isRenewable"),
-                         "hours": round((end - start).total_seconds() / 3600, 1) if start and end else None})
-        log.info("history statuses: %s", json.dumps(rows))
-    except Exception as e:
-        log.info("history statuses unavailable: %s", str(e)[:200])
 
 
 def is_admin(s):

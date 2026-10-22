@@ -1,5 +1,8 @@
 import { cn } from '@/lib/utils'
 
+/** The one sign-up call to action, worded the same everywhere. */
+export const TRY_LABEL = 'Essayer 1 mois gratuit'
+
 /** The few building blocks of the minimal look (blue accent), shared by every screen. */
 export const ui = {
   /** The one main action of a screen. */

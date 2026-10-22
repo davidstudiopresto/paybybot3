@@ -10,7 +10,7 @@ import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { api, type Pricing } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { ui } from '@/lib/styles'
+import { TRY_LABEL, ui } from '@/lib/styles'
 
 export type Plan = 'monthly' | 'yearly'
 
@@ -186,7 +186,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
             ) : signedIn ? (
               plan === 'yearly' ? 'Choisir l’annuel' : 'Choisir le mensuel'
             ) : (
-              'Commencer mon mois offert'
+              TRY_LABEL
             )}
           </button>
         </div>
@@ -196,6 +196,9 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
           Votre prix est calculé tout seul avec votre compte <PayByPhone />.
         </p>
       )}
+      <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-sm text-ink/55">
+        <Lock className="size-3.5" /> Paiement sécurisé par Stripe · CB, Visa, Mastercard
+      </p>
       <FinesNote className="mx-auto mt-8 max-w-xl" />
     </>
   )

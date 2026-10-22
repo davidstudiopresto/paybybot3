@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Wordmark } from '@/components/signs'
 import { ContactLink } from '@/components/Contact'
-import { ui } from '@/lib/styles'
+import { TRY_LABEL, ui } from '@/lib/styles'
 
 /** The bar on top of every page: logo on the left, links in the middle (if any), actions on the right. */
 export function TopBar({ center, children }: { center?: ReactNode; children?: ReactNode }) {
@@ -54,7 +54,8 @@ export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
             Se connecter
           </a>
           <a href="#/inscription" className={ui.pillBlue}>
-            S'inscrire
+            <span className="hidden sm:inline">{TRY_LABEL}</span>
+            <span className="sm:hidden">S'inscrire</span>
           </a>
         </>
       )}

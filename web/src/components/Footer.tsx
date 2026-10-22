@@ -19,6 +19,7 @@ export function HostedFooter({ className }: { className?: string; hosted?: boole
           </a>
         ))}
       </nav>
+      <p className="text-xs">PayByBot n’est pas affilié à PayByPhone. Édité par Studio Presto (SAS), 47 rue Vivienne, 75002 Paris.</p>
       <p>© PayByBot 2026</p>
     </footer>
   )

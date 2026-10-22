@@ -626,8 +626,8 @@ function RiverainDialog({
                               <Repeat className="mr-1 inline size-3.5" />
                               {runningFor(plate)
                                 ? f.quote?.currentExpire
-                                  ? `Prend le relais ${clock(f.quote.currentExpire)}`
-                                  : 'Prend le relais à la fin du ticket en cours'
+                                  ? `Rien à payer maintenant : prend le relais ${clock(f.quote.currentExpire)}`
+                                  : 'Rien à payer maintenant : prend le relais à la fin du ticket en cours'
                                 : 'Première semaine payée tout de suite'}
                             </>
                           ) : null}

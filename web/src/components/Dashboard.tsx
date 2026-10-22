@@ -114,7 +114,7 @@ function IdleVehicles({ data }: { data: Overview }) {
               )}
               {week != null && (
                 <div>
-                  <dt className="inline">Abonnement : </dt>
+                  <dt className="inline">Abonnement résident : </dt>
                   <dd className="inline text-ink">{euros(week)} / semaine</dd>
                 </div>
               )}

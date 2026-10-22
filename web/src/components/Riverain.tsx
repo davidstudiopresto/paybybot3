@@ -50,7 +50,7 @@ export function activationToast(activation: Activation, plate?: string) {
         <span className="mt-1.5 block font-medium">{activation.payYourself}</span>
       </>
     ),
-    duration: 15_000,
+    duration: 6_000,
   })
 }
 

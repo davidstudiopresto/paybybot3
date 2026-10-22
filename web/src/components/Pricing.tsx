@@ -112,31 +112,6 @@ const INCLUDED = [
   'Annulable à tout moment',
 ]
 
-/** Mensuel / Annuel as a sliding switch, « -20 % » next to Annuel. */
-function PlanSwitch({ plan, onChange }: { plan: Plan; onChange: (p: Plan) => void }) {
-  const yearly = plan === 'yearly'
-  return (
-    <div className="flex items-center gap-3 text-[0.95rem] font-semibold">
-      <button type="button" onClick={() => onChange('monthly')} className={yearly ? 'text-ink/45' : 'text-ink'}>
-        Mensuel
-      </button>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={yearly}
-        aria-label="Facturation annuelle"
-        onClick={() => onChange(yearly ? 'monthly' : 'yearly')}
-        className={cn('relative h-7 w-12 rounded-full transition-colors', yearly ? 'bg-eu' : 'bg-ink/15')}
-      >
-        <span className={cn('absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform', yearly && 'translate-x-5')} />
-      </button>
-      <button type="button" onClick={() => onChange('yearly')} className={cn('flex items-center gap-2', yearly ? 'text-ink' : 'text-ink/45')}>
-        Annuel <span className="rounded-full bg-eu/[0.1] px-2 py-0.5 text-xs text-eu">-20 %</span>
-      </button>
-    </div>
-  )
-}
-
 /** Zone 1 / Zone 2, with their arrondissements. */
 function ZoneSwitch({ zone, onChange }: { zone: 1 | 2; onChange: (z: 1 | 2) => void }) {
   return (
@@ -162,10 +137,9 @@ function ZoneSwitch({ zone, onChange }: { zone: 1 | 2; onChange: (z: 1 | 2) => v
 /** The public offer: two cards (two-wheeler, car — the car one put forward) for the chosen zone, per month or per
  *  year. Signed in, the account's own price instead (OwnPlan). */
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
-  const [plan, setPlan] = useState<Plan>('monthly')
+  // The Tarifs show the monthly price only (the yearly plan stays offered at payment).
   const [zone, setZone] = useState<1 | 2>(1)
-  if (signedIn) return <OwnPlan plan={plan} setPlan={setPlan} />
-  const yearly = plan === 'yearly'
+  if (signedIn) return <OwnPlan plan="monthly" />
   const cards: { name: string; who: string; monthly: number; popular?: boolean }[] = [
     { name: 'Deux-roues', who: 'Scooter, moto', monthly: GRID[1][zone] },
     { name: 'Voiture', who: 'Voiture, utilitaire', monthly: GRID[0][zone], popular: true },
@@ -174,7 +148,6 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   return (
     <>
       <div className="flex flex-col items-center gap-4">
-        <PlanSwitch plan={plan} onChange={setPlan} />
         <ZoneSwitch zone={zone} onChange={setZone} />
         <p className="text-xs text-ink/45">Votre zone est détectée toute seule à l’inscription.</p>
       </div>
@@ -191,19 +164,11 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
           >
             <p className="text-sm font-semibold tracking-[0.12em] text-ink/55 uppercase">{c.name}</p>
             <p className="mt-5 font-heading leading-none font-semibold tracking-tight text-ink">
-              <span className="text-[3.2rem]">{euros(yearly ? yearOf(c.monthly) : c.monthly).replace(' €', '')}</span>
+              <span className="text-[3.2rem]">{euros(c.monthly).replace(' €', '')}</span>
               <span className="text-[2rem]"> €</span>
-              <span className="ml-1.5 text-base font-normal text-ink/50">{yearly ? '/ an' : '/ mois'}</span>
+              <span className="ml-1.5 text-base font-normal text-ink/50">/ mois</span>
             </p>
-            <p className="mt-2 text-sm text-ink/50">
-              {yearly ? (
-                <>
-                  <span className="line-through">{euros(c.monthly * 12)}</span> · soit {euros(Math.round(yearOf(c.monthly) / 12))} par mois
-                </>
-              ) : (
-                'facturé chaque mois'
-              )}
-            </p>
+            <p className="mt-2 text-sm text-ink/50">facturé chaque mois, sans engagement</p>
             <ul className="mt-7 space-y-2.5 border-t border-ink/10 pt-6 text-left text-[0.95rem] text-ink/75">
               {INCLUDED.map((x) => (
                 <li key={x} className="flex items-start gap-2">
@@ -224,7 +189,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
 }
 
 /** Signed in: one card with the account's own price, monthly or yearly. */
-function OwnPlan({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void }) {
+function OwnPlan({ plan }: { plan: Plan }) {
   const [busy, setBusy] = useState(false)
   const [pricing] = usePricing(true)
   const own = pricing?.monthly != null && pricing.yearly != null ? pricing : null
@@ -243,9 +208,6 @@ function OwnPlan({ plan, setPlan }: { plan: Plan; setPlan: (p: Plan) => void }) 
   return (
     <>
       {pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
-      <div className="mb-6 flex justify-center">
-        <PlanSwitch plan={plan} onChange={setPlan} />
-      </div>
       {!pricing ? (
         <div className="mx-auto h-96 max-w-xl animate-pulse rounded-3xl bg-ink/[0.05]" />
       ) : (

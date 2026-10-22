@@ -377,13 +377,33 @@ export function RiverainCard({
   }
 
   return (
+    <section className="rise">
+      <ActivateRenewal data={data} onChanged={onChanged} hosted={hosted} demo={demo} />
+    </section>
+  )
+}
+
+/** The « Activer le renouvellement résident » button and its dialog; with a plate, only that car is ticked. */
+export function ActivateRenewal({
+  data,
+  onChanged,
+  hosted = false,
+  demo = false,
+  plate,
+}: {
+  data: Overview | null
+  onChanged: () => void
+  hosted?: boolean
+  demo?: boolean
+  plate?: string
+}) {
+  const [open, setOpen] = useState(false)
+  return (
     <>
-      <section className="rise">
-        <ShinyButton onClick={() => setOpen(true)} disabled={!data} className="flex h-14 w-full items-center justify-center rounded-xl border border-eu/30 bg-eu/[0.07] px-6 text-lg font-bold text-eu hover:bg-eu/[0.1] disabled:opacity-50">
-          Activer le renouvellement résident
-        </ShinyButton>
-      </section>
-      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} />}
+      <ShinyButton onClick={() => setOpen(true)} disabled={!data} className="flex h-14 w-full items-center justify-center rounded-xl border border-eu/30 bg-eu/[0.07] px-6 text-lg font-bold text-eu hover:bg-eu/[0.1] disabled:opacity-50">
+        Activer le renouvellement résident
+      </ShinyButton>
+      {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} plate={plate} />}
     </>
   )
 }
@@ -398,6 +418,7 @@ function RiverainDialog({
   onDone,
   hosted,
   demo = false,
+  plate,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -405,6 +426,8 @@ function RiverainDialog({
   onDone: () => void
   hosted: boolean
   demo?: boolean
+  /** Opened from a car's card: only that car is ticked. */
+  plate?: string
 }) {
   const [plates, setPlates] = useState<string[] | null>(null) // the « riverain » vehicles (null: looking)
   const [selected, setSelected] = useState<string[]>([])
@@ -443,7 +466,8 @@ function RiverainDialog({
         const riverain = (p.vehicles ?? []).filter((v) => v.zone)
         setZones(Object.fromEntries(riverain.map((v) => [v.plate, v.zone])))
         setPlates(riverain.map((v) => v.plate))
-        setSelected(riverain.map((v) => v.plate).filter((x) => !covered.has(x)))
+        const same = (x: string) => !plate || x.replace(/[^0-9a-z]/gi, '').toUpperCase() === plate.replace(/[^0-9a-z]/gi, '').toUpperCase()
+        setSelected(riverain.map((v) => v.plate).filter((x) => !covered.has(x) && same(x)))
       },
       (e) => {
         setPlates([])

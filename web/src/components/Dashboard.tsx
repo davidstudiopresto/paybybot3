@@ -8,7 +8,7 @@ import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
-import { CardGate, RenewalActions, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
+import { ActivateRenewal, CardGate, RenewalActions, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
 import { api, clock, remaining, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -74,7 +74,7 @@ function Ticket({
 }
 
 /** The cars with no ticket: plate, type, zone and the resident week's price, one card each. */
-function IdleVehicles({ data }: { data: Overview }) {
+function IdleVehicles({ data, onChanged, hosted, demo }: { data: Overview; onChanged: () => void; hosted: boolean; demo?: boolean }) {
   const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
   const [weeks, setWeeks] = useState<Record<string, number | null>>({})
   useEffect(() => {
@@ -119,6 +119,9 @@ function IdleVehicles({ data }: { data: Overview }) {
                 </div>
               )}
             </dl>
+            <div className="mt-5">
+              <ActivateRenewal data={data} onChanged={onChanged} hosted={hosted} demo={demo} plate={v.plate} />
+            </div>
           </div>
         )
       })}
@@ -224,7 +227,7 @@ export function Dashboard({
         </p>
 
         {/* No ticket: one card per car (the ones a renewal does not already list below). */}
-        {data && sessions.length === 0 && <IdleVehicles data={data} />}
+        {data && sessions.length === 0 && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />}
 
         {data && sessions.length > 0 && (
           <div className="mt-6 space-y-3">
@@ -235,9 +238,12 @@ export function Dashboard({
         )}
 
         {/* The renewal is the one action of the app: no one-off payment button. */}
-        <div className={renewing ? 'mt-6' : 'mt-10 border-t border-border pt-8'}>
-          <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
-        </div>
+        {/* Without a ticket nor a renewal, each car's card already has the button. */}
+        {!(data && sessions.length === 0 && !renewing && data.vehicles.length > 0) && (
+          <div className={renewing ? 'mt-6' : 'mt-10 border-t border-border pt-8'}>
+            <RiverainCard data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} />
+          </div>
+        )}
       </main>
 
       <HostedFooter className="px-6 pb-8" hosted={!!me.hosted} />

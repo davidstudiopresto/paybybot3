@@ -3,6 +3,7 @@ import { ArrowRight, ChevronDown, Link2, Plus, RefreshCw, ShieldCheck } from 'lu
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
+import { PlanCards } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/components/signs'
@@ -160,6 +161,18 @@ export function Landing({ hosted }: { hosted: boolean }) {
         </section>
 
         <Testimonials />
+
+        <section id="tarifs" className="scroll-mt-16 py-12 lg:py-16">
+          <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+            Tarifs
+          </h2>
+          <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
+            Un prix par véhicule résident, selon son type et sa zone.
+          </p>
+          <div className="mt-12">
+            <PlanCards signedIn={false} />
+          </div>
+        </section>
 
         <section id="faq" className="mt-24 lg:mt-36">
           <FaqTitle as="h2" />

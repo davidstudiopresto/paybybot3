@@ -155,14 +155,12 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
     <div className="flex min-h-dvh flex-col bg-white">
       <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 pt-16 pb-20 lg:pt-24">
-        <h1 className="rise text-center font-heading text-[2.4rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[3.4rem]">
-          {signedIn ? 'Vos tarifs.' : 'Tarifs.'}
+        <h1 className="rise text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+          {signedIn ? 'Vos tarifs' : 'Tarifs'}
         </h1>
-        {signedIn && (
-          <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
-            Un prix par véhicule résident, selon son type et sa zone.
-          </p>
-        )}
+        <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
+          Un prix par véhicule résident, selon son type et sa zone.
+        </p>
         <div className="mt-12">
           <PlanCards signedIn={signedIn} />
         </div>

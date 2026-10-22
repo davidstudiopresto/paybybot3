@@ -26,7 +26,6 @@ const yearOf = (monthly: number) => Math.round(monthly * 12 * 0.8)
 const GRID: [string, number, number][] = [
   ['Voiture', 990, 690],
   ['Deux-roues', 690, 490],
-  ['SUV', 1490, 990],
 ]
 
 /** The signed-in account's prices (null while loading). */
@@ -143,7 +142,6 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   const cards: { name: string; who: string; monthly: number; popular?: boolean }[] = [
     { name: 'Deux-roues', who: 'Scooter, moto', monthly: GRID[1][zone] },
     { name: 'Voiture', who: 'Voiture, utilitaire', monthly: GRID[0][zone], popular: true },
-    { name: 'SUV', who: 'À cocher à l’activation', monthly: GRID[2][zone] },
   ]
   return (
     <>
@@ -151,7 +149,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
         <ZoneSwitch zone={zone} onChange={setZone} />
         <p className="text-xs text-ink/45">Votre zone est détectée toute seule à l’inscription.</p>
       </div>
-      <div className="mx-auto mt-10 grid max-w-5xl items-center gap-5 md:grid-cols-3">
+      <div className="mx-auto mt-10 grid max-w-3xl items-center gap-5 md:grid-cols-2">
         {cards.map((c) => (
           <div
             key={c.name}

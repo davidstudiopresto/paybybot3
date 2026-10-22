@@ -335,13 +335,6 @@ export function RiverainCard({
 type Found = { rate: Rate | null; quote: Quote | null; error: string | null }
 type Quote = { cost: Money | null; afterCurrent?: boolean; currentExpire?: string | null; priceSource?: 'history' | 'paris' | null }
 
-/** A two-wheeler, from its PayByPhone type (never a SUV). */
-function isTwoWheeler(data: Overview, plate: string) {
-  const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
-  const type = data.vehicles.find((v) => key(v.plate) === key(plate))?.type ?? ''
-  return /2\s*roues|deux[\s-]*roues|moto|scooter|two[\s-]*wheel/i.test(type)
-}
-
 function RiverainDialog({
   open,
   onOpenChange,
@@ -358,11 +351,9 @@ function RiverainDialog({
   demo?: boolean
 }) {
   const [plates, setPlates] = useState<string[] | null>(null) // the « riverain » vehicles (null: looking)
-  const plateKey = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
   const [selected, setSelected] = useState<string[]>([])
   const [zones, setZones] = useState<Record<string, string>>({}) // each riverain vehicle's arrondissement, from PayByPhone
   const [payment, setPayment] = useState('')
-  const [suvs, setSuvs] = useState<string[]>([]) // plates ticked as SUV (plate keys)
   const [found, setFound] = useState<Record<string, Found>>({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -388,7 +379,6 @@ function RiverainDialog({
   useEffect(() => {
     if (!open) return
     const last = loadLast()
-    api.account().then((a) => setSuvs(a.suvPlates ?? []), () => {})
     setError(null)
     setFound({})
     setPlates(null)
@@ -556,39 +546,6 @@ function RiverainDialog({
               </div>
             )}
           </div>
-
-          {/* PayByPhone does not say which cars are SUVs: the user ticks it, the SUV price then applies. */}
-          {selected.some((p) => !isTwoWheeler(data, p)) && (
-            <div className="space-y-2">
-              {selected
-                .filter((p) => !isTwoWheeler(data, p))
-                .map((p) => {
-                  const on = suvs.includes(plateKey(p))
-                  return (
-                    <label key={p} className="flex cursor-pointer items-center gap-3 text-sm text-ink/70">
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={async (e) => {
-                          const next = e.target.checked
-                          setSuvs((list) => (next ? [...list, plateKey(p)] : list.filter((x) => x !== plateKey(p))))
-                          try {
-                            await api.setSuv(p, next)
-                          } catch (err) {
-                            toast.error((err as Error).message)
-                          }
-                        }}
-                        className="size-4 accent-[var(--eu)]"
-                      />
-                      <span>
-                        {selected.length > 1 ? <><Plate plate={p} size="sm" /> </> : null}
-                        Mon véhicule est un SUV <span className="text-ink/45">(tarif SUV : 14,90 € ou 9,90 €/mois selon la zone)</span>
-                      </span>
-                    </label>
-                  )
-                })}
-            </div>
-          )}
 
           {!allCards.length && <NoPayment compact onRefresh={async () => onDone()} />}
           {allCards.length > 0 && !cards.length && (

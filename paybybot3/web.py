@@ -1916,7 +1916,8 @@ def paris_zone(zone):
 
 
 def monthly_cents(vehicle_type, zone, suv=False):
-    kind = "two" if TWO_WHEELS.search(str(vehicle_type or "")) else "suv" if suv else "car"
+    # No SUV price any more: a resident SUV pays the same resident ticket as any car.
+    kind = "two" if TWO_WHEELS.search(str(vehicle_type or "")) else "car"
     return MONTHLY_PRICES[(kind, paris_zone(zone))]
 
 

@@ -55,8 +55,8 @@ class Billing(unittest.TestCase):
         self.assertEqual(web.monthly_cents("Motorcycle", "75008"), 690)
         self.assertEqual(web.monthly_cents("Scooter", "75017"), 490)
         self.assertEqual(web.monthly_cents("Car", None), 990)  # unknown zone: zone 1
-        self.assertEqual(web.monthly_cents("Car", "75006", suv=True), 1490)  # ticked SUV
-        self.assertEqual(web.monthly_cents("Car", "75015", suv=True), 990)
+        self.assertEqual(web.monthly_cents("Car", "75006", suv=True), 990)  # no SUV price: a car
+        self.assertEqual(web.monthly_cents("Car", "75015", suv=True), 690)
         self.assertEqual(web.monthly_cents("Scooter", "75015", suv=True), 490)  # a two-wheeler is never a SUV
 
     def test_yearly_is_twelve_months_with_20_percent_off(self):
@@ -119,7 +119,7 @@ class Billing(unittest.TestCase):
                 patch.object(web, "load_account", return_value={"suv_plates": ["AB123CD"]}), \
                 patch.object(web, "save_account", side_effect=lambda s, p: p), patch.object(web, "reprice"), \
                 patch.object(web, "renewed_plates", return_value={"AB123CD"}):
-            self.assertEqual(web.account_pricing(self.s)["monthly"], 1490)
+            self.assertEqual(web.account_pricing(self.s)["monthly"], 990)  # an old SUV tick: car price
 
     def test_checkout_bills_every_renewed_vehicle(self):
         self.assertEqual(web.account_monthlies({"monthlies": [990, 490]}), [990, 490])

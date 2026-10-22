@@ -18,7 +18,7 @@ export const PUBLISHER = {
   email: 'contact@paybybot.fr',
 }
 
-export const LEGAL_UPDATED = '20 octobre 2026'
+export const LEGAL_UPDATED = '22 octobre 2026'
 export const REPO_URL = 'https://github.com/davidstudiopresto/paybybot3/tree/web-interface'
 
 export type LegalPage = 'securite' | 'confidentialite' | 'cgu' | 'mentions-legales'
@@ -497,6 +497,13 @@ function Terms() {
           <li>
             <strong>Changement de prix :</strong> si votre zone de résidence ou votre véhicule change, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
             effet sur la période déjà payée. Vous pouvez résilier à tout moment depuis « Mon compte ».
+          </li>
+          <li>
+            <strong>Arrêt d’un ticket dans PayByPhone :</strong> PayByBot n’est pas informé quand vous arrêtez vous-même
+            un ticket dans l’application <PayByPhone /> avant sa fin. Tant que le renouvellement est actif dans PayByBot,
+            une nouvelle semaine est achetée à son prochain passage, et elle reste due. Pour ne plus rien payer, mettez
+            le renouvellement en pause ou arrêtez-le depuis PayByBot (« Gérer »). PayByBot conserve, comme justificatif,
+            la date et l’état de fin des tickets arrêtés avant leur terme, tels que <PayByPhone /> les indique.
           </li>
           <li>
             <strong>Premier prélèvement :</strong> si vous souscrivez pendant votre mois offert, rien n’est prélevé avant

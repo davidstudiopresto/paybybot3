@@ -81,6 +81,21 @@ class RunningTicket(unittest.TestCase):
         self.assertEqual(web.known_price(session([]), body), (web.PARIS_RESIDENT_WEEK, "paris"))
         self.assertEqual(web.known_price(session([]), body.model_copy(update={"location": "69001"})), (None, None))
 
+    def test_a_week_stopped_early_is_found(self):
+        now = datetime.now(timezone.utc)
+        row = {"plate": "FT630FH", "location": "75005", "rate": "101"}
+
+        def past(days, status="Completed"):
+            start = now - timedelta(days=10)
+            return {"parkingSessionId": "p%s" % days, "status": status, "locationId": "75005",
+                    "vehicle": {"licensePlate": "FT-630-FH"}, "ratePolicy": {"ratePolicyId": "101"},
+                    "startTime": start, "expireTime": start + timedelta(days=days)}
+        s = MagicMock()
+        s.call.side_effect = lambda name, *a, **k: [past(7), past(14), past(2.5, "Stopped")]
+        stops = web.early_stops(s, row)
+        self.assertEqual([x["session"] for x in stops], ["p2.5"])  # full weeks (one or extended) are not stops
+        self.assertEqual(stops[0]["status"], "Stopped")
+
     def test_a_capped_extension_is_not_the_week_price(self):
         now = datetime.now(timezone.utc)
         running = ticket("FT630FH", "75005", hours=24 * 7)

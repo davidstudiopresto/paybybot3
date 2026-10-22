@@ -1089,7 +1089,7 @@ def with_details(row):
 
 ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "suv_plates", "zone_found",
-                  "vehicle_zones", "dunning", "check_mailed")
+                  "vehicle_zones", "dunning", "check_mailed", "early_stops")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -1218,6 +1218,46 @@ def utc_iso(dt):
     return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).isoformat()
 
 
+def early_stops(session, row):
+    """Resident tickets of this car in this zone that ended before the end of their paid weeks: stopped by the user
+    in PayByPhone (PayByBot is not told when it happens)."""
+    found = []
+    for x in session.call("get_past_sessions", limit=10) or []:
+        if not (same_plate((x.get("vehicle") or {}).get("licensePlate"), row["plate"])
+                and str(x.get("locationId")) == str(row["location"])
+                and str((x.get("ratePolicy") or {}).get("ratePolicyId")) == str(row["rate"])):
+            continue
+        start, end = parse_dt(x.get("startTime")), parse_dt(x.get("expireTime"))
+        if not (start and end):
+            continue
+        weeks = max(1, round((end - start) / WEEK))
+        if abs((end - start) - weeks * WEEK) > timedelta(hours=2):
+            found.append({"session": x.get("parkingSessionId"), "start": utc_iso(start), "end": utc_iso(end),
+                          "paid_until": utc_iso(start + weeks * WEEK), "status": x.get("status")})
+    return found
+
+
+def keep_early_stops(session, row):
+    """Keeps on the account each week stopped early (date, planned end, PayByPhone status): the proof that the
+    user stopped it, should a week bought after be disputed. Never stops a renewal."""
+    if not row.get("owner"):
+        return
+    try:
+        stops = early_stops(session, row)
+        if not stops:
+            return
+        known = account_by_owner(row["owner"]).get("early_stops") or []
+        seen = {k.get("session") for k in known}
+        new = [dict(x, plate=plate_key(row["plate"]), seen_at=utc_iso(datetime.now(timezone.utc)))
+               for x in stops if x["session"] not in seen]
+        if new:
+            save_account_by_owner(row["owner"], {"early_stops": (known + new)[-20:]})
+            log.info("renewal %s: %d week(s) stopped early in PayByPhone kept as proof (status %s)", row["id"],
+                     len(new), sorted({str(x["status"]) for x in new}))
+    except Exception as e:
+        log.warning("early stops not checked: %s", str(e)[:200])
+
+
 def process_renewal(row, refresh_token=None, activating=False, refused=False):
     """Check one stored renewal and pay for it if no session is active. Never raises."""
     now = datetime.now(timezone.utc)
@@ -1309,6 +1349,7 @@ def process_renewal(row, refresh_token=None, activating=False, refused=False):
             patch.update(next_check=utc_iso(next_check or now + timedelta(days=30)), last_error=None)
             outcome = "active"
         else:
+            keep_early_stops(session, row)  # a week stopped in PayByPhone before its end: kept as proof
             card = check_payable(session, row["location"], row["rate"], row["plate"], row["payment_account_id"],
                                  avoid=refused)
             result, found = pay_and_confirm(session, row["location"], row["rate"], fmt_qty(row["duration"]),
@@ -1477,6 +1518,8 @@ def login(body: Login, request: Request, response: Response):
             log.warning("could not save the account e-mail: %s", e)
     set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
+    if HOSTED and not demo:  # temporary, read only: how PayByPhone marks a ticket stopped early
+        log_history_statuses(session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -2799,6 +2842,20 @@ def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None and k != "zone"}
     account = guarded(lambda: save_account(s, patch))
     return {"email": account.get("email") or "", "zone": account.get("zone") or None}
+
+
+def log_history_statuses(session):
+    """Temporary: the status and length of the account's last tickets (no plate, no place, no id)."""
+    try:
+        rows = []
+        for x in session.call("get_past_sessions", limit=15) or []:
+            start, end = parse_dt(x.get("startTime")), parse_dt(x.get("expireTime"))
+            rows.append({"status": x.get("status"), "type": x.get("type"),
+                         "rate": (x.get("ratePolicy") or {}).get("type"), "renewable": x.get("isRenewable"),
+                         "hours": round((end - start).total_seconds() / 3600, 1) if start and end else None})
+        log.info("history statuses: %s", json.dumps(rows))
+    except Exception as e:
+        log.info("history statuses unavailable: %s", str(e)[:200])
 
 
 def is_admin(s):

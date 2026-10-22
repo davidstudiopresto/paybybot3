@@ -12,6 +12,8 @@ import { PricingPage } from '@/components/Pricing'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { NotFoundPage } from '@/components/NotFound'
 import { Welcome } from '@/components/Welcome'
+import { InviteGate } from '@/components/InviteGate'
+import { captureInvite, forgetInvite } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
@@ -32,6 +34,9 @@ export default function App() {
   const [data, setData] = useState<Overview | null>(null)
   const [paying, setPaying] = useState(false)
   const [hosted, setHosted] = useState(false)
+  // Word of mouth only (server's PAYBYBOT_INVITE_ONLY): the site opens through a user's link (?i=…).
+  const [inviteOnly, setInviteOnly] = useState(false)
+  const [invited, setInvited] = useState<'yes' | 'no' | 'invalid' | null>(null)
   const [legal, setLegal] = useState<LegalPage | null>(() => legalPageFromHash(window.location.hash))
   const [route, setRoute] = useState(() => routeFromHash(window.location.hash))
   // Right after "S'inscrire": open the renewal setup on the dashboard.
@@ -92,7 +97,23 @@ export default function App() {
 
   useEffect(() => {
     api.me().then(setMe, () => setMe(null))
-    api.config().then((c) => setHosted(c.hosted), () => {})
+    api.config().then(
+      (c) => {
+        setHosted(c.hosted)
+        setInviteOnly(!!c.inviteOnly)
+      },
+      () => {},
+    )
+    const code = captureInvite()
+    if (!code) setInvited('no')
+    else
+      api.inviteCheck(code).then(
+        (r) => {
+          if (!r.valid) forgetInvite()
+          setInvited(r.valid ? 'yes' : 'invalid')
+        },
+        () => setInvited('no'),
+      )
   }, [])
 
   // A page left open across an update keeps running the old app: reload it once a new version is online.
@@ -171,8 +192,11 @@ export default function App() {
         <NotFoundPage hosted={hosted} />
       ) : legal ? (
         legal === 'securite' ? <SecurityPage hosted={hosted} signedIn={!!me} /> : <LegalView page={legal} hosted={hosted} signedIn={!!me} />
-      ) : me === undefined ? (
+      ) : me === undefined || (inviteOnly && !me && invited === null) ? (
         <Loading />
+      ) : inviteOnly && !me && invited !== 'yes' && route !== 'connexion' ? (
+        // Not invited: the home page, blurred, asks for a user's link; signing in stays open.
+        <InviteGate hosted={hosted} invalid={invited === 'invalid'} />
       ) : route === 'admin' ? (
         <AdminPage signedIn={!!me} />
       ) : route === 'tarifs' && me ? (

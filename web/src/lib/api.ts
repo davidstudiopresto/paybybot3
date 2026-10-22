@@ -135,13 +135,16 @@ const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) })
 
 export const api = {
-  config: () => request<{ hosted: boolean; turnstileSiteKey?: string | null; build?: string | null }>('/api/config'),
+  config: () =>
+    request<{ hosted: boolean; turnstileSiteKey?: string | null; build?: string | null; inviteOnly?: boolean }>('/api/config'),
+  inviteCheck: (code: string) => request<{ valid: boolean }>(`/api/invite/${encodeURIComponent(code)}`),
+  myInvite: () => request<{ code: string; url: string }>('/api/invite'),
   me: () => request<Me>('/api/me'),
   login: (
     username: string,
     password: string,
     accepted = false,
-    signup?: { email: string },
+    signup?: { email: string; invite?: string },
     remember = false,
     turnstile = '',
   ) =>

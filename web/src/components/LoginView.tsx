@@ -4,6 +4,7 @@ import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { CARD_NOTE, ResidentRequired } from '@/components/Riverain'
 import { PayByBot, PayByPhone, withPayByPhone } from '@/components/signs'
+import { storedInvite } from '@/lib/invite'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 import { cn } from '@/lib/utils'
@@ -131,7 +132,7 @@ export function LoginView({
         demo ? 'demo' : password,
         !demo,
         // Signed up by e-mail: that address is also the contact one (no second field).
-        signup && !demo ? { email: (mode === 'email' ? email : signupEmail).trim() } : undefined,
+        signup && !demo ? { email: (mode === 'email' ? email : signupEmail).trim(), invite: storedInvite() ?? '' } : undefined,
         !signup && !demo && remember,
         demo ? '' : await human.token(),
       )

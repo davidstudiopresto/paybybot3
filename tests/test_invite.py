@@ -1,0 +1,24 @@
+import unittest
+from unittest.mock import patch
+
+from fastapi import HTTPException
+
+from paybybot3 import web
+
+
+class Invite(unittest.TestCase):
+    def test_a_users_code_is_valid_and_a_made_up_one_is_not(self):
+        code = web.invite_code(web.owner_id("0611223344"))
+        self.assertEqual(len(code), 14)
+        self.assertTrue(web.valid_invite(code))
+        self.assertTrue(web.valid_invite(code.upper()))
+        self.assertFalse(web.valid_invite(code[:8] + "000000"))
+        self.assertFalse(web.valid_invite(""))
+        self.assertFalse(web.valid_invite("not a code"))
+
+    def test_invite_only_sign_up_needs_a_valid_code(self):
+        body = web.Login(username="0611223344", password="x", signup=True, email="a@b.fr", accepted=True)
+        with patch.object(web, "INVITE_ONLY", True), patch.object(web, "HOSTED", False), \
+                self.assertRaises(HTTPException) as refused:
+            web.login(body, None, None)
+        self.assertEqual(refused.exception.status_code, 403)

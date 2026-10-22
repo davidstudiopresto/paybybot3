@@ -1010,6 +1010,21 @@ def owner_id(username):
     return hmac.new(_subkey(_secrets()[0], "owner"), username.encode(), hashlib.sha256).hexdigest()
 
 
+# Word of mouth only: online, signing up needs the link of an existing user (?i=<code> on the site).
+INVITE_ONLY = os.environ.get("PAYBYBOT_INVITE_ONLY", "").strip() == "1"
+
+
+def invite_code(owner):
+    """A user's invitation code: the start of their owner id (who invited, for later) signed by the server."""
+    o = str(owner)[:8]
+    return o + hmac.new(_subkey(_secrets()[0], "invite"), o.encode(), hashlib.sha256).hexdigest()[:6]
+
+
+def valid_invite(code):
+    code = str(code or "").strip().lower()
+    return bool(re.fullmatch(r"[0-9a-f]{14}", code)) and hmac.compare_digest(invite_code(code[:8]), code)
+
+
 def encrypt_credential(refresh_token):
     return _fernet("credential").encrypt(refresh_token.encode()).decode()
 
@@ -1421,6 +1436,7 @@ class Login(BaseModel):
     email: str = Field(default="", max_length=254, pattern=EMAIL_PATTERN)  # required at sign-up
     zone: str = Field(default="", pattern=r"^$|^\w{3,10}$")  # home zone, asked at sign-up
     turnstile: str = Field(default="", max_length=2048)  # Cloudflare's human check token (hosted)
+    invite: str = Field(default="", max_length=40)  # the inviting user's code (sign-up, invite-only)
 
 
 class AccountPatch(BaseModel):
@@ -1465,6 +1481,8 @@ def login(body: Login, request: Request, response: Response):
     masked = body.username.strip()[:4] + "***"
     if body.signup and not demo and not body.email.strip():
         raise HTTPException(400, "Indiquez votre adresse e-mail.")
+    if body.signup and not demo and INVITE_ONLY and not valid_invite(body.invite):
+        raise HTTPException(403, "PayByBot est sur invitation : demandez son lien à un proche qui l'utilise déjà.")
     if HOSTED and not demo:
         if not body.accepted:
             raise HTTPException(400, "Acceptez les conditions d'utilisation et la politique de confidentialité.")
@@ -1698,7 +1716,22 @@ def current_build():
 @app.get("/api/config")
 def config():
     """Public: lets the login page describe where credentials go."""
-    return {"hosted": HOSTED, "turnstileSiteKey": turnstile_site_key() or None, "build": current_build()}
+    return {"hosted": HOSTED, "turnstileSiteKey": turnstile_site_key() or None, "build": current_build(),
+            "inviteOnly": INVITE_ONLY}
+
+
+@app.get("/api/invite/{code}")
+def invite_check(code: str):
+    """Public: whether an invitation link is valid (the site opens only through one)."""
+    return {"valid": valid_invite(code)}
+
+
+@app.get("/api/invite")
+def my_invite(pbb_session: str = Cookie(None)):
+    """The signed-in user's invitation link, to share with people around them."""
+    s = current(pbb_session)
+    code = invite_code(owner_id(s.username))
+    return {"code": code, "url": APP_URL.rstrip("/") + "/?i=" + code}
 
 
 @app.get("/api/me")

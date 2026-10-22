@@ -49,6 +49,11 @@ function AccountDialog({
     api.pricing().then((p) => setVehicles(p.vehicles ?? []), () => setVehicles([]))
   }, [])
 
+  const [invite, setInvite] = useState<string | null>(null)
+  useEffect(() => {
+    api.myInvite().then((r) => setInvite(r.url), () => {})
+  }, [])
+
   async function openPortal() {
     try {
       window.location.assign((await api.billingPortal()).url)
@@ -147,6 +152,30 @@ function AccountDialog({
             </dd>
           </div>
 
+          {/* Word of mouth: the user's own link, the only way in for people around them. */}
+          <div className={row}>
+            <dt className={label}>Inviter un proche</dt>
+            <dd className="flex min-w-0 flex-col items-end gap-1.5">
+              {invite ? (
+                <>
+                  <span className="max-w-full truncate text-sm text-ink/70">{invite.replace(/^https?:\/\//, '')}</span>
+                  <button
+                    onClick={() =>
+                      navigator.clipboard.writeText(invite).then(
+                        () => toast.success('Lien copié : envoyez-le à un proche.'),
+                        () => toast.error('Copie impossible : sélectionnez le lien.'),
+                      )
+                    }
+                    className={cn('text-sm', ui.link)}
+                  >
+                    Copier le lien
+                  </button>
+                </>
+              ) : (
+                <span className="inline-block h-5 w-32 animate-pulse rounded bg-ink/10" />
+              )}
+            </dd>
+          </div>
         </dl>
 
         <p className="px-6 pt-4 text-sm text-ink/50">

@@ -198,7 +198,7 @@ function DeleteConfirm({ data, onCancel, onDeleted }: { data: Overview; onCancel
             confirmation par e-mail.
           </DialogDescription>
           {/* Which ticket stays valid, and until when: plate, zone, end. */}
-          <div role="note" className="mt-4 rounded-xl bg-amber/20 px-4 py-3 text-sm leading-relaxed text-ink">
+          <div role="note" className="mt-4 rounded-xl border border-border bg-white px-4 py-3 text-sm leading-relaxed text-ink">
             {running.length ? (
               <>
                 <p>{running.length > 1 ? 'Vos tickets en cours restent valables jusqu’à leur fin :' : 'Votre ticket en cours reste valable jusqu’à sa fin :'}</p>

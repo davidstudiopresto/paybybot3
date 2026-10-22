@@ -167,6 +167,7 @@ export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () =
 export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; onChanged: () => void; demo?: boolean }) {
   const [managing, setManaging] = useState(false)
   const [pausing, setPausing] = useState(false)
+  const [emailing, setEmailing] = useState(false)
 
   async function resume() {
     if (ap.enabled) {
@@ -182,22 +183,6 @@ export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; 
     await relaunch(ap, onChanged)
   }
 
-  async function editEmail() {
-    const value = window.prompt(
-      (demo ? "Mode démo : aucun e-mail n'est envoyé.\n\n" : '') +
-        "Adresse e-mail pour recevoir une confirmation à chaque paiement et une alerte en cas de problème (laisser vide pour ne plus rien recevoir) :",
-      ap.email ?? '',
-    )
-    if (value === null) return
-    try {
-      await api.setAutopilotEmail(ap.id, value.trim())
-      toast.success(value.trim() ? 'Les confirmations seront envoyées à cette adresse.' : 'Vous ne recevrez plus d’e-mails.')
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
-    onChanged()
-  }
-
   async function stop() {
     await api.deleteAutopilot(ap.id)
     toast.success('Renouvellement hebdomadaire arrêté.', { description: 'Le ticket en cours reste valable.' })
@@ -210,6 +195,7 @@ export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; 
         Gérer
       </button>
       {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
+      {emailing && <EmailDialog ap={ap} demo={demo} onClose={() => setEmailing(false)} onDone={onChanged} />}
       {managing && (
         <ManageDialog
           ap={ap}
@@ -224,7 +210,7 @@ export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; 
           }}
           onEmail={() => {
             setManaging(false)
-            editEmail()
+            setEmailing(true)
           }}
           onStop={() => {
             setManaging(false)
@@ -808,6 +794,75 @@ function isoDay(d: Date) {
 }
 
 /** Vacation pause: no payment between two days (Paris time), or from a day with no end yet. */
+/** Where the renewal's confirmations go: one address, or none. */
+function EmailDialog({ ap, demo, onClose, onDone }: { ap: Autopilot; demo: boolean; onClose: () => void; onDone: () => void }) {
+  const [email, setEmail] = useState(ap.email ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const valid = email.trim() === '' || /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email.trim())
+
+  async function save(value: string) {
+    setSaving(true)
+    setError(null)
+    try {
+      await api.setAutopilotEmail(ap.id, value)
+      toast.success(value ? 'Les confirmations seront envoyées à cette adresse.' : 'Vous ne recevrez plus d’e-mails.')
+      onClose()
+      onDone()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className={ui.dialog}>
+        <div className="px-6 pt-7">
+          <DialogTitle className={ui.dialogTitle}>Confirmations par e-mail</DialogTitle>
+          <DialogDescription className="mt-1 text-ink/60">
+            Un e-mail à chaque paiement, et une alerte en cas de problème.
+            {demo && ' Mode démo : aucun e-mail n’est envoyé.'}
+          </DialogDescription>
+        </div>
+        <form
+          className="space-y-4 p-6"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (valid) save(email.trim())
+          }}
+        >
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoFocus
+            placeholder="vous@exemple.fr"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-label="Adresse e-mail"
+            className={ui.field}
+          />
+          {error && (
+            <p role="alert" className={ui.error}>
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={!valid || saving || email.trim() === (ap.email ?? '')} className={ui.primary}>
+            {saving ? <Loader2 className="size-5 animate-spin" /> : 'Enregistrer'}
+          </button>
+          {ap.email && (
+            <button type="button" onClick={() => save('')} disabled={saving} className={cn('mx-auto block text-sm', ui.link)}>
+              Ne plus recevoir d’e-mails
+            </button>
+          )}
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function PauseDialog({ ap, onClose, onDone }: { ap: Autopilot; onClose: () => void; onDone: () => void }) {
   const today = isoDay(new Date())
   const [start, setStart] = useState(today)

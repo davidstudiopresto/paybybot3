@@ -1810,9 +1810,18 @@ def quote(body: QuoteRequest, pbb_session: str = Cookie(None)):
         until = iso(covered_until(running)) if running else None
         for x in running:
             try:
-                return {**ask("Extend", x.get("parkingSessionId")), "afterCurrent": True, "currentExpire": until}
+                q = ask("Extend", x.get("parkingSessionId"))
             except Exception as e:  # e.g. a visitor ticket cannot be extended at the resident rate
                 log.info("renewal price as an extension refused: %s", str(e)[:200])
+                continue
+            # PayByPhone may cap an extension (longest stay allowed): its price is then that of a few hours, not
+            # of the week asked. Only an extension of the full stay gives the renewal's price.
+            ends = parse_dt(covered_until([x]))
+            added = parse_dt(q.get("expire")) - ends if q.get("expire") and ends else None
+            asked = timedelta(**{body.unit.lower(): float(body.duration)})
+            if added is not None and abs(added - asked) <= timedelta(hours=2):
+                return {**q, "afterCurrent": True, "currentExpire": until}
+            log.info("renewal price as an extension: only %s added out of %s, not used", added, asked)
         cost, source = known_price(s, body)
         return {"cost": cost, "priceSource": source, "start": None, "expire": None, "afterCurrent": True,
                 "currentExpire": until}

@@ -81,6 +81,30 @@ class RunningTicket(unittest.TestCase):
         self.assertEqual(web.known_price(session([]), body), (web.PARIS_RESIDENT_WEEK, "paris"))
         self.assertEqual(web.known_price(session([]), body.model_copy(update={"location": "69001"})), (None, None))
 
+    def test_a_capped_extension_is_not_the_week_price(self):
+        now = datetime.now(timezone.utc)
+        running = ticket("FT630FH", "75005", hours=24 * 7)
+        week = {"vehicle": {"licensePlate": "FT-630-FH"}, "ratePolicy": {"ratePolicyId": "101"},
+                "startTime": now - timedelta(days=20), "expireTime": now - timedelta(days=13),
+                "totalCost": {"amount": 5.0, "currency": "EUR"}}
+        body = web.QuoteRequest(location="75005", rate="101", duration=7, unit="Days", plate="FT630FH",
+                                paymentAccountId="c", renewal=True)
+
+        def call(name, *a, **k):
+            if name == "_create_quote":
+                if k["operation"] == "Start":
+                    raise RuntimeError("VehicleAlreadyParked")
+                # PayByPhone caps it: a few hours more, not a week
+                return {"cost": {"amount": 1.25, "currency": "EUR"},
+                        "details": {"parkingExpiryTime": (running["expireTime"] + timedelta(hours=6)).isoformat()}}
+            return {"get_parking_sessions": [running], "get_past_sessions": [week]}.get(name, [])
+        s = MagicMock()
+        s.call.side_effect = call
+        with patch.object(web, "current", return_value=s):
+            q = web.quote(body, "t")
+        self.assertEqual((q["cost"], q.get("priceSource"), q["afterCurrent"]),
+                         ({"amount": 5.0, "currency": "EUR"}, "history", True))
+
     def test_bank_asking_to_confirm_is_tried_again_in_an_hour(self):
         before = datetime.now(timezone.utc)
         outcome, patch_, mail, _ = self.run_renewal([], pay_error=web.BankCheck(web.BANK_CHECK))

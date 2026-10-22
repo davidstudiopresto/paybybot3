@@ -262,6 +262,23 @@ export function LoginView({
                 />
               </div>
             )}
+            {/* Sign-up by phone: the e-mail comes right under the number. */}
+            {signup && mode === 'phone' && (
+              <div className={fieldBox}>
+                <input
+                  id="signup-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="Votre e-mail"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  aria-label="E-mail"
+                  required
+                  className="h-full min-w-0 flex-1 bg-transparent px-4 text-lg text-ink outline-none placeholder:text-ink/30"
+                />
+              </div>
+            )}
             {accountExists && (
               <p role="alert" className="rounded-xl bg-destructive/8 px-4 py-3 text-destructive">
                 {withPayByPhone(EXISTS)}{' '}
@@ -318,22 +335,6 @@ export function LoginView({
               </a>
             </div>
 
-            {signup && mode === 'phone' && (
-              <div className={fieldBox}>
-                <input
-                  id="signup-email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="Votre e-mail"
-                  value={signupEmail}
-                  onChange={(e) => setSignupEmail(e.target.value)}
-                  aria-label="E-mail"
-                  required
-                  className="h-full min-w-0 flex-1 bg-transparent px-4 text-lg text-ink outline-none placeholder:text-ink/30"
-                />
-              </div>
-            )}
           </div>
           {signup && mode === 'email' && (
             <p className="mt-2 text-sm text-ink/50">Cette adresse reçoit aussi les confirmations de paiement et les alertes. Gardée chiffrée.</p>

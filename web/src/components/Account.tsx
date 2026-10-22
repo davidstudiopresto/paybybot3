@@ -95,8 +95,11 @@ function AccountDialog({
                 vehicles.map((v) => (
                   <span key={v.plate} className="flex flex-wrap items-center justify-end gap-2">
                     <Plate plate={v.plate} size="sm" />
-                    {arrondissement(v.zone) && <span className="text-sm font-semibold text-ink">{arrondissement(v.zone)}</span>}
-                    <ZonePlate zone={v.zone} />
+                    {arrondissement(v.zone) ? (
+                      <span className="text-sm font-semibold text-ink">{arrondissement(v.zone)}</span>
+                    ) : (
+                      <ZonePlate zone={v.zone} />
+                    )}
                   </span>
                 ))
               ) : (

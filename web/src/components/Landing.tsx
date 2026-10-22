@@ -193,7 +193,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
           <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             Fonctionnalités
           </h2>
-          <Rows items={FEATURES} className="mt-12 lg:mt-16" />
+          <Rows items={FEATURES} openFirst className="mt-12 lg:mt-16" />
         </section>
 
         <Testimonials />
@@ -316,9 +316,9 @@ function FaqTitle({ as: Tag = 'h1' }: { as?: 'h1' | 'h2' }) {
 }
 
 /** One row per item, a hairline between them, "+" turning into "×" when open; one open at a time, its title in bold. */
-function Rows({ items, className }: { items: Question[]; className?: string }) {
+function Rows({ items, className, openFirst = false }: { items: Question[]; className?: string; openFirst?: boolean }) {
   return (
-    <Accordion className={cn('border-t border-ink/12', className)}>
+    <Accordion defaultValue={openFirst ? [items[0][0]] : []} className={cn('border-t border-ink/12', className)}>
       {items.map(([q, a]) => (
         <AccordionItem key={q} value={q} className="border-b border-ink/12 not-last:border-b">
           <AccordionTrigger className="group/q items-center gap-6 rounded-none py-6 text-[1.05rem] font-normal text-ink/70 transition-colors hover:text-ink hover:no-underline focus-visible:ring-0 aria-expanded:font-semibold aria-expanded:text-ink sm:text-[1.15rem] **:data-[slot=accordion-trigger-icon]:hidden">

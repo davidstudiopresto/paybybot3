@@ -490,7 +490,7 @@ function Terms() {
             carte bancaire.
           </li>
           <li>
-            <strong>Offres et prix :</strong> abonnement mensuel, TTC, par véhicule : voiture 9,90 € en zone 1
+            <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC, par véhicule et par mois : voiture 9,90 € en zone 1
             (arrondissements 1 à 11) et 6,90 € en zone 2 (12 à 20) ; deux-roues 6,90 € et 4,90 €. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte bancaire, via notre
             prestataire de paiement Stripe ; PayByBot ne voit ni ne conserve votre numéro de carte.
           </li>

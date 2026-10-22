@@ -69,10 +69,11 @@ export type Account = {
 }
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
 
-/** The account's monthly prices in cents, by vehicle type and zone (zone null: unknown). */
+/** The account's prices in cents, by vehicle type and zone: per month, and per year with 20 % off (zone null: unknown). */
 export type Pricing = {
   zone: string | null
   monthly: number | null
+  yearly: number | null
   /** Resident status active on PayByPhone in the home zone (null while the zone is unknown). */
   resident?: boolean | null
   /** The « riverain » vehicles (a resident rate in the home zone), one price each. */
@@ -85,6 +86,7 @@ export type PricedVehicle = {
   type?: string | null
   zone: string // the arrondissement PayByPhone gives it the resident rate in (never typed)
   monthly: number
+  yearly: number
   renewed: boolean
 }
 
@@ -150,7 +152,7 @@ export const api = {
   updateAccount: (patch: Partial<Account>) =>
     request<Account>('/api/account', { method: 'PUT', body: JSON.stringify(patch) }),
   logout: () => post('/api/logout'),
-  checkout: (plan: 'monthly') => post<{ url: string }>('/api/billing/checkout', { plan }),
+  checkout: (plan: 'monthly' | 'yearly') => post<{ url: string }>('/api/billing/checkout', { plan }),
   contact: (p: { email: string; message: string; website: string }) => post<{ ok: true }>('/api/contact', p),
   confirmCheckout: (session_id: string) => post<{ plan: string }>('/api/billing/confirm', { session_id }),
   billingPortal: () => post<{ url: string }>('/api/billing/portal'),

@@ -12,7 +12,15 @@ import { api, type Pricing } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 
+export type Plan = 'monthly' | 'yearly'
+
+const PLANS: { id: Plan; name: string; popular?: boolean }[] = [
+  { id: 'yearly', name: 'Annuel', popular: true },
+  { id: 'monthly', name: 'Mensuel' },
+]
+
 const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
+const yearOf = (monthly: number) => Math.round(monthly * 12 * 0.8)
 
 /** The grid, by vehicle type and Paris zone (the server's MONTHLY_PRICES). */
 const GRID: [string, number, number][] = [
@@ -26,14 +34,16 @@ function usePricing(enabled: boolean) {
   const load = useCallback(() => {
     if (!enabled) return
     setPricing(null)
-    api.pricing().then(setPricing, () => setPricing({ zone: null, monthly: null }))
+    api.pricing().then(setPricing, () => setPricing({ zone: null, monthly: null, yearly: null }))
   }, [enabled])
   useEffect(load, [load])
   return [pricing, load] as const
 }
 
-/** The monthly price by vehicle type and zone. */
-function PriceGrid({ className }: { className?: string }) {
+/** The price by vehicle type and zone, per month or per year. */
+function PriceGrid({ plan, className }: { plan: Plan; className?: string }) {
+  const price = (m: number) => (plan === 'monthly' ? euros(m) : euros(yearOf(m)))
+  const per = plan === 'monthly' ? '/ mois' : '/ an'
   return (
     <table className={cn('w-full text-left text-[0.95rem]', className)}>
       <thead>
@@ -51,8 +61,8 @@ function PriceGrid({ className }: { className?: string }) {
         {GRID.map(([name, z1, z2]) => (
           <tr key={name} className="border-t border-ink/10">
             <td className="py-3 font-semibold text-ink">{name}</td>
-            <td className="py-3 text-ink tabular-nums">{euros(z1)} <span className="text-ink/50">/ mois</span></td>
-            <td className="py-3 text-ink tabular-nums">{euros(z2)} <span className="text-ink/50">/ mois</span></td>
+            <td className="py-3 text-ink tabular-nums">{price(z1)} <span className="text-ink/50">{per}</span></td>
+            <td className="py-3 text-ink tabular-nums">{price(z2)} <span className="text-ink/50">{per}</span></td>
           </tr>
         ))}
       </tbody>
@@ -61,7 +71,7 @@ function PriceGrid({ className }: { className?: string }) {
 }
 
 /** One price per « riverain » vehicle (plate), and what the subscription covers. */
-function VehiclePrices({ pricing, className }: { pricing: Pricing | null; className?: string }) {
+function VehiclePrices({ plan, pricing, className }: { plan: Plan; pricing: Pricing | null; className?: string }) {
   const vehicles = pricing?.vehicles ?? []
   if (vehicles.length < 2) return null
   const billed = pricing?.billed?.length ?? 1
@@ -71,7 +81,9 @@ function VehiclePrices({ pricing, className }: { pricing: Pricing | null; classN
         {vehicles.map((v) => (
           <li key={v.plate} className="flex items-center justify-between gap-3 text-sm">
             <Plate plate={v.plate} size="sm" />
-            <span className="text-ink/70 tabular-nums">{euros(v.monthly)} / mois</span>
+            <span className="text-ink/70 tabular-nums">
+              {plan === 'monthly' ? `${euros(v.monthly)} / mois` : `${euros(v.yearly)} / an`}
+            </span>
           </li>
         ))}
       </ul>
@@ -83,6 +95,13 @@ function VehiclePrices({ pricing, className }: { pricing: Pricing | null; classN
   )
 }
 
+/** What a plan shows with the account's own price. */
+function planText(id: Plan, pricing: Pricing) {
+  return id === 'monthly'
+    ? { price: euros(pricing.monthly!), per: '/ mois', note: 'Sans engagement' }
+    : { price: euros(pricing.yearly!), per: '/ an', note: `Soit ${euros(Math.round(pricing.yearly! / 12))} par mois` }
+}
+
 const INCLUDED = [
   'Renouvellement automatique du forfait résident',
   'Pause vacances',
@@ -90,23 +109,32 @@ const INCLUDED = [
   'Annulable à tout moment',
 ]
 
-/** The monthly offer: the account's own price once signed in, else the grid. */
-export function PlanCards({ signedIn }: { signedIn: boolean }) {
-  const [busy, setBusy] = useState(false)
-  const [pricing] = usePricing(signedIn)
+function PopularBadge() {
+  return (
+    <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] px-3 py-1 text-xs font-semibold text-white">
+      <Sparkles className="size-3.5" /> Plus populaire
+    </span>
+  )
+}
 
-  async function choose() {
+/** The two plans side by side, the yearly one put forward: the account's own prices once signed in, else the grid. */
+export function PlanCards({ signedIn }: { signedIn: boolean }) {
+  const [busy, setBusy] = useState<Plan | null>(null)
+  const [pricing] = usePricing(signedIn)
+  const own = signedIn && pricing?.monthly != null && pricing.yearly != null ? pricing : null
+
+  async function choose(plan: Plan) {
     if (!signedIn) {
       window.location.hash = '#/inscription'
       return
     }
-    setBusy(true)
+    setBusy(plan)
     try {
-      const { url } = await api.checkout('monthly')
+      const { url } = await api.checkout(plan)
       window.location.assign(url)
     } catch (e) {
       toast((e as Error).message)
-      setBusy(false)
+      setBusy(null)
     }
   }
 
@@ -114,34 +142,62 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
     <>
       {signedIn && pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
       {signedIn && !pricing ? (
-        <div className="mx-auto h-96 max-w-md animate-pulse rounded-2xl bg-ink/[0.05]" />
-      ) : (
-        <div className="mx-auto flex max-w-md flex-col rounded-2xl border border-eu p-6 ring-1 ring-eu sm:p-7">
-          {signedIn && pricing?.monthly != null ? (
-            <>
-              <p className="font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
-                {euros(pricing.monthly)} <span className="text-base font-normal text-ink/50">/ mois</span>
-              </p>
-              <p className="mt-2 text-sm text-ink/55">Sans engagement</p>
-              <VehiclePrices pricing={pricing} className="mt-5 border-t border-ink/10 pt-4" />
-            </>
-          ) : (
-            <>
-              <PriceGrid />
-              <p className="mt-2 text-sm text-ink/55">Votre prix est calculé tout seul avec votre compte <PayByPhone />. Sans engagement.</p>
-            </>
-          )}
-          <ul className="mt-6 space-y-2 text-[0.95rem] text-ink/70">
-            {INCLUDED.map((x) => (
-              <li key={x} className="flex items-start gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-eu" /> {x}
-              </li>
-            ))}
-          </ul>
-          <button onClick={choose} disabled={busy} className={cn('mt-7', ui.primary)}>
-            {busy ? <Loader2 className="size-5 animate-spin" /> : signedIn ? 'Choisir le mensuel' : 'Commencer mon mois offert'}
-          </button>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="h-96 animate-pulse rounded-2xl bg-ink/[0.05]" />
+          <div className="h-96 animate-pulse rounded-2xl bg-ink/[0.05]" />
         </div>
+      ) : (
+        <div className="grid gap-5 md:grid-cols-2">
+          {PLANS.map((p) => (
+            <div
+              key={p.id}
+              className={cn('relative flex flex-col rounded-2xl border p-6 sm:p-7', p.popular ? 'border-eu ring-1 ring-eu' : 'border-ink/10')}
+            >
+              {p.popular && <PopularBadge />}
+              <p className="flex items-center justify-between font-semibold text-ink">
+                {p.name}
+                {p.popular && <span className="rounded-full bg-eu/[0.08] px-2 py-0.5 text-xs font-semibold text-eu">-20 %</span>}
+              </p>
+              {own ? (
+                <>
+                  <p className="mt-4 font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
+                    {planText(p.id, own).price} <span className="text-base font-normal text-ink/50">{planText(p.id, own).per}</span>
+                  </p>
+                  <p className="mt-2 text-sm text-ink/55">{planText(p.id, own).note}</p>
+                  <VehiclePrices plan={p.id} pricing={own} className="mt-5 border-t border-ink/10 pt-4" />
+                </>
+              ) : (
+                <>
+                  <PriceGrid plan={p.id} className="mt-4" />
+                  <p className="mt-2 text-sm text-ink/55">
+                    {p.id === 'yearly' ? 'Payé une fois par an, 20 % de moins que le mensuel.' : 'Sans engagement.'}
+                  </p>
+                </>
+              )}
+              <ul className="mt-6 space-y-2 text-[0.95rem] text-ink/70">
+                {INCLUDED.map((x) => (
+                  <li key={x} className="flex items-start gap-2">
+                    <Check className="mt-0.5 size-4 shrink-0 text-eu" /> {x}
+                  </li>
+                ))}
+              </ul>
+              <button onClick={() => choose(p.id)} disabled={busy !== null} className={cn('mt-7', p.popular ? ui.primary : ui.primaryGray)}>
+                {busy === p.id ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : signedIn ? (
+                  p.popular ? 'Choisir l’annuel' : 'Choisir le mensuel'
+                ) : (
+                  'Commencer mon mois offert'
+                )}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {!own && (
+        <p className="mt-6 text-center text-sm text-ink/55">
+          Votre prix est calculé tout seul avec votre compte <PayByPhone />.
+        </p>
       )}
     </>
   )
@@ -153,7 +209,7 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <PublicTopBar signedIn={signedIn} />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 pt-16 pb-20 lg:pt-24">
+      <main className="mx-auto w-full max-w-4xl flex-1 px-6 pt-16 pb-20 lg:pt-24">
         <h1 className="rise text-center font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
           {signedIn ? 'Vos tarifs' : 'Tarifs'}
         </h1>
@@ -269,6 +325,7 @@ function graceDay(iso: string | null) {
 /** Full-page paywall: the offer and the way to pay on the left, the parking meter on the right. onPay runs just
  *  before leaving for Stripe. */
 export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; text: string; onPay?: () => void }) {
+  const [plan, setPlan] = useState<Plan>('yearly')
   const [busy, setBusy] = useState(false)
   const [pricing] = usePricing(true)
   const locked = pricing?.resident === false
@@ -276,7 +333,7 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
   async function pay() {
     setBusy(true)
     try {
-      const { url } = await api.checkout('monthly')
+      const { url } = await api.checkout(plan)
       onPay?.()
       window.location.assign(url)
     } catch (e) {
@@ -311,29 +368,45 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
                 aria-hidden={locked || undefined}
                 className={cn(locked && 'pointer-events-none select-none opacity-50 blur-[2px] grayscale')}
               >
-              <div className="mt-8 space-y-3">
+              <div role="radiogroup" aria-label="Offre" className="mt-8 space-y-3">
                 {pricing && pricing.monthly == null && !locked && (
                   <p className="rounded-2xl border border-ink/10 p-4 text-sm text-ink/60">
                     Votre prix n’a pas pu être calculé avec <PayByPhone /> pour le moment. Réessayez dans quelques minutes.
                   </p>
                 )}
                 {!pricing && <div className="h-40 animate-pulse rounded-2xl bg-ink/[0.05]" />}
-                {pricing?.monthly != null && (
-                  <div className="flex w-full items-center gap-4 rounded-2xl border border-eu bg-eu/[0.04] p-4 ring-1 ring-eu">
-                    <span className="flex-1">
-                      <span className="block font-semibold text-ink">Mensuel</span>
-                      <span className="block text-sm text-ink/55">Sans engagement</span>
-                    </span>
-                    <span className="text-right">
-                      <span className="font-heading text-xl font-semibold text-ink">{euros(pricing.monthly)}</span>{' '}
-                      <span className="text-sm text-ink/50">/ mois</span>
-                    </span>
-                  </div>
-                )}
-                {locked && <PriceGrid className="rounded-2xl border border-ink/10 p-4" />}
+                {pricing?.monthly != null && pricing.yearly != null &&
+                  PLANS.map((p) => ({ ...p, ...planText(p.id, pricing) })).map((p) => (
+                    <button
+                      key={p.id}
+                      role="radio"
+                      aria-checked={plan === p.id}
+                      onClick={() => setPlan(p.id)}
+                      className={cn(
+                        'flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition',
+                        plan === p.id ? 'border-eu bg-eu/[0.04] ring-1 ring-eu' : 'border-ink/15 hover:border-ink/30',
+                      )}
+                    >
+                      <span className={cn('grid size-5 shrink-0 place-items-center rounded-full border-2', plan === p.id ? 'border-eu' : 'border-ink/25')}>
+                        {plan === p.id && <span className="size-2.5 rounded-full bg-eu" />}
+                      </span>
+                      <span className="flex-1">
+                        <span className="flex items-center gap-2 font-semibold text-ink">
+                          {p.name}
+                          {p.popular && <span className="rounded-full bg-eu/[0.08] px-2 py-0.5 text-xs font-semibold text-eu">-20 %</span>}
+                        </span>
+                        <span className="block text-sm text-ink/55">{p.note}</span>
+                      </span>
+                      <span className="text-right">
+                        <span className="font-heading text-xl font-semibold text-ink">{p.price}</span>{' '}
+                        <span className="text-sm text-ink/50">{p.per}</span>
+                      </span>
+                    </button>
+                  ))}
+                {locked && <PriceGrid plan={plan} className="rounded-2xl border border-ink/10 p-4" />}
               </div>
 
-              <VehiclePrices pricing={pricing} className="mt-5 rounded-2xl bg-ink/[0.03] p-4" />
+              <VehiclePrices plan={plan} pricing={pricing} className="mt-5 rounded-2xl bg-ink/[0.03] p-4" />
               <ul className="mt-6 grid gap-2 text-[0.95rem] text-ink/70 sm:grid-cols-2">
                 {INCLUDED.map((x) => (
                   <li key={x} className="flex items-start gap-2">

@@ -37,11 +37,11 @@ class Billing(unittest.TestCase):
     def test_checkout_waits_for_the_end_of_the_free_month(self):
         self.s.account["monthlies"] = [990]  # a car in zone 1
         with patch.object(web, "account_pricing", return_value={"monthly": 990}):
-            r = web.billing_checkout(web.Checkout(plan="yearly"), None, "t")  # the yearly plan is no longer offered
+            r = web.billing_checkout(web.Checkout(plan="yearly"), None, "t")
         self.assertEqual(r["url"], "https://checkout.stripe.com/x")
         data = self.calls[0][2]
         self.assertEqual((data["line_items[0][price_data][unit_amount]"],
-                          data["line_items[0][price_data][recurring][interval]"]), (990, "month"))
+                          data["line_items[0][price_data][recurring][interval]"]), (9504, "year"))
         self.assertNotIn("subscription_data[trial_end]", data)  # no Stripe trial: the free month already runs
         self.assertEqual((data["adaptive_pricing[enabled]"], data["payment_method_types[0]"]), ("false", "card"))
         self.assertEqual(data["subscription_data[proration_behavior]"], "none")
@@ -56,7 +56,7 @@ class Billing(unittest.TestCase):
         self.assertEqual(web.monthly_cents("Scooter", "75017"), 490)
         self.assertEqual(web.monthly_cents("Car", None), 990)  # unknown zone: zone 1
 
-    def test_yearly_kept_for_older_subscriptions(self):
+    def test_yearly_is_twelve_months_with_20_percent_off(self):
         self.assertEqual(web.plan_total([990], "yearly"), 9504)  # twelve months, 20 % off
 
     def test_no_zone_no_checkout(self):

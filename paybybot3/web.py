@@ -1846,8 +1846,8 @@ def known_price(s, body):
 WEEK = timedelta(days=7)
 
 # The subscription: a monthly price per renewed vehicle, by vehicle type and Paris zone (zone 1: arrondissements 1
-# to 11, zone 2: 12 to 20), the same grid as Frequens. Both are known from PayByPhone, never asked. The yearly plan
-# is no longer offered; it is kept only for subscriptions taken before (twelve months, 20 % off).
+# to 11, zone 2: 12 to 20), the same grid as Frequens. Both are known from PayByPhone, never asked. Per year:
+# twelve months with 20 % off.
 YEARLY_DISCOUNT = 0.20
 MONTHLY_PRICES = {("car", 1): 990, ("car", 2): 690, ("two", 1): 690, ("two", 2): 490}
 DEFAULT_MONTHLY_CENTS = MONTHLY_PRICES[("car", 1)]
@@ -1865,8 +1865,7 @@ def monthly_cents(vehicle_type, zone):
 
 
 def plan_total(monthlies, plan="monthly"):
-    """The subscription for several vehicles: the sum of their monthly prices (per year, for older yearly plans:
-    twelve months with 20 % off)."""
+    """The subscription for several vehicles: the sum of their monthly prices; per year twelve months with 20 % off."""
     monthly = sum(int(m) for m in monthlies) or DEFAULT_MONTHLY_CENTS
     return monthly if plan == "monthly" else int(round(monthly * 12 * (1 - YEARLY_DISCOUNT)))
 
@@ -2012,8 +2011,10 @@ def account_pricing(s):
     if account.get("monthlies") != monthlies or account.get("price_zone") != zone:
         account = save_account(s, {"monthlies": monthlies, "price_zone": zone})
         reprice(account, owner_id(s.username) if HOSTED and not s.demo else None)
-    return {"zone": zone, "monthly": plan_total(monthlies), "billed": [v["plate"] for v in billed],
-            "vehicles": [{**v, "renewed": plate_key(v["plate"]) in renewed} for v in vehicles]}
+    return {"zone": zone, "monthly": plan_total(monthlies), "yearly": plan_total(monthlies, "yearly"),
+            "billed": [v["plate"] for v in billed],
+            "vehicles": [{**v, "yearly": plan_total([v["monthly"]], "yearly"), "renewed": plate_key(v["plate"]) in renewed}
+                         for v in vehicles]}
 
 
 def follow_renewals(s):
@@ -2624,13 +2625,14 @@ def reprice(account, owner):
 
 @app.get("/api/pricing")
 def pricing(pbb_session: str = Cookie(None)):
-    """The account's monthly prices, by vehicle type and zone. No riverain vehicle: zone and prices None."""
+    """The account's prices, by vehicle type and zone: per month, and per year with 20 % off. No riverain vehicle:
+    zone and prices None."""
     s = current(pbb_session)
     found = guarded(lambda: account_pricing(s))
     if found:
         return {**found, "resident": True}
     status = guarded(lambda: resident_status(s))
-    return {"zone": status["zone"], "monthly": None, "resident": status["resident"]}
+    return {"zone": status["zone"], "monthly": None, "yearly": None, "resident": status["resident"]}
 
 
 def resident_status(s):
@@ -2650,7 +2652,7 @@ def resident_status_route(pbb_session: str = Cookie(None)):
 
 @app.post("/api/billing/checkout")
 def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie(None)):
-    """Stripe Checkout for the monthly plan (the only one offered); nothing is charged before the free month ends."""
+    """Stripe Checkout for the monthly or yearly plan; nothing is charged before the free month ends."""
     s = current(pbb_session)
     if s.demo:
         raise HTTPException(400, "Le paiement n'est pas disponible en mode démo.")
@@ -2662,7 +2664,7 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
                                      "disponible pour l'instant.")
         raise HTTPException(400, "Choisissez d'abord votre arrondissement : le prix dépend de votre zone de résidence.")
     account = guarded(lambda: load_account(s))
-    url = checkout_url(owner_id(s.username), account, "monthly",
+    url = checkout_url(owner_id(s.username), account, body.plan,
                        APP_URL.rstrip("/") + "/#/abonnement?session_id={CHECKOUT_SESSION_ID}")
     return {"url": url}
 

@@ -29,8 +29,17 @@ export const LEGAL_PAGES: { id: LegalPage; label: string }[] = [
 ]
 
 export function legalPageFromHash(hash: string): LegalPage | null {
-  const id = hash.replace(/^#\/?/, '')
+  const id = hash.replace(/^#\/?/, '').split('?')[0]
   return LEGAL_PAGES.some((p) => p.id === id) ? (id as LegalPage) : null
+}
+
+/** The page a legal page was opened from (« ?from=inscription » in its hash, set by App), to go back to it. */
+export function legalBack(signedIn: boolean): { href: string; label: string } {
+  const from = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('from') ?? ''
+  if (from === 'inscription') return { href: '#/inscription', label: 'Retour à l’inscription' }
+  if (from === 'connexion') return { href: '#/connexion', label: 'Retour à la connexion' }
+  if (from && /^[a-z-]+$/.test(from)) return { href: '#/' + from, label: 'Retour' }
+  return { href: '#/', label: signedIn ? 'Mon espace' : 'Accueil' }
 }
 
 export const Mailto = () => (
@@ -582,11 +591,12 @@ const CONTENT: Record<LegalPage, { title: string; body: () => ReactNode }> = {
 /** The legal pages, like a plain document: a way back, the title, the date, then small text in one narrow column. */
 export function LegalView({ page, signedIn = false }: { page: LegalPage; hosted: boolean; signedIn?: boolean }) {
   const { title, body: Body } = CONTENT[page]
+  const back = legalBack(signedIn)
   return (
     <div className="min-h-dvh bg-white text-ink">
       <main className="max-w-[34rem] px-4 pt-5 pb-20 sm:px-6">
-        <a href="#/" className="inline-flex items-center gap-1.5 text-[0.95rem] text-ink hover:text-ink/70">
-          <ArrowLeft className="size-4" strokeWidth={1.75} /> {signedIn ? 'Mon espace' : 'Accueil'}
+        <a href={back.href} className="inline-flex items-center gap-1.5 text-[0.95rem] text-ink hover:text-ink/70">
+          <ArrowLeft className="size-4" strokeWidth={1.75} /> {back.label}
         </a>
         <h1 className="mt-9 text-[1.6rem] leading-[1.3] font-semibold tracking-[-0.01em]">{title}</h1>
         <p className="mt-4 text-[0.95rem] text-ink/60">Dernière mise à jour le {LEGAL_UPDATED}</p>

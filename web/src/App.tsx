@@ -19,7 +19,7 @@ import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/a
 type Route = 'faq' | 'tarifs' | 'connexion' | 'inscription' | 'demo' | 'admin' | 'bienvenue' | null
 
 function routeFromHash(hash: string): Route {
-  const id = hash.replace(/^#\/?/, '')
+  const id = hash.replace(/^#\/?/, '').split('?')[0]
   return id === 'faq' || id === 'tarifs' || id === 'connexion' || id === 'inscription' || id === 'demo' || id === 'admin' ||
     id === 'bienvenue'
     ? id
@@ -47,6 +47,24 @@ export default function App() {
     }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  // A link to a legal page remembers where it was clicked (« ?from=inscription »), so its « ← » leads back there,
+  // also when it opens in a new tab. Between legal pages, the first origin is kept.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.('a[href^="#/"]') as HTMLAnchorElement | null
+      if (!a) return
+      const target = a.getAttribute('href') ?? ''
+      if (!legalPageFromHash(target)) return
+      const here = window.location.hash
+      const from = legalPageFromHash(here)
+        ? new URLSearchParams(here.split('?')[1] ?? '').get('from')
+        : here.replace(/^#\/?/, '').split('?')[0]
+      a.setAttribute('href', target.split('?')[0] + (from ? '?from=' + encodeURIComponent(from) : ''))
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
   }, [])
 
   // "Démo" link on the home page: open the demo account directly.

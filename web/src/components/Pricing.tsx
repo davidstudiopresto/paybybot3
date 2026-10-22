@@ -191,14 +191,6 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
           </button>
         </div>
       )}
-      {!own && (
-        <p className="mt-6 text-center text-sm text-ink/55">
-          Votre prix est calculé tout seul avec votre compte <PayByPhone />.
-        </p>
-      )}
-      <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-sm text-ink/55">
-        <Lock className="size-3.5" /> Paiement sécurisé par Stripe · CB, Visa, Mastercard
-      </p>
       <FinesNote className="mx-auto mt-8 max-w-xl" />
     </>
   )

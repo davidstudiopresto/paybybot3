@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { ArrowRight, CreditCard, Link2, Plus, RefreshCw, Repeat, ShieldCheck, Trash2, type LucideIcon } from 'lucide-react'
+import { ArrowRight, CreditCard, Link2, Plus, RefreshCw, ShieldCheck, Trash2, type LucideIcon } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { PlanCards } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { TRY_LABEL, ui } from '@/lib/styles'
-import { brandNodes, PayByBot, PayByPhone, Plate, withBrands, withPayByPhone, Wordmark } from '@/components/signs'
-import { Iphone } from '@/components/ui/iphone'
+import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/components/signs'
 
 
 
@@ -79,44 +78,6 @@ export function TrustRow({ className }: { className?: string }) {
   )
 }
 
-/** The dashboard as it looks once the renewal runs, in a phone (an illustration, not a real account). */
-function PhoneDemo({ className }: { className?: string }) {
-  return (
-    <div aria-hidden className={cn('relative mx-auto w-[16rem] sm:w-[18rem]', className)}>
-      <div className="relative">
-        <Iphone />
-        {/* The screen's place in the mockup (433 × 882, screen at 21.25 / 19.25, 389.5 × 843.5). */}
-        <div className="absolute overflow-hidden bg-white text-left" style={{ left: '4.91%', top: '2.18%', width: '89.95%', height: '95.64%', borderRadius: '14.3% / 6.6%' }}>
-          <div className="flex h-full flex-col px-4 pt-12 text-[0.7rem]">
-            <p className="font-heading text-[0.95rem] font-semibold"><Wordmark /></p>
-            <p className="mt-5 text-ink/50">Bonjour,</p>
-            <p className="font-heading text-[1.15rem] leading-tight font-semibold text-ink">1 ticket en cours</p>
-            <div className="mt-3 rounded-xl border border-ink/10 p-3 shadow-[0_6px_16px_-10px_rgb(11_16_36/0.25)]">
-              <div className="flex items-center gap-2">
-                <Plate plate="AB-123-CD" size="sm" />
-                <span className="font-semibold text-ink">Paris 5e</span>
-              </div>
-              <p className="mt-2 text-ink/55">Valable encore 4 jours</p>
-              <div className="mt-2 h-1 overflow-hidden rounded-full bg-ink/10">
-                <div className="h-full w-[58%] rounded-full bg-eu" />
-              </div>
-              <p className="mt-2.5 flex items-center gap-1.5 text-ink/70">
-                <Repeat className="size-3 text-eu" /> Renouvelé automatiquement
-              </p>
-            </div>
-            <div className="mt-3 rounded-xl bg-eu/[0.06] p-3">
-              <p className="font-semibold text-ink">Forfait renouvelé</p>
-              <p className="mt-0.5 text-ink/60">Une nouvelle semaine a été payée sur <PayByPhone />.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* The phone's lower half fades into the page. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-white to-transparent" />
-    </div>
-  )
-}
-
 /** « +0 » rising to « +100 » once on screen (at once when motion is reduced). */
 function CountUp({ to, className }: { to: number; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -150,8 +111,7 @@ function CountUp({ to, className }: { to: number; className?: string }) {
   )
 }
 
-/** Off until real users' reviews and a real count replace the examples above (see TESTIMONIALS). */
-const SHOW_TESTIMONIALS = false
+const SHOW_TESTIMONIALS = true
 
 function Testimonials() {
   if (!SHOW_TESTIMONIALS || !TESTIMONIALS.length) return null
@@ -196,7 +156,7 @@ export function Landing({ hosted }: { hosted: boolean }) {
 
       {/* Centered hero filling the window on a computer (under the 4rem top bar): the kicker as a pill, the title on
           two lines (the first in the brand gradient), then the call to action. */}
-      <section className="rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:pt-20">
+      <section className="rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:min-h-[calc(100dvh-4rem)] lg:items-center lg:py-20">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center text-center">
           <h1 className="font-heading text-[2rem] leading-[1.05] font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
@@ -219,7 +179,6 @@ export function Landing({ hosted }: { hosted: boolean }) {
             Une amende : jusqu’à 125 €. <PayByBot /> : dès 4,90 €/mois.
           </p>
           <TrustRow className="mt-8" />
-          <PhoneDemo className="mt-14 lg:mt-16" />
         </div>
       </section>
 

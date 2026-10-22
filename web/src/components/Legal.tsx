@@ -348,13 +348,6 @@ function Privacy() {
           ou leur portabilité, et vous opposer à un traitement fondé sur l’intérêt légitime. Écrivez à <Mailto /> : nous
           répondons sous un mois. Arrêter votre renouvellement résident efface immédiatement les données correspondantes.
         </p>
-        <p>
-          Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL (
-          <a href="https://www.cnil.fr" target="_blank" rel="noreferrer" className="font-bold text-ink underline decoration-ink/30 underline-offset-[3px] hover:decoration-ink">
-            cnil.fr
-          </a>
-          ).
-        </p>
       </Section>
 
       <Section title="9. Modifications">

@@ -128,32 +128,14 @@ export function RemoteScene({ className }: { className?: string }) {
   )
 }
 
-/** A hand-drawn beige brush stroke, under a few words. */
-function BrushStroke({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 200 14" preserveAspectRatio="none" className={className} aria-hidden>
-      <path
-        d="M2 8.5c18-2.6 36-3.4 54-2.6 14 .6 26 2.7 40 2.4 22-.5 44-4.3 66-4 12 .2 24 1.6 36 3.2"
-        fill="none"
-        stroke="#d8cbbd"
-        strokeWidth="6"
-        strokeLinecap="round"
-        opacity="0.9"
-      />
-      <path d="M6 10.5c26-2 52-2.2 78-.6 30 1.8 62 .4 92-2.6" fill="none" stroke="#e6dbcf" strokeWidth="3" strokeLinecap="round" opacity="0.75" />
-    </svg>
-  )
-}
-
 /** The scene with Qonto's caption: a small kicker and a strong two-line sentence, on light grey. */
 export function RemotePanel({ className }: { className?: string }) {
   return (
     <div className={className} style={{ background: '#f4f4f4' }}>
       <div className="flex h-full flex-col items-center justify-center px-10 py-16 text-center">
-        {/* The promise first, above the scene, underlined by a hand-drawn brush stroke (Instinct-like). */}
+        {/* The promise first, above the scene. */}
         <p className="relative mb-9 font-heading text-[1.6rem] font-semibold tracking-[-0.02em] text-ink">
           <span className="relative z-10">Fini les FPS&nbsp;!</span>
-          <BrushStroke className="absolute bottom-[0.02em] left-[-3%] h-[0.55em] w-[106%]" />
         </p>
         <RemoteScene className="h-[min(58vh,27rem)] w-auto max-w-full" />
         <p className="mt-12 max-w-[30rem] font-heading text-[2rem] leading-[1.1] font-medium tracking-[-0.035em] text-ink">

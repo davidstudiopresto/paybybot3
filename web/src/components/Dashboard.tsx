@@ -139,6 +139,7 @@ function Ticket({
 /** The weeks already paid (PayByPhone's running and past tickets of five days or more), newest first. */
 function PaidWeeks({ data }: { data: Overview }) {
   const [weeks, setWeeks] = useState<Session[] | null>(null)
+  const [all, setAll] = useState(false) // the last 3 only, unless asked
   // Looked again when a ticket starts or is extended, or a renewal pays.
   const changed = data.sessions.map((s) => s.id + s.expire).join() + data.autopilots.map((a) => a.lastPayment).join()
   useEffect(() => {
@@ -158,7 +159,7 @@ function PaidWeeks({ data }: { data: Overview }) {
     <section className="rise mt-10">
       <h2 className="text-sm text-ink/50">Semaines payées</h2>
       <ul className="mt-3 divide-y divide-ink/[0.06] overflow-hidden rounded-2xl border border-ink/10 bg-white">
-        {weeks.slice(0, 8).map((w) => {
+        {weeks.slice(0, all ? 12 : 3).map((w) => {
           const running = new Date(w.expire).getTime() > Date.now()
           return (
             <li key={w.id} className="flex items-center gap-3 px-5 py-3.5">
@@ -185,6 +186,11 @@ function PaidWeeks({ data }: { data: Overview }) {
           )
         })}
       </ul>
+      {weeks.length > 3 && (
+        <button onClick={() => setAll((v) => !v)} className={cn('mt-3 text-sm', ui.link)}>
+          {all ? 'Voir moins' : `Voir tout (${Math.min(weeks.length, 12)})`}
+        </button>
+      )}
     </section>
   )
 }

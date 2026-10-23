@@ -248,7 +248,7 @@ export function LoginView({
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel-national"
-                  placeholder={selected.placeholder}
+                  placeholder="Numéro PayByPhone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   aria-label="Numéro de téléphone"

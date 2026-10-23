@@ -25,7 +25,7 @@ export function RemoteScene({ className }: { className?: string }) {
         .${c}-after { opacity: 0; animation: ${c}-after 8s linear infinite; }
         .${c}-fill { transform-origin: 0% 50%; animation: ${c}-fill 8s cubic-bezier(.4,0,.2,1) infinite, ${c}-tint 8s linear infinite; }
         .${c}-urgent { animation: ${c}-pulse 1s ease-in-out infinite; }
-        .${c}-row { opacity: 0; }
+        .${c}-note { opacity: 0; transform-origin: 50% 0%; }
         .${c}-on { opacity: 0; animation: ${c}-on 8s ease-in-out infinite; }
         .${c}-knob { animation: ${c}-knob 8s ease-in-out infinite; }
         .${c}-r1 { animation: ${c}-r1 8s ease-out infinite; }
@@ -43,12 +43,17 @@ export function RemoteScene({ className }: { className?: string }) {
         @keyframes ${c}-pulse { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
         @keyframes ${c}-on { 0%,30% { opacity: 0 } 34%,95% { opacity: 1 } 100% { opacity: 0 } }
         @keyframes ${c}-knob { 0%,30% { transform: translateX(0) } 34%,95% { transform: translateX(14px) } 100% { transform: translateX(0) } }
-        @keyframes ${c}-r1 { 0%,42% { opacity: 0 } 47%,95% { opacity: 1 } 100% { opacity: 0 } }
-        @keyframes ${c}-r2 { 0%,58% { opacity: 0 } 63%,95% { opacity: 1 } 100% { opacity: 0 } }
-        @keyframes ${c}-r3 { 0%,74% { opacity: 0 } 79%,95% { opacity: 1 } 100% { opacity: 0 } }
-        @media (prefers-reduced-motion: reduce) { .${c} * { animation: none !important; } .${c}-before { opacity: 0 } .${c}-after, .${c}-row, .${c}-on { opacity: 1 } .${c}-knob { transform: translateX(14px) } }
+        @keyframes ${c}-r1 { 0%,41% { opacity: 0; transform: translateY(-16px) } 46%,58% { opacity: 1; transform: translateY(0) scale(1) } 63%,74% { opacity: .55; transform: translateY(14px) scale(.93) } 79%,95% { opacity: .25; transform: translateY(28px) scale(.86) } 100% { opacity: 0; transform: translateY(28px) scale(.86) } }
+        @keyframes ${c}-r2 { 0%,57% { opacity: 0; transform: translateY(-16px) } 62%,74% { opacity: 1; transform: translateY(0) scale(1) } 79%,95% { opacity: .55; transform: translateY(14px) scale(.93) } 100% { opacity: 0; transform: translateY(14px) scale(.93) } }
+        @keyframes ${c}-r3 { 0%,73% { opacity: 0; transform: translateY(-16px) } 78%,95% { opacity: 1; transform: translateY(0) scale(1) } 100% { opacity: 0; transform: translateY(0) } }
+        @media (prefers-reduced-motion: reduce) { .${c} * { animation: none !important; } .${c}-before { opacity: 0 } .${c}-after, .${c}-r3, .${c}-on { opacity: 1 } .${c}-knob { transform: translateX(14px) } }
       `}</style>
 
+      <defs>
+        <filter id={`${c}-shadow`} x="-20%" y="-40%" width="140%" height="200%">
+          <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#0b1024" floodOpacity=".12" />
+        </filter>
+      </defs>
       <g className={c} fontFamily="Figtree Variable, sans-serif">
         {/* the ticket card: PayByPhone's name, the plate, time left, then the weeks paid piling up */}
         <rect x="340" y="40" width="190" height="320" rx="10" fill="#fff" stroke={LINE} strokeWidth="1.5" />
@@ -86,21 +91,21 @@ export function RemoteScene({ className }: { className?: string }) {
         <text x="358" y="238" fontSize="11" fill={INK} opacity=".5">
           Tickets payés
         </text>
-        {/* one row per week, added one under the other: the renewal goes on, week after week */}
+        {/* « Forfait renouvelé » notices piling up, as in the video: the newest in front, the older ones step back */}
         {[
-          ['Sem. du 20 oct.', 'r1'],
-          ['Sem. du 27 oct.', 'r2'],
-          ['Sem. du 3 nov.', 'r3'],
-        ].map(([week, k], i) => (
-          <g key={k} className={`${c}-row ${c}-${k}`} transform={`translate(0 ${252 + i * 34})`}>
-            <rect x="352" y="0" width="166" height="28" rx="8" fill="#f7f7f7" />
-            <circle cx="368" cy="14" r="8" fill="#fff" stroke={TEAL} strokeWidth="1.5" />
-            <path d="M364.5 14 l2.5 2.5 l5 -5.5" fill="none" stroke={TEAL} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="382" y="18" fontSize="11" fill={INK}>
-              {week}
+          ['lun. 27 oct.', 'r1'],
+          ['lun. 3 nov.', 'r2'],
+          ['lun. 10 nov.', 'r3'],
+        ].map(([day, k]) => (
+          <g key={k} className={`${c}-note ${c}-${k}`}>
+            <rect x="350" y="252" width="170" height="44" rx="11" fill="#fff" stroke={LINE} strokeWidth="1.2" filter={`url(#${c}-shadow)`} />
+            <circle cx="371" cy="274" r="11" fill="#e3f5e9" />
+            <path d="M366 274 l3.5 3.5 l6.5 -7" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <text x="389" y="270" fontSize="11" fontWeight="700" fill={INK}>
+              Forfait renouvelé
             </text>
-            <text x="510" y="18" textAnchor="end" fontSize="11" fill={INK} opacity=".55">
-              9,00 €
+            <text x="389" y="285" fontSize="10" fill={INK} opacity=".55">
+              {day} · 9,00 €
             </text>
           </g>
         ))}

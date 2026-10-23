@@ -194,11 +194,16 @@ export function LoginView({
             {title ?? (signup ? <>Inscrivez-vous avec vos identifiants <PayByPhone /></> : <>Connexion à <PayByBot /></>)}
           </h1>
           <p className="mt-3 text-[1.05rem] leading-relaxed text-ink/60">
-            {withPayByPhone(signup ? 'Inscription avec votre compte PayByPhone : pas de nouveau mot de passe à retenir.' : 'Avec votre compte PayByPhone.')}{' '}
-            {hosted ? 'Mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}{' '}
-            <a href="#/securite" target="_blank" rel="noopener" className={link}>
-              En savoir plus
-            </a>
+            {withPayByPhone(signup ? 'Inscription avec votre compte PayByPhone.' : 'Avec votre compte PayByPhone.')}
+            {!signup && (
+              <>
+                {' '}
+                {hosted ? 'Mot de passe jamais enregistré.' : 'Vos identifiants restent sur cet ordinateur.'}{' '}
+                <a href="#/securite" target="_blank" rel="noopener" className={link}>
+                  En savoir plus
+                </a>
+              </>
+            )}
           </p>
 
           <div className="mt-9 space-y-3">

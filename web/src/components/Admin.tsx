@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { ui } from '@/lib/styles'
 import { ApiError } from '@/lib/api'
-import { PublicTopBar } from '@/components/TopBar'
+import { TopBar } from '@/components/TopBar'
 import { api } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 
@@ -19,7 +19,7 @@ export type AdminStats = {
 }
 
 /** The owner's page: a few counts, nothing else. */
-export function AdminPage({ signedIn = false }: { signedIn?: boolean }) {
+export function AdminPage(_: { signedIn?: boolean }) {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [needsLogin, setNeedsLogin] = useState(false)
@@ -49,7 +49,7 @@ export function AdminPage({ signedIn = false }: { signedIn?: boolean }) {
   if (needsLogin) {
     return (
       <div className="min-h-dvh bg-white">
-        <PublicTopBar signedIn={signedIn} />
+        <TopBar />
         <AdminLoginForm onDone={load} />
       </div>
     )
@@ -69,7 +69,7 @@ export function AdminPage({ signedIn = false }: { signedIn?: boolean }) {
 
   return (
     <div className="min-h-dvh bg-white">
-      <PublicTopBar signedIn={signedIn} />
+      <TopBar />
       <main className="mx-auto max-w-4xl px-6 pt-12 pb-20">
         <div className="flex items-center justify-between gap-4">
           <h1 className="font-heading text-[2.4rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink">Admin</h1>

@@ -141,9 +141,11 @@ export default function App() {
       )
     const onVisible = () => document.visibilityState === 'visible' && check()
     document.addEventListener('visibilitychange', onVisible)
-    const id = setInterval(check, 5 * 60_000)
+    window.addEventListener('focus', check)
+    const id = setInterval(check, 60_000) // a new version is online within a minute, no hard refresh needed
     return () => {
       document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', check)
       clearInterval(id)
     }
   }, [])
@@ -175,12 +177,37 @@ export default function App() {
     }
   }, [])
 
+  // A renewal whose payment is under way (on, no error, not paused, no ticket yet): its result is looked for every
+  // 5 seconds for 3 minutes, then every minute as usual.
+  const renewing = !!data?.autopilots.some((ap) => {
+    const now = Date.now()
+    const from = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
+    const until = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
+    const paused = from !== null && from <= now && (until === null || now < until)
+    const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
+    const covered = data.sessions.some((s) => key(s.plate) === key(ap.plate) && new Date(s.expire).getTime() > now)
+    return ap.enabled && !ap.lastError && !paused && !covered
+  })
+
   useEffect(() => {
     if (!me) return
     refresh()
-    const id = setInterval(refresh, 60_000)
-    return () => clearInterval(id)
   }, [me, refresh])
+
+  useEffect(() => {
+    if (!me) return
+    if (!renewing) {
+      const id = setInterval(refresh, 60_000)
+      return () => clearInterval(id)
+    }
+    let left = 36
+    const id = setInterval(() => (left-- > 0 ? refresh() : undefined), 5_000)
+    const slow = setInterval(refresh, 60_000)
+    return () => {
+      clearInterval(id)
+      clearInterval(slow)
+    }
+  }, [me, refresh, renewing])
 
   async function logout() {
     await api.logout().catch(() => {})

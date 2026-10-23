@@ -2917,6 +2917,70 @@ def billing_portal(pbb_session: str = Cookie(None)):
     return {"url": portal["url"]}
 
 
+def own_subscription(s):
+    """The signed-in account's Stripe subscription id, or a 400 when there is none."""
+    account = guarded(lambda: load_account(s))
+    sub_id = account.get("stripe_subscription")
+    if s.demo or not sub_id or not os.environ.get("STRIPE_SECRET_KEY"):
+        raise HTTPException(400, "Aucun abonnement à gérer.")
+    return account, sub_id
+
+
+@app.get("/api/billing/subscription")
+def billing_subscription(pbb_session: str = Cookie(None)):
+    """« Mon abonnement », inside PayByBot: offer, price, next billing date, card, last invoices."""
+    s = current(pbb_session)
+    account, sub_id = own_subscription(s)
+    sub = stripe("GET", "subscriptions/" + sub_id + "?expand[]=default_payment_method"
+                 "&expand[]=customer.invoice_settings.default_payment_method")
+    item = (sub.get("items") or {}).get("data", [{}])[0]
+    price = item.get("price") or {}
+    method = sub.get("default_payment_method") or \
+        (((sub.get("customer") or {}).get("invoice_settings") or {}).get("default_payment_method")) or {}
+    card = method.get("card") or {}
+    period_end = item.get("current_period_end") or sub.get("current_period_end")
+    invoices = stripe("GET", "invoices?limit=6&subscription=" + sub_id).get("data") or []
+    return {
+        "plan": "yearly" if (price.get("recurring") or {}).get("interval") == "year" else "monthly",
+        "amount": price.get("unit_amount"),
+        "status": sub.get("status"),
+        "nextBilling": datetime.fromtimestamp(period_end, timezone.utc).isoformat() if period_end else None,
+        "cancelAtPeriodEnd": bool(sub.get("cancel_at_period_end")),
+        "card": {"brand": card.get("brand"), "last4": card.get("last4"), "expMonth": card.get("exp_month"),
+                 "expYear": card.get("exp_year")} if card else None,
+        "invoices": [{"date": datetime.fromtimestamp(i["created"], timezone.utc).isoformat(), "amount": i.get("amount_paid"),
+                      "status": i.get("status"), "url": i.get("hosted_invoice_url")}
+                     for i in invoices if i.get("status") in ("paid", "open")],
+    }
+
+
+class CancelChoice(BaseModel):
+    cancel: bool
+
+
+@app.post("/api/billing/cancel")
+def billing_cancel(body: CancelChoice, pbb_session: str = Cookie(None)):
+    """Cancel at the end of the period already paid (or take it back before then)."""
+    s = current(pbb_session)
+    _, sub_id = own_subscription(s)
+    stripe("POST", "subscriptions/" + sub_id, cancel_at_period_end="true" if body.cancel else "false")
+    log.info("subscription %s at period end", "cancelled" if body.cancel else "kept")
+    return billing_subscription(pbb_session)
+
+
+@app.post("/api/billing/card")
+def billing_card(pbb_session: str = Cookie(None)):
+    """Change the card: Stripe's secure page, opened on that step only, then back to PayByBot."""
+    s = current(pbb_session)
+    account, _ = own_subscription(s)
+    portal = stripe("POST", "billing_portal/sessions", customer=account["stripe_customer"],
+                    return_url=APP_URL.rstrip("/") + "/", configuration=portal_configuration(),
+                    **{"flow_data[type]": "payment_method_update",
+                       "flow_data[after_completion][type]": "redirect",
+                       "flow_data[after_completion][redirect][return_url]": APP_URL.rstrip("/") + "/"})
+    return {"url": portal["url"]}
+
+
 @app.put("/api/account")
 def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     s = current(pbb_session)

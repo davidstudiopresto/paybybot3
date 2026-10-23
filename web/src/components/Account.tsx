@@ -6,6 +6,7 @@ import { arrondissement, PayByBot, PayByPhone, Plate, ZonePlate } from '@/compon
 import { api, clock, type Account, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
+import { SubscriptionDialog } from '@/components/Subscription'
 
 /** "Mon compte" in the top bar: what PayByBot reads from the PayByPhone account, the home zone and e-mail. */
 export function AccountButton({
@@ -54,13 +55,7 @@ function AccountDialog({
     api.myInvite().then((r) => setInvite(r.url), () => {})
   }, [])
 
-  async function openPortal() {
-    try {
-      window.location.assign((await api.billingPortal()).url)
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
-  }
+  const [managing, setManaging] = useState(false)
 
   useEffect(() => {
     api.account().then(
@@ -81,7 +76,9 @@ function AccountDialog({
   if (deleting) return <DeleteConfirm data={data} onCancel={() => setDeleting(false)} onDeleted={onDeleted} />
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
+    <>
+    {managing && <SubscriptionDialog onClose={() => setManaging(false)} />}
+    <Dialog open onOpenChange={(o) => !o && !managing && onClose()}>
       <DialogContent className={ui.dialog}>
         <div className="px-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Mon compte</DialogTitle>
@@ -124,7 +121,7 @@ function AccountDialog({
                 ) : account?.plan ? (
                   <span className="flex items-center gap-3">
                     <span className="font-medium text-ink">{account.plan === 'yearly' ? 'Annuel' : 'Mensuel'}</span>
-                    <button onClick={openPortal} className={cn('text-sm', ui.link)}>
+                    <button onClick={() => setManaging(true)} className={cn('text-sm', ui.link)}>
                       Gérer
                     </button>
                   </span>
@@ -197,6 +194,7 @@ function AccountDialog({
         </div>
       </DialogContent>
     </Dialog>
+    </>
   )
 }
 

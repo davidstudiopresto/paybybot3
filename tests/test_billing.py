@@ -132,6 +132,25 @@ class Billing(unittest.TestCase):
         self.assertEqual(web.monthlies_from({"monthlies": "490,990"}), [490, 990])
         self.assertIsNone(web.billed_monthlies({"billed_weeklies": [900]}))  # the old rule: repriced
 
+    def test_my_subscription_inside_paybybot(self):
+        self.s.account.update(stripe_subscription="sub_1", stripe_customer="cus_1")
+        sub = {"status": "active", "cancel_at_period_end": False,
+               "items": {"data": [{"current_period_end": 1800000000,
+                                   "price": {"unit_amount": 990, "recurring": {"interval": "month"}}}]},
+               "default_payment_method": {"card": {"brand": "mastercard", "last4": "1730", "exp_month": 7, "exp_year": 2031}}}
+        calls = []
+
+        def fake(method, path, **data):
+            calls.append((method, path, data))
+            if path.startswith("invoices"):
+                return {"data": [{"created": 1790000000, "amount_paid": 990, "status": "paid", "hosted_invoice_url": "https://x"}]}
+            return sub
+        with patch.object(web, "stripe", side_effect=fake):
+            got = web.billing_subscription("t")
+            self.assertEqual((got["plan"], got["amount"], got["card"]["last4"], len(got["invoices"])), ("monthly", 990, "1730", 1))
+            web.billing_cancel(web.CancelChoice(cancel=True), "t")
+        self.assertIn(("POST", "subscriptions/sub_1", {"cancel_at_period_end": "true"}), calls)
+
     def test_confirm_records_the_plan(self):
         self.owner = web.owner_id(self.s.username)
         web.billing_confirm(web.CheckoutDone(session_id="cs_test_1234567890"), "t")

@@ -13,6 +13,7 @@ import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal
 import { NotFoundPage } from '@/components/NotFound'
 import { Welcome } from '@/components/Welcome'
 import { CheckoutDone } from '@/components/CheckoutDone'
+import { SubscriptionDialog } from '@/components/Subscription'
 import { InviteGate } from '@/components/InviteGate'
 import { captureInvite, forgetInvite, isMember, markMember } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
@@ -218,6 +219,20 @@ export default function App() {
     setMe(null)
   }
 
+  // Development only: « Mon abonnement » with a made-up subscription (#/apercu-abonnement).
+  if (import.meta.env.DEV && window.location.hash === '#/apercu-abonnement') {
+    const fake = {
+      plan: 'monthly', amount: 990, status: 'active', nextBilling: '2026-11-22T12:00:00Z', cancelAtPeriodEnd: false,
+      card: { brand: 'mastercard', last4: '4242', expMonth: 7, expYear: 2031 },
+      invoices: [{ date: '2026-10-22T12:00:00Z', amount: 990, status: 'paid', url: null }],
+    }
+    const real = window.fetch
+    window.fetch = (input, init) =>
+      String(input).includes('/api/billing/subscription') || String(input).includes('/api/billing/cancel')
+        ? Promise.resolve(new Response(JSON.stringify({ ...fake, cancelAtPeriodEnd: String(input).includes('cancel') }), { headers: { 'content-type': 'application/json' } }))
+        : real(input, init)
+    return <SubscriptionDialog onClose={() => (window.location.hash = '#/')} />
+  }
   // Development only: the screen shown after Stripe Checkout, without paying (#/apercu-paiement).
   if (import.meta.env.DEV && window.location.hash === '#/apercu-paiement')
     return (

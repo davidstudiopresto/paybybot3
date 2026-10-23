@@ -69,6 +69,16 @@ export type Account = {
   /** Plates the user ticked as SUV (PayByPhone does not say): the SUV price applies. */
   suvPlates?: string[]
 }
+/** « Mon abonnement »: the Stripe subscription as PayByBot shows it (amounts in cents). */
+export type Subscription = {
+  plan: 'monthly' | 'yearly'
+  amount: number | null
+  status: string
+  nextBilling: string | null
+  cancelAtPeriodEnd: boolean
+  card: { brand: string | null; last4: string | null; expMonth: number | null; expYear: number | null } | null
+  invoices: { date: string; amount: number | null; status: string; url: string | null }[]
+}
 export type Me = { username: string; demo: boolean; hosted?: boolean; firstName?: string | null }
 
 /** The account's prices in cents, by vehicle type and zone: per month, and per year with 20 % off (zone null: unknown). */
@@ -166,6 +176,9 @@ export const api = {
   contact: (p: { email: string; message: string; website: string }) => post<{ ok: true }>('/api/contact', p),
   confirmCheckout: (session_id: string) => post<{ plan: string }>('/api/billing/confirm', { session_id }),
   billingPortal: () => post<{ url: string }>('/api/billing/portal'),
+  subscription: () => request<Subscription>('/api/billing/subscription'),
+  cancelSubscription: (cancel: boolean) => post<Subscription>('/api/billing/cancel', { cancel }),
+  changeCard: () => post<{ url: string }>('/api/billing/card'),
   unlock: () => post<{ url: string }>('/api/billing/unlock'),
   pricing: () => request<Pricing>('/api/pricing'),
   residentStatus: () => request<{ zone: string | null; resident: boolean | null }>('/api/resident-status'),

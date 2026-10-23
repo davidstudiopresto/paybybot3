@@ -22,3 +22,9 @@ class Invite(unittest.TestCase):
                 self.assertRaises(HTTPException) as refused:
             web.login(body, None, None)
         self.assertEqual(refused.exception.status_code, 403)
+
+    def test_one_shared_link_when_set(self):
+        with patch.object(web, "SHARED_INVITE", "paris2026"):
+            self.assertTrue(web.valid_invite("paris2026"))
+            self.assertFalse(web.valid_invite("paris2027"))
+            self.assertFalse(web.valid_invite(web.invite_code(web.owner_id("0611223344"))))  # no personal codes then

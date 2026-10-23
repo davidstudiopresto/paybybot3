@@ -1020,8 +1020,16 @@ def invite_code(owner):
     return o + hmac.new(_subkey(_secrets()[0], "invite"), o.encode(), hashlib.sha256).hexdigest()[:6]
 
 
+# One private link for everyone (PAYBYBOT_INVITE_CODE): the founder's, shared from person to person. Without it,
+# each user has their own signed code.
+SHARED_INVITE = os.environ.get("PAYBYBOT_INVITE_CODE", "").strip()
+
+
 def valid_invite(code):
-    code = str(code or "").strip().lower()
+    code = str(code or "").strip()
+    if SHARED_INVITE:
+        return hmac.compare_digest(code, SHARED_INVITE)
+    code = code.lower()
     return bool(re.fullmatch(r"[0-9a-f]{14}", code)) and hmac.compare_digest(invite_code(code[:8]), code)
 
 
@@ -1732,7 +1740,7 @@ def invite_check(code: str):
 def my_invite(pbb_session: str = Cookie(None)):
     """The signed-in user's invitation link, to share with people around them."""
     s = current(pbb_session)
-    code = invite_code(owner_id(s.username))
+    code = SHARED_INVITE or invite_code(owner_id(s.username))
     return {"code": code, "url": APP_URL.rstrip("/") + "/?i=" + code}
 
 

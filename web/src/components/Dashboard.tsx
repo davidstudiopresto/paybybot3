@@ -127,6 +127,7 @@ function Ticket({
 
       <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
         {/* Renewal on: no countdown (nothing to watch), only when the ticket ends. Without one, the time left. */}
+        {renewal && renewal.enabled && !note && <p className="mb-1 text-[0.95rem] font-medium text-ink">Ticket en cours</p>}
         {!(renewal && renewal.enabled && !note) && (
           <>
             <p className="text-sm text-ink/50">Temps restant</p>

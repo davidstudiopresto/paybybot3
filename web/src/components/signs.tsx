@@ -88,12 +88,31 @@ export function ParkingSign({ className }: { className?: string }) {
   )
 }
 
+/** The mark: three blue capsules, rising and falling like the renewals. */
+export function LogoMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="16 10 92 100" className={cn('size-7', className)} aria-hidden>
+      <defs>
+        <linearGradient id="pbb-c1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2f6bff" /><stop offset="1" stopColor="#0a2fb8" /></linearGradient>
+        <linearGradient id="pbb-c2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5a9bff" /><stop offset="1" stopColor="#1f55e6" /></linearGradient>
+        <linearGradient id="pbb-c3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#8ad4ff" /><stop offset="1" stopColor="#3b82f6" /></linearGradient>
+      </defs>
+      <rect x="18" y="12" width="26" height="96" rx="13" fill="url(#pbb-c1)" />
+      <rect x="51" y="50" width="24" height="54" rx="12" fill="url(#pbb-c2)" />
+      <rect x="82" y="22" width="24" height="56" rx="12" fill="url(#pbb-c3)" />
+    </svg>
+  )
+}
+
 export function Wordmark() {
   return (
-    <span className="font-heading text-[1.4rem] leading-none font-semibold tracking-[-0.025em] text-ink">
-      Pay
-      <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">By</span>
-      Bot
+    <span className="inline-flex items-center gap-2 font-heading text-[1.4rem] leading-none font-semibold tracking-[-0.025em] text-ink">
+      <LogoMark />
+      <span>
+        Pay
+        <span className="bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">By</span>
+        Bot
+      </span>
     </span>
   )
 }

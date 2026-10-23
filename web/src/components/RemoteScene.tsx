@@ -155,7 +155,7 @@ export function RemotePanel({ className }: { className?: string }) {
           <span className="relative z-10">Fini les FPS&nbsp;!</span>
           <BrushStroke className="absolute bottom-[0.02em] left-[-3%] h-[0.55em] w-[106%]" />
         </p>
-        <RemoteScene className="h-[min(52vh,24rem)] w-auto max-w-full" />
+        <RemoteScene className="h-[min(58vh,27rem)] w-auto max-w-full" />
         <p className="mt-12 max-w-[30rem] font-heading text-[2rem] leading-[1.1] font-medium tracking-[-0.035em] text-ink">
           Renouvelez votre ticket résident sans y penser
         </p>

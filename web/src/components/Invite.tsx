@@ -6,7 +6,9 @@ import { api } from '@/lib/api'
 import { ui } from '@/lib/styles'
 import { cn } from '@/lib/utils'
 
-const MESSAGE = 'Je ne paie plus d’amende de stationnement : PayByBot renouvelle mon ticket résident PayByPhone tout seul. Essaie avec mon lien :'
+// The message sent with the link (copied or shared), in the user's own voice.
+const MESSAGE =
+  'Hello ! J’ai découvert PayByBot : il renouvelle tout seul mon ticket résident PayByPhone, fini les FPS. Je te le conseille, voici mon lien :'
 
 /** WhatsApp's mark (Simple Icons), white on its green. */
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -66,7 +68,7 @@ export function InviteButton({ disabled = false }: { disabled?: boolean }) {
   async function copy() {
     if (!url) return
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(text) // the message with the link, ready to paste
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {

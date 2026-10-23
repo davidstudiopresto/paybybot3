@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Eye, EyeOff, Loader2, Lock } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
+import { RemotePanel } from '@/components/RemoteScene'
 import { CARD_NOTE, ResidentRequired } from '@/components/Riverain'
 import { PayByBot, PayByPhone, withPayByPhone } from '@/components/signs'
 import { storedInvite } from '@/lib/invite'
@@ -177,6 +178,9 @@ export function LoginView({
       )}
       <PublicTopBar />
 
+      {/* On a computer, like Qonto: the form on the left, the animated scene on the right. */}
+      <div className="flex flex-1 lg:grid lg:grid-cols-2">
+      <div className="flex flex-1 flex-col">
       <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center sm:pt-0">
         <form
           className="rise w-full max-w-[26rem]"
@@ -428,6 +432,9 @@ export function LoginView({
       </main>
 
       <HostedFooter className="px-6 pb-8" hosted={hosted} linksOnly={signup} />
+      </div>
+      <RemotePanel className="hidden lg:block" />
+      </div>
     </div>
   )
 }

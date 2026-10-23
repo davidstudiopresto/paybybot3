@@ -251,6 +251,61 @@ export function Home({ hosted }: { hosted: boolean }) {
   return <Landing hosted={hosted} heroOnly />
 }
 
+/** The home page's example: a ticket card as on the dashboard, renewal on, with made-up data (no real account). */
+function SampleTicket({ className }: { className?: string }) {
+  return (
+    <div
+      role="img"
+      aria-label="Exemple : renouvellement automatique actif, prochain renouvellement jeudi à 20h, rien à faire de votre côté"
+      className={cn(
+        'w-full max-w-[26rem] overflow-hidden rounded-2xl border border-ink/10 bg-white text-left shadow-[0_30px_60px_-28px_rgb(11_16_36/0.3),0_8px_18px_-10px_rgb(11_16_36/0.1)]',
+        className,
+      )}
+    >
+      <div className="flex items-baseline justify-between gap-4 px-5 pt-5 pb-4">
+        <span className="flex items-baseline gap-3">
+          <span className="text-[1.05rem] font-medium text-ink">
+            <PayByPhone />
+          </span>
+          <span className="tracking-wide text-ink/50 tabular-nums">AB-123-CD</span>
+        </span>
+        <span className="text-sm text-ink/50">Paris 5e</span>
+      </div>
+      <div className="border-t border-ink/[0.06] px-5 py-4">
+        <div className="flex items-center justify-between">
+          <span className="text-ink">Renouvellement auto</span>
+          <span className="relative h-6 w-11 rounded-full bg-[#4e9aa0]" aria-hidden>
+            <span className="absolute top-1 right-1 size-4 rounded-full bg-white" />
+          </span>
+        </div>
+        <dl className="mt-3 space-y-1 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-ink/50">Prochain renouvellement</dt>
+            <dd className="text-ink">jeudi à 20h</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-ink/50">Dernier paiement</dt>
+            <dd className="text-ink tabular-nums">il y a 6 jours · 9,00 €</dd>
+          </div>
+        </dl>
+        <p className="mt-3 flex items-center gap-2 text-sm text-[#3d7f84]">
+          <svg viewBox="0 0 16 16" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3.5 8.5l3 3 6-7" />
+          </svg>
+          Rien à faire de votre côté.
+        </p>
+      </div>
+      <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
+        <p className="mb-1 text-[0.95rem] font-medium text-ink">Ticket en cours</p>
+        <p className="text-sm text-ink/50">Expire vendredi à 11h30</p>
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
+          <div className="h-full w-[86%] rounded-full bg-[#4e9aa0]" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: boolean; heroOnly?: boolean; lean?: boolean }) {
   const cta = useRef<HTMLAnchorElement>(null)
   const sticky = useStickyCta(cta)
@@ -267,8 +322,15 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
           heroOnly ? 'flex flex-1 items-center pb-16' : 'lg:min-h-[calc(100dvh-4rem)]',
         )}
       >
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center text-center">
-          <h1 className="font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
+        {/* Home: the text on the left and an example ticket card on the right (one column on a phone). */}
+        <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14')}>
+        <div className={cn('flex flex-col items-center text-center', heroOnly && 'lg:items-start lg:text-left')}>
+          <h1
+            className={cn(
+              'font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]',
+              heroOnly && 'lg:text-[2.7rem] lg:[&>span]:whitespace-nowrap',
+            )}
+          >
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
             <span className="block">de votre stationnement résident</span>
             <span className="block">sur <PayByPhone /></span>
@@ -292,6 +354,8 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
               <TrustRow className="mt-14 lg:mt-20" />
             </>
           )}
+        </div>
+        {heroOnly && <SampleTicket className="mx-auto lg:mx-0 lg:justify-self-end" />}
         </div>
       </section>
 

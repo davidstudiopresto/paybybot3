@@ -6,7 +6,6 @@ import { arrondissement, PayByBot, PayByPhone, Plate, ZonePlate } from '@/compon
 import { api, clock, type Account, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
-import { SubscriptionDialog } from '@/components/Subscription'
 
 /** "Mon compte" in the top bar: what PayByBot reads from the PayByPhone account, the home zone and e-mail. */
 export function AccountButton({
@@ -55,7 +54,18 @@ function AccountDialog({
     api.myInvite().then((r) => setInvite(r.url), () => {})
   }, [])
 
-  const [managing, setManaging] = useState(false)
+  // « Gérer »: Stripe's customer portal (card, invoices, cancel), back here after.
+  const [opening, setOpening] = useState(false)
+  function manage() {
+    setOpening(true)
+    api.billingPortal().then(
+      (r) => window.location.assign(r.url),
+      () => {
+        setOpening(false)
+        toast.error('Impossible d’ouvrir la gestion de l’abonnement. Réessayez dans un instant.')
+      },
+    )
+  }
 
   useEffect(() => {
     api.account().then(
@@ -76,9 +86,7 @@ function AccountDialog({
   if (deleting) return <DeleteConfirm data={data} onCancel={() => setDeleting(false)} onDeleted={onDeleted} />
 
   return (
-    <>
-    {managing && <SubscriptionDialog onClose={() => setManaging(false)} />}
-    <Dialog open onOpenChange={(o) => !o && !managing && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className={ui.dialog}>
         <div className="px-6 pt-7">
           <DialogTitle className={ui.dialogTitle}>Mon compte</DialogTitle>
@@ -121,7 +129,8 @@ function AccountDialog({
                 ) : account?.plan ? (
                   <span className="flex items-center gap-3">
                     <span className="font-medium text-ink">{account.plan === 'yearly' ? 'Annuel' : 'Mensuel'}</span>
-                    <button onClick={() => setManaging(true)} className={cn('text-sm', ui.link)}>
+                    <button onClick={manage} disabled={opening} className={cn('inline-flex items-center gap-1.5 text-sm', ui.link)}>
+                      {opening && <Loader2 className="size-3.5 animate-spin" />}
                       Gérer
                     </button>
                   </span>
@@ -194,7 +203,6 @@ function AccountDialog({
         </div>
       </DialogContent>
     </Dialog>
-    </>
   )
 }
 

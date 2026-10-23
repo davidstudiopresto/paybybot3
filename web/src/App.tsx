@@ -12,6 +12,7 @@ import { PricingPage } from '@/components/Pricing'
 import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
 import { NotFoundPage } from '@/components/NotFound'
 import { Welcome } from '@/components/Welcome'
+import { CheckoutDone } from '@/components/CheckoutDone'
 import { InviteGate } from '@/components/InviteGate'
 import { captureInvite, forgetInvite, isMember, markMember } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
@@ -216,6 +217,15 @@ export default function App() {
     forgetZoneLookup()
     setMe(null)
   }
+
+  // Development only: the screen shown after Stripe Checkout, without paying (#/apercu-paiement).
+  if (import.meta.env.DEV && window.location.hash === '#/apercu-paiement')
+    return (
+      <>
+        <img src="/how/3-tableau-de-bord.png" alt="" className="fixed inset-0 size-full object-cover object-top" />
+        <CheckoutDone vehicle={{ plate: 'AB-123-CD', type: 'Car', zone: '75005' }} onClose={() => (window.location.hash = '#/')} />
+      </>
+    )
 
   return (
     <>

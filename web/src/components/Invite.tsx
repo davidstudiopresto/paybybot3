@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Check, Link2, Mail, MessageSquare, Send, Share, UserPlus } from 'lucide-react'
+import { Check, Link2, Mail, MessageSquare, Send, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { api } from '@/lib/api'
@@ -52,15 +52,14 @@ function Option({
   )
 }
 
-/** « Inviter un proche » in the top bar: a share sheet with the user's own link (WhatsApp, SMS, e-mail…). */
-export function InviteButton({ disabled = false }: { disabled?: boolean }) {
-  const [open, setOpen] = useState(false)
+/** The share options with the user's own link (WhatsApp, SMS, e-mail…), and the link itself unless withLink is false. */
+export function InviteShare({ withLink = false, className }: { withLink?: boolean; className?: string }) {
   const [url, setUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    if (open && !url) api.myInvite().then((r) => setUrl(r.url), () => toast.error('Lien indisponible pour le moment.'))
-  }, [open, url])
+    api.myInvite().then((r) => setUrl(r.url), () => toast.error('Lien indisponible pour le moment.'))
+  }, [])
 
   const text = url ? `${MESSAGE} ${url}` : ''
   const enc = encodeURIComponent
@@ -76,76 +75,92 @@ export function InviteButton({ disabled = false }: { disabled?: boolean }) {
     }
   }
 
-  async function more() {
-    if (!url) return
-    try {
-      await navigator.share({ title: 'PayByBot', text: MESSAGE, url })
-    } catch {
-      // closed by the user: nothing to do
-    }
-  }
+  return (
+    <div className={className}>
+      {/* The share options, in a row that scrolls on a phone */}
+      <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]">
+        <Option
+          label={copied ? 'Copié' : 'Copier le lien'}
+          className="bg-ink/[0.06] text-ink"
+          icon={copied ? <Check className="size-6" /> : <Link2 className="size-6" />}
+          onClick={copy}
+        />
+        <Option
+          label="WhatsApp"
+          className="bg-[#25d366] text-white"
+          icon={<WhatsAppIcon className="size-7" />}
+          href={url ? `https://wa.me/?text=${enc(text)}` : undefined}
+        />
+        <Option
+          label="SMS"
+          className="bg-[#34c759] text-white"
+          icon={<MessageSquare className="size-6" />}
+          href={url ? `sms:?&body=${enc(text)}` : undefined}
+        />
+        <Option
+          label="E-mail"
+          className="bg-eu text-white"
+          icon={<Mail className="size-6" />}
+          href={url ? `mailto:?subject=${enc('Fini les amendes de stationnement')}&body=${enc(text)}` : undefined}
+        />
+        <Option
+          label="Telegram"
+          className="bg-[#229ed9] text-white"
+          icon={<Send className="size-6" />}
+          href={url ? `https://t.me/share/url?url=${enc(url)}&text=${enc(MESSAGE)}` : undefined}
+        />
+      </div>
 
+      {withLink && (
+        <div className="mt-4 flex items-center gap-3 rounded-xl bg-ink/[0.04] py-2 pr-2 pl-4">
+          <span className="min-w-0 flex-1 truncate text-left text-sm text-ink/70">
+            {url ? url.replace(/^https?:\/\//, '') : <span className="inline-block h-4 w-40 animate-pulse rounded bg-ink/10" />}
+          </span>
+          <button onClick={copy} disabled={!url} className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-ink shadow-[0_1px_2px_rgb(0_0_0/0.08)]">
+            {copied ? 'Copié' : 'Copier'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** « Inviter un proche » in the top bar: a share sheet with the user's own link. */
+export function InviteButton({
+  disabled = false,
+  big = false,
+  openAfter,
+}: {
+  disabled?: boolean
+  big?: boolean
+  /** Opens the share sheet by itself after this many milliseconds (the after-payment screen). */
+  openAfter?: number
+}) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (openAfter === undefined) return
+    const id = setTimeout(() => setOpen(true), openAfter)
+    return () => clearTimeout(id)
+  }, [openAfter])
   return (
     <>
-      <button onClick={() => setOpen(true)} disabled={disabled} className={cn(ui.pillGray, 'gap-2')}>
-        <UserPlus className="size-4" /> <span className="hidden sm:inline">Inviter un proche</span>
-      </button>
+      {big ? (
+        <button onClick={() => setOpen(true)} disabled={disabled} className={cn(ui.primary, 'sm:w-fit sm:px-10')}>
+          <UserPlus className="size-5" /> Inviter un proche
+        </button>
+      ) : (
+        <button onClick={() => setOpen(true)} disabled={disabled} className={cn(ui.pillGray, 'gap-2')}>
+          <UserPlus className="size-4" /> <span className="hidden sm:inline">Inviter un proche</span>
+        </button>
+      )}
       {open && (
         <Dialog open onOpenChange={(o) => !o && setOpen(false)}>
           <DialogContent className={ui.dialog}>
             <div className="px-6 pt-7">
               <DialogTitle className={ui.dialogTitle}>Inviter un proche</DialogTitle>
-              <DialogDescription className="mt-1 text-ink/60">
-                Partagez votre lien : vos proches résidents ne paieront plus d’amende non plus.
-              </DialogDescription>
+              <DialogDescription className="sr-only">Partagez votre lien d’invitation.</DialogDescription>
             </div>
-
-            {/* The share options, in a row that scrolls on a phone */}
-            <div className="mt-6 flex gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none]">
-              <Option
-                label={copied ? 'Copié' : 'Copier le lien'}
-                className="bg-ink/[0.06] text-ink"
-                icon={copied ? <Check className="size-6" /> : <Link2 className="size-6" />}
-                onClick={copy}
-              />
-              <Option
-                label="WhatsApp"
-                className="bg-[#25d366] text-white"
-                icon={<WhatsAppIcon className="size-7" />}
-                href={url ? `https://wa.me/?text=${enc(text)}` : undefined}
-              />
-              <Option
-                label="SMS"
-                className="bg-[#34c759] text-white"
-                icon={<MessageSquare className="size-6" />}
-                href={url ? `sms:?&body=${enc(text)}` : undefined}
-              />
-              <Option
-                label="E-mail"
-                className="bg-eu text-white"
-                icon={<Mail className="size-6" />}
-                href={url ? `mailto:?subject=${enc('Fini les amendes de stationnement')}&body=${enc(text)}` : undefined}
-              />
-              <Option
-                label="Telegram"
-                className="bg-[#229ed9] text-white"
-                icon={<Send className="size-6" />}
-                href={url ? `https://t.me/share/url?url=${enc(url)}&text=${enc(MESSAGE)}` : undefined}
-              />
-              {typeof navigator !== 'undefined' && 'share' in navigator && (
-                <Option label="Plus…" className="bg-ink/[0.06] text-ink" icon={<Share className="size-6" />} onClick={more} />
-              )}
-            </div>
-
-            {/* The link itself */}
-            <div className="m-6 mt-4 flex items-center gap-3 rounded-xl bg-ink/[0.04] py-2 pr-2 pl-4">
-              <span className="min-w-0 flex-1 truncate text-sm text-ink/70">
-                {url ? url.replace(/^https?:\/\//, '') : <span className="inline-block h-4 w-40 animate-pulse rounded bg-ink/10" />}
-              </span>
-              <button onClick={copy} disabled={!url} className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-ink shadow-[0_1px_2px_rgb(0_0_0/0.08)]">
-                {copied ? 'Copié' : 'Copier'}
-              </button>
-            </div>
+            <InviteShare className="m-6 mt-6" />
           </DialogContent>
         </Dialog>
       )}

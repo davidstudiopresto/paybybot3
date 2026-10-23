@@ -9,6 +9,7 @@ import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
+import { CheckoutDone } from '@/components/CheckoutDone'
 import { ActivateRenewal, CardGate, RenewalActions, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
 import { api, clock, remaining, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
@@ -167,16 +168,16 @@ export function Dashboard({
 }) {
   const now = useNow()
   const [account, setAccount] = useState<Account | null>(null)
+  const [checkoutDone, setCheckoutDone] = useState(false)
   useEffect(() => {
     // Back from Stripe Checkout: record the subscription, then show the account as it is now.
     const done = window.location.hash.match(/session_id=(cs_[A-Za-z0-9_]+)/)
     const confirm = done
       ? api.confirmCheckout(done[1]).then(
-          async (r) => {
+          async () => {
             history.replaceState(null, '', window.location.pathname)
-            const offer = `Offre ${r.plan === 'yearly' ? 'annuelle' : 'mensuelle'} activée.`
-            // The renewal chosen just before Stripe is activated now.
-            toast.success(offer, { description: "Rien n'est prélevé avant la fin de votre mois offert." })
+            // The confirmation screen (its animation says it); the renewal chosen just before Stripe is activated now.
+            setCheckoutDone(true)
             const { done: renewed, failed, shown } = await runPendingRenewals()
             if (renewed) {
               if (!shown)
@@ -216,6 +217,18 @@ export function Dashboard({
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
+      {checkoutDone && (
+        <CheckoutDone
+          // The car whose renewal was just activated (else the first car of the account).
+          vehicle={(() => {
+            const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
+            const renewed = data?.autopilots.find((ap) => ap.label === WEEKLY_LABEL)
+            const car = data?.vehicles.find((v) => !renewed || key(v.plate) === key(renewed.plate)) ?? data?.vehicles[0]
+            return car ? { plate: car.plate, type: car.type, zone: car.zone ?? renewed?.location ?? null } : null
+          })()}
+          onClose={() => setCheckoutDone(false)}
+        />
+      )}
       {/* No resident rate on PayByPhone: PayByBot is not usable, the page stays blurred behind the notice. */}
       {resident?.resident === false && !me.demo ? (
         <ResidentGate zone={resident.zone} vehicles={data?.vehicles.length} onChecked={setResident} />

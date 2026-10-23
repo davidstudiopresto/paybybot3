@@ -40,7 +40,8 @@ function Option({
       <span className="text-[0.8rem] leading-tight text-ink/70">{label}</span>
     </>
   )
-  const box = 'group flex w-[4.5rem] flex-col items-center gap-2 text-center'
+  // No square outline when the sheet opens with the focus on the first option; a ring on the round for the keyboard.
+  const box = 'group flex w-[4.5rem] flex-col items-center gap-2 text-center outline-none [&:focus-visible>span:first-child]:ring-2 [&:focus-visible>span:first-child]:ring-ink/30'
   return href ? (
     <a href={href} target="_blank" rel="noopener noreferrer" className={box}>
       {body}

@@ -46,11 +46,13 @@ class HumanCheck(unittest.TestCase):
                         web.check_human(_Request(), token)
                     self.assertEqual(e.exception.status_code, status)
 
-    def test_demo_login_needs_no_check(self):
+    def test_no_demo_on_the_public_site(self):
         with patch.object(web, "HOSTED", True), patch.dict(os.environ, {**KEYS, "PAYBYBOT_SECRET": "t"}), \
-                patch.object(web, "check_human", side_effect=AssertionError) as check:
+                patch.object(web, "check_human", side_effect=AssertionError) as check, \
+                self.assertRaises(HTTPException) as refused:
             web.login(web.Login(username="demo", password="demo"), _Request(), web.Response())
-            check.assert_not_called()
+        self.assertEqual(refused.exception.status_code, 404)
+        check.assert_not_called()
 
     def test_login_and_admin_check_first(self):
         refused = HTTPException(400, "La vérification anti-robot a échoué. Réessayez.")

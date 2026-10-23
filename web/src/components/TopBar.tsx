@@ -34,9 +34,6 @@ export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
           <a href="#/securite" className={navLink}>
             Sécurité
           </a>
-          <a href="#/demo" className={navLink}>
-            Démo
-          </a>
         </>
       }
     >

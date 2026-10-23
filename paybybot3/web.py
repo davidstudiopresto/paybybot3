@@ -1478,6 +1478,8 @@ class EmailChange(BaseModel):
 @app.post("/api/login")
 def login(body: Login, request: Request, response: Response):
     demo = body.username.strip().lower() == "demo"
+    if demo and HOSTED:  # the demo account is for local use only, not on the public site
+        raise HTTPException(404, "La démo n'est pas disponible.")
     masked = body.username.strip()[:4] + "***"
     if body.signup and not demo and not body.email.strip():
         raise HTTPException(400, "Indiquez votre adresse e-mail.")

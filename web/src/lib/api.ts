@@ -173,6 +173,7 @@ export const api = {
     post('/api/admin/login', { email, password, turnstile }),
   adminLogout: () => post('/api/admin/logout'),
   adminStats: () => request<import('@/components/Admin').AdminStats>('/api/admin/stats'),
+  adminClients: () => request<import('@/components/Admin').AdminClient[]>('/api/admin/clients'),
   signupCheck: (username: string) => post<{ exists: boolean }>('/api/signup/check', { username }),
   verifySignup: (code: string) => post<Me>('/api/signup/verify', { code }),
   resendSignupCode: () => post<SignupPending>('/api/signup/resend'),

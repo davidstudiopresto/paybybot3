@@ -1110,7 +1110,7 @@ def with_details(row):
     return {**row, **json.loads(_fernet("renewal").decrypt(row["data"].encode()))}
 
 
-ACCOUNT_FIELDS = ("email", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
+ACCOUNT_FIELDS = ("email", "first_name", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "suv_plates", "zone_found",
                   "vehicle_zones", "dunning", "check_mailed", "early_stops")
 TRIAL_DAYS = 30  # one free month for every new account
@@ -1546,6 +1546,7 @@ def login(body: Login, request: Request, response: Response):
             log.warning("could not save the account e-mail: %s", e)
     set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
+    remember_name(session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -1694,6 +1695,7 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
     set_session_cookie(response, token, True)
     response.delete_cookie(PENDING_COOKIE, path="/api/signup")
     log.info("sign-up confirmed")
+    remember_name(session)
     return {"username": session.username, "demo": False, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -1759,6 +1761,18 @@ def token_claims(session):
         return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
     except Exception:
         return {}
+
+
+def remember_name(session):
+    """Online, keep the holder's first name with the account (encrypted), for the owner's client list."""
+    if not HOSTED or session.demo:
+        return
+    try:
+        name = first_name(session)
+        if name and load_account(session) and load_account(session).get("first_name") != name:
+            save_account(session, {"first_name": name})
+    except Exception as e:
+        log.info("first name not kept: %s", type(e).__name__)
 
 
 def first_name(session):
@@ -2977,6 +2991,32 @@ def admin_stats(pbb_admin: str = Cookie(None)):
         raise HTTPException(403, "Accès réservé.")
     require_admin(pbb_admin)
     return guarded(lambda: store("admin_stats"))
+
+
+@app.get("/api/admin/clients")
+def admin_clients(pbb_admin: str = Cookie(None)):
+    """The owner's client list: first name (PayByPhone, else the Stripe billing name), e-mail, sign-up date, offer,
+    renewals. Read from the encrypted accounts, on the server only."""
+    if not HOSTED:
+        raise HTTPException(403, "Accès réservé.")
+    require_admin(pbb_admin)
+    rows = guarded(lambda: store("admin_accounts")) or []
+    clients = []
+    for row in rows:
+        try:
+            account = json.loads(_fernet("account").decrypt(row["data"].encode()))
+        except Exception:
+            account = {}
+        name = account.get("first_name")
+        if not name and account.get("stripe_customer") and os.environ.get("STRIPE_SECRET_KEY"):
+            try:
+                name = stripe("GET", "customers/" + account["stripe_customer"]).get("name")
+            except Exception:
+                name = None
+        clients.append({"name": name, "email": account.get("email"), "created": row.get("created_at"),
+                        "plan": account.get("plan"), "subscribed": bool(account.get("stripe_subscription")),
+                        "renewals": row.get("renewals_active", 0)})
+    return clients
 
 
 @app.get("/api/resident-zone")

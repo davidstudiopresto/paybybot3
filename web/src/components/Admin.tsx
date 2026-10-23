@@ -19,10 +19,57 @@ export type AdminStats = {
 }
 
 /** The owner's page: a few counts, nothing else. */
+export type AdminClient = {
+  name: string | null
+  email: string | null
+  created: string
+  plan: string | null
+  subscribed: boolean
+  renewals: number
+}
+
+/** Total sign-ups day after day (last 30 days, or since the first one), as a line with its area. */
+function UsersChart({ clients }: { clients: AdminClient[] }) {
+  const day = 86_400_000
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const first = clients.length ? Math.min(...clients.map((c) => new Date(c.created).getTime())) : today.getTime()
+  const start = Math.max(today.getTime() - 29 * day, new Date(first).setHours(0, 0, 0, 0))
+  const days = Math.max(1, Math.round((today.getTime() - start) / day) + 1)
+  const points = Array.from({ length: days }, (_, i) => {
+    const end = start + (i + 1) * day
+    return { at: start + i * day, total: clients.filter((c) => new Date(c.created).getTime() < end).length }
+  })
+  const max = Math.max(1, ...points.map((p) => p.total))
+  const W = 600
+  const H = 160
+  const x = (i: number) => (days === 1 ? W / 2 : (i / (days - 1)) * W)
+  const y = (v: number) => H - (v / max) * (H - 16) - 4
+  const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.total).toFixed(1)}`).join(' ')
+  const label = (t: number) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  return (
+    <div className="mt-3 rounded-2xl border border-ink/10 p-5">
+      <div className="flex items-baseline justify-between">
+        <span className="font-heading text-3xl font-semibold tabular-nums text-ink">{clients.length}</span>
+        <span className="text-sm text-ink/50">inscrits au total</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 h-40 w-full overflow-visible" preserveAspectRatio="none" aria-hidden>
+        <path d={`${line} L${x(days - 1)},${H} L${x(0)},${H} Z`} fill="var(--eu)" opacity=".08" />
+        <path d={line} fill="none" stroke="var(--eu)" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="mt-2 flex justify-between text-xs text-ink/45 tabular-nums">
+        <span>{label(points[0].at)}</span>
+        <span>{label(points[points.length - 1].at)}</span>
+      </div>
+    </div>
+  )
+}
+
 export function AdminPage(_: { signedIn?: boolean }) {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [needsLogin, setNeedsLogin] = useState(false)
+  const [clients, setClients] = useState<AdminClient[] | null>(null)
 
   function load() {
     setError(null)
@@ -30,6 +77,7 @@ export function AdminPage(_: { signedIn?: boolean }) {
       (s) => {
         setStats(s)
         setNeedsLogin(false)
+        api.adminClients().then(setClients, () => setClients([]))
       },
       (e) => {
         if (e instanceof ApiError && e.status === 401) setNeedsLogin(true)
@@ -65,7 +113,6 @@ export function AdminPage(_: { signedIn?: boolean }) {
     ['Payés, 7 jours', stats?.paid_7d],
     ['Renouvellements au total', stats?.renewals],
   ]
-  const max = Math.max(1, ...(stats?.signups_by_day.map((d) => d.count) ?? [1]))
 
   return (
     <div className="min-h-dvh bg-white">
@@ -94,21 +141,46 @@ export function AdminPage(_: { signedIn?: boolean }) {
               ))}
             </dl>
 
-            <h2 className="mt-12 text-sm font-semibold text-ink/55">Inscriptions, 14 derniers jours</h2>
-            {stats.signups_by_day.length ? (
-              <ul className="mt-3 space-y-1.5">
-                {stats.signups_by_day.map((d) => (
-                  <li key={d.day} className="grid grid-cols-[6rem_1fr_2rem] items-center gap-3 text-sm">
-                    <span className="text-ink/60 tabular-nums">
-                      {new Date(d.day + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                    </span>
-                    <span className="h-2 rounded-full bg-eu" style={{ width: `${(d.count / max) * 100}%` }} />
-                    <span className="text-right font-semibold tabular-nums">{d.count}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-3 text-ink/50">Aucune inscription sur la période.</p>
+            <h2 className="mt-12 text-sm font-semibold text-ink/55">Nombre d’inscrits</h2>
+            {clients ? <UsersChart clients={clients} /> : <div className="mt-3 h-56 animate-pulse rounded-2xl bg-ink/[0.04]" />}
+
+            <h2 className="mt-12 text-sm font-semibold text-ink/55">Clients{clients ? ` (${clients.length})` : ''}</h2>
+            {clients && clients.length === 0 && <p className="mt-3 text-ink/50">Aucun client pour l’instant.</p>}
+            {clients && clients.length > 0 && (
+              <div className="mt-3 overflow-x-auto rounded-2xl border border-ink/10">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-ink/[0.03] text-ink/55">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Nom</th>
+                      <th className="px-4 py-3 font-medium">E-mail</th>
+                      <th className="px-4 py-3 font-medium">Inscrit le</th>
+                      <th className="px-4 py-3 font-medium">Offre</th>
+                      <th className="px-4 py-3 text-right font-medium">Renouvellements</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clients.map((c, i) => (
+                      <tr key={i} className="border-t border-ink/10">
+                        <td className="px-4 py-3 font-semibold text-ink">{c.name || '—'}</td>
+                        <td className="px-4 py-3 text-ink/70">{c.email || '—'}</td>
+                        <td className="px-4 py-3 text-ink/70 tabular-nums">
+                          {new Date(c.created).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-4 py-3">
+                          {c.subscribed ? (
+                            <span className="rounded-full bg-[#e7f6ec] px-2 py-0.5 text-xs font-semibold text-[#14703a]">
+                              {c.plan === 'yearly' ? 'Annuel' : 'Mensuel'}
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-xs font-semibold text-ink/60">Sans offre</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold tabular-nums">{c.renewals}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </>
         )}

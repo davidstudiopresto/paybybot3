@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 
 // The message sent with the link (copied or shared), in the user's own voice.
 const MESSAGE =
-  'Hello ! J’ai découvert PayByBot : il permet de renouveler tout seul mon ticket résident PayByPhone et d’éviter les FPS. Je te le conseille, voici mon lien :'
+  'Hello ! J’ai découvert PayByBot : c’est une app qui renouvelle tout seul mon ticket résident PayByPhone et qui permet d’éviter les FPS. Je te le conseille, voici mon lien :'
 
 /** WhatsApp's mark (Simple Icons), white on its green. */
 function WhatsAppIcon({ className }: { className?: string }) {

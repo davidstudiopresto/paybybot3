@@ -385,7 +385,7 @@ SECURITY_HEADERS = {
     # Only our own scripts, styles, fonts and API (plus Cloudflare's human check); never shown inside another site's frame (clickjacking).
     "Content-Security-Policy": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; "
                                "style-src 'self' 'unsafe-inline'; frame-src https://challenges.cloudflare.com; "
-                               "img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; "
+                               "img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.ingest.de.sentry.io; worker-src 'self' blob:; object-src 'none'; "
                                "base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",

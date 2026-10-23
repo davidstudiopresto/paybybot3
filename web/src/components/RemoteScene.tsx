@@ -41,8 +41,8 @@ export function RemoteScene({ className }: { className?: string }) {
         @keyframes ${c}-pulse { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
         @keyframes ${c}-on { 0%,30% { opacity: 0 } 34%,95% { opacity: 1 } 100% { opacity: 0 } }
         @keyframes ${c}-knob { 0%,30% { transform: translateX(0) } 34%,95% { transform: translateX(14px) } 100% { transform: translateX(0) } }
-        @keyframes ${c}-r1 { 0%,41% { opacity: 0; transform: translateY(-16px) } 46%,58% { opacity: 1; transform: translateY(0) scale(1) } 63%,74% { opacity: .55; transform: translateY(14px) scale(.93) } 79%,95% { opacity: .25; transform: translateY(28px) scale(.86) } 100% { opacity: 0; transform: translateY(28px) scale(.86) } }
-        @keyframes ${c}-r2 { 0%,57% { opacity: 0; transform: translateY(-16px) } 62%,74% { opacity: 1; transform: translateY(0) scale(1) } 79%,95% { opacity: .55; transform: translateY(14px) scale(.93) } 100% { opacity: 0; transform: translateY(14px) scale(.93) } }
+        @keyframes ${c}-r1 { 0%,41% { opacity: 0; transform: translateY(-16px) } 46%,58% { opacity: 1; transform: translateY(0) scale(1) } 63%,74% { opacity: .7; transform: translateY(42px) scale(.94) } 79%,95% { opacity: .45; transform: translateY(80px) scale(.88) } 100% { opacity: 0; transform: translateY(80px) scale(.88) } }
+        @keyframes ${c}-r2 { 0%,57% { opacity: 0; transform: translateY(-16px) } 62%,74% { opacity: 1; transform: translateY(0) scale(1) } 79%,95% { opacity: .7; transform: translateY(42px) scale(.94) } 100% { opacity: 0; transform: translateY(42px) scale(.94) } }
         @keyframes ${c}-r3 { 0%,73% { opacity: 0; transform: translateY(-16px) } 78%,95% { opacity: 1; transform: translateY(0) scale(1) } 100% { opacity: 0; transform: translateY(0) } }
         @media (prefers-reduced-motion: reduce) { .${c} * { animation: none !important; } .${c}-before { opacity: 0 } .${c}-after, .${c}-r3, .${c}-on { opacity: 1 } .${c}-knob { transform: translateX(14px) } }
       `}</style>
@@ -96,13 +96,13 @@ export function RemoteScene({ className }: { className?: string }) {
           ['lun. 10 nov.', 'r3'],
         ].map(([day, k]) => (
           <g key={k} className={`${c}-note ${c}-${k}`}>
-            <rect x="350" y="252" width="170" height="44" rx="11" fill="#fff" stroke={LINE} strokeWidth="1.2" filter={`url(#${c}-shadow)`} />
-            <circle cx="371" cy="274" r="11" fill="#e3f5e9" />
-            <path d="M366 274 l3.5 3.5 l6.5 -7" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="389" y="270" fontSize="11" fontWeight="700" fill={INK}>
+            <rect x="350" y="246" width="170" height="38" rx="10" fill="#fff" stroke={LINE} strokeWidth="1.2" filter={`url(#${c}-shadow)`} />
+            <circle cx="370" cy="265" r="10" fill="#e3f5e9" />
+            <path d="M365.5 265 l3 3 l6 -6.5" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <text x="388" y="262" fontSize="11" fontWeight="700" fill={INK}>
               Forfait renouvelé
             </text>
-            <text x="389" y="285" fontSize="10" fill={INK} opacity=".55">
+            <text x="388" y="276" fontSize="10" fill={INK} opacity=".55">
               {day} · 9,00 €
             </text>
           </g>

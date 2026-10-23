@@ -9,7 +9,7 @@ import { PlansDialog } from '@/components/Pricing'
 import { ShinyButton } from '@/components/ui/shiny-button'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
-import { api, clock, remaining, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, ApiError, clock, remaining, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
 
@@ -175,19 +175,36 @@ export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; on
     return () => clearTimeout(id)
   }, [confirming])
 
+  const [busy, setBusy] = useState(false)
+
   async function resume() {
+    if (busy) return
+    setBusy(true)
+    // After a failed payment, resuming tries the payment again (up to a minute): shown as such.
+    if (ap.lastError) {
+      await relaunch(ap, onChanged)
+      return setBusy(false)
+    }
     try {
       await api.resumeAutopilot(ap.id)
       toast.success(paused ? 'Renouvellement repris.' : 'Pause annulée.')
     } catch (e) {
       toast.error((e as Error).message)
     }
+    setBusy(false)
     onChanged()
   }
 
   async function stop() {
-    await api.deleteAutopilot(ap.id)
-    toast.success('Renouvellement arrêté.', { description: 'Le ticket en cours reste valable.' })
+    if (busy) return
+    setBusy(true)
+    try {
+      await api.deleteAutopilot(ap.id)
+      toast.success('Renouvellement arrêté.', { description: 'Le ticket en cours reste valable.' })
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+    setBusy(false)
     onChanged()
   }
 
@@ -197,13 +214,13 @@ export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; on
       {later ? (
         <div className="flex items-center justify-between gap-3">
           <PlannedPause ap={ap} className="flex-1" />
-          <button onClick={resume} className={cn('shrink-0', ui.link)}>
+          <button onClick={resume} disabled={busy} className={cn('shrink-0', ui.link)}>
             Annuler
           </button>
         </div>
       ) : paused ? (
-        <button onClick={resume} className={cn(actionBtn, 'border-ink/15 text-ink hover:border-ink/40')}>
-          <Play className="size-4" /> Reprendre maintenant
+        <button onClick={resume} disabled={busy} className={cn(actionBtn, 'border-ink/15 text-ink hover:border-ink/40')}>
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />} Reprendre maintenant
         </button>
       ) : null}
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -214,6 +231,7 @@ export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; on
         )}
         <button
           onClick={() => (confirming ? stop() : setConfirming(true))}
+          disabled={busy}
           className={cn(
             actionBtn,
             confirming
@@ -250,8 +268,12 @@ export function ManageRenewal({ ap, onChanged, demo = false }: { ap: Autopilot; 
   }
 
   async function stop() {
-    await api.deleteAutopilot(ap.id)
-    toast.success('Renouvellement hebdomadaire arrêté.', { description: 'Le ticket en cours reste valable.' })
+    try {
+      await api.deleteAutopilot(ap.id)
+      toast.success('Renouvellement hebdomadaire arrêté.', { description: 'Le ticket en cours reste valable.' })
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
     onChanged()
   }
 
@@ -579,6 +601,12 @@ function RiverainDialog({
           shown += 1
         }
       } catch (e) {
+        // No subscription yet (the account had not loaded when « Activer » was clicked): the offer screen.
+        if (e instanceof ApiError && e.status === 402 && /offre/.test(e.message)) {
+          setSaving(false)
+          setPaywall(true)
+          return
+        }
         failed.push(`${plate} : ${(e as Error).message}`)
       }
     }

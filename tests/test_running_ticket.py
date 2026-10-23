@@ -158,47 +158,6 @@ class RunningTicket(unittest.TestCase):
         s = self.session([], cards=("other",))
         self.assertEqual(web.check_payable(s, "75005", "101", "FT630FH", "c"), "other")
 
-    def check(self, tickets=(), pay=None, **account):
-        s = self.session(list(tickets), **account)
-        s.demo = False
-        body = web.Parking(location="75005", rate="101", duration=7, unit="Days", plate="FT630FH", paymentAccountId="c")
-        with patch.object(web, "current", return_value=s), \
-                patch.object(web, "pay_and_confirm", side_effect=pay or AssertionError("must not pay")) as paid:
-            try:
-                return web.renewal_check(body, "token"), paid
-            except web.HTTPException as e:
-                return e, paid
-
-    def test_check_before_the_offer_rejects_a_card_that_needs_3d_secure(self):
-        answer, _ = self.check(pay=lambda *a, **k: ({"challenged": True}, [ticket("FT630FH", "75005")]))
-        self.assertEqual(answer.status_code, 409)
-        self.assertIn("banque a refusé", answer.detail)
-
-    def test_a_refused_card_is_not_tried_again_at_once(self):
-        s = self.session([])
-        s.demo = False
-        body = web.Parking(location="75005", rate="101", duration=7, unit="Days", plate="FT630FH", paymentAccountId="c")
-        with patch.object(web, "current", return_value=s), patch.object(web, "mail_check_failed"), \
-                patch.object(web, "pay_and_confirm", return_value=({"challenged": True}, [])) as paid:
-            for _ in range(2):
-                with self.assertRaises(web.HTTPException) as refused:
-                    web.renewal_check(body, "token")
-                self.assertEqual(refused.exception.status_code, 409)
-        self.assertEqual(paid.call_count, 1)  # the second check answers without asking the bank again
-
-    def test_check_before_the_offer_pays_the_first_week(self):
-        answer, paid = self.check(pay=lambda *a, **k: ({"challenged": False, "cost": None}, [ticket("FT630FH", "75005")]))
-        self.assertTrue(answer["paid"])
-
-    def test_check_before_the_offer_does_not_pay_over_a_running_ticket(self):
-        answer, paid = self.check(tickets=[ticket("FT-630-FH", "75015")])
-        self.assertEqual(answer, {"ok": True, "paid": False})
-        paid.assert_not_called()
-
-    def test_check_before_the_offer_needs_a_card(self):
-        answer, _ = self.check(cards=())
-        self.assertEqual((answer.status_code, answer.detail), (400, web.NO_CARD))
-
     def accounts(self, *cards):
         s = MagicMock()
         rates = [{"ratePolicyId": "101", "name": "Résident", "type": "Resident"}]

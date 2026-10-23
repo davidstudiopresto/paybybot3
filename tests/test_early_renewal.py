@@ -19,7 +19,7 @@ class EarlyRenewal(unittest.TestCase):
     def run_renewal(self, hours_left, extend=None, zone="75005", rate="101", activating=False, **row_extra):
         now = datetime.now(timezone.utc)
         ticket = {"parkingSessionId": "s1", "locationId": zone, "vehicle": {"licensePlate": "FT630FH"},
-                  "rateOption": {"ratePolicyId": rate}, "expireTime": now + timedelta(hours=hours_left)}
+                  "ratePolicy": {"ratePolicyId": rate}, "expireTime": now + timedelta(hours=hours_left)}
         extended = dict(ticket, expireTime=ticket["expireTime"] + timedelta(days=7))
         state = {"extended": False}
 
@@ -54,6 +54,12 @@ class EarlyRenewal(unittest.TestCase):
             outcome = web.process_renewal(row, refresh_token="t", activating=activating)
         p = stored[-1]["p_patch"]
         return outcome, p, mail, session, ticket, datetime.fromisoformat(p["next_check"])
+
+    def test_a_pause_already_over_does_not_stop_extending(self):
+        now = datetime.now(timezone.utc)
+        outcome, *_ = self.run_renewal(hours_left=3, paused_from=(now - timedelta(days=20)).isoformat(),
+                                       paused_until=(now - timedelta(days=10)).isoformat())
+        self.assertEqual(outcome, "paid")
 
     def test_extends_once_20_00_the_day_before_has_come(self):
         outcome, p, mail, session, ticket, next_check = self.run_renewal(hours_left=3)  # 20:00 the day before: past
@@ -118,7 +124,7 @@ class ActivationMessage(unittest.TestCase):
 
     def t(self, hours_left, started_hours_ago=48, zone="75005"):
         now = datetime.now(timezone.utc)
-        return {"parkingSessionId": "s1", "locationId": zone, "rateOption": {"ratePolicyId": "101"},
+        return {"parkingSessionId": "s1", "locationId": zone, "ratePolicy": {"ratePolicyId": "101"},
                 "startTime": now - timedelta(hours=started_hours_ago), "expireTime": now + timedelta(hours=hours_left)}
 
     def test_cases(self):

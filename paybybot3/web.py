@@ -15,6 +15,7 @@ Two modes:
 """
 
 import base64
+from concurrent.futures import ThreadPoolExecutor
 import contextvars
 import hashlib
 import hmac
@@ -1112,7 +1113,7 @@ def with_details(row):
 
 ACCOUNT_FIELDS = ("email", "first_name", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "suv_plates", "zone_found",
-                  "vehicle_zones", "dunning", "check_mailed", "early_stops", "card_checks")
+                  "vehicle_zones", "dunning", "check_mailed", "early_stops", "checkout_at")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -1423,7 +1424,18 @@ def cron_renew(request: Request):
         raise HTTPException(404)
     if not cron_authorized(request):
         raise HTTPException(401, "Unauthorized")
-    results = [process_renewal(row) for row in store("renewal_claim_due", p_limit=2)]
+    # Side by side, so a slow one (a payment to confirm can take a minute) never pushes the others past the
+    # function's time limit; one failing never stops the others.
+    rows = store("renewal_claim_due", p_limit=4) or []
+
+    def safe(row):
+        try:
+            return process_renewal(row)
+        except Exception as e:
+            log.warning("renewal %s not processed: %s", row.get("id"), type(e).__name__)
+            return "error"
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(safe, rows))
     # Once an hour (the scheduler calls every 5 minutes): the e-mails of the grace week after a refused charge.
     dunned = run_dunning() if datetime.now(timezone.utc).minute < 5 else None
     return {"processed": len(results), "outcomes": results, "dunning": dunned}
@@ -2305,56 +2317,6 @@ def mail_check_failed(s, plate, message):
         log.warning("check e-mail failed: %s", str(e)[:200])
 
 
-CARD_CHECK_COOLDOWN = 15 * 60  # seconds before the same card is tried again for the same car after a refusal
-
-
-@app.post("/api/renewal-check")
-def renewal_check(body: Parking, pbb_session: str = Cookie(None)):
-    """Before the offer page: make sure PayByPhone can really be paid unattended for this car. Resident rate and
-    card are checked; with no ticket running, the first week (the price shown) is paid now, which also tells
-    whether the bank asks to confirm each payment (3-D Secure): then the renewal could never run on its own."""
-    s = current(pbb_session)
-
-    def run():
-        try:
-            card = check_payable(s, body.location, body.rate, body.plate, body.paymentAccountId)
-        except NotPayable as e:
-            mail_check_failed(s, body.plate, str(e))
-            raise HTTPException(400, str(e))
-        if s.demo or running_for(s, body.plate):
-            return {"ok": True, "paid": False}
-        # Refused a moment ago (3-D Secure, card refused): not tried again at once. Each try sends the bank another
-        # request to confirm, and one confirmed later would pay a second week.
-        key = "%s|%s" % (plate_key(body.plate), card)
-        recent = (load_account(s).get("card_checks") or {}).get(key) or {}
-        if time.time() - recent.get("at", 0) < CARD_CHECK_COOLDOWN:
-            raise HTTPException(recent.get("status", 409), recent.get("error") or CARD_NEEDS_CHECK)
-
-        def refused(status, message):
-            mail_check_failed(s, body.plate, message)
-            try:
-                checks = {k: v for k, v in (load_account(s).get("card_checks") or {}).items()
-                          if time.time() - v.get("at", 0) < CARD_CHECK_COOLDOWN}
-                save_account(s, {"card_checks": {**checks, key: {"at": time.time(), "status": status, "error": message}}})
-            except Exception as e:
-                log.warning("card check not kept: %s", type(e).__name__)
-            raise HTTPException(status, message)
-
-        try:
-            result, found = pay_and_confirm(s, body.location, body.rate, fmt_qty(body.duration), body.unit,
-                                            body.plate, card)
-        except BankCheck:
-            refused(409, CARD_NEEDS_CHECK)
-        except Unconfirmed as e:
-            refused(504, str(e))
-        if result.get("challenged"):
-            refused(409, CARD_NEEDS_CHECK)
-        s.log("success", "Première semaine payée : zone %s, %s" % (body.location, body.plate))
-        return {"ok": True, "paid": True, "expire": iso(covered_until(found)), "cost": result.get("cost")}
-
-    return guarded(run)
-
-
 @app.post("/api/autopilots")
 def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
@@ -2391,6 +2353,10 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                                          "rate": body.rate, "duration": fmt_qty(body.duration), "unit": body.unit,
                                          "payment_account_id": body.paymentAccountId,
                                          "email": body.email.strip(), "days": days, "start": start})})
+            # Paid below, in this request: the scheduler keeps off the new row meanwhile (never two payments at once).
+            store("renewal_update", p_id=row["id"],
+                  p_patch={"next_check": utc_iso(datetime.now(timezone.utc) + timedelta(minutes=10))})
+            row = {**row, "owner": owner_id(s.username)}  # its stored login is the fallback if this one is stale
             details = {**with_details(row)}
             before = running_for(s, body.plate)
             outcome = process_renewal(row, refresh_token=refresh, activating=True)  # pay now if it is due
@@ -2408,7 +2374,7 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
             answer = with_next_ticket(stored_to_autopilot(stored))
             if message:
                 answer["activation"] = {"title": message[0], "text": message[1], "payYourself": PAY_YOURSELF}
-            elif outcome in ("unconfirmed", "not_payable", "error"):
+            elif outcome in ("unconfirmed", "not_payable", "error", "relogin", "blocked", "unreadable"):
                 # Paying now failed while the customer is on the page: say it there, they pay this ticket themselves.
                 answer["activation"] = {"failed": True, "title": "Le paiement n'a pas abouti.",
                                         "text": stored.get("last_error") or UNCONFIRMED,
@@ -2551,11 +2517,16 @@ def billing_status(account, owner=None):
             since = unpaid_since(sub.get("latest_invoice"))
             end = since + timedelta(days=GRACE_DAYS) if since else None
             return ("grace" if end and end > datetime.now(timezone.utc) else "unpaid"), end
+    # Paid on Stripe Checkout but the return to PayByBot never happened (tab closed): found and recorded, during
+    # the free month too, so the offer is never asked (and paid) twice. Looked up only after a Checkout was opened.
+    if owner and not sub_id and account.get("checkout_at") and os.environ.get("STRIPE_SECRET_KEY") \
+            and recover_subscription(account, owner):
+        return "ok", None
     start = parse_dt(account.get("trial_start"))
     if not start or start + timedelta(days=TRIAL_DAYS) > datetime.now(timezone.utc):
         return "trial", None  # no start yet: the free month begins when the account is first opened
     if owner and not sub_id and os.environ.get("STRIPE_SECRET_KEY") and recover_subscription(account, owner):
-        return "ok", None  # paid on Stripe but the return to PayByBot never happened (tab closed)
+        return "ok", None
     return "trial_over", None
 
 
@@ -2850,6 +2821,12 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
                                      "disponible pour l'instant.")
         raise HTTPException(400, "Choisissez d'abord votre arrondissement : le prix dépend de votre zone de résidence.")
     account = guarded(lambda: load_account(s))
+    # Already subscribed (or paid in a tab closed before coming back): no second subscription.
+    if account.get("stripe_subscription") or (account.get("checkout_at")
+                                              and recover_subscription(account, owner_id(s.username))):
+        if billing_status(guarded(lambda: load_account(s)), owner_id(s.username))[0] in ("ok", "grace"):
+            raise HTTPException(409, "Vous avez déjà un abonnement en cours : gérez-le depuis « Mon compte ».")
+    guarded(lambda: save_account(s, {"checkout_at": int(time.time())}))
     url = checkout_url(owner_id(s.username), account, body.plan,
                        APP_URL.rstrip("/") + "/#/abonnement?session_id={CHECKOUT_SESSION_ID}")
     return {"url": url}
@@ -3182,8 +3159,12 @@ def update_own_renewal(s, ap_id, patch):
     try:
         return stored_to_autopilot(store("renewal_update_owned", p_owner=owner_id(s.username), p_id=ap_id,
                                          p_patch=patch))
-    except requests.HTTPError:
-        raise HTTPException(404, "Renouvellement introuvable.")
+    except requests.HTTPError as e:
+        answer = getattr(e.response, "text", "") or ""
+        if "P0002" in answer or getattr(e.response, "status_code", 0) == 404:  # not this user's, or gone
+            raise HTTPException(404, "Renouvellement introuvable.")
+        log.warning("renewal update failed: %s", answer[:200])
+        raise HTTPException(502, "Service momentanément indisponible. Réessayez dans un instant.")
 
 
 @app.post("/api/autopilots/{ap_id}/pause")
@@ -3214,6 +3195,10 @@ def resume_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
         before = next((r for r in store("renewal_list", p_owner=owner) if r["id"] == ap_id), None)
         refresh = getattr(s.bot, "refresh_token", None)
         relaunch = bool(before and (not before.get("enabled") or before.get("last_error")) and refresh)  # suspended or failed
+        # Blocked account: said before anything is written (the renewal keeps its state and its reason).
+        if relaunch and billing_state(guarded(lambda: load_account(s)), owner) in BLOCKED_STATES:
+            raise HTTPException(402, "Compte bloqué : débloquez-le (bandeau en haut de page) pour relancer le "
+                                     "renouvellement.")
         # A relaunch is tried below, in this request: keep the scheduler off it meanwhile (never two payments at once).
         check = datetime.now(timezone.utc) + (timedelta(minutes=10) if relaunch else timedelta())
         result = update_own_renewal(s, ap_id, {"paused_from": None, "paused_until": None, "enabled": True,
@@ -3221,9 +3206,6 @@ def resume_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
         if relaunch:
             # Relaunched: try now, in this request, so the user sees the outcome (ticket or reason) within a minute
             # instead of « Paiement en cours… » until the next scheduler run.
-            if billing_state(guarded(lambda: load_account(s)), owner) in BLOCKED_STATES:
-                raise HTTPException(402, "Compte bloqué : débloquez-le (bandeau en haut de page) pour relancer le "
-                                         "renouvellement.")
             row = next((r for r in store("renewal_list", p_owner=owner) if r["id"] == ap_id), None)
             if row:
                 process_renewal({**row, "owner": owner}, refresh_token=refresh,
@@ -3270,6 +3252,13 @@ def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
     except Exception as e:
         log.warning("account e-mail unreadable before deletion: %s", e)
     if HOSTED and not s.demo:
+        sub_id = (load_account(s) or {}).get("stripe_subscription")
+        if sub_id and os.environ.get("STRIPE_SECRET_KEY"):
+            try:  # nothing more is charged once the account is gone
+                stripe("DELETE", "subscriptions/" + sub_id)
+                log.info("subscription cancelled with the account")
+            except HTTPException as e:
+                log.warning("subscription not cancelled with the account: %s", e.detail)
         guarded(lambda: store("renewal_delete_owner", p_owner=owner_id(s.username)))
         guarded(lambda: store("account_delete", p_owner=owner_id(s.username)))
     if email and not s.demo:

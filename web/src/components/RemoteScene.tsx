@@ -2,7 +2,7 @@ import { useId } from 'react'
 
 /**
  * Qonto-like side scene: one flat white card with a hairline border on light grey, a muted teal accent, an outlined
- * hand cursor. The hand turns on « Renouvellement auto », the ticket about to end gets 7 days, then the paid weeks
+ * no cursor: « Renouvellement auto » turns itself on, the ticket about to end gets 7 days, then the paid weeks
  * pile up. One 8-second loop, CSS only (still with reduced motion).
  */
 const TEAL = '#4e9aa0'
@@ -16,7 +16,6 @@ export function RemoteScene({ className }: { className?: string }) {
     <svg viewBox="320 20 230 360" className={className} role="img" aria-label="La télécommande PayByBot renouvelle le ticket résident sans y penser">
       <style>{`
         .${c} * { transform-box: fill-box; }
-        .${c}-hand { animation: ${c}-hand 8s cubic-bezier(.4,0,.2,1) infinite; }
         .${c}-btn { transform-origin: center; animation: ${c}-press 8s ease-in-out infinite; }
         .${c}-halo { transform-origin: center; opacity: 0; animation: ${c}-halo 8s ease-out infinite; }
         .${c}-sig { stroke-dasharray: 260; stroke-dashoffset: 260; animation: ${c}-sig 8s ease-in-out infinite; }
@@ -31,7 +30,6 @@ export function RemoteScene({ className }: { className?: string }) {
         .${c}-r1 { animation: ${c}-r1 8s ease-out infinite; }
         .${c}-r2 { animation: ${c}-r2 8s ease-out infinite; }
         .${c}-r3 { animation: ${c}-r3 8s ease-out infinite; }
-        @keyframes ${c}-hand { 0%,10% { transform: translate(70px, 60px); opacity: 0 } 16% { opacity: 1 } 24%,28% { transform: translate(0,0) } 30% { transform: translate(2px,3px) } 34% { transform: translate(0,0) } 44%,100% { transform: translate(70px, 60px); opacity: 0 } }
         @keyframes ${c}-press { 0%,28% { transform: scale(1) } 30% { transform: scale(.9) } 34%,100% { transform: scale(1) } }
         @keyframes ${c}-halo { 0%,29% { opacity: 0; transform: scale(1) } 31% { opacity: 1 } 44%,100% { opacity: 0; transform: scale(1.6) } }
         @keyframes ${c}-sig { 0%,30% { stroke-dashoffset: 260 } 48% { stroke-dashoffset: 0 } 90% { stroke-dashoffset: 0; opacity: 1 } 100% { stroke-dashoffset: 0; opacity: 0 } }
@@ -110,19 +108,6 @@ export function RemoteScene({ className }: { className?: string }) {
           </g>
         ))}
 
-        {/* the outlined pointing hand, as on Qonto */}
-        <g className={`${c}-hand`} transform="translate(0 0)">
-          <g transform="translate(491 111)">
-            <path
-              d="M6 0 c 3.5 0 6 2.5 6 6 v 20 c 1.5 -1.5 3.5 -2.2 5.5 -2 c 3 .3 5 2.6 5 5.6 c 1.5 -1.2 3.4 -1.8 5.4 -1.4 c 2.7 .5 4.6 2.8 4.6 5.6 c 1.4 -.8 3 -1.1 4.6 -.7 c 2.6 .6 4.4 3 4.4 5.7 v 13 c 0 11 -9 20 -20 20 h -9 c -6 0 -11.6 -3 -15 -8 l -12 -18 c -1.8 -2.7 -1.1 -6.3 1.6 -8.1 c 2.5 -1.7 5.9 -1.2 7.8 1.2 l 1.6 2 v -37 c 0 -3.5 2.5 -6 6 -6 z"
-              fill="#fff"
-              stroke={INK}
-              strokeWidth="2"
-              strokeLinejoin="round"
-            />
-            <path d="M18.5 36 v 9 M29 36 v 9 M40 38 v 7" stroke={INK} strokeWidth="1.6" strokeLinecap="round" />
-          </g>
-        </g>
       </g>
     </svg>
   )

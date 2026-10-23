@@ -3293,10 +3293,11 @@ def delete_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
 # Front-end
 # --------------------------------------------------------------------------
 
-# A page loaded during a deployment switch can ask for the previous build's files, which no longer
-# exist: instead of a blank page, a missing script reloads the page once to get the current build.
-RELOAD_ONCE_JS = ("try{if(!sessionStorage.getItem('pbb-reloaded')){sessionStorage.setItem('pbb-reloaded','1');"
-                  "location.reload()}}catch(e){}")
+# A page loaded during a deployment switch (or an old copy kept by the browser) can ask for the previous build's
+# files, which no longer exist: instead of a blank page, a missing script reloads the page to get the current build.
+# At most once every 30 seconds, so a later deployment in the same tab is caught too, without a reload loop.
+RELOAD_ONCE_JS = ("try{var t=+sessionStorage.getItem('pbb-reloaded')||0;if(Date.now()-t>30000){"
+                  "sessionStorage.setItem('pbb-reloaded',String(Date.now()));location.reload()}}catch(e){}")
 
 
 class Assets(StaticFiles):
@@ -3361,10 +3362,10 @@ def spa(path: str):
     index = STATIC_DIR / "index.html"
     if not index.exists():
         raise HTTPException(404, "Interface non compilée : lancez `npm run build` dans web/.")
-    # Always revalidate the page: a cached copy would point to the assets of a previous deployment.
+    # Never keep the page (no cache, no back/forward copy): a stale copy points to a previous deployment's assets.
     # Any other path gets the page with a 404 status: the app shows "page not found", search engines skip it.
     return FileResponse(index, status_code=200 if path in ("", "index.html") else 404,
-                        headers={"Cache-Control": "no-cache"})
+                        headers={"Cache-Control": "no-store"})
 
 
 def serve(host="127.0.0.1", port=8765, open_browser=True):

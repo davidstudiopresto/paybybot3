@@ -1112,7 +1112,7 @@ def with_details(row):
 
 ACCOUNT_FIELDS = ("email", "first_name", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "suv_plates", "zone_found",
-                  "vehicle_zones", "dunning", "check_mailed", "early_stops")
+                  "vehicle_zones", "dunning", "check_mailed", "early_stops", "card_checks")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -2303,6 +2303,9 @@ def mail_check_failed(s, plate, message):
         log.warning("check e-mail failed: %s", str(e)[:200])
 
 
+CARD_CHECK_COOLDOWN = 15 * 60  # seconds before the same card is tried again for the same car after a refusal
+
+
 @app.post("/api/renewal-check")
 def renewal_check(body: Parking, pbb_session: str = Cookie(None)):
     """Before the offer page: make sure PayByPhone can really be paid unattended for this car. Resident rate and
@@ -2318,18 +2321,32 @@ def renewal_check(body: Parking, pbb_session: str = Cookie(None)):
             raise HTTPException(400, str(e))
         if s.demo or running_for(s, body.plate):
             return {"ok": True, "paid": False}
+        # Refused a moment ago (3-D Secure, card refused): not tried again at once. Each try sends the bank another
+        # request to confirm, and one confirmed later would pay a second week.
+        key = "%s|%s" % (plate_key(body.plate), card)
+        recent = (load_account(s).get("card_checks") or {}).get(key) or {}
+        if time.time() - recent.get("at", 0) < CARD_CHECK_COOLDOWN:
+            raise HTTPException(recent.get("status", 409), recent.get("error") or CARD_NEEDS_CHECK)
+
+        def refused(status, message):
+            mail_check_failed(s, body.plate, message)
+            try:
+                checks = {k: v for k, v in (load_account(s).get("card_checks") or {}).items()
+                          if time.time() - v.get("at", 0) < CARD_CHECK_COOLDOWN}
+                save_account(s, {"card_checks": {**checks, key: {"at": time.time(), "status": status, "error": message}}})
+            except Exception as e:
+                log.warning("card check not kept: %s", type(e).__name__)
+            raise HTTPException(status, message)
+
         try:
             result, found = pay_and_confirm(s, body.location, body.rate, fmt_qty(body.duration), body.unit,
                                             body.plate, card)
         except BankCheck:
-            mail_check_failed(s, body.plate, CARD_NEEDS_CHECK)
-            raise HTTPException(409, CARD_NEEDS_CHECK)
+            refused(409, CARD_NEEDS_CHECK)
         except Unconfirmed as e:
-            mail_check_failed(s, body.plate, str(e))
-            raise HTTPException(504, str(e))
+            refused(504, str(e))
         if result.get("challenged"):
-            mail_check_failed(s, body.plate, CARD_NEEDS_CHECK)
-            raise HTTPException(409, CARD_NEEDS_CHECK)
+            refused(409, CARD_NEEDS_CHECK)
         s.log("success", "Première semaine payée : zone %s, %s" % (body.location, body.plate))
         return {"ok": True, "paid": True, "expire": iso(covered_until(found)), "cost": result.get("cost")}
 
@@ -2747,6 +2764,16 @@ def resume_renewals(owner):
         store("renewal_update", p_id=row["id"], p_patch={"next_check": utc_iso(datetime.now(timezone.utc))})
 
 
+def active_product(plan):
+    """The Stripe product a repriced subscription item points to: an active one (the product of a Checkout's inline
+    price is created inactive, and Stripe refuses a new price on it)."""
+    found = stripe("GET", "products/search?query=" + requests.utils.quote(
+        "active:'true' AND metadata['paybybot_plan']:'%s'" % plan)).get("data") or []
+    if found:
+        return found[0]["id"]
+    return stripe("POST", "products", name=PLANS[plan][1], **{"metadata[paybybot_plan]": plan})["id"]
+
+
 def reprice(account, owner):
     """The home zone's resident price changed (a move, a new city rate): the running subscription follows it from
     its next billing date, without proration. No e-mail: the Stripe receipt shows the new amount."""
@@ -2768,7 +2795,7 @@ def reprice(account, owner):
             return False
         stripe("POST", "subscriptions/" + sub_id, **{
             "items[0][id]": item["id"], "items[0][price_data][currency]": "eur",
-            "items[0][price_data][product]": item["price"]["product"],
+            "items[0][price_data][product]": active_product(plan),
             "items[0][price_data][unit_amount]": new,
             "items[0][price_data][recurring][interval]": item["price"]["recurring"]["interval"],
             "proration_behavior": "none", "metadata[monthlies]": ",".join(str(m) for m in monthlies)})

@@ -93,10 +93,15 @@ class Billing(unittest.TestCase):
 
         def fake(method, path, **data):
             calls.append((method, path, data))
+            if path.startswith("products/search"):
+                return {"data": []}  # no active product yet: one is created
+            if path == "products":
+                return {"id": "prod_active"}
             return sub
         with patch.object(web, "stripe", side_effect=fake), patch.object(web, "save_account_by_owner") as saved, \
                 patch.object(web, "send_email") as mail:
             self.assertTrue(web.reprice(account, "o"))
+        self.assertEqual(calls[-1][2]["items[0][price_data][product]"], "prod_active")  # never the inactive one
         mail.assert_not_called()  # no e-mail on a zone change
         update = calls[-1][2]
         self.assertEqual((update["items[0][price_data][unit_amount]"], update["proration_behavior"]), (690, "none"))

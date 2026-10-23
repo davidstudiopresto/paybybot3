@@ -174,6 +174,18 @@ class RunningTicket(unittest.TestCase):
         self.assertEqual(answer.status_code, 409)
         self.assertIn("banque a refusé", answer.detail)
 
+    def test_a_refused_card_is_not_tried_again_at_once(self):
+        s = self.session([])
+        s.demo = False
+        body = web.Parking(location="75005", rate="101", duration=7, unit="Days", plate="FT630FH", paymentAccountId="c")
+        with patch.object(web, "current", return_value=s), patch.object(web, "mail_check_failed"), \
+                patch.object(web, "pay_and_confirm", return_value=({"challenged": True}, [])) as paid:
+            for _ in range(2):
+                with self.assertRaises(web.HTTPException) as refused:
+                    web.renewal_check(body, "token")
+                self.assertEqual(refused.exception.status_code, 409)
+        self.assertEqual(paid.call_count, 1)  # the second check answers without asking the bank again
+
     def test_check_before_the_offer_pays_the_first_week(self):
         answer, paid = self.check(pay=lambda *a, **k: ({"challenged": False, "cost": None}, [ticket("FT630FH", "75005")]))
         self.assertTrue(answer["paid"])

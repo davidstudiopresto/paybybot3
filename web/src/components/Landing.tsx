@@ -24,7 +24,7 @@ const STEP_ICONS = [Link2, RefreshCw, ShieldCheck]
 
 /** Each step's screen (demo account, captured at one size: 1040 × 1100). */
 const STEP_SHOTS = ['/how/1-connexion.png', '/how/2-activation.png', '/how/3-tableau-de-bord.png']
-const STEP_MS = 5000
+const STEP_MS = 3500
 
 const STEPS = [
   ['Connectez PayByPhone', 'Reliez votre compte PayByPhone existant.'],
@@ -51,7 +51,7 @@ const TESTIMONIALS: [string, string, string][] = [
 ]
 
 /** « Comment ça marche » : the three steps on the left, a line filling down the active one, and its screen on the
- *  right. The steps take turns every 5 seconds (not with reduced motion); a click shows one at once. */
+ *  right. The steps take turns every 3.5 seconds (not with reduced motion); a click shows one at once. */
 function HowItWorks() {
   const [active, setActive] = useState(0)
   const [auto, setAuto] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -87,7 +87,7 @@ function HowItWorks() {
                     {on && (
                       <span
                         key={auto ? `run-${active}` : 'still'}
-                        className={cn('block h-full w-full origin-top bg-eu', auto && 'animate-[fill-down_5s_linear_forwards]')}
+                        className={cn('block h-full w-full origin-top bg-eu', auto && 'animate-[fill-down_3.5s_linear_forwards]')}
                       />
                     )}
                   </span>

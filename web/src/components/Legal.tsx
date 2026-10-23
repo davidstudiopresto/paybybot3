@@ -16,7 +16,7 @@ export const PUBLISHER = {
   email: 'contact@paybybot.fr',
 }
 
-export const LEGAL_UPDATED = '22 octobre 2026'
+export const LEGAL_UPDATED = '23 octobre 2026'
 export const REPO_URL = 'https://github.com/davidstudiopresto/paybybot3/tree/web-interface'
 
 export type LegalPage = 'securite' | 'confidentialite' | 'cgu' | 'mentions-legales'
@@ -457,8 +457,30 @@ function Terms() {
           fonctionnement de <PayByPhone />, qui peut évoluer à tout moment, et peut être interrompu ou arrêté.
         </p>
         <p>
-          Dans les limites permises par la loi, <PayByBot /> et son propriétaire ne sont pas responsables des amendes ou forfaits
-          post-stationnement, des paiements refusés ou non réalisés, ni des indisponibilités de <PayByPhone /> ou de <PayByBot />.
+          <strong>Forfaits post-stationnement (FPS) et amendes.</strong> L’obligation de <PayByBot /> se limite à
+          tenter le renouvellement et à vous prévenir quand il n’aboutit pas. <PayByBot /> vous prévient, par e-mail et
+          sur votre tableau de bord, notamment dans les cas suivants :
+        </p>
+        <ul>
+          <li>
+            votre abonnement <PayByBot /> n’est pas payé (paiement refusé par votre banque ou mois offert terminé sans
+            abonnement) : les renouvellements s’arrêtent jusqu’à la régularisation ;
+          </li>
+          <li>
+            votre véhicule ne bénéficie plus du tarif résident sur <PayByPhone /> (droit expiré, véhicule ou adresse
+            modifiés) ;
+          </li>
+          <li>votre compte <PayByPhone /> n’a plus de carte bancaire utilisable (carte supprimée, expirée ou bloquée) ;</li>
+          <li>
+            le paiement d’un stationnement échoue pour une autre raison (refus ou validation demandée par votre banque,
+            connexion <PayByPhone /> expirée, service <PayByPhone /> indisponible).
+          </li>
+        </ul>
+        <p>
+          Dès que vous êtes prévenu, et plus généralement tant qu’aucun ticket n’est en cours pour votre véhicule, il vous
+          appartient de payer vous-même votre stationnement dans l’application <PayByPhone />. Dans les limites permises par la
+          loi, <PayByBot /> et son propriétaire ne sont donc pas responsables des forfaits post-stationnement, amendes ou
+          majorations, des paiements refusés ou non réalisés, ni des indisponibilités de <PayByPhone /> ou de <PayByBot />.
           Cette limitation ne s’applique pas en cas de faute lourde ou intentionnelle.
         </p>
       </Section>

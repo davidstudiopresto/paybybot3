@@ -152,7 +152,8 @@ function AccountDialog({
             </dd>
           </div>
 
-          {/* Word of mouth: the user's own link, the only way in for people around them. */}
+          {/* Word of mouth: the user's own link, once the account is active (offer paid). */}
+          {account?.subscribed && (
           <div className={row}>
             <dt className={label}>Inviter un proche</dt>
             <dd className="flex min-w-0 flex-col items-end gap-1.5">
@@ -176,6 +177,7 @@ function AccountDialog({
               )}
             </dd>
           </div>
+          )}
         </dl>
 
         <p className="px-6 pt-4 text-sm text-ink/50">

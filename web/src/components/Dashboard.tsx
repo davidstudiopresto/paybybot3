@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { Infinity as Endless, LogOut } from 'lucide-react'
 import { arrondissement, Plate, vehicleType, ZonePlate, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
+import { InviteButton } from '@/components/Invite'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
@@ -232,6 +233,7 @@ export function Dashboard({
             Démo
           </span>
         )}
+        <InviteButton disabled={!data} />
         <AccountButton data={data} onDeleted={onDeleted ?? onLogout} demo={me.demo} />
         <button onClick={onLogout} aria-label="Déconnexion" title="Déconnexion" className={cn(ui.pillGray, 'gap-2')}>
           <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>

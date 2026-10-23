@@ -246,9 +246,9 @@ function Testimonials() {
 }
 
 /** Public home page: one message, the automatic renewal. */
-/** The home page: the v1 hero, then « Comment ça marche » and the FAQ (no features, reviews or prices). */
+/** The home page: the v1 hero alone (no sections below). */
 export function Home({ hosted }: { hosted: boolean }) {
-  return <Landing hosted={hosted} lean />
+  return <Landing hosted={hosted} heroOnly />
 }
 
 export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: boolean; heroOnly?: boolean; lean?: boolean }) {

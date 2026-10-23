@@ -15,7 +15,7 @@ export function InviteGate({ hosted, invalid = false }: { hosted: boolean; inval
           <span className="mx-auto grid size-12 place-items-center rounded-full bg-eu/[0.08] text-eu">
             <Mail className="size-6" />
           </span>
-          <h1 className="mt-5 font-heading text-2xl font-bold tracking-tight text-ink">Sur invitation</h1>
+          <h1 className="mt-5 font-heading text-[1.9rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink">Sur invitation</h1>
           <p className="mt-2 leading-relaxed text-ink/60">
             {invalid ? (
               'Ce lien d’invitation n’est pas valable.'

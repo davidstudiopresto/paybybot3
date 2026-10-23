@@ -115,15 +115,28 @@ function Ticket({
             )}
           </dl>
         )}
+        {renewal && renewal.enabled && !note && (
+          <p className="mt-3 flex items-center gap-2 text-sm text-[#3d7f84]">
+            <svg viewBox="0 0 16 16" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M3.5 8.5l3 3 6-7" />
+            </svg>
+            Rien à faire de votre côté : PayByBot s’en charge.
+          </p>
+        )}
       </div>
 
       <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
-        <p className="text-sm text-ink/50">Temps restant</p>
-        <p className={`mt-1 font-heading text-[2.4rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
-          {remaining(left)}
-        </p>
+        {/* Renewal on: no countdown (nothing to watch), only when the ticket ends. Without one, the time left. */}
+        {!(renewal && renewal.enabled && !note) && (
+          <>
+            <p className="text-sm text-ink/50">Temps restant</p>
+            <p className={`mt-1 mb-2 font-heading text-[2.4rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
+              {remaining(left)}
+            </p>
+          </>
+        )}
         {/* No renewal yet: the end of the ticket in red, to urge setting one up. */}
-        <p className={`mt-2 text-sm ${renewal ? 'text-ink/50' : 'font-medium text-destructive'}`}>Expire {clock(session.expire)}</p>
+        <p className={`text-sm ${renewal ? 'text-ink/50' : 'font-medium text-destructive'}`}>Expire {clock(session.expire)}</p>
         <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
           <div
             className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-[#4e9aa0]'}`}

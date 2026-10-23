@@ -4,4 +4,19 @@ import os
 
 os.environ.setdefault("PAYBYBOT_HOSTED", "1")
 
+if os.environ.get("SENTRY_DSN"):
+    # Server errors and slow requests to Sentry (project paybybot-api). No personal data: no IP, cookies, headers
+    # or request bodies (passwords, plates and cards never leave the server).
+    import sentry_sdk
+
+    def _scrub(event, hint):
+        event.pop("user", None)
+        request = event.get("request") or {}
+        for key in ("cookies", "headers", "data", "query_string", "env"):
+            request.pop(key, None)
+        return event
+
+    sentry_sdk.init(dsn=os.environ["SENTRY_DSN"], environment="production", send_default_pii=False,
+                    traces_sample_rate=0.3, before_send=_scrub, before_send_transaction=_scrub)
+
 from paybybot3.web import app  # noqa: E402,F401

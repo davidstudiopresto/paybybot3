@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from '@/components/NotFound'
+import { reactErrorHandler, startSentry } from '@/lib/sentry'
+
+startSentry()
 
 // The current build loaded: allow the one-time reload again for a future deployment switch.
 try {
@@ -11,7 +14,11 @@ try {
   /* storage blocked: nothing to reset */
 }
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!, {
+  onUncaughtError: reactErrorHandler(),
+  onCaughtError: reactErrorHandler(), // errors shown by ErrorBoundary are reported too
+  onRecoverableError: reactErrorHandler(),
+}).render(
   <StrictMode>
     <ErrorBoundary>
       <App />

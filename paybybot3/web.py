@@ -910,7 +910,7 @@ def extendable(active, row):
     """The running ticket a weekly renewal can extend: the one ending last, in its zone and at its resident rate."""
     last = max(active, key=lambda x: aware(x["expireTime"]), default=None)
     if last and str(last.get("locationId")) == str(row["location"]) \
-            and str((last.get("rateOption") or {}).get("ratePolicyId")) == str(row["rate"]):
+            and str((last.get("ratePolicy") or last.get("rateOption") or {}).get("ratePolicyId")) == str(row["rate"]):
         return last
     return None
 
@@ -1338,7 +1338,9 @@ def process_renewal(row, refresh_token=None, activating=False, refused=False):
         # leaves a day to fix the card while the car is still covered. Not when a pause starts before the end.
         ticket = None if rule else extendable(active, row)
         ends = aware(covered_until(active))
-        pause = parse_dt(row.get("paused_from"))
+        # A pause still to come or running (one already over does not stop extending the week any more).
+        until = parse_dt(row.get("paused_until"))
+        pause = parse_dt(row.get("paused_from")) if until is None or until > now else None
         # At 20:00 the day before the end; when activating, at once if PayByPhone already offers to extend.
         due = bool(ticket) and (now >= extension_time(ends) or (activating and ends - now <= EARLY_RENEWAL))
         if ticket and due and not (pause and pause <= ends):
@@ -3040,9 +3042,32 @@ def admin_clients(pbb_admin: str = Cookie(None)):
                 name = stripe("GET", "customers/" + account["stripe_customer"]).get("name")
             except Exception:
                 name = None
-        clients.append({"name": name, "email": account.get("email"), "created": row.get("created_at"),
-                        "plan": account.get("plan"), "subscribed": bool(account.get("stripe_subscription")),
+        plan = account.get("plan") or "monthly"
+        clients.append({"owner": row.get("owner"), "name": name, "email": account.get("email"),
+                        "created": row.get("created_at"), "plan": account.get("plan"),
+                        "subscribed": bool(account.get("stripe_subscription")),
+                        "price": plan_total(account_monthlies(account), plan) if account else None,
                         "renewals": row.get("renewals_active", 0)})
+
+    # Each client's vehicles and running tickets, read from PayByPhone with the stored login (in parallel).
+    def parking(owner):
+        try:
+            bot = bot_from_refresh(None, owner)
+            vehicles = [v["licensePlate"] for v in bot.get_vehicles() if not v.get("archived")]
+            running = {}
+            for x in bot.get_parking_sessions():
+                plate, end = (x.get("vehicle") or {}).get("licensePlate"), x.get("expireTime")
+                if plate and end and (plate not in running or end > running[plate]):
+                    running[plate] = end
+            return [{"plate": p, "expire": running[p].isoformat() if p in running else None} for p in vehicles]
+        except Exception as e:
+            log.info("admin: PayByPhone unreadable for a client: %s", type(e).__name__)
+            return None
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for client, vehicles in zip(clients, pool.map(parking, [c.pop("owner") for c in clients])):
+            client["vehicles"] = vehicles
     return clients
 
 

@@ -25,8 +25,16 @@ export type AdminClient = {
   created: string
   plan: string | null
   subscribed: boolean
+  /** The subscription in cents, per month (monthly) or per year (yearly). */
+  price: number | null
+  /** Each vehicle on PayByPhone with its running ticket's end (null: none); null if PayByPhone could not be read. */
+  vehicles: { plate: string; expire: string | null }[] | null
   renewals: number
 }
+
+const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
+const ends = (iso: string) =>
+  new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(':', 'h')
 
 /** Total sign-ups day after day (last 30 days, or since the first one), as a line with its area. */
 function UsersChart({ clients }: { clients: AdminClient[] }) {
@@ -155,6 +163,7 @@ export function AdminPage(_: { signedIn?: boolean }) {
                       <th className="px-4 py-3 font-medium">E-mail</th>
                       <th className="px-4 py-3 font-medium">Inscrit le</th>
                       <th className="px-4 py-3 font-medium">Offre</th>
+                      <th className="px-4 py-3 font-medium">Véhicules et stationnement</th>
                       <th className="px-4 py-3 text-right font-medium">Renouvellements</th>
                     </tr>
                   </thead>
@@ -173,6 +182,34 @@ export function AdminPage(_: { signedIn?: boolean }) {
                             </span>
                           ) : (
                             <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-xs font-semibold text-ink/60">Sans offre</span>
+                          )}
+                          {c.price != null && (
+                            <span className="mt-1 block text-xs whitespace-nowrap text-ink/60 tabular-nums">
+                              {euros(c.price)} / {c.plan === 'yearly' ? 'an' : 'mois'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {c.vehicles === null ? (
+                            <span className="text-ink/40">PayByPhone illisible</span>
+                          ) : (
+                            <>
+                              <span className="font-semibold text-ink">
+                                {c.vehicles.length} véhicule{c.vehicles.length > 1 ? 's' : ''}
+                              </span>
+                              <ul className="mt-1 space-y-0.5 text-xs">
+                                {c.vehicles.map((v) => (
+                                  <li key={v.plate} className="whitespace-nowrap">
+                                    <span className="font-semibold tracking-wide text-ink/80">{v.plate}</span>{' '}
+                                    {v.expire ? (
+                                      <span className="text-[#14703a]">· en cours, jusqu’au {ends(v.expire)}</span>
+                                    ) : (
+                                      <span className="text-destructive">· aucun ticket</span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold tabular-nums">{c.renewals}</td>

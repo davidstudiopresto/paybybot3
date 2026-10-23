@@ -2,10 +2,13 @@ import { Children, cloneElement, isValidElement, type ReactElement, type ReactNo
 import { cn } from '@/lib/utils'
 
 /** French licence plate: white field, blue EU band with the country letter. */
+/** « AB123CD » written as on the plate: « AB-123-CD » (other formats as given). */
+export function plateText(plate: string) {
+  return /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(plate) ? `${plate.slice(0, 2)}-${plate.slice(2, 5)}-${plate.slice(5)}` : plate
+}
+
 export function Plate({ plate, size = 'md', className }: { plate: string; size?: 'sm' | 'md' | 'lg'; className?: string }) {
-  const formatted = /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(plate)
-    ? `${plate.slice(0, 2)}-${plate.slice(2, 5)}-${plate.slice(5)}`
-    : plate
+  const formatted = plateText(plate)
   return (
     <span
       className={cn(

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Infinity as Endless, LogOut } from 'lucide-react'
-import { arrondissement, Plate, vehicleType, ZonePlate, withPayByPhone } from '@/components/signs'
+import { LogOut } from 'lucide-react'
+import { arrondissement, Plate, plateText, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
 import { AccountButton } from '@/components/Account'
@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
 import { CheckoutDone } from '@/components/CheckoutDone'
-import { ActivateRenewal, CardGate, RenewalActions, RenewalNote, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
+import { ActivateRenewal, CardGate, RenewalActions, RenewalNote, RenewalSwitch, pauseState, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
 import { api, clock, remaining, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -50,42 +50,55 @@ function Ticket({
   const progress = Math.min(1, Math.max(0, (now - start) / (end - start || 1)))
   const soon = left < 15 * 60000
 
+  const place = arrondissement(session.location) ?? `Zone ${session.location}`
+  // A line under the switch only when something needs saying (failure, suspended, pause).
+  const note = renewal && (renewal.lastError || !renewal.enabled || pauseState(renewal).paused)
+
+  // Qonto-like: one white card, hairline dividers, a muted teal accent.
   return (
-    <article className="rise rounded-2xl border border-border p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="flex items-center gap-3">
-          <Plate plate={session.plate} size="sm" />
-          <ZonePlate zone={session.location} />
+    <article className="rise overflow-hidden rounded-2xl border border-ink/10 bg-white">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-4">
+        <span className="flex items-baseline gap-3">
+          <span className="text-[1.05rem] font-medium text-ink">{withPayByPhone('PayByPhone')}</span>
+          <span className="tracking-wide text-ink/50 tabular-nums">{plateText(session.plate)}</span>
         </span>
+        <span className="text-sm text-ink/50">{place}</span>
       </div>
-      <p className="mt-5 text-sm text-ink/55">Temps restant</p>
-      <p className={`mt-1 font-heading text-[2.6rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
-        {remaining(left)}
-      </p>
-      {/* No renewal yet: the end of the ticket in red, to urge setting one up. */}
-      <p className={`mt-2 ${renewal ? 'text-muted-foreground' : 'font-medium text-destructive'}`}>Expire {clock(session.expire)}</p>
-      <div className="mt-5 h-1 overflow-hidden rounded-full bg-muted" aria-hidden>
-        <div
-          className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-eu'}`}
-          style={{ width: `${(1 - progress) * 100}%` }}
+
+      <div className="border-t border-ink/[0.06] px-5 py-4">
+        <RenewalSwitch
+          ap={renewal ?? null}
+          data={data}
+          plate={session.plate}
+          onChanged={onRefresh}
+          hosted={hosted}
+          demo={demo}
+          autoOpen={autoOpen}
+          locked={locked}
+          onLogout={onLogout}
         />
-      </div>
-      {renewal && (
-        <div className="mt-4 flex items-start justify-between gap-4">
-          <p className="flex gap-2 text-sm text-ink/70">
-            <Endless className="mt-0.5 size-4 shrink-0 text-eu" strokeWidth={2.25} />
-            <span>
-              <RenewalNote ap={renewal} onChanged={onRefresh} next={session.expire} />
-            </span>
+        {note && (
+          <p className="mt-2 text-sm text-ink/70">
+            <RenewalNote ap={renewal} onChanged={onRefresh} next={session.expire} />
           </p>
+        )}
+      </div>
+
+      <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
+        <p className="text-sm text-ink/50">Temps restant</p>
+        <p className={`mt-1 font-heading text-[2.4rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
+          {remaining(left)}
+        </p>
+        {/* No renewal yet: the end of the ticket in red, to urge setting one up. */}
+        <p className={`mt-2 text-sm ${renewal ? 'text-ink/50' : 'font-medium text-destructive'}`}>Expire {clock(session.expire)}</p>
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
+          <div
+            className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-[#4e9aa0]'}`}
+            style={{ width: `${(1 - progress) * 100}%` }}
+          />
         </div>
-      )}
-      {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} className="mt-4" />}
-      {!renewal && (
-        <div className="mt-5">
-          <ActivateRenewal data={data} onChanged={onRefresh} hosted={hosted} demo={demo} plate={session.plate} label="Automatiser le renouvellement" autoOpen={autoOpen} locked={autoOpen && locked} onLogout={onLogout} />
-        </div>
-      )}
+        {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} withStop={false} className="mt-5" />}
+      </div>
     </article>
   )
 }

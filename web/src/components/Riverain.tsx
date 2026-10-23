@@ -84,7 +84,7 @@ export const isWeekly = (ap: Autopilot) => ap.label === WEEKLY_LABEL
 export const renewalOf = (data: Overview, s: { plate: string; location: string }) =>
   data.autopilots.find((ap) => isWeekly(ap) && ap.plate === s.plate && ap.location === s.location)
 
-function pauseState(ap: Autopilot, now = Date.now()) {
+export function pauseState(ap: Autopilot, now = Date.now()) {
   const start = ap.pausedFrom ? new Date(ap.pausedFrom).getTime() : null
   const end = ap.pausedUntil ? new Date(ap.pausedUntil).getTime() : null
   return {
@@ -97,7 +97,7 @@ function pauseState(ap: Autopilot, now = Date.now()) {
 
 /** One line on what the renewal of a running ticket will do. */
 /** Relaunch a suspended or failed renewal: the server tries the payment right away and answers with the outcome. */
-async function relaunch(ap: Autopilot, onChanged: () => void) {
+export async function relaunch(ap: Autopilot, onChanged: () => void) {
   const waiting = toast.loading('Relance en cours…', { description: 'PayByBot vérifie votre compte PayByPhone et paie si besoin.' })
   try {
     const after = await api.resumeAutopilot(ap.id)
@@ -164,7 +164,7 @@ export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () =
 /** Under a ticket: the vacation pause (planned, or a link to plan one), then the way to stop, in red. */
 const actionBtn = 'flex h-11 w-full items-center justify-center gap-2 rounded-xl border font-semibold transition active:scale-[0.99] sm:w-auto sm:px-5'
 
-export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; onChanged: () => void; className?: string }) {
+export function RenewalActions({ ap, onChanged, className, withStop = true }: { ap: Autopilot; onChanged: () => void; className?: string; withStop?: boolean }) {
   const [pausing, setPausing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const { later, paused } = pauseState(ap)
@@ -229,7 +229,7 @@ export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; on
             <Pause className="size-4" /> Programmer une pause
           </button>
         )}
-        <button
+        {withStop && <button
           onClick={() => (confirming ? stop() : setConfirming(true))}
           disabled={busy}
           className={cn(
@@ -240,7 +240,7 @@ export function RenewalActions({ ap, onChanged, className }: { ap: Autopilot; on
           )}
         >
           {confirming ? 'Confirmer l’arrêt' : 'Arrêter le renouvellement'}
-        </button>
+        </button>}
       </div>
       {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
     </div>
@@ -402,6 +402,105 @@ export function RiverainCard({
 }
 
 /** The « Activer le renouvellement résident » button and its dialog; with a plate, only that car is ticked. */
+/** The ticket card's « Renouvellement auto » switch, Qonto-like (muted teal). Off with no renewal: opens the
+ *  setup; on: turning it off asks to confirm, then stops; off after a failure: tries the payment again. */
+export function RenewalSwitch({
+  ap,
+  data,
+  plate,
+  onChanged,
+  hosted,
+  demo,
+  autoOpen,
+  locked,
+  onLogout,
+}: {
+  ap: Autopilot | null
+  data: Overview
+  plate: string
+  onChanged: () => void
+  hosted: boolean
+  demo: boolean
+  autoOpen?: boolean
+  locked?: boolean
+  onLogout?: () => void
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const on = !!ap && ap.enabled && !ap.lastError
+
+  async function stop() {
+    if (!ap || busy) return
+    setBusy(true)
+    try {
+      await api.deleteAutopilot(ap.id)
+      toast.success('Renouvellement arrêté.', { description: 'Le ticket en cours reste valable.' })
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+    setBusy(false)
+    setConfirming(false)
+    onChanged()
+  }
+
+  const row = (onClick: () => void) => (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-ink">Renouvellement auto</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label="Renouvellement automatique"
+        disabled={busy}
+        onClick={onClick}
+        className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60', on ? 'bg-[#4e9aa0]' : 'bg-ink/15')}
+      >
+        <span className={cn('absolute top-1 left-1 grid size-5 place-items-center rounded-full bg-white shadow transition-transform', on && 'translate-x-5')}>
+          {busy && <Loader2 className="size-3 animate-spin text-ink/50" />}
+        </span>
+      </button>
+    </div>
+  )
+
+  if (!ap)
+    return (
+      <ActivateRenewal
+        data={data}
+        onChanged={onChanged}
+        hosted={hosted}
+        demo={demo}
+        plate={plate}
+        autoOpen={autoOpen}
+        locked={autoOpen && locked}
+        onLogout={onLogout}
+        trigger={(open) => row(open)}
+      />
+    )
+  if (confirming)
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-ink">Arrêter le renouvellement ?</span>
+        <span className="flex gap-2">
+          <button onClick={() => setConfirming(false)} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-ink/70 hover:bg-ink/[0.05]">
+            Annuler
+          </button>
+          <button onClick={stop} disabled={busy} className="rounded-lg bg-destructive px-3 py-1.5 text-sm font-semibold text-white">
+            Arrêter
+          </button>
+        </span>
+      </div>
+    )
+  return row(() =>
+    on
+      ? setConfirming(true)
+      : (async () => {
+          setBusy(true)
+          await relaunch(ap, onChanged)
+          setBusy(false)
+        })(),
+  )
+}
+
 export function ActivateRenewal({
   data,
   onChanged,
@@ -412,12 +511,15 @@ export function ActivateRenewal({
   autoOpen = false,
   locked = false,
   onLogout,
+  trigger,
 }: {
   data: Overview | null
   onChanged: () => void
   hosted?: boolean
   demo?: boolean
   plate?: string
+  /** Something else than the big button opens the dialog (the ticket card's switch). */
+  trigger?: (open: () => void) => ReactNode
   /** A ticket is running: the renewal only takes over when it ends. */
   label?: string
   /** Just signed up: the dialog opens by itself, like Frequens (then the offer, then the renewal). */
@@ -433,9 +535,13 @@ export function ActivateRenewal({
   }, [autoOpen, locked, !!data]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
-      <ShinyButton onClick={() => setOpen(true)} disabled={!data} className="flex h-14 w-full items-center justify-center rounded-xl border border-eu/30 bg-eu/[0.07] px-6 text-lg font-bold text-eu hover:bg-eu/[0.1] disabled:opacity-50">
-        {label}
-      </ShinyButton>
+      {trigger ? (
+        trigger(() => data && setOpen(true))
+      ) : (
+        <ShinyButton onClick={() => setOpen(true)} disabled={!data} className="flex h-14 w-full items-center justify-center rounded-xl border border-eu/30 bg-eu/[0.07] px-6 text-lg font-bold text-eu hover:bg-eu/[0.1] disabled:opacity-50">
+          {label}
+        </ShinyButton>
+      )}
       {data && <RiverainDialog open={open} onOpenChange={setOpen} data={data} onDone={onChanged} hosted={hosted} demo={demo} plate={plate} locked={locked} onLogout={onLogout} />}
     </>
   )

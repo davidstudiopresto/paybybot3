@@ -99,7 +99,13 @@ class DemoBot:
         return self.get_parking_sessions()
 
     def get_past_sessions(self, limit=20):
-        return sorted(self.sessions, key=lambda x: x["startTime"], reverse=True)
+        # Two resident weeks already over, so the demo's history is not empty.
+        now = datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
+        past = [{"parkingSessionId": "demo-past-%d" % i, "locationId": "75001", "startTime": now - timedelta(days=7 * i + 7),
+                 "expireTime": now - timedelta(days=7 * i), "vehicle": {"licensePlate": "AB123CD", "type": "Car"},
+                 "ratePolicy": {"ratePolicyId": "101", "type": "Resident"},
+                 "totalCost": {"amount": 9.0, "currency": "EUR"}} for i in (1, 2)]
+        return sorted(self.sessions + past, key=lambda x: x["startTime"], reverse=True)
 
     def get_rate_options(self, locationId, licensePlate):
         if not str(locationId).isdigit():
@@ -1226,6 +1232,7 @@ def stored_to_autopilot(row):
         "rate": row["rate"], "duration": fmt_qty(row["duration"]), "unit": row["unit"],
         "paymentAccountId": row["payment_account_id"], "enabled": row["enabled"],
         "lastCheck": row.get("last_check"), "lastPayment": row.get("last_payment"), "lastError": row.get("last_error"),
+        "nextCheck": row.get("next_check"),
         "email": row.get("email") or "", "pausedFrom": row.get("paused_from"), "pausedUntil": row.get("paused_until"),
         "days": row.get("days") or None, "start": row.get("start") or None,
     }
@@ -3061,6 +3068,31 @@ def admin_stats(pbb_admin: str = Cookie(None)):
         raise HTTPException(403, "Accès réservé.")
     require_admin(pbb_admin)
     return guarded(lambda: store("admin_stats"))
+
+
+@app.get("/api/history")
+def history(pbb_session: str = Cookie(None)):
+    """The weeks already paid, from PayByPhone (running and past tickets of five days or more), newest first. An
+    extended ticket is one line covering all its weeks."""
+    s = current(pbb_session)
+
+    def load():
+        try:
+            past = s.call("get_past_sessions", limit=40) or []
+        except Exception as e:
+            log.info("history unavailable: %s", type(e).__name__)
+            past = []
+        rows, seen = [], set()
+        for x in (s.call("get_parking_sessions") or []) + past:
+            start, end = x.get("startTime"), x.get("expireTime")
+            if x.get("parkingSessionId") in seen or not (start and end) or end - start < timedelta(days=5):
+                continue
+            seen.add(x.get("parkingSessionId"))
+            rows.append(serialize_session(x))
+        rows.sort(key=lambda r: r["start"] or "", reverse=True)
+        return rows[:20]
+
+    return guarded(load)
 
 
 @app.get("/api/admin/clients")

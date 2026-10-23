@@ -22,6 +22,24 @@ function useNow(interval = 1000) {
   return now
 }
 
+/** « mer. 29 oct. à 20h » (minutes only when not on the hour). */
+function when(t: number) {
+  const d = new Date(t)
+  const day = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+  return `${day} à ${d.getHours()}h${d.getMinutes() ? String(d.getMinutes()).padStart(2, '0') : ''}`
+}
+
+/** When this week will be renewed: the server's next look if it is ahead, else the rule it follows (20h the day
+ *  before the end, never more than 24 hours before it). */
+function nextRenewal(nextCheck: string | null | undefined, expire: string) {
+  const end = new Date(expire).getTime()
+  const planned = nextCheck ? new Date(nextCheck).getTime() : NaN
+  if (planned > Date.now() && planned <= end + 60_000) return planned
+  const dayBefore = new Date(end - 86_400_000)
+  dayBefore.setHours(20, 0, 0, 0)
+  return Math.max(dayBefore.getTime(), end - 86_400_000 + 60_000)
+}
+
 function Ticket({
   session,
   now,
@@ -82,6 +100,21 @@ function Ticket({
             <RenewalNote ap={renewal} onChanged={onRefresh} next={session.expire} />
           </p>
         )}
+        {/* Renewal on and nothing wrong: when the next week is paid, and when the last one was. */}
+        {renewal && renewal.enabled && !note && (
+          <dl className="mt-3 space-y-1 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink/50">Prochain renouvellement</dt>
+              <dd className="text-ink tabular-nums">{when(nextRenewal(renewal.nextCheck, session.expire))}</dd>
+            </div>
+            {renewal.lastPayment && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink/50">Dernier paiement</dt>
+                <dd className="text-ink tabular-nums">{when(new Date(renewal.lastPayment).getTime())}</dd>
+              </div>
+            )}
+          </dl>
+        )}
       </div>
 
       <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
@@ -100,6 +133,59 @@ function Ticket({
         {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} withStop={false} className="mt-5" />}
       </div>
     </article>
+  )
+}
+
+/** The weeks already paid (PayByPhone's running and past tickets of five days or more), newest first. */
+function PaidWeeks({ data }: { data: Overview }) {
+  const [weeks, setWeeks] = useState<Session[] | null>(null)
+  // Looked again when a ticket starts or is extended, or a renewal pays.
+  const changed = data.sessions.map((s) => s.id + s.expire).join() + data.autopilots.map((a) => a.lastPayment).join()
+  useEffect(() => {
+    let cancelled = false
+    api.history().then(
+      (w) => !cancelled && setWeeks(w),
+      () => !cancelled && setWeeks([]),
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [changed])
+  if (!weeks?.length) return null
+  const day = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  const euros = (amount: number) => amount.toFixed(2).replace('.', ',') + ' €'
+  return (
+    <section className="rise mt-10">
+      <h2 className="text-sm text-ink/50">Semaines payées</h2>
+      <ul className="mt-3 divide-y divide-ink/[0.06] overflow-hidden rounded-2xl border border-ink/10 bg-white">
+        {weeks.slice(0, 8).map((w) => {
+          const running = new Date(w.expire).getTime() > Date.now()
+          return (
+            <li key={w.id} className="flex items-center gap-3 px-5 py-3.5">
+              <span
+                className={cn(
+                  'grid size-7 shrink-0 place-items-center rounded-full',
+                  running ? 'bg-[#4e9aa0]/15 text-[#3d7f84]' : 'bg-[#e3f5e9] text-[#16a34a]',
+                )}
+                aria-hidden
+              >
+                <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3.5 8.5l3 3 6-7" />
+                </svg>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-ink">
+                  {day(w.start)} → {day(w.expire)}
+                  {running && <span className="ml-2 text-xs text-[#3d7f84]">en cours</span>}
+                </span>
+                <span className="block text-xs tracking-wide text-ink/50 tabular-nums">{plateText(w.plate)}</span>
+              </span>
+              {w.cost?.amount != null && <span className="text-ink tabular-nums">{euros(w.cost.amount)}</span>}
+            </li>
+          )
+        })}
+      </ul>
+    </section>
   )
 }
 
@@ -293,6 +379,8 @@ export function Dashboard({
         {/* The renewal is the one action of the app: no one-off payment button. */}
         {/* The cars with neither a ticket nor a renewal: one card each, with its button. */}
         {data && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} autoPlate={autoPlate} locked={locked} onLogout={onLogout} />}
+
+        {data && <PaidWeeks data={data} />}
 
         {/* Every car's card has its own button: this block only lists renewals without a ticket (or offers one
             when PayByPhone lists no car). */}

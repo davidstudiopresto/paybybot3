@@ -37,6 +37,8 @@ export type Autopilot = Parking & {
   enabled: boolean
   lastCheck: string | null
   lastPayment: string | null
+  /** When the server looks at this renewal next (online only): the next payment, or a retry. */
+  nextCheck?: string | null
   lastError: string | null
   email?: string
   pausedFrom?: string | null
@@ -192,6 +194,8 @@ export const api = {
   resendSignupCode: () => post<SignupPending>('/api/signup/resend'),
   deleteData: () => request('/api/me/data', { method: 'DELETE' }),
   overview: () => request<Overview>('/api/overview'),
+  /** The weeks already paid, from PayByPhone, newest first. */
+  history: () => request<Session[]>('/api/history'),
   /** Home zone guessed from the PayByPhone history (null if none). */
   residentZone: () => (zoneLookup ??= request<{ zone: string | null; manual?: boolean }>('/api/resident-zone').catch(() => ({ zone: null, manual: false }))),
   rates: (location: string, plate: string) =>

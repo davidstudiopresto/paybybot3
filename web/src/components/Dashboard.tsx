@@ -136,65 +136,6 @@ function Ticket({
   )
 }
 
-/** The weeks already paid (PayByPhone's running and past tickets of five days or more), newest first. */
-function PaidWeeks({ data }: { data: Overview }) {
-  const [weeks, setWeeks] = useState<Session[] | null>(null)
-  const [all, setAll] = useState(false) // the last 3 only, unless asked
-  // Looked again when a ticket starts or is extended, or a renewal pays.
-  const changed = data.sessions.map((s) => s.id + s.expire).join() + data.autopilots.map((a) => a.lastPayment).join()
-  useEffect(() => {
-    let cancelled = false
-    api.history().then(
-      (w) => !cancelled && setWeeks(w),
-      () => !cancelled && setWeeks([]),
-    )
-    return () => {
-      cancelled = true
-    }
-  }, [changed])
-  if (!weeks?.length) return null
-  const day = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-  const euros = (amount: number) => amount.toFixed(2).replace('.', ',') + ' €'
-  return (
-    <section className="rise mt-10">
-      <h2 className="text-sm text-ink/50">Semaines payées</h2>
-      <ul className="mt-3 divide-y divide-ink/[0.06] overflow-hidden rounded-2xl border border-ink/10 bg-white">
-        {weeks.slice(0, all ? 12 : 3).map((w) => {
-          const running = new Date(w.expire).getTime() > Date.now()
-          return (
-            <li key={w.id} className="flex items-center gap-3 px-5 py-3.5">
-              <span
-                className={cn(
-                  'grid size-7 shrink-0 place-items-center rounded-full',
-                  running ? 'bg-[#4e9aa0]/15 text-[#3d7f84]' : 'bg-[#e3f5e9] text-[#16a34a]',
-                )}
-                aria-hidden
-              >
-                <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3.5 8.5l3 3 6-7" />
-                </svg>
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-ink">
-                  {day(w.start)} → {day(w.expire)}
-                  {running && <span className="ml-2 text-xs text-[#3d7f84]">en cours</span>}
-                </span>
-                <span className="block text-xs tracking-wide text-ink/50 tabular-nums">{plateText(w.plate)}</span>
-              </span>
-              {w.cost?.amount != null && <span className="text-ink tabular-nums">{euros(w.cost.amount)}</span>}
-            </li>
-          )
-        })}
-      </ul>
-      {weeks.length > 3 && (
-        <button onClick={() => setAll((v) => !v)} className={cn('mt-3 text-sm', ui.link)}>
-          {all ? 'Voir moins' : `Voir tout (${Math.min(weeks.length, 12)})`}
-        </button>
-      )}
-    </section>
-  )
-}
-
 /** The cars with no ticket: plate, type, zone and the resident week's price, one card each. */
 const sameCar = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCase() === b.replace(/[^0-9a-z]/gi, '').toUpperCase()
 
@@ -386,7 +327,6 @@ export function Dashboard({
         {/* The cars with neither a ticket nor a renewal: one card each, with its button. */}
         {data && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} autoPlate={autoPlate} locked={locked} onLogout={onLogout} />}
 
-        {data && <PaidWeeks data={data} />}
 
         {/* Every car's card has its own button: this block only lists renewals without a ticket (or offers one
             when PayByPhone lists no car). */}

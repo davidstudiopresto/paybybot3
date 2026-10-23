@@ -246,12 +246,12 @@ function Testimonials() {
 }
 
 /** Public home page: one message, the automatic renewal. */
-/** The home page: the v1 hero alone (no sections below). */
+/** The home page: the v1 hero, then « Comment ça marche » and the FAQ (no features, reviews or prices). */
 export function Home({ hosted }: { hosted: boolean }) {
-  return <Landing hosted={hosted} heroOnly />
+  return <Landing hosted={hosted} lean />
 }
 
-export function Landing({ hosted, heroOnly = false }: { hosted: boolean; heroOnly?: boolean }) {
+export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: boolean; heroOnly?: boolean; lean?: boolean }) {
   const cta = useRef<HTMLAnchorElement>(null)
   const sticky = useStickyCta(cta)
   return (
@@ -284,7 +284,7 @@ export function Landing({ hosted, heroOnly = false }: { hosted: boolean; heroOnl
           >
             {TRY_LABEL} <ArrowRight className="size-5" />
           </a>
-          {!heroOnly && (
+          {!heroOnly && !lean && (
             <>
               <p className="mt-4 text-sm text-ink/55">
                 Une amende : jusqu’à 125 €. <PayByBot /> : dès 4,50 €/mois.
@@ -300,7 +300,8 @@ export function Landing({ hosted, heroOnly = false }: { hosted: boolean; heroOnl
 
         <HowItWorks />
 
-
+        {!lean && (
+        <>
         <section id="fonctionnalites" className="scroll-mt-16 py-10 lg:py-12">
           <h2 className="text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
             Fonctionnalités
@@ -334,6 +335,8 @@ export function Landing({ hosted, heroOnly = false }: { hosted: boolean; heroOnl
             <PlanCards signedIn={false} />
           </div>
         </section>
+        </>
+        )}
 
         <section id="faq" className="mt-24 lg:mt-36">
           <FaqTitle as="h2" />

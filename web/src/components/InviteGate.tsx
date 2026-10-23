@@ -6,7 +6,7 @@ import { PayByBot } from '@/components/signs'
  *  sign in: the link is kept on the device once opened). */
 export function InviteGate({ hosted, invalid = false }: { hosted: boolean; invalid?: boolean }) {
   return (
-    <div className="relative min-h-dvh overflow-hidden">
+    <div className="relative h-dvh overflow-hidden">
       <div aria-hidden className="pointer-events-none blur-[6px] select-none">
         <Home hosted={hosted} />
       </div>

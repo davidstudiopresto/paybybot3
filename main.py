@@ -10,7 +10,7 @@ if os.environ.get("SENTRY_DSN"):
     import sentry_sdk
 
     def _scrub(event, hint):
-        event.pop("user", None)
+        event["user"] = {"ip_address": None}  # explicitly empty: Sentry does not take the connection's IP
         request = event.get("request") or {}
         for key in ("cookies", "headers", "data", "query_string", "env"):
             request.pop(key, None)

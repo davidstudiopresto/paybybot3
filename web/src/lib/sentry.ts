@@ -18,16 +18,23 @@ export function startSentry() {
     tracesSampleRate: 0.3, // page loads and API calls timed on 30 % of the visits
     replaysSessionSampleRate: 0.05,
     replaysOnErrorSampleRate: 1.0,
-    beforeSend(event) {
-      delete event.user
-      if (event.request) {
-        delete event.request.cookies
-        delete event.request.headers
-        delete event.request.data
-      }
-      return event
-    },
+    // Not PayByBot's code: a browser extension or the browser itself reading the page's structured data.
+    ignoreErrors: [/@context/],
+    denyUrls: [/^chrome-extension:\/\//, /^moz-extension:\/\//, /^safari-(web-)?extension:\/\//],
+    beforeSend: scrub,
+    beforeSendTransaction: scrub,
   })
+}
+
+/** No IP address (explicitly empty, so Sentry does not take the connection's), no cookies, headers or bodies. */
+function scrub<T extends Sentry.Event>(event: T): T {
+  event.user = { ip_address: null }
+  if (event.request) {
+    delete event.request.cookies
+    delete event.request.headers
+    delete event.request.data
+  }
+  return event
 }
 
 export const reactErrorHandler = Sentry.reactErrorHandler

@@ -56,7 +56,8 @@ export function VehiclePlate({ plate, type }: { plate: string; type?: string | n
 }
 
 /** Paris resident zones are numbered like the postcode: 75017 -> « Paris 17e », 75001 -> « Paris 1er ». */
-export function arrondissement(zone: string) {
+export function arrondissement(zone: string | null | undefined) {
+  if (!zone) return null // a vehicle without a resident rate has no zone
   const m = zone.match(/^75(0(\d{2})|116)$/)
   if (!m) return null
   const n = m[1] === '116' ? 16 : Number(m[2])
@@ -64,7 +65,8 @@ export function arrondissement(zone: string) {
 }
 
 /** Parking zone, shown as a quiet label next to the plate. */
-export function ZonePlate({ zone, className }: { zone: string; className?: string }) {
+export function ZonePlate({ zone, className }: { zone: string | null | undefined; className?: string }) {
+  if (!zone) return null
   return (
     <span className={cn('inline-flex items-baseline gap-1.5 text-ink', className)}>
       <span className="text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">Zone</span>

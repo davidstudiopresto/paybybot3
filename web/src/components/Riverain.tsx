@@ -617,7 +617,7 @@ function RiverainDialog({
     api.pricing().then(
       (p) => {
         const riverain = (p.vehicles ?? []).filter((v) => v.zone)
-        setZones(Object.fromEntries(riverain.map((v) => [v.plate, v.zone])))
+        setZones(Object.fromEntries(riverain.map((v) => [v.plate, v.zone as string])))
         setWeeks(Object.fromEntries(riverain.map((v) => [v.plate, v.weekly ?? null])))
         setPlates(riverain.map((v) => v.plate))
         const same = (x: string) => !plate || x.replace(/[^0-9a-z]/gi, '').toUpperCase() === plate.replace(/[^0-9a-z]/gi, '').toUpperCase()

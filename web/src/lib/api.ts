@@ -100,7 +100,7 @@ export type Pricing = {
 export type PricedVehicle = {
   plate: string
   type?: string | null
-  zone: string // the arrondissement PayByPhone gives it the resident rate in (never typed)
+  zone: string | null // the arrondissement PayByPhone gives it the resident rate in (never typed); null: no resident rate
   suv?: boolean
   monthly: number
   yearly: number

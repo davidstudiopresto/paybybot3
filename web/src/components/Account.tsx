@@ -92,7 +92,10 @@ function AccountDialog({
 
         <dl className="mx-6 mt-5 divide-y divide-ink/10 border-y border-ink/10">
           <div className={row}>
-            <dt className={label}>{vehicles && vehicles.length > 1 ? 'Véhicules résidents' : 'Véhicule résident'}</dt>
+            {/* Resident vehicles show their arrondissement; without a resident rate, just the plate. */}
+            <dt className={label}>
+              {(vehicles && vehicles.length > 1 ? 'Véhicules' : 'Véhicule') + (vehicles?.length && vehicles.every((v) => v.zone) ? (vehicles.length > 1 ? ' résidents' : ' résident') : '')}
+            </dt>
             <dd className="flex flex-col items-end gap-2">
               {vehicles === undefined ? (
                 <span className="inline-block h-5 w-32 animate-pulse rounded bg-ink/10" />

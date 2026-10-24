@@ -2833,7 +2833,8 @@ def checkout_url(owner, account, plan, success_url):
             "client_reference_id": owner, "metadata[plan]": plan, "subscription_data[metadata][owner]": owner,
             "metadata[monthlies]": ",".join(str(m) for m in monthlies),
             "success_url": success_url,
-            "cancel_url": base + "/#/tarifs", "locale": "fr", "allow_promotion_codes": "true",
+            "cancel_url": base + "/#/",  # Stripe's back arrow: back to the dashboard
+            "locale": "fr", "allow_promotion_codes": "true",
             # A simple page: euros only (no currency switch) and cards only (Apple Pay / Google Pay included,
             # no Klarna or Revolut Pay).
             "adaptive_pricing[enabled]": "false", "payment_method_types[0]": "card",
@@ -2988,7 +2989,7 @@ def billing_unlock(t: str = "", plan: str = "monthly"):
     try:
         owner = _fernet("unlock").decrypt(t.encode(), ttl=UNLOCK_TTL).decode()
     except Exception:
-        return RedirectResponse(APP_URL.rstrip("/") + "/#/tarifs", 303)
+        return RedirectResponse(APP_URL.rstrip("/") + "/", 303)
     account = guarded(lambda: account_by_owner(owner))
     return RedirectResponse(unlock_url(owner, account, plan if plan in PLANS else "monthly"), 303)
 
@@ -3012,7 +3013,7 @@ def billing_unlocked(session_id: str = ""):
     session = stripe("GET", "checkout/sessions/" + session_id)
     owner = session.get("client_reference_id")
     if session.get("status") != "complete" or not owner:
-        return RedirectResponse(home + "/#/tarifs", 303)
+        return RedirectResponse(home + "/", 303)
     billed = monthlies_from(session.get("metadata"))
     guarded(lambda: save_account_by_owner(owner, {"plan": (session.get("metadata") or {}).get("plan"),
                                                   "stripe_customer": session.get("customer"),

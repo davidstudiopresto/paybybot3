@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Car, Check, CreditCard, Minus, Phone, Ticket, UserRound } from 'lucide-react'
-import { Horodateur } from '@/components/Horodateur'
+import { RemotePanel } from '@/components/RemoteScene'
 import { CardGate } from '@/components/Riverain'
 import { arrondissement, PayByBot, PayByPhone, Plate, withPayByPhone, Wordmark, ZonePlate } from '@/components/signs'
 import { api, until, type Me, type Overview, type PricedVehicle } from '@/lib/api'
@@ -33,7 +33,7 @@ function Row({
 }) {
   return (
     <li
-      className={cn('rise flex items-start gap-4 py-4', highlight && '-mx-4 my-3 rounded-2xl border-2 border-eu bg-eu/[0.03] px-[14px]')}
+      className={cn('rise flex items-start gap-4 py-3', highlight && '-mx-4 my-2 rounded-2xl border-2 border-eu bg-eu/[0.03] px-[14px]')}
       style={{ animationDelay: `${delay}ms` }}
     >
       <span className="grid size-10 shrink-0 place-items-center rounded-full bg-eu/[0.08] text-eu">{icon}</span>
@@ -87,9 +87,9 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
   return (
     <div className="grid min-h-dvh bg-white lg:grid-cols-[1.05fr_1fr]">
       {!cards.length && !me.demo && <CardGate />}
-      <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,7vw,7rem)]">
+      <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,7vw,7rem)] lg:pb-6">
         <Wordmark />
-        <div className="mx-auto w-full max-w-lg lg:my-auto lg:py-10">
+        <div className="mx-auto w-full max-w-lg lg:my-auto lg:pt-2">
           <h1 className={cn(ui.title, 'rise mt-10 lg:mt-0')}>
             Bienvenue{me.firstName ? `, ${me.firstName}` : ''}.
           </h1>
@@ -97,7 +97,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             Voici ce que <PayByBot /> a retrouvé dans votre compte <PayByPhone />. Vérifiez que tout est juste.
           </p>
 
-          <ul className="mt-6 divide-y divide-ink/10 border-y border-ink/10">
+          <ul className="mt-5 divide-y divide-ink/10 border-y border-ink/10">
             <Row icon={<Phone className="size-5" />} label="Compte PayByPhone" delay={next()}>
               <span className="font-semibold tabular-nums">{phoneText(me.username)}</span>
               <span className="ml-2 text-sm text-ink/55">connecté</span>
@@ -117,12 +117,12 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               {vehicles === undefined ? (
                 <span className="inline-block h-5 w-40 animate-pulse rounded bg-ink/10" />
               ) : vehicles.length ? (
-                <span className="flex flex-col gap-2 pt-0.5">
+                <span className="flex flex-col gap-1.5 pt-0.5">
                   {vehicles.map((v) => {
                     // Its running ticket, if any, right under the car.
                     const ticket = data.sessions.find((s) => samePlate(s.plate, v.plate) && new Date(s.expire).getTime() > Date.now())
                     return (
-                      <span key={v.plate} className="flex flex-col gap-1.5">
+                      <span key={v.plate} className="flex flex-col gap-1">
                         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <Plate plate={v.plate} size="sm" />
                           {arrondissement(v.zone) && <span className="font-semibold">{arrondissement(v.zone)}</span>}
@@ -171,7 +171,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             </Row>
           </ul>
 
-          <p className="rise mt-5 text-sm leading-relaxed text-ink/55" style={{ animationDelay: `${next()}ms` }}>
+          <p className="rise mt-4 text-sm leading-relaxed text-ink/55" style={{ animationDelay: `${next()}ms` }}>
             Rien n’a été modifié dans votre compte <PayByPhone />, et votre mot de passe n’est pas enregistré. Un véhicule
             ou une carte à changer ? Faites-le dans l’application <PayByPhone /> : <PayByBot /> suit automatiquement.
           </p>
@@ -179,7 +179,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
           <button
             onClick={onContinue}
             disabled={!vehicles?.length || !cards.length}
-            className={cn('rise mt-8', ui.primary)}
+            className={cn('rise mt-5', ui.primary)}
             style={{ animationDelay: `${next()}ms` }}
           >
             C’est bien moi, continuer <ArrowRight className="size-5" />
@@ -187,9 +187,8 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
         </div>
       </div>
 
-      <div className="relative hidden items-center justify-center overflow-hidden bg-[radial-gradient(70%_60%_at_50%_45%,#e6ecfb_0%,#f4f6fb_60%,#f7f8fb_100%)] lg:flex">
-        <Horodateur className="w-[min(72%,28rem)] drop-shadow-[0_30px_40px_rgb(29_42_107/0.12)]" />
-      </div>
+      {/* The same animated scene as the sign-in page and the offer screen. */}
+      <RemotePanel className="hidden min-h-dvh lg:block" />
     </div>
   )
 }

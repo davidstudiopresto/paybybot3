@@ -240,7 +240,7 @@ class Blocking(unittest.TestCase):
                 r = web.billing_unlock(t=token)
             self.assertEqual(r.headers["location"], "https://invoice.stripe.com/i/1")
             r = web.billing_unlock(t="forged")
-        self.assertTrue(r.headers["location"].endswith("/#/tarifs"))
+        self.assertTrue(r.headers["location"].endswith("/"))  # a forged or expired link: back to the dashboard
 
 
 if __name__ == "__main__":

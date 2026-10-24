@@ -200,7 +200,7 @@ export function LoginView({
       {/* On a computer, like Qonto: the form on the left, the animated scene on the right. */}
       <div className="flex flex-1 lg:grid lg:grid-cols-2">
       <div className="flex flex-1 flex-col">
-      <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center sm:pt-0">
+      <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center lg:pb-4 sm:pt-0">
         <form
           className="rise w-full max-w-[26rem]"
           onSubmit={(e) => {
@@ -227,7 +227,7 @@ export function LoginView({
             </p>
           )}
 
-          <div className="mt-9 space-y-3">
+          <div className="mt-9 space-y-3 lg:mt-6">
             <div role="radiogroup" aria-label="Identifiant PayByPhone" className="flex rounded-xl bg-ink/[0.05] p-1">
               {(
                 [
@@ -374,7 +374,7 @@ export function LoginView({
 
 
           {signup && (
-            <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-ink/70">
+            <label className="mt-6 lg:mt-4 flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-ink/70">
               <input
                 type="checkbox"
                 checked={accepted}
@@ -419,7 +419,7 @@ export function LoginView({
           <button
             type="submit"
             disabled={loading !== null || (signup && (!accepted || accountExists))}
-            className="mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+            className="mt-7 lg:mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}
           </button>
@@ -431,7 +431,7 @@ export function LoginView({
             </p>
           )}
 
-          <p className="mt-6 text-center text-sm text-ink/50">
+          <p className="mt-6 lg:mt-4 text-center text-sm text-ink/50">
             {signup ? (
               <>
                 Déjà inscrit ?{' '}

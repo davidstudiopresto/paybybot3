@@ -1,11 +1,19 @@
 /** Word of mouth: the site opens through a user's link (?i=<code>), kept on this device for the sign-up. */
 const KEY = 'pbb_invite'
 
+let fromLinkNow = false
+
+/** This visit came through a link (?i=…), not from a code kept earlier: the welcome curtain is shown. */
+export function openedFromLink(): boolean {
+  return fromLinkNow
+}
+
 /** Reads ?i= from the address (then removes it), else the code kept from an earlier visit. */
 export function captureInvite(): string | null {
   const url = new URL(window.location.href)
   const fromLink = url.searchParams.get('i')
   if (fromLink) {
+    fromLinkNow = true
     try {
       localStorage.setItem(KEY, fromLink)
     } catch {

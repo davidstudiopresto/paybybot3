@@ -14,8 +14,8 @@ import { NotFoundPage } from '@/components/NotFound'
 import { Welcome } from '@/components/Welcome'
 import { CheckoutDone } from '@/components/CheckoutDone'
 import { SubscriptionDialog } from '@/components/Subscription'
-import { InviteGate } from '@/components/InviteGate'
-import { captureInvite, forgetInvite, isMember, markMember } from '@/lib/invite'
+import { InviteCurtain, InviteGate } from '@/components/InviteGate'
+import { captureInvite, forgetInvite, isMember, markMember, openedFromLink } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
@@ -245,6 +245,8 @@ export default function App() {
   return (
     <>
       <Toaster />
+      {/* Opened through a valid private link: « sur parrainage » first, then the screen lifts on the site. */}
+      {inviteOnly && !me && invited === 'yes' && openedFromLink() && <InviteCurtain />}
       {!['/', '/index.html'].includes(window.location.pathname) ? (
         <NotFoundPage hosted={hosted} />
       ) : legal ? (

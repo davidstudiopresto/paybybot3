@@ -1027,6 +1027,50 @@ def owner_id(username):
     return hmac.new(_subkey(_secrets()[0], "owner"), username.encode(), hashlib.sha256).hexdigest()
 
 
+def trial_keys(s, email=None):
+    """Fingerprints of what identifies someone who already had the free month: the PayByPhone account, the sign-up
+    e-mail (without its +tag, nor dots for Gmail) and the vehicles' plates. Keyed HMACs: nothing readable is kept."""
+    key = _subkey(_secrets()[0], "trial")
+
+    def mark(kind, value):
+        return kind + ":" + hmac.new(key, value.encode(), hashlib.sha256).hexdigest()
+    keys = [mark("o", s.username.strip())]
+    if email and "@" in email:
+        local, _, domain = email.strip().lower().rpartition("@")
+        local = local.split("+")[0]
+        if domain in ("gmail.com", "googlemail.com"):
+            local, domain = local.replace(".", ""), "gmail.com"
+        keys.append(mark("e", local + "@" + domain))
+    try:
+        vehicles = s.call("get_vehicles") or []
+    except Exception as e:
+        log.warning("vehicles unreadable for the free month check: %s", str(e)[:200])
+        vehicles = []
+    keys += [mark("p", plate_key(v["licensePlate"])) for v in vehicles if v.get("licensePlate")]
+    return list(dict.fromkeys(keys))
+
+
+def earlier_trial(s, email=None):
+    """When a free month already started for this account, e-mail or one of its vehicles (None: never)."""
+    if not HOSTED or s.demo:
+        return None
+    try:
+        return parse_dt(store("trial_first", p_keys=trial_keys(s, email)))
+    except Exception as e:
+        log.warning("free month check failed: %s", str(e)[:200])
+        return None
+
+
+def mark_trial(s, start, email=None):
+    """Keeps the free month's start for this account, e-mail and vehicles: it survives the account's deletion."""
+    if not HOSTED or s.demo or not start:
+        return
+    try:
+        store("trial_mark", p_keys=trial_keys(s, email), p_start=start.isoformat())
+    except Exception as e:
+        log.warning("free month not recorded: %s", str(e)[:200])
+
+
 # Word of mouth only: online, signing up needs the link of an existing user (?i=<code> on the site).
 INVITE_ONLY = os.environ.get("PAYBYBOT_INVITE_ONLY", "").strip() == "1"
 
@@ -1777,7 +1821,11 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
     if not hmac.compare_digest(code_hash(code, pending["email"]), pending["h"]):
         raise HTTPException(400, "Code incorrect. Vérifiez l'e-mail reçu.")
     # The home zone is found later from PayByPhone (or asked when the renewal is set up), not at sign-up.
-    save_account(session, {"email": pending["email"], "trial_start": datetime.now(timezone.utc).isoformat(),
+    # One free month per person: a new sign-up after deleting an account (same PayByPhone account, e-mail or
+    # vehicle) keeps the first one's start, so a used-up month is not given again.
+    start = earlier_trial(session, pending["email"]) or datetime.now(timezone.utc)
+    mark_trial(session, start, pending["email"])
+    save_account(session, {"email": pending["email"], "trial_start": start.isoformat(),
                            **({"zone": pending["zone"], "zone_found": True} if pending.get("zone") else {})})
     session.remember = True  # a new user stays signed in (30 days), there is no box to tick at sign-up
     session.issued_at = int(time.time())
@@ -3445,6 +3493,11 @@ def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
     except Exception as e:
         log.warning("account e-mail unreadable before deletion: %s", e)
     if HOSTED and not s.demo:
+        try:  # the free month's start outlives the account (fingerprints only): no second one at a new sign-up
+            account = load_account(s) or {}
+            mark_trial(s, parse_dt(account.get("trial_start")) or datetime.now(timezone.utc), account.get("email"))
+        except Exception as e:
+            log.warning("free month not recorded before deletion: %s", e)
         sub_id = (load_account(s) or {}).get("stripe_subscription")
         if sub_id and os.environ.get("STRIPE_SECRET_KEY"):
             try:  # nothing more is charged once the account is gone
@@ -3457,7 +3510,8 @@ def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
     if email and not s.demo:
         send_email(email, "Compte PayByBot supprimé", "Votre compte est supprimé",
                    ["Votre compte PayByBot a été supprimé à votre demande. Les renouvellements automatiques sont "
-                    "arrêtés et tout ce que PayByBot gardait pour vous est effacé.",
+                    "arrêtés et tout ce que PayByBot gardait pour vous est effacé, sauf une empreinte anonyme qui permet de "
+                    "n'offrir le mois gratuit qu'une fois.",
                     "Les tickets déjà en cours restent valables jusqu'à leur fin. Votre compte PayByPhone n'est pas "
                     "modifié.",
                     "Vous n'avez rien demandé ? Écrivez-nous à %s ou répondez simplement à cet e-mail." % MAIL_REPLY_TO],

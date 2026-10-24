@@ -321,6 +321,11 @@ function Privacy() {
           </li>
           <li>Compte <PayByBot /> (e-mail, zone de résidence) : jusqu’à la suppression du compte.</li>
           <li>Renouvellement résident, y compris l’e-mail : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
+          <li>
+            Mois offert : une empreinte anonyme (chiffrée, impossible à relire) du compte <PayByPhone />, de l’e-mail et
+            des plaques, avec la date de début du mois offert, gardée même après la suppression du compte, pour
+            n’offrir ce mois qu’une fois.
+          </li>
           <li>Tentatives de connexion : 24 heures au plus.</li>
           <li>E-mails envoyés : conservés par Resend pour une durée limitée, le temps d’assurer leur bonne livraison.</li>
           <li>Journaux techniques : durée limitée fixée par l’hébergeur.</li>

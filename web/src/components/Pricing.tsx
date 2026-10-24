@@ -64,31 +64,6 @@ function PriceGrid({ plan, className }: { plan: Plan; className?: string }) {
   )
 }
 
-/** One price per « riverain » vehicle (plate), and what the subscription covers. */
-function VehiclePrices({ plan, pricing, className }: { plan: Plan; pricing: Pricing | null; className?: string }) {
-  const vehicles = pricing?.vehicles ?? []
-  if (vehicles.length < 2) return null
-  const billed = pricing?.billed?.length ?? 1
-  return (
-    <div className={className}>
-      <ul className="space-y-1.5">
-        {vehicles.map((v) => (
-          <li key={v.plate} className="flex items-center justify-between gap-3 text-sm">
-            <Plate plate={v.plate} size="sm" />
-            <span className="text-ink/70 tabular-nums">
-              {plan === 'monthly' ? `${euros(v.monthly)} / mois` : `${euros(v.yearly)} / an`}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 text-xs leading-relaxed text-ink/50">
-        Prix par véhicule. Le total est celui de {billed > 1 ? `vos ${billed} véhicules renouvelés` : 'votre véhicule renouvelé'} :
-        vous ne payez que les véhicules dont le renouvellement est activé.
-      </p>
-    </div>
-  )
-}
-
 const plateKey = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
 
 /** The offer screen's vehicles: tick those to cover, the price follows their number. */
@@ -164,11 +139,9 @@ const INCLUDED = [
   'Annulable à tout moment',
 ]
 
-/** The public offer: two cards (two-wheeler, car — the car one put forward), the same in every zone. Signed in, the
- *  account's own price instead (OwnPlan). */
+/** The offer: two cards, the same for everyone, signed in or not (the offer itself is chosen when an automation is
+ *  activated, on the offer screen). */
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
-  // The Tarifs show the monthly price only (the yearly plan stays offered at payment).
-  if (signedIn) return <OwnPlan plan="monthly" />
   // Yearly on the left (shown per month, billed once a year), monthly on the right, put forward.
   const cards: { name: string; perMonth: number; note: string; badge?: string; popular?: boolean }[] = [
     { name: 'Annuel', perMonth: Math.round(yearOf(MONTHLY) / 12), note: `facturé ${euros(yearOf(MONTHLY))} par an`, badge: '−20 %' },
@@ -204,8 +177,8 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
                 </li>
               ))}
             </ul>
-            <a href="#/inscription" className={cn('mt-7', c.popular ? ui.primary : ui.primaryGray)}>
-              {TRY_LABEL}
+            <a href={signedIn ? '#/' : '#/inscription'} className={cn('mt-7', c.popular ? ui.primary : ui.primaryGray)}>
+              {signedIn ? 'Mon tableau de bord' : TRY_LABEL}
             </a>
           </div>
         ))}
@@ -213,57 +186,6 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
       <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-ink/45">
         Par véhicule : voiture, deux-roues ou utilitaire · ticket résident, visiteur ou carte handicapé.
       </p>
-    </>
-  )
-}
-
-/** Signed in: one card with the account's own price, monthly or yearly. */
-function OwnPlan({ plan }: { plan: Plan }) {
-  const [busy, setBusy] = useState(false)
-  const [pricing] = usePricing(true)
-  const own = pricing?.monthly != null && pricing.yearly != null ? pricing : null
-
-  async function choose() {
-    setBusy(true)
-    try {
-      const { url } = await api.checkout(plan)
-      window.location.assign(url)
-    } catch (e) {
-      toast((e as Error).message)
-      setBusy(false)
-    }
-  }
-
-  return (
-    <>
-      {!pricing ? (
-        <div className="mx-auto h-96 max-w-xl animate-pulse rounded-3xl bg-ink/[0.05]" />
-      ) : (
-        <div className="mx-auto flex max-w-xl flex-col rounded-3xl border border-eu p-7 ring-1 ring-eu">
-          {own ? (
-            <>
-              <p className="font-heading text-[2.6rem] leading-none font-semibold tracking-tight text-ink">
-                {planText(plan, own).price} <span className="text-base font-normal text-ink/50">{planText(plan, own).per}</span>
-              </p>
-              <p className="mt-2 text-sm text-ink/55">{planText(plan, own).note}</p>
-              <VehiclePrices plan={plan} pricing={own} className="mt-5 border-t border-ink/10 pt-4" />
-            </>
-          ) : (
-            <PriceGrid plan={plan} />
-          )}
-          <ul className="mt-5 grid gap-x-6 gap-y-2 text-[0.95rem] text-ink/70 sm:grid-cols-2">
-            {INCLUDED.map((x) => (
-              <li key={x} className="flex items-start gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-eu" /> {x}
-              </li>
-            ))}
-          </ul>
-          <button onClick={choose} disabled={busy} className={cn('mt-7', ui.primary)}>
-            {busy ? <Loader2 className="size-5 animate-spin" /> : plan === 'yearly' ? 'Choisir l’annuel' : 'Choisir le mensuel'}
-          </button>
-        </div>
-      )}
-      <FinesNote zone={own?.zone && Number(String(own.zone).slice(-2)) >= 12 ? 2 : 1} className="mx-auto mt-6 max-w-xl" />
     </>
   )
 }
@@ -299,14 +221,14 @@ function FinesNote({ zone, className }: { zone: 1 | 2; className?: string }) {
 }
 
 
-/** Pricing page (#/tarifs), once signed in: the account's own two plans (signed out, App shows the sign-up). */
+/** Pricing page (#/tarifs): the same two plans for everyone, and what a forgotten ticket costs. */
 export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-5xl flex-1 flex-col justify-center px-6 py-10 lg:py-12">
         <h1 className="rise text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
-          {signedIn ? 'Vos tarifs' : 'Tarifs'}
+          Tarifs
         </h1>
         <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
           Un prix unique par véhicule, quel que soit le ticket.
@@ -314,6 +236,7 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
         <div className="mt-8 lg:mt-10">
           <PlanCards signedIn={signedIn} />
         </div>
+        <FinesNote zone={1} className="mx-auto mt-8 w-full max-w-3xl" />
         <p className="mt-8 text-center text-sm text-ink/50">
           Prix TTC, sans engagement.
         </p>

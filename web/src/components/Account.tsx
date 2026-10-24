@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Loader2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { PlansDialog } from '@/components/Pricing'
 import { arrondissement, PayByBot, PayByPhone, Plate, ZonePlate } from '@/components/signs'
 import { api, clock, type Account, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -51,6 +52,7 @@ function AccountDialog({
 
   // « Gérer »: Stripe's customer portal (card, invoices, cancel), back here after.
   const [opening, setOpening] = useState(false)
+  const [plans, setPlans] = useState(false) // « Choisir mon offre »: the offer screen
   function manage() {
     setOpening(true)
     api.billingPortal().then(
@@ -140,9 +142,12 @@ function AccountDialog({
                         {new Date(account.trialEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                       </span>
                     )}
-                    <a href="#/tarifs" onClick={onClose} className={cn('text-sm', ui.link)}>
+                    {account?.trialDays && !account.trialEnd && (
+                      <span className="text-ink/60">1er mois offert dès le choix de l’offre</span>
+                    )}
+                    <button type="button" onClick={() => setPlans(true)} className={cn('text-sm', ui.link)}>
                       Choisir mon offre
-                    </a>
+                    </button>
                   </span>
                 )}
               </dd>
@@ -174,6 +179,7 @@ function AccountDialog({
           )}
         </div>
       </DialogContent>
+      {plans && <PlansDialog onClose={() => setPlans(false)} />}
     </Dialog>
   )
 }

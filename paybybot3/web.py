@@ -1171,10 +1171,17 @@ def with_details(row):
     return {**row, **json.loads(_fernet("renewal").decrypt(row["data"].encode()))}
 
 
-ACCOUNT_FIELDS = ("email", "first_name", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
+ACCOUNT_FIELDS = ("email", "first_name", "zone", "trial_start", "trial_kept", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "suv_plates", "zone_found",
                   "vehicle_zones", "dunning", "check_mailed", "early_stops", "checkout_at", "chosen_plates")
-TRIAL_DAYS = 30  # one free month for every new account
+TRIAL_DAYS = 30  # one free month for every new account, from the day the offer is chosen (never at sign-up)
+
+
+def trial_started(account):
+    """The patch that starts the free month now, when the offer is chosen (nothing if it already started)."""
+    if account.get("trial_start"):
+        return {}
+    return {"trial_start": datetime.now(timezone.utc).isoformat(), "trial_kept": True}
 
 
 def load_account(s):
@@ -1821,11 +1828,11 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
     if not hmac.compare_digest(code_hash(code, pending["email"]), pending["h"]):
         raise HTTPException(400, "Code incorrect. Vérifiez l'e-mail reçu.")
     # The home zone is found later from PayByPhone (or asked when the renewal is set up), not at sign-up.
-    # One free month per person: a new sign-up after deleting an account (same PayByPhone account, e-mail or
-    # vehicle) keeps the first one's start, so a used-up month is not given again.
-    start = earlier_trial(session, pending["email"]) or datetime.now(timezone.utc)
-    mark_trial(session, start, pending["email"])
-    save_account(session, {"email": pending["email"], "trial_start": start.isoformat(),
+    # The free month starts when the offer is chosen, not now. One per person: a new sign-up after deleting an
+    # account (same PayByPhone account, e-mail or vehicle) keeps the first one's start, so it is not given again.
+    earlier = earlier_trial(session, pending["email"])
+    save_account(session, {"email": pending["email"],
+                           **({"trial_start": earlier.isoformat(), "trial_kept": True} if earlier else {}),
                            **({"zone": pending["zone"], "zone_found": True} if pending.get("zone") else {})})
     session.remember = True  # a new user stays signed in (30 days), there is no box to tick at sign-up
     session.issued_at = int(time.time())
@@ -2544,9 +2551,9 @@ def get_account(pbb_session: str = Cookie(None)):
 
     def load():
         account = load_account(s)
-        if (account or s.demo) and not account.get("trial_start"):
-            # Accounts made before the free month existed (and the demo) start theirs now.
-            account = save_account(s, {"trial_start": datetime.now(timezone.utc).isoformat()})
+        if account.get("trial_start") and not account.get("trial_kept") and not account.get("stripe_subscription"):
+            # Started at sign-up under the old rule, without an offer chosen: it now starts with the offer.
+            account = save_account(s, {"trial_start": None, "trial_kept": True})
         return account
 
     account = guarded(load)
@@ -2554,6 +2561,8 @@ def get_account(pbb_session: str = Cookie(None)):
     state, grace_end = billing_status(account, owner_id(s.username)) if HOSTED and not s.demo else ("ok", None)
     return {"email": account.get("email") or "", "zone": account.get("zone") or None,
             "trialEnd": (start + timedelta(days=TRIAL_DAYS)).isoformat() if start else None,
+            # Not started yet: the free month the offer screen promises (it starts when the offer is chosen).
+            "trialDays": TRIAL_DAYS if not start else None,
             "plan": subscription_plan(account),
             # 'grace': a charge was refused, renewals go on until graceEnd. Renewals stop while blocked:
             # 'unpaid' (still not paid after the grace week) or 'trialOver' (no subscription).
@@ -2690,7 +2699,7 @@ def recover_subscription(account, owner):
     interval = ((((sub.get("items") or {}).get("data") or [{}])[0].get("price") or {}).get("recurring") or {}).get("interval")
     save_account_by_owner(owner, {"stripe_subscription": sub["id"], "stripe_customer": sub.get("customer"),
                                   "plan": (sub.get("metadata") or {}).get("plan") or
-                                          ("yearly" if interval == "year" else "monthly")})
+                                          ("yearly" if interval == "year" else "monthly"), **trial_started(account)})
     log.info("subscription recovered from Stripe (return page missed)")
     return sub.get("status") in PAID_STATUSES
 
@@ -2848,8 +2857,9 @@ def checkout_url(owner, account, plan, success_url):
     elif account.get("email"):
         data["customer_email"] = account["email"]
     start = parse_dt(account.get("trial_start"))
-    trial_end = start + timedelta(days=TRIAL_DAYS) if start else None
-    if trial_end and trial_end > datetime.now(timezone.utc) + timedelta(hours=1):
+    # The free month runs from the day the offer is chosen (today when it has not started yet).
+    trial_end = (start or datetime.now(timezone.utc)) + timedelta(days=TRIAL_DAYS)
+    if trial_end > datetime.now(timezone.utc) + timedelta(hours=1):
         # The free month is already running: no Stripe "trial" (its page would offer to start one); the first
         # charge is simply set on the day the free month ends, nothing being due before.
         data["subscription_data[billing_cycle_anchor]"] = int(trial_end.timestamp())
@@ -3033,9 +3043,13 @@ def billing_confirm(body: CheckoutDone, pbb_session: str = Cookie(None)):
         raise HTTPException(400, "Ce paiement n'a pas abouti.")
     plan = (session.get("metadata") or {}).get("plan")
     billed = monthlies_from(session.get("metadata"))
+    before = guarded(lambda: load_account(s))
+    started = trial_started(before)  # the free month starts now that the offer is chosen
     account = guarded(lambda: save_account(s, {"plan": plan, "stripe_customer": session.get("customer"),
                                                "stripe_subscription": session.get("subscription"),
-                                               "billed_monthlies": billed}))
+                                               "billed_monthlies": billed, **started}))
+    if started:  # kept even if the account is deleted later: one free month per person
+        mark_trial(s, parse_dt(started["trial_start"]), account.get("email"))
     if HOSTED and not s.demo:
         guarded(lambda: resume_renewals(owner_id(s.username)))
     log.info("subscription started (%s)", plan)
@@ -3494,9 +3508,9 @@ def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
     except Exception as e:
         log.warning("account e-mail unreadable before deletion: %s", e)
     if HOSTED and not s.demo:
-        try:  # the free month's start outlives the account (fingerprints only): no second one at a new sign-up
+        try:  # a free month already started outlives the account (fingerprints only): no second one at a new sign-up
             account = load_account(s) or {}
-            mark_trial(s, parse_dt(account.get("trial_start")) or datetime.now(timezone.utc), account.get("email"))
+            mark_trial(s, parse_dt(account.get("trial_start")), account.get("email"))
         except Exception as e:
             log.warning("free month not recorded before deletion: %s", e)
         sub_id = (load_account(s) or {}).get("stripe_subscription")

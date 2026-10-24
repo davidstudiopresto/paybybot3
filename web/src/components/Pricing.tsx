@@ -361,7 +361,8 @@ export function PlansDialog({
   useEffect(() => {
     api.account().then(
       (a) => {
-        const end = a.trialEnd ? new Date(a.trialEnd) : null
+        // Started: its end. Not started yet: it starts today with the offer, so nothing is due for trialDays days.
+        const end = a.trialEnd ? new Date(a.trialEnd) : a.trialDays ? new Date(Date.now() + a.trialDays * 86_400_000) : null
         setTrialEnd(end && end.getTime() > Date.now() ? end : null)
       },
       () => {},

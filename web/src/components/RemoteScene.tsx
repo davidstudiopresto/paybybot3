@@ -74,8 +74,9 @@ export function RemoteScene({ className }: { className?: string }) {
           </text>
         </g>
         <g className={`${c}-after`}>
-          <text x="358" y="180" fontWeight="700" fontSize="26" fill={INK}>
-            7 jours
+          {/* renewed again and again: no end to count down to */}
+          <text x="356" y="186" fontWeight="700" fontSize="38" fill={INK} aria-label="sans fin">
+            ∞
           </text>
         </g>
         <rect x="358" y="194" width="154" height="6" rx="3" fill="#f0f0f0" />

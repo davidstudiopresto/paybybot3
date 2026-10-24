@@ -20,12 +20,29 @@ class Account(unittest.TestCase):
         web.update_account(web.AccountPatch(zone="75017"), "t")  # ignored: it comes from PayByPhone
         self.assertNotIn("zone", self.s.account)
 
-    def test_free_month_lasts_30_days(self):
+    def test_free_month_starts_when_the_offer_is_chosen_and_lasts_30_days(self):
         from datetime import datetime
         web.update_account(web.AccountPatch(email="a@b.fr"), "t")
-        account = web.get_account("t")
+        account = web.get_account("t")  # no offer chosen yet: not started, 30 days promised
+        self.assertIsNone(account["trialEnd"])
+        self.assertEqual(account["trialDays"], 30)
+        with patch.dict("os.environ", {"PAYBYBOT_SECRET": "t"}):
+            session = {"client_reference_id": web.owner_id(self.s.username), "status": "complete",
+                       "metadata": {"plan": "monthly"}, "customer": "cus_1", "subscription": "sub_1"}
+            with patch.object(web, "stripe", return_value=session):
+                web.billing_confirm(web.CheckoutDone(session_id="cs_test_1234567890"), "t")
         start = datetime.fromisoformat(self.s.account["trial_start"])
+        self.assertLess((datetime.now(start.tzinfo) - start).total_seconds(), 60)  # started on payment
+        with patch.object(web, "billing_status", return_value=("ok", None)):
+            account = web.get_account("t")
         self.assertEqual((datetime.fromisoformat(account["trialEnd"]) - start).days, 30)
+        self.assertIsNone(account["trialDays"])
+
+    def test_an_old_sign_up_start_without_an_offer_is_reset(self):
+        self.s.account = {"email": "a@b.fr", "trial_start": "2026-10-01T10:00:00+00:00"}
+        self.assertIsNone(web.get_account("t")["trialEnd"])
+        self.s.account["trial_start"] = "2026-10-01T10:00:00+00:00"  # a kept start (earlier free month): stays
+        self.assertIsNotNone(web.get_account("t")["trialEnd"])
 
     def test_deleting_sends_a_confirmation_and_erases(self):
         web.update_account(web.AccountPatch(email="a@b.fr"), "t")
@@ -78,7 +95,7 @@ class Account(unittest.TestCase):
         # The zone comes from PayByPhone (the demo offers the resident rate everywhere: the 1st), not the form.
         self.assertEqual({k: fresh.account[k] for k in ("email", "zone", "zone_found")},
                          {"email": "c@d.fr", "zone": "75001", "zone_found": True})
-        self.assertIn("trial_start", fresh.account)  # the free month starts at sign-up
+        self.assertNotIn("trial_start", fresh.account)  # the free month starts with the offer, not at sign-up
 
     def test_wrong_code_then_too_many_tries(self):
         _, _, code, token = self.sign_up()

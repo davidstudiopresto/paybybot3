@@ -63,6 +63,8 @@ export type Account = {
   email: string
   zone: string | null
   trialEnd?: string | null
+  /** The free month not started yet: its length, from the day the offer is chosen. */
+  trialDays?: number | null
   plan?: string | null
   /** 'grace': a charge was refused, renewals go on until graceEnd. Renewals stop while blocked: 'unpaid' (still not
    *  paid after the grace week) or 'trialOver' (no subscription). */

@@ -295,13 +295,6 @@ function SampleTicket({ className }: { className?: string }) {
           Rien à faire de votre côté.
         </p>
       </div>
-      <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
-        <p className="mb-1 text-[0.95rem] font-medium text-ink">Ticket en cours</p>
-        <p className="text-sm text-ink/50">Expire vendredi à 11h30</p>
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
-          <div className="h-full w-[86%] rounded-full bg-[#4e9aa0]" />
-        </div>
-      </div>
     </div>
   )
 }

@@ -106,11 +106,14 @@ function VehicleChoice({
                   {on && <Check className="size-3.5" strokeWidth={3} />}
                 </span>
                 <Plate plate={v.plate} size="sm" />
-                {/* Always per month (what people compare); the yearly total underneath on the yearly plan. */}
-                <span className={cn('ml-auto text-right tabular-nums', on ? 'text-ink' : 'text-ink/40')}>
-                  {plan === 'yearly' && <span className="mr-2 text-xs text-ink/45">{euros(v.yearly)} / an ·</span>}
-                  {plan === 'monthly' ? euros(v.monthly) : euros(Math.round(v.yearly / 12))} / mois
-                </span>
+                {/* A ticked vehicle shows its price (per month, the yearly total beside it on the yearly plan); the others
+                    none, they are not counted. */}
+                {on && (
+                  <span className="ml-auto text-right text-ink tabular-nums">
+                    {plan === 'yearly' && <span className="mr-2 text-xs text-ink/45">{euros(v.yearly)} / an ·</span>}
+                    {plan === 'monthly' ? euros(v.monthly) : euros(Math.round(v.yearly / 12))} / mois
+                  </span>
+                )}
               </button>
             </li>
           )

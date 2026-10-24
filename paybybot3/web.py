@@ -1988,7 +1988,7 @@ WEEK = timedelta(days=7)
 # The subscription: one monthly price per renewed vehicle, whatever its ticket (resident, visitor, Handi) and type.
 # Per year: twelve months with 20 % off.
 YEARLY_DISCOUNT = 0.20
-MONTHLY_PRICE = 500
+MONTHLY_PRICE = 950
 # The Paris resident week when PayByPhone does not give it: car (any weight) 9 €, two-wheeler 4.50 €, electric free.
 RESIDENT_WEEK = {"car": 900, "two": 450, "electric": 0}
 ELECTRIC_TWO_WHEELS = re.compile(r"electric\s*motorcycle|deux[\s-]*roues\s*[ée]lectrique", re.I)

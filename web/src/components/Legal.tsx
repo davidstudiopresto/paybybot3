@@ -512,8 +512,8 @@ function Terms() {
             carte bancaire.
           </li>
           <li>
-            <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC : 5 € par véhicule et par mois, quel que soit le ticket (résident, visiteur, carte handicapé) ou le type de véhicule,
-            soit 48 € par véhicule et par an. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte bancaire, via notre
+            <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC : 9,50 € par véhicule et par mois, quel que soit le ticket (résident, visiteur, carte handicapé) ou le type de véhicule,
+            ou 91,20 € par véhicule et par an. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte bancaire, via notre
             prestataire de paiement Stripe ; <PayByBot /> ne voit ni ne conserve votre numéro de carte.
           </li>
           <li>

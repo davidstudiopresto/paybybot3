@@ -24,7 +24,7 @@ const euros = (cents: number) => (cents % 100 ? (cents / 100).toFixed(2).replace
 const yearOf = (monthly: number) => Math.round(monthly * 12 * 0.8)
 
 /** One price per vehicle, whatever its ticket and type (the server's MONTHLY_PRICE). */
-const MONTHLY = 500
+const MONTHLY = 950
 const GRID: [string, number][] = [['Par véhicule', MONTHLY]]
 
 /** The signed-in account's prices (null while loading). */
@@ -250,7 +250,7 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
           <PlanCards signedIn={signedIn} />
         </div>
         <p className="mt-8 text-center text-sm text-ink/50">
-          Un seul oubli (50 € en zone 1) coûte autant que 10 mois de <PayByBot />. Prix TTC, sans engagement.
+          Un seul oubli (50 € en zone 1) coûte plus de 5 mois de <PayByBot />. Prix TTC, sans engagement.
         </p>
       </main>
       <HostedFooter className="px-6 pb-8" hosted={hosted} />

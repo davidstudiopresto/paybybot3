@@ -50,8 +50,8 @@ class Billing(unittest.TestCase):
 
     def test_price_is_twice_the_resident_week(self):
         for args in (("Car", "75006"), ("HeavyGoodsVehicle", "75015"), ("Motorcycle", "75008"), ("ElectricMotorcycle", "75017")):
-            self.assertEqual(web.monthly_cents(*args), 500)  # one price, whatever the vehicle and zone
-        self.assertEqual(web.monthly_cents("Car", "75005", weekly=0), 500)  # nor PayByPhone's price
+            self.assertEqual(web.monthly_cents(*args), 950)  # one price, whatever the vehicle and zone
+        self.assertEqual(web.monthly_cents("Car", "75005", weekly=0), 950)  # nor PayByPhone's price
 
     def test_yearly_is_twelve_months_with_20_percent_off(self):
         self.assertEqual(web.plan_total([1800], "yearly"), 17280)  # twelve months, 20 % off
@@ -110,19 +110,19 @@ class Billing(unittest.TestCase):
                 patch.object(web, "save_account", side_effect=lambda s, p: p), patch.object(web, "reprice"):
             with patch.object(web, "renewed_plates", return_value=set()):  # none renewed yet: the first one
                 p = web.account_pricing(self.s)
-                self.assertEqual((p["billed"], p["monthly"]), (["AB-123-CD"], 500))
+                self.assertEqual((p["billed"], p["monthly"]), (["AB-123-CD"], 950))
             with patch.object(web, "renewed_plates", return_value={"AB123CD", "EF456GH"}):
                 p = web.account_pricing(self.s)
-                self.assertEqual((p["monthly"], [v["monthly"] for v in p["vehicles"]]), (1000, [500, 500]))  # 5 € each
+                self.assertEqual((p["monthly"], [v["monthly"] for v in p["vehicles"]]), (1900, [950, 950]))  # 9,50 € each
         with patch.object(web, "vehicle_zones", return_value=found), \
                 patch.object(web, "load_account", return_value={"suv_plates": ["AB123CD"]}), \
                 patch.object(web, "save_account", side_effect=lambda s, p: p), patch.object(web, "reprice"), \
                 patch.object(web, "renewed_plates", return_value={"AB123CD"}):
-            self.assertEqual(web.account_pricing(self.s)["monthly"], 500)  # an old SUV tick changes nothing
+            self.assertEqual(web.account_pricing(self.s)["monthly"], 950)  # an old SUV tick changes nothing
 
     def test_checkout_bills_every_renewed_vehicle(self):
         self.assertEqual(web.account_monthlies({"monthlies": [990, 490]}), [990, 490])
-        self.assertEqual(web.account_monthlies({"weekly_cents": 900}), [500])  # not priced yet: one vehicle
+        self.assertEqual(web.account_monthlies({"weekly_cents": 900}), [950])  # not priced yet: one vehicle
         self.assertEqual(web.monthlies_from({"monthlies": "490,990"}), [490, 990])
         self.assertIsNone(web.billed_monthlies({"billed_weeklies": [900]}))  # the old rule: repriced
 

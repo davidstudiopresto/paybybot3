@@ -4,7 +4,7 @@ import { LogOut } from 'lucide-react'
 import { arrondissement, Plate, plateText, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
-import { DailyTickets } from '@/components/DailyTickets'
+import { DailySwitch, DailyTickets } from '@/components/DailyTickets'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
@@ -51,6 +51,8 @@ function Ticket({
   autoOpen = false,
   locked = false,
   onLogout,
+  daily = false,
+  needsOffer = false,
 }: {
   session: Session
   now: number
@@ -61,8 +63,12 @@ function Ticket({
   autoOpen?: boolean
   locked?: boolean
   onLogout?: () => void
+  /** A non-resident ticket: its switch programs a ticket on chosen days instead of the weekly renewal. */
+  daily?: boolean
+  needsOffer?: boolean
 }) {
   const renewal = renewalOf(data, session)
+  const dailySwitch = daily && !renewal
   // The weekly renewal is for resident tickets only: a visitor or Handi ticket shows no switch (unless renewed).
   const renewable = session.resident !== false || !!renewal
   const start = new Date(session.start).getTime()
@@ -86,7 +92,12 @@ function Ticket({
         <span className="text-sm text-ink/50">{place}</span>
       </div>
 
-      {renewable && (
+      {dailySwitch && (
+        <div className="border-t border-ink/[0.06] px-5 py-4">
+          <DailySwitch data={data} plate={session.plate} zone={session.location} onChanged={onRefresh} needsOffer={needsOffer} />
+        </div>
+      )}
+      {renewable && !dailySwitch && (
       <div className="border-t border-ink/[0.06] px-5 py-4">
         <RenewalSwitch
           ap={renewal ?? null}
@@ -355,7 +366,21 @@ export function Dashboard({
         {data && sessions.length > 0 && (
           <div className="mt-6 space-y-3">
             {sessions.map((s) => (
-              <Ticket key={s.id} session={s} now={now} data={data} onRefresh={onRefresh} hosted={!!me.hosted} demo={me.demo} autoOpen={!!autoPlate && sameCar(autoPlate, s.plate)} locked={locked} onLogout={onLogout} />
+              <Ticket
+                key={s.id}
+                session={s}
+                now={now}
+                data={data}
+                onRefresh={onRefresh}
+                hosted={!!me.hosted}
+                demo={me.demo}
+                autoOpen={!!autoPlate && sameCar(autoPlate, s.plate)}
+                locked={locked}
+                onLogout={onLogout}
+                // Not a resident ticket (PayByPhone says so, or the car has no resident rate): tickets on chosen days.
+                daily={s.resident === false || (!!residentPlates && !residentPlates.has(plateKey(s.plate)))}
+                needsOffer={needsOffer}
+              />
             ))}
           </div>
         )}

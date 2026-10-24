@@ -193,25 +193,79 @@ export function DailyTickets({
   )
 }
 
+/** « Renouvellement auto » on a running non-resident ticket: on when a ticket is programmed for that vehicle; off, it
+ *  opens « Programmer un ticket » with the ticket's vehicle and zone filled in. */
+export function DailySwitch({
+  data,
+  plate,
+  zone,
+  onChanged,
+  needsOffer,
+}: {
+  data: Overview
+  plate: string
+  zone: string
+  onChanged: () => void
+  needsOffer: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const on = data.autopilots.some((ap) => isDaily(ap) && keyOf(ap.plate) === keyOf(plate))
+  return (
+    <>
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-ink">Renouvellement auto</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label="Renouvellement automatique"
+          title={on ? 'Programmé : voir « Tickets non-résident » plus bas' : undefined}
+          onClick={() => !on && setOpen(true)}
+          className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors', on ? 'bg-[#4e9aa0]' : 'bg-ink/15')}
+        >
+          <span className={cn('absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform', on && 'translate-x-5')} />
+        </button>
+      </div>
+      {open && (
+        <DailyWizard
+          data={data}
+          onClose={() => setOpen(false)}
+          onDone={onChanged}
+          needsOffer={needsOffer}
+          initialPlate={plate}
+          initialZone={zone}
+        />
+      )}
+    </>
+  )
+}
+
 /** Four steps, like the rest of the app: vehicle and zone, the ticket, its time and days, then check and activate. */
-function DailyWizard({
+export function DailyWizard({
   data,
   onClose,
   onDone,
   needsOffer,
-  locked,
+  locked = false,
   onLogout,
+  initialPlate,
+  initialZone,
 }: {
   data: Overview
   onClose: () => void
   onDone: () => void
   needsOffer: boolean
-  locked: boolean
+  locked?: boolean
   onLogout?: () => void
+  /** Opened from a running ticket: its vehicle and zone, already filled in. */
+  initialPlate?: string
+  initialZone?: string
 }) {
   const [step, setStep] = useState(1)
-  const [plate, setPlate] = useState(data.vehicles[0]?.plate ?? '')
-  const [zone, setZone] = useState('')
+  const [plate, setPlate] = useState(
+    data.vehicles.find((v) => initialPlate && keyOf(v.plate) === keyOf(initialPlate))?.plate ?? data.vehicles[0]?.plate ?? '',
+  )
+  const [zone, setZone] = useState(initialZone ?? '')
   const [rates, setRates] = useState<Rate[] | null>(null)
   const [looking, setLooking] = useState(false)
   const [error, setError] = useState<string | null>(null)

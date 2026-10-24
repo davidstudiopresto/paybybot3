@@ -148,6 +148,7 @@ export function DailyTickets({
   onChanged,
   needsOffer = false,
   locked = false,
+  autoOpen = false,
   onLogout,
 }: {
   data: Overview
@@ -156,12 +157,14 @@ export function DailyTickets({
   needsOffer?: boolean
   /** Online, no offer and no resident vehicle: the wizard opens by itself and stays open (then the offer). */
   locked?: boolean
+  /** Just past the welcome page (no resident car): open the wizard once, closable. */
+  autoOpen?: boolean
   onLogout?: () => void
 }) {
   const [open, setOpen] = useState(false)
   useEffect(() => {
-    if (locked) setOpen(true)
-  }, [locked])
+    if (locked || autoOpen) setOpen(true)
+  }, [locked, autoOpen])
   const daily = data.autopilots.filter(isDaily)
   return (
     <section className="rise mt-10">

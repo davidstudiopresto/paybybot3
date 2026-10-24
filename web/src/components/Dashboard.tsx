@@ -266,10 +266,9 @@ export function Dashboard({
       : Promise.resolve()
     confirm.then(() => api.account().then(setAccount, () => {}))
   }, [])
-  // The vehicles with the resident rate on PayByPhone (a zone in the pricing), online only; null while looking.
+  // The vehicles with the resident rate on PayByPhone (a zone in the pricing); null while looking.
   const [residentPlates, setResidentPlates] = useState<Set<string> | null>(null)
   useEffect(() => {
-    if (!me.hosted || me.demo) return
     api.pricing().then(
       (p) => setResidentPlates(new Set((p.vehicles ?? []).filter((v) => v.zone).map((v) => plateKey(v.plate)))),
       () => setResidentPlates(new Set()),
@@ -370,6 +369,8 @@ export function Dashboard({
             onChanged={onRefresh}
             needsOffer={needsOffer}
             locked={lockedDaily}
+            // Just past the welcome page without a resident car to renew: the ticket wizard opens by itself.
+            autoOpen={autoRenew && !renewing && !!residentPlates && !residentPlate}
             onLogout={onLogout}
           />
         )}

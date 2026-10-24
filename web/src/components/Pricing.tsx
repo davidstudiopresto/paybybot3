@@ -109,7 +109,7 @@ function VehicleChoice({
   const n = chosen.length
   return (
     <div className={className}>
-      <p className="mb-2 px-2 text-sm font-semibold text-ink">Véhicules couverts</p>
+      <p className="mb-1 px-2 text-sm font-semibold text-ink">Véhicules couverts</p>
       <ul className="space-y-0.5">
         {vehicles.map((v) => {
           const on = chosen.includes(plateKey(v.plate))
@@ -120,7 +120,7 @@ function VehicleChoice({
                 role="checkbox"
                 aria-checked={on}
                 onClick={() => onToggle(v.plate)}
-                className="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm transition hover:bg-ink/[0.04]"
+                className="flex w-full items-center gap-3 rounded-xl px-2 py-1 text-left text-sm transition hover:bg-ink/[0.04]"
               >
                 <span
                   className={cn(
@@ -131,15 +131,17 @@ function VehicleChoice({
                   {on && <Check className="size-3.5" strokeWidth={3} />}
                 </span>
                 <Plate plate={v.plate} size="sm" />
-                <span className={cn('ml-auto tabular-nums', on ? 'text-ink' : 'text-ink/40')}>
-                  {plan === 'monthly' ? `${euros(v.monthly)} / mois` : `${euros(v.yearly)} / an`}
+                {/* Always per month (what people compare); the yearly total underneath on the yearly plan. */}
+                <span className={cn('ml-auto text-right tabular-nums', on ? 'text-ink' : 'text-ink/40')}>
+                  {plan === 'yearly' && <span className="mr-2 text-xs text-ink/45">{euros(v.yearly)} / an ·</span>}
+                  {plan === 'monthly' ? euros(v.monthly) : euros(Math.round(v.yearly / 12))} / mois
                 </span>
               </button>
             </li>
           )
         })}
       </ul>
-      <p className="mt-2 px-2 text-xs leading-relaxed text-ink/50">
+      <p className="mt-1 px-2 text-xs leading-relaxed text-ink/50">
         {n > 1 ? `${n} véhicules couverts : le prix ci-dessus est leur total.` : '1 véhicule couvert.'} Un véhicule
         automatisé plus tard s’ajoute à l’abonnement.
       </p>
@@ -456,7 +458,7 @@ export function PlansDialog({
     <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogPortal>
         <DialogPrimitive.Popup className="fixed inset-0 z-[70] grid overflow-y-auto bg-white outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 lg:grid-cols-2">
-          <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,8vw,8rem)]">
+          <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,8vw,8rem)] lg:pb-6">
             <div className="flex items-center justify-between">
               <Wordmark />
               <DialogClose
@@ -468,11 +470,11 @@ export function PlansDialog({
               </DialogClose>
             </div>
             <Horodateur className={cn('mx-auto mt-6 h-44 lg:hidden', locked && 'opacity-50 grayscale')} />
-            <div className="mx-auto w-full max-w-md lg:my-auto lg:pt-10">
+            <div className="mx-auto w-full max-w-md lg:my-auto lg:pt-4">
               <DialogTitle className={cn(ui.title, 'mt-6 lg:mt-0')}>Choisissez votre offre</DialogTitle>
               {text && <DialogDescription className={ui.subtitle}>{text}</DialogDescription>}
               {trialEnd && (
-                <div className="mt-6 flex items-center gap-3 rounded-2xl bg-[#e7f6ec] px-4 py-3.5 text-[#14703a]">
+                <div className="mt-5 flex items-center gap-3 rounded-2xl bg-[#e7f6ec] px-4 py-2.5 text-[#14703a]">
                   <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#1a9a4a] text-white">
                     <Gift className="size-5" />
                   </span>
@@ -490,7 +492,7 @@ export function PlansDialog({
                 aria-hidden={locked || undefined}
                 className={cn(locked && 'pointer-events-none select-none opacity-50 blur-[2px] grayscale')}
               >
-              <div role="radiogroup" aria-label="Offre" className="mt-8 space-y-3">
+              <div role="radiogroup" aria-label="Offre" className="mt-5 space-y-2.5">
                 {pricing && pricing.monthly == null && !locked && (
                   <p className="rounded-2xl border border-ink/10 p-4 text-sm text-ink/60">
                     Votre prix n’a pas pu être calculé avec <PayByPhone /> pour le moment. Réessayez dans quelques minutes.
@@ -505,7 +507,7 @@ export function PlansDialog({
                       aria-checked={plan === p.id}
                       onClick={() => setPlan(p.id)}
                       className={cn(
-                        'flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition',
+                        'flex w-full items-center gap-4 rounded-2xl border px-4 py-3 text-left transition',
                         plan === p.id ? 'border-eu bg-eu/[0.04] ring-1 ring-eu' : 'border-ink/15 hover:border-ink/30',
                       )}
                     >
@@ -538,9 +540,9 @@ export function PlansDialog({
                 vehicles={loaded?.vehicles ?? []}
                 chosen={chosen ?? []}
                 onToggle={toggle}
-                className="mt-5 rounded-2xl bg-ink/[0.03] p-4"
+                className="mt-4 rounded-2xl bg-ink/[0.03] px-3 py-3"
               />
-              <ul className="mt-6 grid gap-2 text-[0.95rem] text-ink/70 sm:grid-cols-2">
+              <ul className="mt-4 grid gap-1.5 text-sm text-ink/70 sm:grid-cols-2">
                 {INCLUDED.map((x) => (
                   <li key={x} className="flex items-start gap-2">
                     <Check className="mt-0.5 size-4 shrink-0 text-eu" /> {x}
@@ -548,10 +550,10 @@ export function PlansDialog({
                 ))}
               </ul>
 
-              <button onClick={pay} disabled={busy || pricing?.monthly == null} className={cn('mt-8', ui.primary)}>
+              <button onClick={pay} disabled={busy || pricing?.monthly == null} className={cn('mt-5', ui.primary)}>
                 {busy ? <Loader2 className="size-5 animate-spin" /> : 'Continuer vers le paiement'}
               </button>
-              <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-sm text-ink/50">
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-sm text-ink/50">
                 <Lock className="size-3.5" /> Paiement sécurisé par Stripe. Sans engagement.
               </p>
               </div>

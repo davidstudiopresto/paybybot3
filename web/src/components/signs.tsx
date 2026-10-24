@@ -28,7 +28,10 @@ export function Plate({ plate, size = 'md', className }: { plate: string; size?:
         </svg>
         <span className={cn('leading-none font-bold', size === 'sm' ? 'text-[8px]' : 'text-[11px]')}>F</span>
       </span>
-      <span className={cn('flex items-center leading-none', size === 'sm' ? 'px-1.5' : 'px-3')}>{formatted}</span>
+      {/* One width for every plate, like real ones: the widest French plate (WW-888-MM) fits, text centred. */}
+      <span className={cn('flex min-w-[6.6em] items-center justify-center leading-none', size === 'sm' ? 'px-1.5' : 'px-3')}>
+        {formatted}
+      </span>
     </span>
   )
 }

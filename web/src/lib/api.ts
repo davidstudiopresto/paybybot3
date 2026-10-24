@@ -150,6 +150,8 @@ export const forgetZoneLookup = () => {
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) })
 
+let pricingCall: { at: number; p: Promise<Pricing> } | null = null
+
 export const api = {
   config: () =>
     request<{ hosted: boolean; turnstileSiteKey?: string | null; build?: string | null; inviteOnly?: boolean }>('/api/config'),
@@ -186,7 +188,13 @@ export const api = {
   cancelSubscription: (cancel: boolean) => post<Subscription>('/api/billing/cancel', { cancel }),
   changeCard: () => post<{ url: string }>('/api/billing/card'),
   unlock: () => post<{ url: string }>('/api/billing/unlock'),
-  pricing: () => request<Pricing>('/api/pricing'),
+  // Several parts of a page ask at once (top of the page, vehicles, account): one request for them all, as
+  // each one makes PayByBot ask PayByPhone again (too many in a row and PayByPhone answers 429).
+  pricing: () => {
+    const now = Date.now()
+    if (!pricingCall || now - pricingCall.at > 3000) pricingCall = { at: now, p: request<Pricing>('/api/pricing') }
+    return pricingCall.p
+  },
   residentStatus: () => request<{ zone: string | null; resident: boolean | null }>('/api/resident-status'),
   adminLogin: (email: string, password: string, turnstile = '') =>
     post('/api/admin/login', { email, password, turnstile }),

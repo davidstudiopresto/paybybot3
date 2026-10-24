@@ -333,8 +333,8 @@ export function Dashboard({
             Démo
           </span>
         )}
-        {/* Inviting a friend once the account is active (offer paid on Stripe). */}
-        {account?.subscribed && <InviteButton disabled={!data} />}
+        {/* Inviting a friend: always offered to a signed-in account (word of mouth is the only way in). */}
+        {!me.demo && <InviteButton disabled={!data} />}
         <AccountButton data={data} onDeleted={onDeleted ?? onLogout} demo={me.demo} />
         <button onClick={onLogout} aria-label="Déconnexion" title="Déconnexion" className={cn(ui.pillGray, 'gap-2')}>
           <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>

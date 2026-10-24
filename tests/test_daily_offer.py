@@ -10,10 +10,10 @@ from paybybot3 import web
 
 
 class DailyNeedsAnOffer(unittest.TestCase):
-    def add(self, state, **extra):
+    def add(self, state, plate="AB123CD", **extra):
         s = SimpleNamespace(username="u@x.fr", demo=False, bot=SimpleNamespace(refresh_token="r"), autopilots={},
-                            call=lambda *a, **k: {})
-        body = web.Autopilot(plate="AB123CD", location="75015", rate="201", duration=6, unit="Hours",
+                            call=lambda name, *a, **k: [{"licensePlate": "AB-123-CD"}] if name == "get_vehicles" else {})
+        body = web.Autopilot(plate=plate, location="75015", rate="201", duration=6, unit="Hours",
                              paymentAccountId="card-1", label="Jours précis", email="u@x.fr", **extra)
         saved = []
         with patch.dict(os.environ, {"PAYBYBOT_SECRET": "t"}), patch.object(web, "HOSTED", True), patch.object(web, "current", return_value=s), \
@@ -48,3 +48,9 @@ class DailyNeedsAnOffer(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_a_plate_not_on_the_account_is_refused(self):
+        status, detail, saved = self.add("ok", plate="ZZ999ZZ", days=[5], start="09:00")
+        self.assertEqual(status, 400)
+        self.assertIn("pas sur votre compte", detail)
+        self.assertEqual(saved, [])

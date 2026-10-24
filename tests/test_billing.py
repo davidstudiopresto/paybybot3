@@ -267,3 +267,17 @@ class RecoverSubscription(unittest.TestCase):
         with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sk_test_x"}), \
                 patch.object(web, "stripe", return_value={"data": []}):
             self.assertEqual(web.billing_state(over, "o"), "trial_over")
+
+
+class MixedAccount(unittest.TestCase):
+    def test_a_ticket_on_a_non_resident_vehicle_is_billed_on_a_resident_account(self):
+        car = {"licensePlate": "AB-123-CD", "type": "Car"}
+        other = {"licensePlate": "EF-456-GH", "type": "Car"}
+        s = type("S", (), {"call": lambda self, name, *a, **k: [car, other] if name == "get_vehicles" else {}})()
+        with patch.object(web, "vehicle_zones", return_value=[(car, "75006", {})]), \
+                patch.object(web, "load_account", return_value={}), patch.object(web, "week_price", return_value=900), \
+                patch.object(web, "save_account", side_effect=lambda s, p: p), patch.object(web, "reprice"), \
+                patch.object(web, "renewed_plates", return_value={"AB123CD", "EF456GH"}):
+            p = web.account_pricing(s)
+        self.assertEqual((sorted(p["billed"]), p["monthly"]), (["AB-123-CD", "EF-456-GH"], 1900))
+        self.assertEqual([v["zone"] for v in p["vehicles"]], ["75006", None])

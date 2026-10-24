@@ -1947,13 +1947,28 @@ def first_name(session):
     return None
 
 
+def error_status(e):
+    """The HTTP status for a PayByPhone failure: 422 when PayByPhone refuses what was asked (a ticket already
+    running, no rate in the zone, payment declined: the user's case, not a bug), 503 when it is busy or unreachable
+    (429, 5xx, network), 502 for anything else (unexpected: reported to Sentry)."""
+    text = str(e)
+    if isinstance(e, requests.HTTPError) and e.response is not None:
+        code = e.response.status_code
+        return 422 if code in (400, 401) else 503 if code == 429 or code >= 500 else 502
+    if isinstance(e, requests.ConnectionError):
+        return 503
+    if "Quote error" in text or "Payment job failed" in text or ("GraphQL error" in text and "getRateOptions" in text):
+        return 422
+    return 502
+
+
 def guarded(fn):
     try:
         return fn()
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(502, friendly_error(e))
+        raise HTTPException(error_status(e), friendly_error(e))
 
 
 @app.get("/api/overview")
@@ -2225,7 +2240,13 @@ def vehicle_zones(s, keep=True):
                         zone = z
                         break
             if not zone:
-                zone = scan_vehicle_zone(s, vehicle)
+                try:
+                    zone = scan_vehicle_zone(s, vehicle)
+                except ScanIncomplete as e:  # not known: looked for again in 10 minutes, never cached as « no »
+                    log.info("vehicle zone scan incomplete: %s", e)
+                    kept[key] = {"z": None, "t": int(now) - VEHICLE_ZONE_RECHECK + 600}
+                    changed = True
+                    continue
                 rate = vehicle_resident_rate(s, zone, vehicle) if zone else None
                 zone = zone if rate else None
             kept[key] = {"z": zone, "t": int(now)}
@@ -2299,10 +2320,13 @@ def account_pricing(s):
         vehicles.append({"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
                          "suv": plate_key(v["licensePlate"]) in suvs,
                          "monthly": monthly_cents(v.get("type"), zone, weekly=week), "weekly": week})
-    if not vehicles:  # no resident vehicle: every PayByPhone vehicle, at the same single price
-        vehicles = [{"plate": v["licensePlate"], "type": v.get("type"), "zone": None, "suv": False,
-                     "monthly": monthly_cents(v.get("type")), "weekly": None}
-                    for v in s.call("get_vehicles") or [] if not v.get("archived") and v.get("licensePlate")]
+    # Then the other vehicles (no resident rate: tickets on chosen days), at the same single price: a ticket
+    # programmed on one of them is billed like a resident renewal.
+    seen = {plate_key(v["plate"]) for v in vehicles}
+    vehicles += [{"plate": v["licensePlate"], "type": v.get("type"), "zone": None, "suv": False,
+                  "monthly": monthly_cents(v.get("type")), "weekly": None}
+                 for v in s.call("get_vehicles") or []
+                 if not v.get("archived") and v.get("licensePlate") and plate_key(v["licensePlate"]) not in seen]
     if not vehicles:
         return None
     zone = vehicles[0]["zone"]
@@ -2376,7 +2400,7 @@ def pay(body: Parking, pbb_session: str = Cookie(None)):
     try:
         return guarded(run)
     except HTTPException as e:
-        if e.status_code in (502, 504):
+        if e.status_code in (422, 502, 503, 504):
             log.warning("pay failed: %s", e.detail)
             s.log("error", "Paiement échoué (zone %s) : %s" % (body.location, e.detail))
         raise
@@ -2428,7 +2452,7 @@ def extend(body: Extension, pbb_session: str = Cookie(None)):
     try:
         return guarded(run)
     except HTTPException as e:
-        if e.status_code in (502, 504):
+        if e.status_code in (422, 502, 503, 504):
             log.warning("extend failed: %s", e.detail)
         raise
 
@@ -2478,6 +2502,11 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
             log.warning("account e-mail unreadable: %s", e)
     days = sorted(set(body.days)) if body.days else None
     start = (body.start or schedule.DEFAULT_START) if days else None
+    # Only the account's own vehicles (they are what the subscription bills).
+    own = {plate_key(v.get("licensePlate") or "") for v in guarded(lambda: s.call("get_vehicles")) or []
+           if not v.get("archived")}
+    if plate_key(body.plate) not in own:
+        raise HTTPException(400, "Ce véhicule n'est pas sur votre compte PayByPhone : ajoutez-le d'abord dans l'application.")
     # One renewal per vehicle: two would each pay for the same car.
     if plate_key(body.plate) in guarded(lambda: renewed_plates(s)):
         raise HTTPException(409, "Ce véhicule a déjà un renouvellement automatique.")
@@ -3327,14 +3356,25 @@ def scan_vehicle_zone(s, vehicle):
     def resident_in(zone):
         try:
             rates = bot.get_rate_options(zone, vehicle["licensePlate"]) or []
-        except Exception:
-            return False
+        except Exception as e:
+            if "getRateOptions" in str(e):  # PayByPhone has no rate there for this vehicle: a real « no »
+                return False
+            return None  # busy (429) or unreachable: unknown, not « no »
         return any(RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type"))) and not r.get("parkingNotAllowedReason")
                    for r in rates)
 
-    with ThreadPoolExecutor(max_workers=10) as pool:
+    # Four at a time: ten in parallel made PayByPhone answer 429 (too many requests).
+    with ThreadPoolExecutor(max_workers=4) as pool:
         hits = list(pool.map(resident_in, PARIS_ZONES))
-    return PARIS_ZONES[hits.index(True)] if any(hits) else None
+    if any(hits):
+        return PARIS_ZONES[hits.index(True)]
+    if None in hits:
+        raise ScanIncomplete("%d arrondissements not answered" % hits.count(None))
+    return None
+
+
+class ScanIncomplete(Exception):
+    """PayByPhone did not answer for every arrondissement: whether the vehicle is resident is not known yet."""
 
 
 def scan_resident_zone(s):

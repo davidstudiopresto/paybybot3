@@ -16,7 +16,14 @@ if os.environ.get("SENTRY_DSN"):
             request.pop(key, None)
         return event
 
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+
+    # 503 is PayByPhone busy or unreachable (and 422 its refusals): passing, not PayByBot's bugs, never reported.
+    failed = {*range(500, 503), *range(504, 600)}
     sentry_sdk.init(dsn=os.environ["SENTRY_DSN"], environment="production", send_default_pii=False,
-                    traces_sample_rate=0.3, before_send=_scrub, before_send_transaction=_scrub)
+                    traces_sample_rate=0.3, before_send=_scrub, before_send_transaction=_scrub,
+                    integrations=[StarletteIntegration(failed_request_status_codes=failed),
+                                  FastApiIntegration(failed_request_status_codes=failed)])
 
 from paybybot3.web import app  # noqa: E402,F401

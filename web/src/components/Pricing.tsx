@@ -4,7 +4,6 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
-import { RemotePanel } from '@/components/RemoteScene'
 import { PayByPhone, Plate, Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -487,8 +486,10 @@ export function PlansDialog({
             </div>
           </div>
 
-          {/* The same animated scene as the sign-in page. */}
-          <RemotePanel className="hidden min-h-dvh lg:block" />
+          {/* The parking meter robot, on its soft blue backdrop. */}
+          <div className="relative hidden items-center justify-center overflow-hidden bg-[radial-gradient(70%_60%_at_50%_45%,#e6ecfb_0%,#f4f6fb_60%,#f7f8fb_100%)] lg:flex">
+            <Horodateur className="w-[min(78%,30rem)] drop-shadow-[0_30px_40px_rgb(29_42_107/0.12)]" />
+          </div>
         </DialogPrimitive.Popup>
       </DialogPortal>
     </Dialog>

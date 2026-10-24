@@ -62,12 +62,19 @@ class Billing(unittest.TestCase):
                 self.assertRaises(HTTPException):
             web.billing_checkout(web.Checkout(plan="monthly"), None, "t")
 
-    def test_no_resident_status_no_checkout(self):
-        with patch.object(web, "account_pricing", return_value=None), \
-                patch.object(web, "resident_status", return_value={"zone": "75017", "resident": False}), \
-                self.assertRaises(HTTPException) as e:
+    def test_no_vehicle_no_checkout(self):
+        with patch.object(web, "account_pricing", return_value=None), self.assertRaises(HTTPException) as e:
             web.billing_checkout(web.Checkout(plan="monthly"), None, "t")
-        self.assertIn("statut résident", e.exception.detail)
+        self.assertIn("véhicule", e.exception.detail)
+
+    def test_a_non_resident_account_is_priced_on_its_vehicles(self):
+        cars = [{"licensePlate": "AB-123-CD", "type": "Car"}, {"licensePlate": "OLD", "type": "Car", "archived": True}]
+        s = type("S", (), {"call": lambda self, name, *a, **k: cars if name == "get_vehicles" else {}})()
+        with patch.object(web, "vehicle_zones", return_value=[]), patch.object(web, "load_account", return_value={}), \
+                patch.object(web, "save_account", side_effect=lambda s, p: p), patch.object(web, "reprice"), \
+                patch.object(web, "renewed_plates", return_value=set()):
+            p = web.account_pricing(s)
+        self.assertEqual((p["billed"], p["monthly"], p["zone"]), (["AB-123-CD"], 950, None))
 
     def test_resident_status_from_the_vehicles_arrondissements(self):
         car = {"licensePlate": "AB123CD", "type": "Car"}

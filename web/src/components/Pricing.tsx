@@ -4,7 +4,6 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
-import { NoResidentStatus } from '@/components/Riverain'
 import { PayByBot, PayByPhone, Plate, Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -109,29 +108,34 @@ const INCLUDED = [
 export function PlanCards({ signedIn }: { signedIn: boolean }) {
   // The Tarifs show the monthly price only (the yearly plan stays offered at payment).
   if (signedIn) return <OwnPlan plan="monthly" />
-  const cards: { name: string; who: string; monthly: number; popular?: boolean }[] = [
-    { name: 'Par véhicule', who: 'Voiture, deux-roues ou utilitaire · résident, visiteur ou carte handicapé', monthly: MONTHLY, popular: true },
+  // Yearly on the left (shown per month, billed once a year), monthly on the right, put forward.
+  const cards: { name: string; perMonth: number; note: string; badge?: string; popular?: boolean }[] = [
+    { name: 'Annuel', perMonth: Math.round(yearOf(MONTHLY) / 12), note: `facturé ${euros(yearOf(MONTHLY))} par an`, badge: '−20 %' },
+    { name: 'Mensuel', perMonth: MONTHLY, note: 'facturé chaque mois, sans engagement', popular: true },
   ]
   return (
     <>
-      <div className="mx-auto grid max-w-md items-center gap-5">
+      <div className="mx-auto grid max-w-3xl items-center gap-5 md:grid-cols-2">
         {cards.map((c) => (
           <div
             key={c.name}
             className={cn(
               'relative flex flex-col rounded-3xl border bg-white p-7 text-center',
               c.popular
-                ? 'order-first border-eu shadow-[0_30px_60px_-30px_color-mix(in_srgb,var(--eu)_55%,transparent)] ring-1 ring-eu md:order-none md:py-10'
+                ? 'border-eu shadow-[0_30px_60px_-30px_color-mix(in_srgb,var(--eu)_55%,transparent)] ring-1 ring-eu md:py-10'
                 : 'border-ink/10',
             )}
           >
+            {c.badge && (
+              <span className="absolute top-5 right-5 rounded-full bg-[#4e9aa0]/[0.12] px-2.5 py-1 text-xs font-semibold text-[#3d7f84]">{c.badge}</span>
+            )}
             <p className="text-sm font-semibold tracking-[0.12em] text-ink/55 uppercase">{c.name}</p>
             <p className="mt-5 font-heading leading-none font-semibold tracking-tight text-ink">
-              <span className="text-[3.2rem]">{euros(c.monthly).replace(' €', '')}</span>
+              <span className="text-[3.2rem]">{euros(c.perMonth).replace(' €', '')}</span>
               <span className="text-[2rem]"> €</span>
               <span className="ml-1.5 text-base font-normal text-ink/50">/ mois</span>
             </p>
-            <p className="mt-2 text-sm text-ink/50">sans engagement · ou {euros(yearOf(c.monthly))} / an, soit {euros(Math.round(yearOf(c.monthly) / 12))} / mois</p>
+            <p className="mt-2 text-sm text-ink/50">{c.note}</p>
             <ul className="mt-7 space-y-2.5 border-t border-ink/10 pt-6 text-left text-[0.95rem] text-ink/75">
               {INCLUDED.map((x) => (
                 <li key={x} className="flex items-start gap-2">
@@ -142,10 +146,12 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
             <a href="#/inscription" className={cn('mt-7', c.popular ? ui.primary : ui.primaryGray)}>
               {TRY_LABEL}
             </a>
-            <p className="mt-4 text-sm text-ink/45">{c.who}</p>
           </div>
         ))}
       </div>
+      <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-ink/45">
+        Par véhicule : voiture, deux-roues ou utilitaire · ticket résident, visiteur ou carte handicapé.
+      </p>
       <FinesNote zone={1} className="mx-auto mt-10 max-w-3xl" />
     </>
   )
@@ -170,7 +176,6 @@ function OwnPlan({ plan }: { plan: Plan }) {
 
   return (
     <>
-      {pricing?.resident === false && <NoResidentStatus zone={pricing.zone} className="mb-6" />}
       {!pricing ? (
         <div className="mx-auto h-96 max-w-xl animate-pulse rounded-3xl bg-ink/[0.05]" />
       ) : (
@@ -332,7 +337,7 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
   const [plan, setPlan] = useState<Plan>('yearly')
   const [busy, setBusy] = useState(false)
   const [pricing] = usePricing(true)
-  const locked = pricing?.resident === false
+  const locked = false // no resident rate needed any more
   // Still in the free month: nothing is charged before its end (Stripe starts billing then).
   const [trialEnd, setTrialEnd] = useState<Date | null>(null)
   useEffect(() => {
@@ -390,7 +395,6 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
                 </div>
               )}
 
-              {locked && <NoResidentStatus zone={pricing.zone} className="mt-8" />}
               {/* No resident status on PayByPhone: the offer stays visible but greyed and out of reach. */}
               <div
                 aria-hidden={locked || undefined}

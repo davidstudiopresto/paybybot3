@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Car, Check, CreditCard, Minus, Phone, Ticket, UserRound } from 'lucide-react'
 import { Horodateur } from '@/components/Horodateur'
-import { CardGate, ResidentGate, type ResidentStatus } from '@/components/Riverain'
+import { CardGate } from '@/components/Riverain'
 import { arrondissement, PayByBot, PayByPhone, Plate, withPayByPhone, Wordmark, ZonePlate } from '@/components/signs'
 import { api, until, type Me, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -56,16 +56,12 @@ function Row({
 
 /** First sign-in: everything PayByBot found in the PayByPhone account, so the user can check it is right. */
 export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onContinue: () => void }) {
-  // The « riverain » vehicles, each with the arrondissement PayByPhone gives it the resident rate in (found on
-  // PayByPhone, never typed); undefined: looking. None at all: PayByBot cannot be used (resident notice).
-  const [status, setStatus] = useState<ResidentStatus | null>(null)
+  // The account's vehicles: with the arrondissement of their resident rate when they have one (found on PayByPhone,
+  // never typed); undefined: looking.
   const [vehicles, setVehicles] = useState<PricedVehicle[] | undefined>(undefined)
   useEffect(() => {
     api.pricing().then(
-      (p) => {
-        setVehicles(p.vehicles ?? [])
-        if (!me.demo) setStatus({ zone: p.zone, resident: p.vehicles?.length ? true : (p.resident ?? false) })
-      },
+      (p) => setVehicles(p.vehicles ?? []),
       () => setVehicles([]),
     )
   }, [me.demo])
@@ -79,11 +75,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
 
   return (
     <div className="grid min-h-dvh bg-white lg:grid-cols-[1.05fr_1fr]">
-      {status?.resident === false ? (
-        <ResidentGate zone={status.zone} vehicles={data.vehicles.length} onChecked={setStatus} />
-      ) : (
-        !cards.length && !me.demo && <CardGate />
-      )}
+      {!cards.length && !me.demo && <CardGate />}
       <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,7vw,7rem)]">
         <Wordmark />
         <div className="mx-auto w-full max-w-lg lg:my-auto lg:py-10">
@@ -169,7 +161,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
 
           <button
             onClick={onContinue}
-            disabled={!vehicles?.length || status?.resident === false || !cards.length}
+            disabled={!vehicles?.length || !cards.length}
             className={cn('rise mt-8', ui.primary)}
             style={{ animationDelay: `${next()}ms` }}
           >

@@ -257,8 +257,8 @@ export default function App() {
         <InviteGate hosted={hosted} invalid={invited === 'invalid'} />
       ) : route === 'admin' ? (
         <AdminPage signedIn={!!me} />
-      ) : route === 'tarifs' && me ? (
-        // Signed in only (where the offer is chosen): the public price page is hidden for now.
+      ) : route === 'tarifs' ? (
+        // Public too (« Tarifs » in the top bar); signed in, the account's own price.
         <PricingPage hosted={hosted} signedIn={!!me} />
       ) : route === 'faq' ? (
         <FaqView hosted={hosted} signedIn={!!me} />

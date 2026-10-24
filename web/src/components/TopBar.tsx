@@ -28,6 +28,9 @@ export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
     <TopBar
       center={
         <>
+          <a href="#/tarifs" className={navLink}>
+            Tarifs
+          </a>
           <a href="#/faq" className={navLink}>
             FAQ
           </a>

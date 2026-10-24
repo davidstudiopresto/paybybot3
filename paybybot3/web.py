@@ -1542,16 +1542,9 @@ def login(body: Login, request: Request, response: Response):
             log.info("login refused: no account yet for %s", masked)
             raise HTTPException(404, "Aucun compte PayByBot pour ce compte PayByPhone.")
     if body.signup and not demo:  # the account is created once the e-mail is confirmed with a code
-        # No card saved on PayByPhone does not stop the sign-up: the account then asks for one, full screen.
-        # PayByBot is for residents: at least one vehicle must have the resident rate on PayByPhone.
-        zone = guarded(lambda: resident_home_zone(session))  # from PayByPhone only, never typed
-        if not zone:
-            log.info("sign-up refused: no resident vehicle for %s", masked)
-            count = len([v for v in guarded(lambda: session.call("get_vehicles")) or [] if not v.get("archived")])
-            raise HTTPException(412, {"message": ("Votre véhicule ne bénéficie" if count == 1 else
-                                                  "Aucun de vos véhicules ne bénéficie")
-                                                 + " du tarif résident sur PayByPhone.", "vehicles": count,
-                                      "reason": "no_resident"})
+        # No card saved on PayByPhone does not stop the sign-up: the account then asks for one, full screen. No
+        # resident rate needed any more: non-residents take visitor or Handi tickets on chosen days.
+        zone = guarded(lambda: resident_home_zone(session))  # the resident zone when there is one, else None
         return start_verification(response, session, body.email.strip(), zone)
     if HOSTED:
         token = seal(session)
@@ -2147,7 +2140,8 @@ def week_price(s, zone, plate, rate, payments=None):
 def account_pricing(s):
     """The account's prices: one monthly price per riverain vehicle (its type, its arrondissement's zone), and the
     subscription, for the vehicles with a renewal (the first one while none has). The billed prices are kept on the
-    account for checkout and the e-mail links. None without a riverain vehicle."""
+    account for checkout and the e-mail links. Without a riverain vehicle, every vehicle of the account; None without
+    any vehicle."""
     found = vehicle_zones(s)
     account = load_account(s)
     suvs = set(account.get("suv_plates") or [])
@@ -2166,6 +2160,10 @@ def account_pricing(s):
         vehicles.append({"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
                          "suv": plate_key(v["licensePlate"]) in suvs,
                          "monthly": monthly_cents(v.get("type"), zone, weekly=week), "weekly": week})
+    if not vehicles:  # no resident vehicle: every PayByPhone vehicle, at the same single price
+        vehicles = [{"plate": v["licensePlate"], "type": v.get("type"), "zone": None, "suv": False,
+                     "monthly": monthly_cents(v.get("type")), "weekly": None}
+                    for v in s.call("get_vehicles") or [] if not v.get("archived") and v.get("licensePlate")]
     if not vehicles:
         return None
     zone = vehicles[0]["zone"]
@@ -2798,8 +2796,8 @@ def pricing(pbb_session: str = Cookie(None)):
     zone and prices None."""
     s = current(pbb_session)
     found = guarded(lambda: account_pricing(s))
-    if found:
-        return {**found, "resident": True}
+    if found:  # « resident » only says whether a vehicle has the resident rate: nothing is locked without one
+        return {**found, "resident": any(v["zone"] for v in found["vehicles"])}
     status = guarded(lambda: resident_status(s))
     return {"zone": status["zone"], "monthly": None, "yearly": None, "resident": status["resident"]}
 
@@ -2828,10 +2826,7 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
     if not os.environ.get("STRIPE_SECRET_KEY"):
         raise HTTPException(503, "Le paiement en ligne arrive très bientôt. Profitez de votre mois offert !")
     if not guarded(lambda: account_pricing(s)):
-        if guarded(lambda: resident_status(s))["resident"] is False:
-            raise HTTPException(400, "Votre statut résident n'est pas activé sur PayByPhone : l'abonnement n'est pas "
-                                     "disponible pour l'instant.")
-        raise HTTPException(400, "Choisissez d'abord votre arrondissement : le prix dépend de votre zone de résidence.")
+        raise HTTPException(400, "Ajoutez d'abord un véhicule sur votre compte PayByPhone.")
     account = guarded(lambda: load_account(s))
     # Already subscribed (or paid in a tab closed before coming back): no second subscription.
     if account.get("stripe_subscription") or (account.get("checkout_at")

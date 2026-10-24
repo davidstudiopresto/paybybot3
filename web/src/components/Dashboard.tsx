@@ -4,14 +4,14 @@ import { LogOut } from 'lucide-react'
 import { arrondissement, Plate, plateText, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
-import { DAILY_LABEL, DailyTickets } from '@/components/DailyTickets'
+import { DailyTickets } from '@/components/DailyTickets'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
 import { CheckoutDone } from '@/components/CheckoutDone'
-import { ActivateRenewal, CardGate, RenewalActions, RenewalNote, RenewalSwitch, pauseState, ResidentGate, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
+import { ActivateRenewal, CardGate, RenewalActions, RenewalNote, RenewalSwitch, pauseState, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
 import { api, clock, remaining, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -263,7 +263,7 @@ export function Dashboard({
   // Right after the welcome page, nothing renewed yet: the renewal of the car with a ticket (else the first car)
   // opens by itself, then the offer comes when it is activated.
   // Online, no offer chosen yet: PayByBot is not usable before choosing one, the renewal dialog stays open.
-  const locked = !!me.hosted && !me.demo && !!account && !account.subscribed && !account.blocked && !renewing
+  const locked = !!me.hosted && !me.demo && !!account && !account.subscribed && !account.blocked && !renewing && resident?.resident !== false
   const autoPlate =
     (autoRenew || locked) && data && !renewing
       ? (data.sessions.find((s) => new Date(s.expire).getTime() > Date.now())?.plate ?? data.vehicles[0]?.plate ?? null)
@@ -290,13 +290,9 @@ export function Dashboard({
           onClose={() => setCheckoutDone(false)}
         />
       )}
-      {/* No resident rate on PayByPhone: PayByBot is not usable, the page stays blurred behind the notice. */}
-      {resident?.resident === false && !me.demo ? (
-        <ResidentGate zone={resident.zone} vehicles={data?.vehicles.length} onChecked={setResident} />
-      ) : (
-        // No card saved on PayByPhone (removed since, Apple Pay only): PayByBot cannot pay, so it is not usable.
-        data && !me.demo && !data.payments.some((p) => p.kind === 'card') && <CardGate />
-      )}
+      {/* No card saved on PayByPhone (removed since, Apple Pay only): PayByBot cannot pay, so it is not usable. The
+          only requirement: no resident rate is needed (non-residents take tickets on chosen days). */}
+      {data && !me.demo && !data.payments.some((p) => p.kind === 'card') && <CardGate />}
       <TrialBanner
         blocked={account?.blocked ?? null}
         graceEnd={account?.graceEnd ?? null}
@@ -342,8 +338,8 @@ export function Dashboard({
         {/* The cars with neither a ticket nor a renewal: one card each, with its button. */}
         {data && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} autoPlate={autoPlate} locked={locked} onLogout={onLogout} />}
 
-        {/* Tickets on precise days (visitor, Handi…): local preview with ?jours, or once one exists. */}
-        {data && (new URLSearchParams(window.location.search).has('jours') || data.autopilots.some((ap) => ap.label === DAILY_LABEL)) && (
+        {/* Tickets on precise days (visitor, Handi…), for everyone. */}
+        {data && (
           <DailyTickets data={data} onChanged={onRefresh} />
         )}
 

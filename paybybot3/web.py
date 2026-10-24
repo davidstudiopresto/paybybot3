@@ -115,16 +115,23 @@ class DemoBot:
              "acceptedTimeUnits": ["Days"], "parkingNotAllowedReason": None},
             {"name": "Résident", "type": "Resident", "ratePolicyId": "101", "maxStayStatus": None,
              "acceptedTimeUnits": ["Days"], "parkingNotAllowedReason": None},
-            {"name": "Visiteur", "type": "Visitor", "ratePolicyId": "102", "maxStayStatus": None,
-             "acceptedTimeUnits": ["Minutes", "Hours"], "parkingNotAllowedReason": None},
+            {"name": "Visiteur - Véhicule léger - 75012-75020", "type": "Visitor", "ratePolicyId": "102",
+             "maxStayStatus": None, "acceptedTimeUnits": ["Minutes", "Hours"], "parkingNotAllowedReason": None},
+            {"name": "Visiteur - Véhicule lourd - 75012-75020", "type": "Visitor", "ratePolicyId": "104",
+             "maxStayStatus": None, "acceptedTimeUnits": ["Minutes", "Hours"], "parkingNotAllowedReason": None},
+            {"name": "Handi - toutes zones", "type": "Disabled", "ratePolicyId": "105", "maxStayStatus": None,
+             "acceptedTimeUnits": ["Days"], "parkingNotAllowedReason": None},
         ]
 
     def _price(self, ratePolicyId, quantity, unit):
         quantity = float(quantity)
+        if str(ratePolicyId) == "105":  # Handi: free with the CMI-S card
+            return 0.0
         if str(ratePolicyId) == "101":  # Paris resident rate: 1.50 € a day, 9 € a week
             return round(9 * (quantity // 7) + 1.5 * (quantity % 7), 2)
         hours = quantity / 60 if unit == "Minutes" else quantity
-        return round(4.0 * hours, 2)
+        # Paris visitors: 4 € an hour (zone 2), three times more for a heavy vehicle (over 1.6 t, 2 t electric).
+        return round((12.0 if str(ratePolicyId) == "104" else 4.0) * hours, 2)
 
     @staticmethod
     def _delta(quantity, unit):

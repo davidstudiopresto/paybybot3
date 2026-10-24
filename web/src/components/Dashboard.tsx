@@ -4,6 +4,7 @@ import { LogOut } from 'lucide-react'
 import { arrondissement, Plate, plateText, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
+import { DAILY_LABEL, DailyTickets } from '@/components/DailyTickets'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
@@ -340,6 +341,11 @@ export function Dashboard({
         {/* The renewal is the one action of the app: no one-off payment button. */}
         {/* The cars with neither a ticket nor a renewal: one card each, with its button. */}
         {data && <IdleVehicles data={data} onChanged={onRefresh} hosted={!!me.hosted} demo={me.demo} autoPlate={autoPlate} locked={locked} onLogout={onLogout} />}
+
+        {/* Tickets on precise days (visitor, Handi…): local preview with ?jours, or once one exists. */}
+        {data && (new URLSearchParams(window.location.search).has('jours') || data.autopilots.some((ap) => ap.label === DAILY_LABEL)) && (
+          <DailyTickets data={data} onChanged={onRefresh} />
+        )}
 
 
         {/* Every car's card has its own button: this block only lists renewals without a ticket (or offers one

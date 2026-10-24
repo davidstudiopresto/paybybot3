@@ -9,6 +9,8 @@ export type Session = {
   start: string
   expire: string
   rate: string
+  /** A resident ticket (the weekly renewal is only for these); null when PayByPhone does not say. */
+  resident?: boolean | null
   cost?: Money
 }
 export type Unit = 'Days' | 'Hours' | 'Minutes'

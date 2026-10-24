@@ -63,6 +63,8 @@ function Ticket({
   onLogout?: () => void
 }) {
   const renewal = renewalOf(data, session)
+  // The weekly renewal is for resident tickets only: a visitor or Handi ticket shows no switch (unless renewed).
+  const renewable = session.resident !== false || !!renewal
   const start = new Date(session.start).getTime()
   const end = new Date(session.expire).getTime()
   const left = end - now
@@ -84,6 +86,7 @@ function Ticket({
         <span className="text-sm text-ink/50">{place}</span>
       </div>
 
+      {renewable && (
       <div className="border-t border-ink/[0.06] px-5 py-4">
         <RenewalSwitch
           ap={renewal ?? null}
@@ -125,6 +128,7 @@ function Ticket({
           </p>
         )}
       </div>
+      )}
 
       <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
         {/* Renewal on: no countdown (nothing to watch), only when the ticket ends. Without one, the time left. */}
@@ -138,7 +142,7 @@ function Ticket({
           </>
         )}
         {/* No renewal yet: the end of the ticket in red, to urge setting one up. */}
-        <p className={`text-sm ${renewal ? 'text-ink/50' : 'font-medium text-destructive'}`}>Expire {clock(session.expire)}</p>
+        <p className={`text-sm ${renewal || !renewable ? 'text-ink/50' : 'font-medium text-destructive'}`}>Expire {clock(session.expire)}</p>
         <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
           <div
             className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-[#4e9aa0]'}`}

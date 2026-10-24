@@ -489,6 +489,9 @@ def serialize_session(s):
         "start": iso(s.get("startTime")),
         "expire": iso(s.get("expireTime")),
         "rate": (s.get("ratePolicy") or {}).get("ratePolicyId"),
+        # A resident ticket (the only one the weekly renewal is for)? None when PayByPhone does not say.
+        "resident": (bool(RESIDENT_RATE.search((s.get("ratePolicy") or {}).get("type") or ""))
+                     if (s.get("ratePolicy") or {}).get("type") else None),
         "cost": s.get("totalCost"),
     }
 

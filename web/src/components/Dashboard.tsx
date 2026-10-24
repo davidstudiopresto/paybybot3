@@ -157,10 +157,16 @@ const sameCar = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCa
 function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogout }: { data: Overview; onChanged: () => void; hosted: boolean; demo?: boolean; autoPlate?: string | null; locked?: boolean; onLogout?: () => void }) {
   const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
   const [weeks, setWeeks] = useState<Record<string, number | null>>({})
+  // The vehicles with the resident rate on PayByPhone (a zone in the pricing); null while looking.
+  const [residents, setResidents] = useState<Set<string> | null>(null)
   useEffect(() => {
     let cancelled = false
     api.pricing().then(
-      (p) => !cancelled && setWeeks(Object.fromEntries((p.vehicles ?? []).map((v) => [key(v.plate), v.weekly ?? null]))),
+      (p) => {
+        if (cancelled) return
+        setWeeks(Object.fromEntries((p.vehicles ?? []).map((v) => [key(v.plate), v.weekly ?? null])))
+        setResidents(new Set((p.vehicles ?? []).filter((v) => v.zone).map((v) => key(v.plate))))
+      },
       () => {},
     )
     return () => {
@@ -169,7 +175,10 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogo
   }, [data.vehicles.length])
   const renewed = new Set(data.autopilots.filter((ap) => ap.label === WEEKLY_LABEL).map((ap) => key(ap.plate)))
   const parked = new Set(data.sessions.filter((s) => new Date(s.expire).getTime() > Date.now()).map((s) => key(s.plate)))
-  const cars = data.vehicles.filter((v) => !renewed.has(key(v.plate)) && !parked.has(key(v.plate)))
+  // Only vehicles with the resident rate get « Activer le renouvellement résident »: the others take tickets on
+  // chosen days (Tickets non-résident, below).
+  const isResident = (v: { plate: string; zone?: string | null }) => (residents ? residents.has(key(v.plate)) : !!v.zone)
+  const cars = data.vehicles.filter((v) => isResident(v) && !renewed.has(key(v.plate)) && !parked.has(key(v.plate)))
   if (!cars.length) return null
   const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
   return (

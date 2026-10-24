@@ -569,7 +569,8 @@ function DailyWizard({
                 <div className="flex justify-between gap-4">
                   <span className="text-ink/55">Prix d’un ticket</span>
                   <span className="font-medium text-ink tabular-nums">
-                    {cost === undefined ? <Loader2 className="inline size-4 animate-spin text-ink/40" /> : euros(cost)}
+                    {/* No price from PayByPhone (a free ticket, e.g. Handi): 0 €, not a dash. */}
+                    {cost === undefined ? <Loader2 className="inline size-4 animate-spin text-ink/40" /> : cost ? euros(cost) : '0,00 €'}
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-ink/45">{withPayByPhone('Payé à PayByPhone au tarif habituel, à chaque ticket.')}</p>

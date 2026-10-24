@@ -60,9 +60,13 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
   // never typed); undefined: looking.
   const [vehicles, setVehicles] = useState<PricedVehicle[] | undefined>(undefined)
   useEffect(() => {
+    // The pricing lists the vehicles with their resident zone; when it lists none (or fails), the account's
+    // vehicles as PayByPhone gives them, without a zone: every vehicle shows, resident or not.
+    const fallback = () =>
+      data.vehicles.map((v): PricedVehicle => ({ plate: v.plate, type: v.type, zone: null, monthly: 0, yearly: 0, renewed: false }))
     api.pricing().then(
-      (p) => setVehicles(p.vehicles ?? []),
-      () => setVehicles([]),
+      (p) => setVehicles(p.vehicles?.length ? p.vehicles : fallback()),
+      () => setVehicles(fallback()),
     )
   }, [me.demo])
 

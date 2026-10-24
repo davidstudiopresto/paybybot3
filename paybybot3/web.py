@@ -1465,6 +1465,83 @@ def cron_renew(request: Request):
 
 EMAIL_PATTERN = r"^$|^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$"
 
+# The common providers and their domains (None: any .com or country domain), to catch a slip of the finger
+# (gmail.comm, gmial.com). Same list and rules as web/src/lib/validate.ts.
+EMAIL_PROVIDERS = {
+    "gmail": ["gmail.com"], "googlemail": ["googlemail.com"], "icloud": ["icloud.com"], "laposte": ["laposte.net"],
+    "orange": ["orange.fr"], "wanadoo": ["wanadoo.fr"], "free": ["free.fr"], "sfr": ["sfr.fr"], "neuf": ["neuf.fr"],
+    "bbox": ["bbox.fr"], "protonmail": ["protonmail.com", "protonmail.ch"],
+    "hotmail": None, "outlook": None, "live": None, "yahoo": None,
+}
+ANY_COUNTRY = re.compile(r"^(com|(co\.|com\.)?[a-z]{2})$")
+
+
+def edit_distance(a, b):
+    """Damerau-Levenshtein distance (a swap of two letters counts as one)."""
+    d = [[(j if not i else i if not j else 0) for j in range(len(b) + 1)] for i in range(len(a) + 1)]
+    for i in range(1, len(a) + 1):
+        for j in range(1, len(b) + 1):
+            d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] != b[j - 1]))
+            if i > 1 and j > 1 and a[i - 1] == b[j - 2] and a[i - 2] == b[j - 1]:
+                d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)
+    return d[len(a)][len(b)]
+
+
+def domain_fix(domain):
+    """The domain the person most likely meant when theirs is a typo of a common provider's, else None."""
+    host = domain.lower()
+    label, _, rest = host.partition(".")
+    if not label or not rest:
+        return None
+    if label in EMAIL_PROVIDERS:
+        provider = label
+    elif len(label) >= 5 and label != "email":
+        provider = next((p for p in EMAIL_PROVIDERS if len(p) >= 5 and edit_distance(label, p) == 1), None)
+    else:
+        provider = None
+    if not provider:
+        return None
+    domains = EMAIL_PROVIDERS[provider]
+    if domains:
+        if host in domains:
+            return None
+        return next((d for d in domains if edit_distance(d.partition(".")[2], rest) <= 2), domains[0])
+    if provider == label and ANY_COUNTRY.match(rest):
+        return None
+    end = rest if ANY_COUNTRY.match(rest) else "fr" if edit_distance(rest, "fr") < edit_distance(rest, "com") else "com"
+    return provider + "." + end
+
+
+def email_problem(email):
+    """What is wrong with an e-mail (shown to the person), or None when it looks right."""
+    value = (email or "").strip()
+    if not re.fullmatch(EMAIL_PATTERN[3:], value):
+        return "Adresse e-mail invalide : vérifiez-la (exemple : prenom.nom@gmail.com)."
+    local, _, domain = value.rpartition("@")
+    fix = domain_fix(domain)
+    return "Adresse e-mail invalide : vouliez-vous dire %s@%s ?" % (local, fix) if fix else None
+
+
+def check_email(email):
+    """Refuses an e-mail that cannot be right (an empty one is left to the caller)."""
+    if (email or "").strip() and email_problem(email):
+        raise HTTPException(400, email_problem(email))
+
+
+def french_phone(username):
+    """+33 and the 9 digits of a French number typed in any usual way, or None when it is not one."""
+    digits = re.sub(r"[\s.\-()]", "", username or "")
+    for prefix in ("+33", "0033"):
+        if digits.startswith(prefix):
+            digits = digits[len(prefix):]
+            break
+    else:
+        if digits.startswith("+"):
+            return None
+        if len(digits) == 10 and digits.startswith("0"):
+            digits = digits[1:]
+    return "+33" + digits if re.fullmatch(r"[1-9]\d{8}", digits) else None
+
 
 class Login(BaseModel):
     username: str = Field(max_length=120)
@@ -1522,6 +1599,10 @@ def login(body: Login, request: Request, response: Response):
     masked = body.username.strip()[:4] + "***"
     if body.signup and not demo and not body.email.strip():
         raise HTTPException(400, "Indiquez votre adresse e-mail.")
+    if body.signup and not demo:
+        check_email(body.email)
+        if "@" not in body.username and not french_phone(body.username):
+            raise HTTPException(400, "Numéro invalide : un numéro français à 10 chiffres (exemple : 06 12 34 56 78).")
     if body.signup and not demo and INVITE_ONLY and not valid_invite(body.invite):
         raise HTTPException(403, "PayByBot est sur invitation : demandez son lien à un proche qui l'utilise déjà.")
     if HOSTED and not demo:
@@ -2994,6 +3075,7 @@ def billing_card(pbb_session: str = Cookie(None)):
 @app.put("/api/account")
 def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
+    check_email(body.email)
     # The e-mail only: the arrondissement is never typed, it comes from PayByPhone for each vehicle.
     patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None and k != "zone"}
     account = guarded(lambda: save_account(s, patch))
@@ -3324,6 +3406,7 @@ def resume_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
 
 @app.put("/api/autopilots/{ap_id}/email")
 def change_autopilot_email(ap_id: str, body: EmailChange, pbb_session: str = Cookie(None)):
+    check_email(body.email)
     s = current(pbb_session)
     if HOSTED and not s.demo:
         current_row = next((r for r in store("renewal_list", p_owner=owner_id(s.username)) if r["id"] == ap_id), None)
@@ -3432,6 +3515,7 @@ def contact(body: ContactMessage, request: Request, pbb_session: str = Cookie(No
     """The « Contact » window: the message goes to the contact address, a reply goes straight to the visitor."""
     if body.website:  # a bot filled the hidden field: say it went, send nothing
         return {"ok": True}
+    check_email(body.email)
     if HOSTED:
         ip = request.headers.get("x-real-ip") or (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
         key = hmac.new(_subkey(_secrets()[0], "rate"), ip.encode(), hashlib.sha256).hexdigest()

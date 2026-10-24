@@ -9,6 +9,7 @@ import { PlansDialog } from '@/components/Pricing'
 import { ShinyButton } from '@/components/ui/shiny-button'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
+import { emailProblem } from '@/lib/validate'
 import { api, ApiError, clock, remaining, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
@@ -1048,7 +1049,7 @@ function EmailDialog({ ap, demo, onClose, onDone }: { ap: Autopilot; demo: boole
   const [email, setEmail] = useState(ap.email ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const valid = email.trim() === '' || /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email.trim())
+  const problem = email.trim() === '' ? null : emailProblem(email)
 
   async function save(value: string) {
     setSaving(true)
@@ -1079,7 +1080,8 @@ function EmailDialog({ ap, demo, onClose, onDone }: { ap: Autopilot; demo: boole
           className="space-y-4 p-6"
           onSubmit={(e) => {
             e.preventDefault()
-            if (valid) save(email.trim())
+            if (problem) setError(problem)
+            else save(email.trim())
           }}
         >
           <input
@@ -1098,7 +1100,7 @@ function EmailDialog({ ap, demo, onClose, onDone }: { ap: Autopilot; demo: boole
               {error}
             </p>
           )}
-          <button type="submit" disabled={!valid || saving || email.trim() === (ap.email ?? '')} className={ui.primary}>
+          <button type="submit" disabled={saving || email.trim() === (ap.email ?? '')} className={ui.primary}>
             {saving ? <Loader2 className="size-5 animate-spin" /> : 'Enregistrer'}
           </button>
           {ap.email && (

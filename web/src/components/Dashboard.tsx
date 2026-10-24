@@ -290,7 +290,9 @@ export function Dashboard({
       null)
     : null
   const locked = needsOffer && !renewing && !!residentPlates && !!residentPlate
-  const lockedDaily = needsOffer && !!data && !data.autopilots.length && !!residentPlates && !residentPlate
+  // No offer yet and no resident car: the ticket wizard opens by itself, but can be closed (the page stays usable);
+  // its « Activer » leads to the offer, and the server refuses any ticket without one.
+  const offerDaily = needsOffer && !!data && !data.autopilots.length && !!residentPlates && !residentPlate
   const autoPlate = (autoRenew || locked) && data && !renewing ? (residentPlate ?? data.vehicles[0]?.plate ?? null) : null
 
   // Fresh data when coming back to the tab (it also refreshes every minute).
@@ -368,9 +370,8 @@ export function Dashboard({
             data={data}
             onChanged={onRefresh}
             needsOffer={needsOffer}
-            locked={lockedDaily}
-            // Just past the welcome page without a resident car to renew: the ticket wizard opens by itself.
-            autoOpen={autoRenew && !renewing && !!residentPlates && !residentPlate}
+            // Just past the welcome page (or no offer yet) without a resident car to renew: the wizard opens by itself.
+            autoOpen={offerDaily || (autoRenew && !renewing && !!residentPlates && !residentPlate)}
             onLogout={onLogout}
           />
         )}

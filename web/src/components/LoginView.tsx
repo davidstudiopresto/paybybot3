@@ -10,6 +10,7 @@ import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
+import { emailProblem, frenchDigits, phoneProblem } from '@/lib/validate'
 
 /** PayByBot is for Paris residents: French numbers only (calling code and flag stripes). */
 const COUNTRIES = [
@@ -50,6 +51,8 @@ const PASSWORD_RESET_LINK = IS_ANDROID
 
 /** "06 12 34 56 78" + France -> "+33612345678"; a number typed with its + prefix is kept as is. */
 function phoneUsername(national: string, code: string) {
+  const digits = frenchDigits(national)
+  if (digits) return '+' + code + digits
   const raw = national.trim()
   if (raw.startsWith('+')) return '+' + raw.replace(/\D/g, '')
   return '+' + code + raw.replace(/\D/g, '').replace(/^0/, '')
@@ -124,6 +127,18 @@ export function LoginView({
     setError(null)
     setAccountExists(false)
     setNoAccount(false)
+    // A number or an e-mail that cannot be right is not sent (PayByPhone would refuse it, or the e-mails get lost).
+    const typed = (mode === 'phone' ? phone : email).trim().toLowerCase()
+    if (!demo && typed !== 'demo') {
+      const problem =
+        mode === 'phone'
+          ? phoneProblem(phone) ?? (signup ? emailProblem(signupEmail) : null)
+          : emailProblem(email)
+      if (problem) {
+        setError(problem)
+        return
+      }
+    }
     setLoading(demo ? 'demo' : 'login')
     try {
       const username = demo ? 'demo' : mode === 'phone' ? phoneUsername(phone, selected.code) : email.trim()

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { ArrowUp, Loader2, MessageCircle, X } from 'lucide-react'
 import { PayByBot } from '@/components/signs'
 import { api } from '@/lib/api'
+import { emailProblem } from '@/lib/validate'
 import { cn } from '@/lib/utils'
 
 type Bubble = { from: 'us' | 'you'; text: string }
@@ -70,12 +71,13 @@ function ContactWindow({ onClose }: { onClose: () => void }) {
     end.current?.scrollIntoView({ block: 'end' }) // in braces: Chrome's scrollIntoView returns a promise now
   }, [bubbles, error])
 
-  const validEmail = /^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(email.trim())
 
   async function send() {
     if (sending) return
     if (!message.trim()) return text.current?.focus()
-    if (!validEmail) return setError('Indiquez votre e-mail pour recevoir la réponse.')
+    if (!email.trim()) return setError('Indiquez votre e-mail pour recevoir la réponse.')
+    const problem = emailProblem(email)
+    if (problem) return setError(problem)
     setSending(true)
     setError(null)
     const sent = message.trim()

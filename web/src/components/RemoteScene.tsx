@@ -22,6 +22,7 @@ export function RemoteScene({ className }: { className?: string }) {
         .${c}-dot { offset-path: path('M 150 150 C 230 90, 300 90, 352 140'); opacity: 0; animation: ${c}-travel 8s ease-in-out infinite; }
         .${c}-before { animation: ${c}-before 8s linear infinite; }
         .${c}-after { opacity: 0; animation: ${c}-after 8s linear infinite; }
+        .${c}-inf { stroke-dasharray: 100; stroke-dashoffset: 100; animation: ${c}-inf 8s ease-in-out infinite; }
         .${c}-fill { transform-origin: 0% 50%; animation: ${c}-fill 8s cubic-bezier(.4,0,.2,1) infinite, ${c}-tint 8s linear infinite; }
         .${c}-urgent { animation: ${c}-pulse 1s ease-in-out infinite; }
         .${c}-row { opacity: 0; }
@@ -36,6 +37,7 @@ export function RemoteScene({ className }: { className?: string }) {
         @keyframes ${c}-travel { 0%,30% { offset-distance: 0%; opacity: 0 } 32% { opacity: 1 } 48% { offset-distance: 100%; opacity: 1 } 52%,100% { offset-distance: 100%; opacity: 0 } }
         @keyframes ${c}-before { 0%,35% { opacity: 1 } 38%,100% { opacity: 0 } }
         @keyframes ${c}-after { 0%,35% { opacity: 0 } 39%,94% { opacity: 1 } 99%,100% { opacity: 0 } }
+        @keyframes ${c}-inf { 0%,36% { stroke-dashoffset: 100 } 50%,100% { stroke-dashoffset: 0 } }
         @keyframes ${c}-fill { 0% { transform: scaleX(.12) } 34% { transform: scaleX(.05) } 44%,94% { transform: scaleX(1) } 100% { transform: scaleX(.12) } }
         @keyframes ${c}-tint { 0%,35% { fill: #741b11 } 38%,100% { fill: #4e9aa0 } }
         @keyframes ${c}-pulse { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
@@ -44,7 +46,7 @@ export function RemoteScene({ className }: { className?: string }) {
         @keyframes ${c}-r1 { 0%,42% { opacity: 0 } 47%,95% { opacity: 1 } 100% { opacity: 0 } }
         @keyframes ${c}-r2 { 0%,58% { opacity: 0 } 63%,95% { opacity: 1 } 100% { opacity: 0 } }
         @keyframes ${c}-r3 { 0%,74% { opacity: 0 } 79%,95% { opacity: 1 } 100% { opacity: 0 } }
-        @media (prefers-reduced-motion: reduce) { .${c} * { animation: none !important; } .${c}-before { opacity: 0 } .${c}-after, .${c}-row, .${c}-on { opacity: 1 } .${c}-knob { transform: translateX(14px) } }
+        @media (prefers-reduced-motion: reduce) { .${c} * { animation: none !important; } .${c}-before { opacity: 0 } .${c}-after, .${c}-row, .${c}-on { opacity: 1 } .${c}-inf { stroke-dashoffset: 0 } .${c}-knob { transform: translateX(14px) } }
       `}</style>
 
       <g className={c} fontFamily="Figtree Variable, sans-serif">
@@ -74,10 +76,17 @@ export function RemoteScene({ className }: { className?: string }) {
           </text>
         </g>
         <g className={`${c}-after`}>
-          {/* renewed again and again: no end to count down to */}
-          <text x="356" y="186" fontWeight="700" fontSize="38" fill={INK} aria-label="sans fin">
-            ∞
-          </text>
+          {/* renewed again and again, no end to count down to: an infinity loop drawn in one stroke */}
+          <path
+            d="M384 171 C 376 159, 360 159, 360 171 C 360 183, 376 183, 384 171 C 392 159, 408 159, 408 171 C 408 183, 392 183, 384 171 Z"
+            pathLength="100"
+            fill="none"
+            stroke={TEAL}
+            strokeWidth="4.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`${c}-inf`}
+          />
         </g>
         <rect x="358" y="194" width="154" height="6" rx="3" fill="#f0f0f0" />
         <rect x="358" y="194" width="154" height="6" rx="3" fill={TEAL} className={`${c}-fill`} />

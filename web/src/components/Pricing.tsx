@@ -384,7 +384,7 @@ export function PlansDialog({
   return (
     <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogPortal>
-        <DialogPrimitive.Popup className="fixed inset-0 z-[70] grid overflow-y-auto bg-white outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 lg:grid-cols-2">
+        <DialogPrimitive.Popup className="fixed inset-0 z-[70] grid overflow-y-auto bg-white outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 lg:grid-cols-[1.4fr_1fr]">
           <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,8vw,8rem)] lg:pb-6">
             <div className="flex items-center justify-between">
               <Wordmark />
@@ -397,7 +397,7 @@ export function PlansDialog({
               </DialogClose>
             </div>
             <Horodateur className={cn('mx-auto mt-6 h-44 lg:hidden', locked && 'opacity-50 grayscale')} />
-            <div className="mx-auto w-full max-w-md lg:my-auto lg:pt-4">
+            <div className="mx-auto w-full max-w-md lg:my-auto lg:max-w-xl lg:pt-4">
               <DialogTitle className={cn(ui.title, 'mt-6 lg:mt-0')}>Choisissez votre offre</DialogTitle>
               {text && <DialogDescription className={ui.subtitle}>{text}</DialogDescription>}
               {trialEnd && (

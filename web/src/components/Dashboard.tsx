@@ -4,7 +4,7 @@ import { LogOut } from 'lucide-react'
 import { arrondissement, Plate, plateText, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
-import { DailySwitch, DailyTickets } from '@/components/DailyTickets'
+import { DailyTickets } from '@/components/DailyTickets'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
@@ -52,7 +52,6 @@ function Ticket({
   locked = false,
   onLogout,
   daily = false,
-  needsOffer = false,
 }: {
   session: Session
   now: number
@@ -63,14 +62,13 @@ function Ticket({
   autoOpen?: boolean
   locked?: boolean
   onLogout?: () => void
-  /** A non-resident ticket: its switch programs a ticket on chosen days instead of the weekly renewal. */
+  /** A non-resident ticket: no weekly renewal switch. */
   daily?: boolean
-  needsOffer?: boolean
 }) {
   const renewal = renewalOf(data, session)
-  const dailySwitch = daily && !renewal
-  // The weekly renewal is for resident tickets only: a visitor or Handi ticket shows no switch (unless renewed).
-  const renewable = session.resident !== false || !!renewal
+  // The weekly renewal is for resident tickets only: a non-resident ticket (visitor, Handi…) shows no switch, unless
+  // it is already renewed; tickets on chosen days are set up in « Tickets non-résident ».
+  const renewable = (!daily && session.resident !== false) || !!renewal
   const start = new Date(session.start).getTime()
   const end = new Date(session.expire).getTime()
   const left = end - now
@@ -92,12 +90,7 @@ function Ticket({
         <span className="text-sm text-ink/50">{place}</span>
       </div>
 
-      {dailySwitch && (
-        <div className="border-t border-ink/[0.06] px-5 py-4">
-          <DailySwitch data={data} plate={session.plate} zone={session.location} onChanged={onRefresh} needsOffer={needsOffer} />
-        </div>
-      )}
-      {renewable && !dailySwitch && (
+      {renewable && (
       <div className="border-t border-ink/[0.06] px-5 py-4">
         <RenewalSwitch
           ap={renewal ?? null}
@@ -379,7 +372,6 @@ export function Dashboard({
                 onLogout={onLogout}
                 // Not a resident ticket (PayByPhone says so, or the car has no resident rate): tickets on chosen days.
                 daily={s.resident === false || (!!residentPlates && !residentPlates.has(plateKey(s.plate)))}
-                needsOffer={needsOffer}
               />
             ))}
           </div>

@@ -66,6 +66,13 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
     )
   }, [me.demo])
 
+  // Without a resident rate, the pricing lists every vehicle with no zone: they take non-resident tickets.
+  const residents = vehicles?.some((v) => v.zone) ?? false
+  const n = vehicles?.length ?? 0
+  const vehiclesLabel = residents
+    ? n > 1 ? `${n} véhicules résidents` : 'Véhicule résident'
+    : n > 1 ? `${n} véhicules` : 'Véhicule'
+
   // PayByBot pays with a card saved on PayByPhone: without one it cannot be used.
   const cards = data.payments.filter((p) => p.kind === 'card')
 
@@ -98,7 +105,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             )}
             <Row
               icon={<Car className="size-5" />}
-              label={vehicles && vehicles.length > 1 ? `${vehicles.length} véhicules résidents` : 'Véhicule résident'}
+              label={vehiclesLabel}
               delay={next()}
               found={!!vehicles?.length}
               highlight
@@ -125,6 +132,12 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                       </span>
                     )
                   })}
+                  {!residents && (
+                    <span className="text-sm leading-relaxed text-ink/60">
+                      Pas de tarif résident sur {withPayByPhone('PayByPhone')} : <PayByBot /> prendra vos tickets
+                      non-résident les jours choisis.
+                    </span>
+                  )}
                 </span>
               ) : (
                 <span className="text-ink/60">

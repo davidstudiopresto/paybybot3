@@ -727,7 +727,7 @@ def email_html(title, lines, button=None, footer=RENEWAL_FOOTER, code=None):
         '<div style="margin:0;padding:32px 16px;background:#ffffff;%s">'
         '<div style="max-width:520px;margin:0 auto">'
         '<p style="margin:0 0 18px 4px"><a href="%s" style="text-decoration:none">'
-        '<img src="%s/brand/paybybot-logo.png" width="120" alt="PayByBot" style="display:block;border:0;height:auto"></a></p>'
+        '<img src="%s/brand/paybybot-email-logo.png" width="150" alt="PayByBot" style="display:block;border:0;height:auto"></a></p>'
         '<div style="background:#ffffff;border:1px solid #e6e8ee;border-radius:16px;padding:32px 28px">'
         '<h1 style="margin:0 0 16px;font-size:23px;line-height:1.25;letter-spacing:-0.3px;color:#111111">%s</h1>%s%s'
         "</div>"

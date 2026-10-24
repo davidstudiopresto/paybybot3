@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { PayByPhone } from '@/components/signs'
 
 /**
  * Qonto-like side scene: one flat white card with a hairline border on light grey, a muted teal accent, an outlined
@@ -50,10 +51,19 @@ export function RemoteScene({ className }: { className?: string }) {
       `}</style>
 
       <g className={c} fontFamily="Figtree Variable, sans-serif">
-        {/* the ticket card: PayByPhone's name, the plate, time left, then the weeks paid piling up */}
+        {/* the ticket card: PayByBot's logo and name, the plate, time left, then the weeks paid piling up */}
         <rect x="340" y="40" width="190" height="320" rx="10" fill="#fff" stroke={LINE} strokeWidth="1.5" />
-        <text x="358" y="70" fontWeight="500" fontSize="15" fill={INK}>
-          Pay<tspan fill="#64be38">By</tspan>Phone
+        <defs>
+          <linearGradient id={`${c}-m1`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2f6bff" /><stop offset="1" stopColor="#0a2fb8" /></linearGradient>
+          <linearGradient id={`${c}-m2`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5a9bff" /><stop offset="1" stopColor="#1f55e6" /></linearGradient>
+          <linearGradient id={`${c}-m3`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#8ad4ff" /><stop offset="1" stopColor="#3b82f6" /></linearGradient>
+        </defs>
+        {/* the logo's three bars (LogoMark), then « PayByBot » with its blue « By » */}
+        <rect x="358.3" y="56.3" width="4.2" height="15.4" rx="2.1" fill={`url(#${c}-m1)`} />
+        <rect x="363.6" y="62.4" width="3.8" height="8.6" rx="1.9" fill={`url(#${c}-m2)`} />
+        <rect x="368.6" y="57.9" width="3.8" height="9" rx="1.9" fill={`url(#${c}-m3)`} />
+        <text x="377" y="70" fontWeight="600" fontSize="15" letterSpacing="-0.3" fill={INK}>
+          Pay<tspan fill="#1d4ea3">By</tspan>Bot
         </text>
         <text x="512" y="70" textAnchor="end" fontSize="12" fill={INK} opacity=".55">
           AB-123-CD
@@ -129,7 +139,7 @@ export function RemotePanel({ className }: { className?: string }) {
         </p>
         <RemoteScene className="h-[min(50vh,27rem)] w-auto max-w-full" />
         <p className="mt-8 max-w-[30rem] font-heading text-[2rem] leading-[1.1] font-medium tracking-[-0.035em] text-ink">
-          Renouvelez votre ticket sans y penser
+          Renouvelez votre ticket <PayByPhone /> sans y penser
         </p>
       </div>
     </div>

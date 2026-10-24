@@ -58,6 +58,8 @@ function phoneUsername(national: string, code: string) {
   return '+' + code + raw.replace(/\D/g, '').replace(/^0/, '')
 }
 
+type Field = 'phone' | 'email' | 'signupEmail'
+
 const fieldBox =
   'flex h-14 items-center rounded-xl border border-ink/20 bg-white transition focus-within:border-eu focus-within:ring-3 focus-within:ring-eu/15 overflow-hidden'
 
@@ -78,6 +80,9 @@ export function LoginView({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
+  const [invalid, setInvalid] = useState<Set<Field>>(new Set())
+  const fixed = (f: Field) => setInvalid((x) => (x.has(f) ? new Set([...x].filter((y) => y !== f)) : x))
+  const box = (f: Field) => cn(fieldBox, invalid.has(f) && 'border-destructive ring-3 ring-destructive/15 focus-within:border-destructive focus-within:ring-destructive/15')
   const [showPassword, setShowPassword] = useState(false)
   const [accepted, setAccepted] = useState(false)
   const [remember, setRemember] = useState(false)
@@ -130,14 +135,13 @@ export function LoginView({
     // A number or an e-mail that cannot be right is not sent (PayByPhone would refuse it, or the e-mails get lost).
     const typed = (mode === 'phone' ? phone : email).trim().toLowerCase()
     if (!demo && typed !== 'demo') {
-      const problem =
-        mode === 'phone'
-          ? phoneProblem(phone) ?? (signup ? emailProblem(signupEmail) : null)
-          : emailProblem(email)
-      if (problem) {
-        setError(problem)
-        return
-      }
+      // No message: the field that cannot be right is framed in red, until it is changed.
+      const bad = new Set<Field>()
+      if (mode === 'phone' && phoneProblem(phone)) bad.add('phone')
+      if (mode === 'phone' && signup && emailProblem(signupEmail)) bad.add('signupEmail')
+      if (mode === 'email' && emailProblem(email)) bad.add('email')
+      setInvalid(bad)
+      if (bad.size) return
     }
     setLoading(demo ? 'demo' : 'login')
     try {
@@ -239,6 +243,7 @@ export function LoginView({
                   onClick={() => {
                     setMode(id)
                     setError(null)
+                    setInvalid(new Set())
                   }}
                   className={cn(
                     'h-10 flex-1 rounded-lg text-[0.95rem] font-semibold transition',
@@ -250,7 +255,7 @@ export function LoginView({
               ))}
             </div>
             {mode === 'phone' ? (
-              <div className={fieldBox}>
+              <div className={box('phone')}>
                 <span className="flex h-full shrink-0 items-center border-r border-ink/10 pr-3 pl-4" title="Numéro français">
                   <span className="sr-only">France</span>
                   <Flag flag={selected.flag} />
@@ -263,14 +268,15 @@ export function LoginView({
                   autoComplete="tel-national"
                   placeholder="Numéro PayByPhone"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => (setPhone(e.target.value), fixed('phone'))}
                   aria-label="Numéro de téléphone"
+                  aria-invalid={invalid.has('phone') || undefined}
                   required
                   className="h-full min-w-0 flex-1 bg-transparent px-2 text-lg text-ink tabular-nums outline-none placeholder:text-ink/30"
                 />
               </div>
             ) : (
-              <div className={fieldBox}>
+              <div className={box('email')}>
                 <input
                   id="username"
                   type="email"
@@ -278,8 +284,9 @@ export function LoginView({
                   autoComplete="username"
                   placeholder="E-mail du compte PayByPhone"
                   aria-label="E-mail du compte PayByPhone"
+                  aria-invalid={invalid.has('email') || undefined}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => (setEmail(e.target.value), fixed('email'))}
                   required
                   className="h-full min-w-0 flex-1 bg-transparent px-4 text-lg text-ink outline-none placeholder:text-ink/30"
                 />
@@ -287,7 +294,7 @@ export function LoginView({
             )}
             {/* Sign-up by phone: the e-mail comes right under the number. */}
             {signup && mode === 'phone' && (
-              <div className={fieldBox}>
+              <div className={box('signupEmail')}>
                 <input
                   id="signup-email"
                   type="email"
@@ -295,8 +302,9 @@ export function LoginView({
                   autoComplete="email"
                   placeholder="Votre e-mail"
                   value={signupEmail}
-                  onChange={(e) => setSignupEmail(e.target.value)}
+                  onChange={(e) => (setSignupEmail(e.target.value), fixed('signupEmail'))}
                   aria-label="E-mail"
+                  aria-invalid={invalid.has('signupEmail') || undefined}
                   required
                   className="h-full min-w-0 flex-1 bg-transparent px-4 text-lg text-ink outline-none placeholder:text-ink/30"
                 />

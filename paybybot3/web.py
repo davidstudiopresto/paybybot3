@@ -3580,6 +3580,12 @@ class Assets(StaticFiles):
         return RawResponse(status_code=404)
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon_ico():
+    """Google and some browsers ask for /favicon.ico whatever the page says: the current logo (48 px PNG)."""
+    return RedirectResponse("/favicon-48.png", 301)
+
+
 if (STATIC_DIR / "assets").exists():
     app.mount("/assets", Assets(directory=STATIC_DIR / "assets"), name="assets")
 

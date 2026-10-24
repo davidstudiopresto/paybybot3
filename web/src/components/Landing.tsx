@@ -12,7 +12,7 @@ import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/
 
 /** Prunoo's four features, said only as far as PayByBot does them. */
 const FEATURES: Question[] = [
-  ['Renouvellement automatique', <>Votre forfait résident est renouvelé chaque semaine, avant l'expiration.</>],
+  ['Renouvellement automatique', <>Votre ticket est renouvelé avant l'expiration, ou pris les jours que vous choisissez.</>],
   ['Pause en 1 clic', <>Vacances ? Mettez en pause entre deux dates : rien n'est payé.</>],
   ['Alertes intelligentes', <>Un e-mail avec la raison en cas d'échec, et une relance en un clic.</>],
   ['Support 24h/24', <>Une question ? Écrivez-nous à <a href="mailto:contact@paybybot.fr">contact@paybybot.fr</a>, 7j/7.</>],
@@ -40,14 +40,14 @@ const STEPS = [
 const TESTIMONIAL_PHOTOS: Record<string, string> = {}
 
 const TESTIMONIALS: [string, string, string][] = [
-  ['Julie M.', 'Résident Paris 6', 'J’oubliais toujours le ticket résident. Là, ça se renouvelle tout seul.'],
-  ['Thomas B.', 'Résident Paris 8', 'Ma voiture bouge peu et j’oubliais de renouveler. Plus maintenant.'],
-  ['Sarah L.', 'Résident Paris 17', 'Ça fait le boulot, rien à redire.'],
-  ['Nicolas R.', 'Résident Paris 8', 'Mon rappel sonnait au boulot, je l’oubliais. L’automatique règle ça.'],
-  ['Camille D.', 'Résident Paris 16', 'Enfin ! Depuis le temps que je voulais automatiser ce truc.'],
-  ['Antoine P.', 'Résident Paris 5', 'Pris après une énième amende pour un ticket oublié. Plus jamais.'],
-  ['Léa F.', 'Résident Paris 2', 'Avec mon conjoint, chacun croyait que l’autre l’avait fait. Plus maintenant.'],
-  ['Marc V.', 'Résident Paris 16', 'J’ai vérifié les premières fois : le ticket était bien pris. Je laisse faire.'],
+  ['Julie M.', 'Paris 6', 'J’oubliais toujours le ticket. Là, ça se renouvelle tout seul.'],
+  ['Thomas B.', 'Paris 8', 'Ma voiture bouge peu et j’oubliais de renouveler. Plus maintenant.'],
+  ['Sarah L.', 'Paris 17', 'Ça fait le boulot, rien à redire.'],
+  ['Nicolas R.', 'Paris 8', 'Mon rappel sonnait au boulot, je l’oubliais. L’automatique règle ça.'],
+  ['Camille D.', 'Paris 16', 'Enfin ! Depuis le temps que je voulais automatiser ce truc.'],
+  ['Antoine P.', 'Paris 5', 'Pris après une énième amende pour un ticket oublié. Plus jamais.'],
+  ['Léa F.', 'Paris 2', 'Avec mon conjoint, chacun croyait que l’autre l’avait fait. Plus maintenant.'],
+  ['Marc V.', 'Paris 16', 'J’ai vérifié les premières fois : le ticket était bien pris. Je laisse faire.'],
 ]
 
 /** « Comment ça marche » : the three steps on the left, a line filling down the active one, and its screen on the
@@ -227,7 +227,7 @@ function Testimonials() {
         Ils nous font confiance.
       </h2>
       <p className="mt-5 text-center text-lg text-ink/60">
-        <CountUp to={100} className="font-heading text-2xl font-semibold text-eu" /> résidents parisiens utilisent <PayByBot />
+        <CountUp to={100} className="font-heading text-2xl font-semibold text-eu" /> Parisiens utilisent <PayByBot />
       </p>
       <div className="relative left-1/2 mt-16 w-screen lg:mt-24 -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
         <ul className="marquee flex w-max gap-4">
@@ -332,11 +332,11 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
             )}
           >
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
-            <span className="block">de votre stationnement résident</span>
+            <span className="block">de votre stationnement</span>
             <span className="block">sur <PayByPhone /></span>
           </h1>
           <p className="mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]">
-            <PayByBot /> renouvelle votre stationnement résident sur <PayByPhone />, sans interruption.{' '}
+            <PayByBot /> prend et renouvelle vos tickets de stationnement sur <PayByPhone />, sans interruption.{' '}
             <span className="font-semibold text-ink/80">Zéro oubli, zéro amende.</span>
           </p>
           <a
@@ -349,7 +349,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
           {!heroOnly && !lean && (
             <>
               <p className="mt-4 text-sm text-ink/55">
-                Une amende : jusqu’à 125 €. <PayByBot /> : dès 4,50 €/mois.
+                Une amende : jusqu’à 125 €. <PayByBot /> : 5 €/mois.
               </p>
               <TrustRow className="mt-14 lg:mt-20" />
             </>
@@ -393,7 +393,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
             Tarifs
           </h2>
           <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
-            Un prix par véhicule résident, selon son type et sa zone.
+            Un prix unique par véhicule, quel que soit le ticket.
           </p>
           <div className="mt-12">
             <PlanCards signedIn={false} />
@@ -448,8 +448,8 @@ const QUESTIONS: Question[] = [
   [
     'Comment fonctionne PayByBot ?',
     <>
-      Vous connectez votre compte <PayByPhone /> et activez le renouvellement. Chaque semaine, votre stationnement
-      résident est repris avant la fin de la précédente, même téléphone éteint.
+      Vous connectez votre compte <PayByPhone /> et activez le renouvellement. Votre ticket est repris avant la fin
+      du précédent, ou chaque jour choisi à l’heure voulue, même téléphone éteint.
     </>,
   ],
   [
@@ -459,8 +459,8 @@ const QUESTIONS: Question[] = [
   [
     'Pour quels véhicules et quels stationnements ?',
     <>
-      Voiture, deux-roues ou utilitaire ayant le tarif résident à Paris. Les autres tarifs (PMR, professionnel,
-      électrique…) ne sont pas encore proposés.
+      Voiture, deux-roues ou utilitaire à Paris : ticket résident renouvelé chaque semaine, ticket visiteur ou carte
+      handicapé (CMI-S) pris les jours choisis. Le tarif professionnel n’est pas encore proposé.
     </>,
   ],
   [
@@ -477,7 +477,7 @@ const QUESTIONS: Question[] = [
   [
     'Que se passe-t-il si le renouvellement échoue ?',
     <>
-      Vous êtes prévenu par e-mail avec la raison (carte refusée, droit résident expiré…), et vous relancez en un clic
+      Vous êtes prévenu par e-mail avec la raison (carte refusée, droit au tarif expiré…), et vous relancez en un clic
       une fois le problème réglé.
     </>,
   ],

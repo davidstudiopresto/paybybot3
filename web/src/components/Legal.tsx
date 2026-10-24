@@ -512,12 +512,12 @@ function Terms() {
             carte bancaire.
           </li>
           <li>
-            <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC, par véhicule et par mois : deux fois le prix de la
-            semaine au tarif résident chez <PayByPhone />, avec un minimum de 4,50 € (voiture 18 €, deux-roues 9 €, deux-roues électrique 4,50 €). Le prix exact est affiché avant tout paiement. Le paiement se fait par carte bancaire, via notre
+            <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC : 5 € par véhicule et par mois, quel que soit le ticket (résident, visiteur, carte handicapé) ou le type de véhicule,
+            soit 48 € par véhicule et par an. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte bancaire, via notre
             prestataire de paiement Stripe ; <PayByBot /> ne voit ni ne conserve votre numéro de carte.
           </li>
           <li>
-            <strong>Changement de prix :</strong> si votre zone de résidence ou votre véhicule change, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
+            <strong>Changement de prix :</strong> si le nombre de véhicules renouvelés change, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
             effet sur la période déjà payée. Vous pouvez résilier à tout moment depuis « Mon compte ».
           </li>
           <li>

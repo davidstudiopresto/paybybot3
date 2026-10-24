@@ -13,7 +13,7 @@ const RED = '#741b11' // the site's red: little time left
 export function RemoteScene({ className }: { className?: string }) {
   const c = `rs-${useId().replace(/:/g, '')}` // class prefix: several scenes never share keyframes
   return (
-    <svg viewBox="320 20 230 360" className={className} role="img" aria-label="La télécommande PayByBot renouvelle le ticket résident sans y penser">
+    <svg viewBox="320 20 230 360" className={className} role="img" aria-label="La télécommande PayByBot renouvelle le ticket sans y penser">
       <style>{`
         .${c} * { transform-box: fill-box; }
         .${c}-btn { transform-origin: center; animation: ${c}-press 8s ease-in-out infinite; }
@@ -124,7 +124,7 @@ export function RemotePanel({ className }: { className?: string }) {
         </p>
         <RemoteScene className="h-[min(58vh,27rem)] w-auto max-w-full" />
         <p className="mt-12 max-w-[30rem] font-heading text-[2rem] leading-[1.1] font-medium tracking-[-0.035em] text-ink">
-          Renouvelez votre ticket résident sans y penser
+          Renouvelez votre ticket sans y penser
         </p>
       </div>
     </div>

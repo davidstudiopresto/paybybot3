@@ -19,15 +19,13 @@ const PLANS: { id: Plan; name: string; popular?: boolean }[] = [
   { id: 'monthly', name: 'Mensuel' },
 ]
 
-const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
+// Round amounts without cents: « 5 € », « 48 € », but « 4,50 € ».
+const euros = (cents: number) => (cents % 100 ? (cents / 100).toFixed(2).replace('.', ',') : String(cents / 100)) + ' €'
 const yearOf = (monthly: number) => Math.round(monthly * 12 * 0.8)
 
-/** The grid: twice the Paris resident week, at least 4,50 € (the server's monthly_cents). */
-const GRID: [string, number][] = [
-  ['Voiture', 1800],
-  ['Deux-roues', 900],
-  ['Deux-roues électrique', 450],
-]
+/** One price per vehicle, whatever its ticket and type (the server's MONTHLY_PRICE). */
+const MONTHLY = 500
+const GRID: [string, number][] = [['Par véhicule', MONTHLY]]
 
 /** The signed-in account's prices (null while loading). */
 function usePricing(enabled: boolean) {
@@ -100,7 +98,7 @@ function planText(id: Plan, pricing: Pricing) {
 }
 
 const INCLUDED = [
-  'Renouvellement automatique du forfait résident',
+  'Tickets pris et renouvelés automatiquement',
   'Pause en un clic, reprise automatique',
   'Alertes en cas d’échec',
   'Annulable à tout moment',
@@ -112,12 +110,11 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   // The Tarifs show the monthly price only (the yearly plan stays offered at payment).
   if (signedIn) return <OwnPlan plan="monthly" />
   const cards: { name: string; who: string; monthly: number; popular?: boolean }[] = [
-    { name: 'Deux-roues', who: 'Scooter, moto', monthly: GRID[1][1] },
-    { name: 'Voiture', who: 'Voiture, utilitaire', monthly: GRID[0][1], popular: true },
+    { name: 'Par véhicule', who: 'Voiture, deux-roues ou utilitaire · résident, visiteur ou carte handicapé', monthly: MONTHLY, popular: true },
   ]
   return (
     <>
-      <div className="mx-auto grid max-w-3xl items-center gap-5 md:grid-cols-2">
+      <div className="mx-auto grid max-w-md items-center gap-5">
         {cards.map((c) => (
           <div
             key={c.name}
@@ -134,7 +131,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
               <span className="text-[2rem]"> €</span>
               <span className="ml-1.5 text-base font-normal text-ink/50">/ mois</span>
             </p>
-            <p className="mt-2 text-sm text-ink/50">facturé chaque mois, sans engagement</p>
+            <p className="mt-2 text-sm text-ink/50">sans engagement · ou {euros(yearOf(c.monthly))} / an, soit {euros(Math.round(yearOf(c.monthly) / 12))} / mois</p>
             <ul className="mt-7 space-y-2.5 border-t border-ink/10 pt-6 text-left text-[0.95rem] text-ink/75">
               {INCLUDED.map((x) => (
                 <li key={x} className="flex items-start gap-2">
@@ -247,13 +244,13 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
           {signedIn ? 'Vos tarifs' : 'Tarifs'}
         </h1>
         <p className="mx-auto mt-4 max-w-[32rem] text-center text-[1.05rem] text-ink/60 sm:text-lg">
-          Un prix par véhicule résident, selon son type et sa zone.
+          Un prix unique par véhicule, quel que soit le ticket.
         </p>
         <div className="mt-8 lg:mt-10">
           <PlanCards signedIn={signedIn} />
         </div>
         <p className="mt-8 text-center text-sm text-ink/50">
-          Un seul oubli coûte plus cher que 3 mois de <PayByBot />. Prix TTC, sans engagement.
+          Un seul oubli (50 € en zone 1) coûte autant que 10 mois de <PayByBot />. Prix TTC, sans engagement.
         </p>
       </main>
       <HostedFooter className="px-6 pb-8" hosted={hosted} />

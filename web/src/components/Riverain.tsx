@@ -16,7 +16,10 @@ export const WEEKLY_LABEL = 'Riverain hebdo'
 /** The renewals chosen just before leaving for Stripe, activated on the way back (kept one hour). */
 const PENDING_KEY = 'pbb-pending-renewals'
 
-function savePending(items: Parking[]) {
+/** A renewal kept for the way back from Stripe: weekly (no label) or a non-resident ticket on precise days. */
+export type PendingRenewal = Parking & { label?: string; days?: number[]; start?: string }
+
+export function savePending(items: PendingRenewal[]) {
   try {
     localStorage.setItem(PENDING_KEY, JSON.stringify({ at: Date.now(), items }))
   } catch {
@@ -24,7 +27,7 @@ function savePending(items: Parking[]) {
   }
 }
 
-function clearPending() {
+export function clearPending() {
   try {
     localStorage.removeItem(PENDING_KEY)
   } catch {
@@ -52,7 +55,7 @@ export function activationToast(activation: Activation, plate?: string) {
 
 /** Back from Stripe with a subscription: activate the renewals chosen before leaving. */
 export async function runPendingRenewals(): Promise<{ done: number; failed: string[]; shown: number }> {
-  let items: Parking[] = []
+  let items: PendingRenewal[] = []
   try {
     const saved = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null')
     if (saved && Date.now() - saved.at < 3_600_000 && Array.isArray(saved.items)) items = saved.items
@@ -64,7 +67,13 @@ export async function runPendingRenewals(): Promise<{ done: number; failed: stri
   let shown = 0
   for (const p of items) {
     try {
-      const { activation } = await api.addAutopilot({ ...p, label: WEEKLY_LABEL })
+      const { activation } = await api.addAutopilot({ label: WEEKLY_LABEL, ...p } as Parameters<typeof api.addAutopilot>[0])
+      if (p.days?.length) {
+        // A non-resident ticket on precise days: nothing paid now, the first ticket comes on its day.
+        toast.success(items.length > 1 ? `${p.plate} : ticket programmé.` : 'Ticket programmé.')
+        shown += 1
+        continue
+      }
       saveLast(p)
       if (activation) {
         activationToast(activation, items.length > 1 ? p.plate : undefined)

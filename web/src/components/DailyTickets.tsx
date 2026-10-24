@@ -3,9 +3,10 @@ import { Check, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
-import { RenewalActions } from '@/components/Riverain'
+import { PlansDialog } from '@/components/Pricing'
+import { clearPending, RenewalActions, savePending, type PendingRenewal } from '@/components/Riverain'
 import { arrondissement, PayByPhone, Plate, plateText, withPayByPhone } from '@/components/signs'
-import { api, unitLabel, type Autopilot, type Money, type Overview, type Rate, type Unit } from '@/lib/api'
+import { api, ApiError, unitLabel, type Autopilot, type Money, type Overview, type Rate, type Unit } from '@/lib/api'
 import { ui } from '@/lib/styles'
 import { cn } from '@/lib/utils'
 
@@ -142,8 +143,25 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
 }
 
 /** The section of the dashboard: the precise-days tickets and the way to add one. */
-export function DailyTickets({ data, onChanged }: { data: Overview; onChanged: () => void }) {
+export function DailyTickets({
+  data,
+  onChanged,
+  needsOffer = false,
+  locked = false,
+  onLogout,
+}: {
+  data: Overview
+  onChanged: () => void
+  /** Online, no offer chosen yet: activating leads to the offer screen first. */
+  needsOffer?: boolean
+  /** Online, no offer and no resident vehicle: the wizard opens by itself and stays open (then the offer). */
+  locked?: boolean
+  onLogout?: () => void
+}) {
   const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (locked) setOpen(true)
+  }, [locked])
   const daily = data.autopilots.filter(isDaily)
   return (
     <section className="rise mt-10">
@@ -165,13 +183,29 @@ export function DailyTickets({ data, onChanged }: { data: Overview; onChanged: (
           jour choisi.
         </p>
       )}
-      {open && <DailyWizard data={data} onClose={() => setOpen(false)} onDone={onChanged} />}
+      {open && (
+        <DailyWizard data={data} onClose={() => setOpen(false)} onDone={onChanged} needsOffer={needsOffer} locked={locked} onLogout={onLogout} />
+      )}
     </section>
   )
 }
 
 /** Four steps, like the rest of the app: vehicle and zone, the ticket, its time and days, then check and activate. */
-function DailyWizard({ data, onClose, onDone }: { data: Overview; onClose: () => void; onDone: () => void }) {
+function DailyWizard({
+  data,
+  onClose,
+  onDone,
+  needsOffer,
+  locked,
+  onLogout,
+}: {
+  data: Overview
+  onClose: () => void
+  onDone: () => void
+  needsOffer: boolean
+  locked: boolean
+  onLogout?: () => void
+}) {
   const [step, setStep] = useState(1)
   const [plate, setPlate] = useState(data.vehicles[0]?.plate ?? '')
   const [zone, setZone] = useState('')
@@ -188,6 +222,9 @@ function DailyWizard({ data, onClose, onDone }: { data: Overview; onClose: () =>
   const cards = data.payments.filter((p) => p.kind === 'card' && !p.expired)
   const [payment, setPayment] = useState(cards[0]?.id ?? '')
   const [saving, setSaving] = useState(false)
+  // Online, no offer chosen yet: the offer screen first, as for the weekly renewal; the ticket is programmed on the
+  // way back from Stripe (nothing is charged before the end of the free month).
+  const [paywall, setPaywall] = useState(false)
 
   const place = /^\d{5}$/.test(zone) ? arrondissement(zone) : null
   // The visitor rate comes as « léger » and « lourd »: PayByPhone does not know the weight, so one question instead.
@@ -291,28 +328,36 @@ function DailyWizard({ data, onClose, onDone }: { data: Overview; onClose: () =>
     }
   }, [step, effective?.ratePolicyId, duration, unit, zone, plate, payment]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const rule = (): PendingRenewal => ({
+    location: zone,
+    rate: effective!.ratePolicyId,
+    duration,
+    unit,
+    plate,
+    paymentAccountId: payment,
+    label: DAILY_LABEL,
+    days,
+    start,
+  })
+
   async function activate() {
     if (!effective) return
+    if (needsOffer) {
+      setPaywall(true)
+      return
+    }
     setSaving(true)
     try {
-      await api.addAutopilot({
-        location: zone,
-        rate: effective.ratePolicyId,
-        duration,
-        unit,
-        plate,
-        paymentAccountId: payment,
-        label: DAILY_LABEL,
-        days,
-        start,
-      } as Parameters<typeof api.addAutopilot>[0])
+      await api.addAutopilot(rule() as Parameters<typeof api.addAutopilot>[0])
       toast.success('Ticket programmé.', {
         description: `Prochain ticket ${when(nextTicket(days, start)!)}.`,
       })
       onDone()
       onClose()
     } catch (e) {
-      toast.error((e as Error).message)
+      // No subscription yet (the account had not loaded): the offer screen.
+      if (e instanceof ApiError && e.status === 402 && /offre/.test(e.message)) setPaywall(true)
+      else toast.error((e as Error).message)
     } finally {
       setSaving(false)
     }
@@ -321,8 +366,8 @@ function DailyWizard({ data, onClose, onDone }: { data: Overview; onClose: () =>
   const steps = ['Véhicule et zone', 'Votre ticket', 'Horaires et jours', 'Vérifier et activer']
 
   return (
-    <Dialog open onOpenChange={(o) => !o && !saving && onClose()}>
-      <DialogContent className={ui.dialog}>
+    <Dialog open onOpenChange={(o) => !o && !saving && !locked && onClose()}>
+      <DialogContent className={ui.dialog} showCloseButton={!locked}>
         <div className="px-6 pt-7">
           <p className="text-xs font-medium tracking-wide text-ink/45 uppercase">
             Étape {step} sur {steps.length} · {steps[step - 1]}
@@ -604,8 +649,22 @@ function DailyWizard({ data, onClose, onDone }: { data: Overview; onClose: () =>
               </button>
             )}
           </div>
+          {locked && onLogout && (
+            <button onClick={onLogout} className={cn('mx-auto mt-4 block text-sm', ui.link)}>
+              Se déconnecter
+            </button>
+          )}
         </div>
       </DialogContent>
+      {paywall && (
+        <PlansDialog
+          onPay={() => savePending([rule()])}
+          onClose={() => {
+            clearPending()
+            setPaywall(false)
+          }}
+        />
+      )}
     </Dialog>
   )
 }

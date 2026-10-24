@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LogOut } from 'lucide-react'
 import { arrondissement, Plate, plateText, vehicleType, withPayByPhone } from '@/components/signs'
@@ -156,6 +156,7 @@ function Ticket({
 }
 
 /** The cars with no ticket: plate, type, zone and the resident week's price, one card each. */
+const plateKey = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
 const sameCar = (a: string, b: string) => a.replace(/[^0-9a-z]/gi, '').toUpperCase() === b.replace(/[^0-9a-z]/gi, '').toUpperCase()
 
 function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogout }: { data: Overview; onChanged: () => void; hosted: boolean; demo?: boolean; autoPlate?: string | null; locked?: boolean; onLogout?: () => void }) {
@@ -265,22 +266,33 @@ export function Dashboard({
       : Promise.resolve()
     confirm.then(() => api.account().then(setAccount, () => {}))
   }, [])
-  // Resident status on PayByPhone: without it, nothing to renew (and no subscription).
-  const [resident, setResident] = useState<{ zone: string | null; resident: boolean | null } | null>(null)
-  const checkResident = useCallback(() => {
-    if (!me.demo) api.residentStatus().then(setResident, () => {})
-  }, [me.demo])
-  useEffect(checkResident, [checkResident])
+  // The vehicles with the resident rate on PayByPhone (a zone in the pricing), online only; null while looking.
+  const [residentPlates, setResidentPlates] = useState<Set<string> | null>(null)
+  useEffect(() => {
+    if (!me.hosted || me.demo) return
+    api.pricing().then(
+      (p) => setResidentPlates(new Set((p.vehicles ?? []).filter((v) => v.zone).map((v) => plateKey(v.plate)))),
+      () => setResidentPlates(new Set()),
+    )
+  }, [me.hosted, me.demo, data?.vehicles.length])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
   // Right after the welcome page, nothing renewed yet: the renewal of the car with a ticket (else the first car)
   // opens by itself, then the offer comes when it is activated.
-  // Online, no offer chosen yet: PayByBot is not usable before choosing one, the renewal dialog stays open.
-  const locked = !!me.hosted && !me.demo && !!account && !account.subscribed && !account.blocked && !renewing && resident?.resident !== false
-  const autoPlate =
-    (autoRenew || locked) && data && !renewing
-      ? (data.sessions.find((s) => new Date(s.expire).getTime() > Date.now())?.plate ?? data.vehicles[0]?.plate ?? null)
-      : null
+  // Online, no offer chosen yet: PayByBot is not usable before choosing one. With a resident vehicle, its renewal
+  // dialog stays open (then the offer); without one, the « Programmer un ticket » wizard does (then the offer).
+  const needsOffer = !!me.hosted && !me.demo && !!account && !account.subscribed && !account.blocked
+  const live = data?.sessions.filter((s) => new Date(s.expire).getTime() > Date.now()) ?? []
+  const isResidentCar = (plate: string) => (residentPlates ? residentPlates.has(plateKey(plate)) : true)
+  // The car whose renewal opens: a resident ticket running, else a resident car without a ticket (its card is shown).
+  const residentPlate = data
+    ? (live.find((s) => s.resident !== false && isResidentCar(s.plate))?.plate ??
+      data.vehicles.find((v) => isResidentCar(v.plate) && !live.some((s) => sameCar(s.plate, v.plate)))?.plate ??
+      null)
+    : null
+  const locked = needsOffer && !renewing && !!residentPlates && !!residentPlate
+  const lockedDaily = needsOffer && !!data && !data.autopilots.length && !!residentPlates && !residentPlate
+  const autoPlate = (autoRenew || locked) && data && !renewing ? (residentPlate ?? data.vehicles[0]?.plate ?? null) : null
 
   // Fresh data when coming back to the tab (it also refreshes every minute).
   useEffect(() => {
@@ -325,9 +337,9 @@ export function Dashboard({
       </TopBar>
 
       <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-12 pb-16">
-        <p className="rise text-lg text-ink/60">{me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}</p>
-        <h1 className="rise mt-1 font-heading text-[2.6rem] leading-[1.05] font-medium tracking-[-0.035em]">
-          {!data ? '…' : sessions.length ? 'Vous êtes en règle.' : 'Aucun ticket en cours.'}
+        {/* Just the greeting, large: the line below says whether a ticket is running. */}
+        <h1 className="rise font-heading text-[2.6rem] leading-[1.05] font-medium tracking-[-0.035em]">
+          {me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}
         </h1>
         <p className="mt-3 text-[1.05rem] text-ink/60">
           {!data
@@ -353,7 +365,13 @@ export function Dashboard({
 
         {/* Tickets on precise days (visitor, Handi…), for everyone. */}
         {data && (
-          <DailyTickets data={data} onChanged={onRefresh} />
+          <DailyTickets
+            data={data}
+            onChanged={onRefresh}
+            needsOffer={needsOffer}
+            locked={lockedDaily}
+            onLogout={onLogout}
+          />
         )}
 
 

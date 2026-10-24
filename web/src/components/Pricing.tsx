@@ -4,7 +4,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
-import { PayByBot, PayByPhone, Plate, Wordmark } from '@/components/signs'
+import { PayByPhone, Plate, Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
 import { api, type Pricing } from '@/lib/api'
@@ -152,7 +152,6 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
       <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-ink/45">
         Par véhicule : voiture, deux-roues ou utilitaire · ticket résident, visiteur ou carte handicapé.
       </p>
-      <FinesNote zone={1} className="mx-auto mt-10 max-w-3xl" />
     </>
   )
 }
@@ -255,7 +254,7 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
           <PlanCards signedIn={signedIn} />
         </div>
         <p className="mt-8 text-center text-sm text-ink/50">
-          Un seul oubli (50 € en zone 1) coûte plus de 5 mois de <PayByBot />. Prix TTC, sans engagement.
+          Prix TTC, sans engagement.
         </p>
       </main>
       <HostedFooter className="px-6 pb-8" hosted={hosted} />

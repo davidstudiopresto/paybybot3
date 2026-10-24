@@ -323,26 +323,27 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
         )}
       >
         {/* Home: the text on the left and an example ticket card on the right (one column on a phone). */}
-        <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14')}>
+        <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14 xl:max-w-7xl xl:gap-20 2xl:max-w-[90rem]')}>
         <div className={cn('flex flex-col items-center text-center', heroOnly && 'lg:items-start lg:text-left')}>
           <h1
             className={cn(
               'font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]',
-              heroOnly && 'lg:text-[2.7rem] lg:[&>span]:whitespace-nowrap',
+              // Full screen: larger, so the hero fills a wide window.
+              heroOnly && 'lg:text-[2.7rem] lg:[&>span]:whitespace-nowrap xl:text-[3.5rem] 2xl:text-[4.2rem]',
             )}
           >
             <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
             <span className="block">de votre stationnement</span>
             <span className="block">sur <PayByPhone /></span>
           </h1>
-          <p className="mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]">
+          <p className={cn('mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]', heroOnly && 'xl:max-w-[42rem] xl:text-[1.4rem] 2xl:max-w-[48rem] 2xl:text-[1.6rem]')}>
             <PayByBot /> prend et renouvelle vos tickets de stationnement sur <PayByPhone />, sans interruption.{' '}
             <span className="font-semibold text-ink/80">Zéro oubli, zéro amende.</span>
           </p>
           <a
             ref={cta}
             href="#/inscription"
-            className={cn('mt-10 w-full sm:px-10 shadow-[0_14px_30px_-12px_var(--eu)] sm:w-fit lg:mt-12 lg:h-14 lg:rounded-[12px] lg:px-10 lg:text-lg', ui.primary)}
+            className={cn('mt-10 w-full sm:px-10 shadow-[0_14px_30px_-12px_var(--eu)] sm:w-fit lg:mt-12 lg:h-14 lg:rounded-[12px] lg:px-10 lg:text-lg', heroOnly && 'xl:h-16 xl:px-12 xl:text-xl', ui.primary)}
           >
             {TRY_LABEL} <ArrowRight className="size-5" />
           </a>
@@ -355,7 +356,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
             </>
           )}
         </div>
-        {heroOnly && <SampleTicket className="mx-auto lg:mx-0 lg:justify-self-end" />}
+        {heroOnly && <SampleTicket className="mx-auto lg:mx-0 lg:justify-self-end xl:origin-right xl:scale-[1.15] 2xl:scale-[1.3]" />}
         </div>
       </section>
 

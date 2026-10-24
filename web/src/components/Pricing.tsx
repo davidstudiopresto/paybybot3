@@ -8,7 +8,7 @@ import { RemotePanel } from '@/components/RemoteScene'
 import { PayByPhone, Plate, Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
-import { api, type Pricing } from '@/lib/api'
+import { api, type PricedVehicle, type Pricing } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { TRY_LABEL, ui } from '@/lib/styles'
 
@@ -84,6 +84,64 @@ function VehiclePrices({ plan, pricing, className }: { plan: Plan; pricing: Pric
       <p className="mt-2 text-xs leading-relaxed text-ink/50">
         Prix par véhicule. Le total est celui de {billed > 1 ? `vos ${billed} véhicules renouvelés` : 'votre véhicule renouvelé'} :
         vous ne payez que les véhicules dont le renouvellement est activé.
+      </p>
+    </div>
+  )
+}
+
+const plateKey = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
+
+/** The offer screen's vehicles: tick those to cover, the price follows their number. */
+function VehicleChoice({
+  plan,
+  vehicles,
+  chosen,
+  onToggle,
+  className,
+}: {
+  plan: Plan
+  vehicles: PricedVehicle[]
+  chosen: string[]
+  onToggle: (plate: string) => void
+  className?: string
+}) {
+  if (vehicles.length < 2) return null
+  const n = chosen.length
+  return (
+    <div className={className}>
+      <p className="mb-2 px-2 text-sm font-semibold text-ink">Véhicules couverts</p>
+      <ul className="space-y-0.5">
+        {vehicles.map((v) => {
+          const on = chosen.includes(plateKey(v.plate))
+          return (
+            <li key={v.plate}>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={on}
+                onClick={() => onToggle(v.plate)}
+                className="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm transition hover:bg-ink/[0.04]"
+              >
+                <span
+                  className={cn(
+                    'grid size-5 shrink-0 place-items-center rounded-md border-2 transition',
+                    on ? 'border-eu bg-eu text-white' : 'border-ink/25 bg-white',
+                  )}
+                >
+                  {on && <Check className="size-3.5" strokeWidth={3} />}
+                </span>
+                <Plate plate={v.plate} size="sm" />
+                <span className={cn('ml-auto tabular-nums', on ? 'text-ink' : 'text-ink/40')}>
+                  {plan === 'monthly' ? `${euros(v.monthly)} / mois` : `${euros(v.yearly)} / an`}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="mt-2 px-2 text-xs leading-relaxed text-ink/50">
+        {n > 1 ? `${n} véhicules couverts : le prix ci-dessus est leur total.` : '1 véhicule couvert.'} Un véhicule
+        automatisé plus tard s’ajoute à l’abonnement.
       </p>
     </div>
   )
@@ -333,10 +391,42 @@ function graceDay(iso: string | null) {
 
 /** Full-page paywall: the offer and the way to pay on the left, the parking meter on the right. onPay runs just
  *  before leaving for Stripe. */
-export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; text?: string; onPay?: () => void }) {
+export function PlansDialog({
+  onClose,
+  text,
+  onPay,
+  plates,
+}: {
+  onClose: () => void
+  text?: string
+  onPay?: () => void
+  /** The vehicles being activated: ticked first among the account's vehicles. */
+  plates?: string[]
+}) {
   const [plan, setPlan] = useState<Plan>('yearly')
   const [busy, setBusy] = useState(false)
-  const [pricing] = usePricing(true)
+  const [loaded] = usePricing(true)
+  // The vehicles the subscription is for: those being activated, else those already billed, else the first one.
+  const [chosen, setChosen] = useState<string[] | null>(null)
+  useEffect(() => {
+    const vehicles = loaded?.vehicles ?? []
+    if (!vehicles.length || chosen) return
+    const all = vehicles.map((v) => plateKey(v.plate))
+    const wanted = [...(plates ?? []), ...(loaded?.billed ?? [])].map(plateKey).filter((k) => all.includes(k))
+    setChosen(wanted.length ? [...new Set(wanted)] : all.slice(0, 1))
+  }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps
+  // The prices shown are those of the chosen vehicles (the price per vehicle times their number).
+  const picked = (loaded?.vehicles ?? []).filter((v) => chosen?.includes(plateKey(v.plate)))
+  const pricing: Pricing | null =
+    loaded && picked.length
+      ? { ...loaded, monthly: picked.reduce((t, v) => t + v.monthly, 0), yearly: picked.reduce((t, v) => t + v.yearly, 0) }
+      : loaded
+  const toggle = (plate: string) =>
+    setChosen((list) => {
+      const k = plateKey(plate)
+      const next = list?.includes(k) ? list.filter((x) => x !== k) : [...(list ?? []), k]
+      return next.length ? next : list // at least one vehicle
+    })
   const locked = false // no resident rate needed any more
   // Still in the free month: nothing is charged before its end (Stripe starts billing then).
   const [trialEnd, setTrialEnd] = useState<Date | null>(null)
@@ -353,7 +443,7 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
   async function pay() {
     setBusy(true)
     try {
-      const { url } = await api.checkout(plan)
+      const { url } = await api.checkout(plan, chosen ?? [])
       onPay?.()
       window.location.assign(url)
     } catch (e) {
@@ -443,7 +533,13 @@ export function PlansDialog({ onClose, text, onPay }: { onClose: () => void; tex
                 {locked && <PriceGrid plan={plan} className="rounded-2xl border border-ink/10 p-4" />}
               </div>
 
-              <VehiclePrices plan={plan} pricing={pricing} className="mt-5 rounded-2xl bg-ink/[0.03] p-4" />
+              <VehicleChoice
+                plan={plan}
+                vehicles={loaded?.vehicles ?? []}
+                chosen={chosen ?? []}
+                onToggle={toggle}
+                className="mt-5 rounded-2xl bg-ink/[0.03] p-4"
+              />
               <ul className="mt-6 grid gap-2 text-[0.95rem] text-ink/70 sm:grid-cols-2">
                 {INCLUDED.map((x) => (
                   <li key={x} className="flex items-start gap-2">

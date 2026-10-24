@@ -662,6 +662,7 @@ function DailyWizard({
       </DialogContent>
       {paywall && (
         <PlansDialog
+          plates={[plate]}
           onPay={() => savePending([rule()])}
           onClose={() => {
             clearPending()

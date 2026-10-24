@@ -1129,7 +1129,7 @@ def with_details(row):
 
 ACCOUNT_FIELDS = ("email", "first_name", "zone", "trial_start", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "suv_plates", "zone_found",
-                  "vehicle_zones", "dunning", "check_mailed", "early_stops", "checkout_at")
+                  "vehicle_zones", "dunning", "check_mailed", "early_stops", "checkout_at", "chosen_plates")
 TRIAL_DAYS = 30  # one free month for every new account
 
 
@@ -2252,7 +2252,9 @@ def account_pricing(s):
         return None
     zone = vehicles[0]["zone"]
     renewed = renewed_plates(s)
-    billed = [v for v in vehicles if plate_key(v["plate"]) in renewed] or vehicles[:1]
+    # Billed: the vehicles chosen on the offer screen and those with a renewal (the first one while none is).
+    chosen = set(account.get("chosen_plates") or [])
+    billed = [v for v in vehicles if plate_key(v["plate"]) in renewed or plate_key(v["plate"]) in chosen] or vehicles[:1]
     monthlies = sorted(v["monthly"] for v in billed)
     if account.get("monthlies") != monthlies or account.get("price_zone") != zone:
         account = save_account(s, {"monthlies": monthlies, "price_zone": zone})
@@ -2534,6 +2536,7 @@ def set_suv(body: SuvChoice, pbb_session: str = Cookie(None)):
 
 class Checkout(BaseModel):
     plan: str = Field(pattern="^(monthly|yearly)$")
+    plates: list[str] = Field(default_factory=list, max_length=50)  # the vehicles chosen on the offer screen
 
 
 class CheckoutDone(BaseModel):
@@ -2909,8 +2912,16 @@ def billing_checkout(body: Checkout, request: Request, pbb_session: str = Cookie
         raise HTTPException(400, "Le paiement n'est pas disponible en mode démo.")
     if not os.environ.get("STRIPE_SECRET_KEY"):
         raise HTTPException(503, "Le paiement en ligne arrive très bientôt. Profitez de votre mois offert !")
-    if not guarded(lambda: account_pricing(s)):
+    found = guarded(lambda: account_pricing(s))
+    if not found:
         raise HTTPException(400, "Ajoutez d'abord un véhicule sur votre compte PayByPhone.")
+    if body.plates:  # the vehicles chosen on the offer screen: the subscription is for them (and any renewed one)
+        known = {plate_key(v["plate"]) for v in found["vehicles"]}
+        chosen = [k for k in dict.fromkeys(plate_key(p) for p in body.plates) if k in known]
+        if not chosen:
+            raise HTTPException(400, "Choisissez au moins un véhicule.")
+        guarded(lambda: save_account(s, {"chosen_plates": chosen}))
+        guarded(lambda: account_pricing(s))  # the monthly prices follow the choice
     account = guarded(lambda: load_account(s))
     # Already subscribed (or paid in a tab closed before coming back): no second subscription.
     if account.get("stripe_subscription") or (account.get("checkout_at")

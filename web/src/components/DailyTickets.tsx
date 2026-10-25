@@ -168,8 +168,7 @@ export function DailyTickets({
   const daily = data.autopilots.filter(isDaily)
   return (
     <section className="rise mt-10">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-sm text-ink/50">Tickets non-résident</h2>
+      <div className="flex items-center justify-end gap-4">
         <button onClick={() => setOpen(true)} className={cn(ui.pillGray, 'gap-1.5')}>
           <Plus className="size-4" /> Programmer un ticket
         </button>

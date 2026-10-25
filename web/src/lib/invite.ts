@@ -3,24 +3,36 @@ const KEY = 'pbb_invite'
 
 let fromLinkNow = false
 
-/** This visit came through a link (?i=…), not from a code kept earlier: the welcome curtain is shown. */
+/** This visit came through a link (?i=…) not opened yet in this tab: the welcome curtain is shown (once per tab,
+ *  not again on each reload). */
 export function openedFromLink(): boolean {
   return fromLinkNow
 }
 
-/** Reads ?i= from the address (then removes it), else the code kept from an earlier visit. */
+/** Reads ?i= from the address, else the code kept from an earlier visit. The code stays in the address: copied
+ *  from the address bar, reopened from the history or from an app's in-app browser, the link keeps working. */
+let captured: string | null | undefined
+
 export function captureInvite(): string | null {
-  const url = new URL(window.location.href)
-  const fromLink = url.searchParams.get('i')
+  if (captured !== undefined) return captured // read once per page: a second call must not hide the curtain
+  captured = readInvite()
+  return captured
+}
+
+function readInvite(): string | null {
+  const fromLink = new URL(window.location.href).searchParams.get('i')
   if (fromLink) {
-    fromLinkNow = true
     try {
       localStorage.setItem(KEY, fromLink)
     } catch {
-      // private window: the code still works for this visit
+      // private window: the code still works, it is in the address
     }
-    url.searchParams.delete('i')
-    history.replaceState(null, '', url.pathname + url.search + url.hash)
+    try {
+      fromLinkNow = sessionStorage.getItem('pbb_curtain') !== fromLink
+      sessionStorage.setItem('pbb_curtain', fromLink)
+    } catch {
+      fromLinkNow = true
+    }
     return fromLink
   }
   return storedInvite()

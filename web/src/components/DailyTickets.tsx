@@ -181,11 +181,24 @@ export function DailyTickets({
   const daily = data.autopilots.filter(isDaily)
   return (
     <section className="rise mt-10">
-      <div className="flex items-center justify-end gap-4">
-        <button onClick={() => setOpen(true)} className={cn(ui.pillGray, 'gap-1.5')}>
-          <Plus className="size-4" /> Programmer un ticket
-        </button>
-      </div>
+      {/* Nothing automated and no resident vehicle: the one thing to do, as a card. Otherwise a small button. */}
+      {!daily.length && !data.autopilots.some((ap) => ap.enabled) && !data.vehicles.some((v) => v.zone) ? (
+        <div className="rounded-2xl border border-ink/10 bg-white p-6">
+          <p className="font-heading text-[1.35rem] leading-tight font-medium tracking-[-0.02em] text-ink">Programmez vos tickets (non-résidents)</p>
+          <p className="mt-2 leading-relaxed text-ink/60">
+            {withPayByPhone('PayByBot les prend pour vous sur PayByPhone, les jours choisis et à l’heure voulue.')} Vous n’avez plus à y penser.
+          </p>
+          <button onClick={() => setOpen(true)} className={cn('mt-5', ui.primary)}>
+            <Plus className="size-5" /> Programmer un ticket
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-end gap-4">
+          <button onClick={() => setOpen(true)} className={cn(ui.pillGray, 'gap-1.5')}>
+            <Plus className="size-4" /> Programmer un ticket
+          </button>
+        </div>
+      )}
       {daily.length ? (
         <div className="mt-3 space-y-3">
           {daily.map((ap) => (

@@ -153,6 +153,10 @@ function Ticket({
             style={{ width: `${(1 - progress) * 100}%` }}
           />
         </div>
+        {/* Nothing will follow this ticket (no renewal, no programmed ticket for the car): said under it. */}
+        {!renewal && !data.autopilots.some((ap) => ap.enabled && sameCar(ap.plate, session.plate)) && (
+          <p className="mt-4 text-sm text-ink/55">Ce ticket ne sera pas renouvelé : aucun ticket programmé pour ce véhicule.</p>
+        )}
         {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} withStop={false} className="mt-5" />}
       </div>
     </article>
@@ -349,6 +353,9 @@ export function Dashboard({
         <p className="mt-3 text-[1.05rem] text-ink/60">
           {!data
             ? withPayByPhone('Chargement de votre compte PayByPhone.')
+            : !data.autopilots.some((ap) => ap.enabled)
+              ? // Nothing automated yet: say it plainly (a running ticket is not renewed by itself).
+                "Votre stationnement n'est pas encore automatisé."
             : sessions.length
               ? sessions.length > 1
                 ? `${sessions.length} tickets en cours.`

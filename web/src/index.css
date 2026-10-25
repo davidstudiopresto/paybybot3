@@ -218,3 +218,16 @@ input:-webkit-autofill::first-line {
   font-family: 'Figtree Variable', sans-serif;
   font-size: 1.125rem;
 }
+
+/* ShinyButton: the light sweeping from right to left, then a pause (CSS only). */
+@property --x {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 100%;
+}
+@keyframes shiny-sweep {
+  0% { --x: 100%; }
+  60%, 100% { --x: -100%; }
+}
+.shiny { animation: shiny-sweep 3.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .shiny { animation: none; --x: -100%; } }

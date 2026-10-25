@@ -19,19 +19,8 @@ export const PUBLISHER = {
 export const LEGAL_UPDATED = '25 octobre 2026'
 export const REPO_URL = 'https://github.com/davidstudiopresto/paybybot3/tree/web-interface'
 
-export type LegalPage = 'securite' | 'confidentialite' | 'cgu' | 'mentions-legales'
-
-export const LEGAL_PAGES: { id: LegalPage; label: string }[] = [
-  { id: 'securite', label: 'Sécurité et données' },
-  { id: 'confidentialite', label: 'Confidentialité' },
-  { id: 'cgu', label: "Conditions d'utilisation" },
-  { id: 'mentions-legales', label: 'Mentions légales' },
-]
-
-export function legalPageFromHash(hash: string): LegalPage | null {
-  const id = hash.replace(/^#\/?/, '').split('?')[0]
-  return LEGAL_PAGES.some((p) => p.id === id) ? (id as LegalPage) : null
-}
+import { type LegalPage } from '@/lib/legalPages'
+export { LEGAL_PAGES, legalPageFromHash, type LegalPage } from '@/lib/legalPages'
 
 /** The page a legal page was opened from (« ?from=inscription » in its hash, set by App), to go back to it. */
 export function legalBack(signedIn: boolean): { href: string; label: string } {

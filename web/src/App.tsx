@@ -1,23 +1,26 @@
 import { Loading } from '@/components/Loading'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import { Dashboard } from '@/components/Dashboard'
 import { LoginView } from '@/components/LoginView'
 import { FaqView, Home } from '@/components/Landing'
 import { PayWizard } from '@/components/PayWizard'
-import { SecurityPage } from '@/components/SecurityPage'
-import { AdminPage } from '@/components/Admin'
 import { PricingPage } from '@/components/Pricing'
-import { legalPageFromHash, LegalView, type LegalPage } from '@/components/Legal'
+import { legalPageFromHash, type LegalPage } from '@/lib/legalPages'
 import { NotFoundPage } from '@/components/NotFound'
-import { Welcome } from '@/components/Welcome'
 import { CheckoutDone } from '@/components/CheckoutDone'
-import { SubscriptionDialog } from '@/components/Subscription'
 import { InviteCurtain, InviteGate } from '@/components/InviteGate'
 import { captureInvite, forgetInvite, isMember, markMember, openedFromLink } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
+
+// Pages seldom opened, loaded only when they are (the first screen comes up sooner).
+const SecurityPage = lazy(() => import('@/components/SecurityPage').then((m) => ({ default: m.SecurityPage })))
+const LegalView = lazy(() => import('@/components/Legal').then((m) => ({ default: m.LegalView })))
+const AdminPage = lazy(() => import('@/components/Admin').then((m) => ({ default: m.AdminPage })))
+const Welcome = lazy(() => import('@/components/Welcome').then((m) => ({ default: m.Welcome })))
+const SubscriptionDialog = lazy(() => import('@/components/Subscription').then((m) => ({ default: m.SubscriptionDialog })))
 
 type Route = 'faq' | 'tarifs' | 'connexion' | 'inscription' | 'demo' | 'admin' | 'bienvenue' | null
 
@@ -29,11 +32,39 @@ function routeFromHash(hash: string): Route {
     : null
 }
 
+const OVERVIEW_KEY = 'pbb-overview'
+
+/** The account data kept for this tab only (sessionStorage: gone when the tab closes, cleared at logout). */
+function cachedOverview(): Overview | null {
+  try {
+    const raw = sessionStorage.getItem(OVERVIEW_KEY)
+    return raw ? (JSON.parse(raw) as Overview) : null
+  } catch {
+    return null
+  }
+}
+
+function keepOverview(d: Overview | null) {
+  try {
+    if (d) sessionStorage.setItem(OVERVIEW_KEY, JSON.stringify(d))
+    else sessionStorage.removeItem(OVERVIEW_KEY)
+  } catch {
+    // storage blocked: nothing kept
+  }
+}
+
 export default function App() {
   const [me, setMe] = useState<Me | null | undefined>(undefined)
   const [loadError, setLoadError] = useState<string | null>(null)
   const shown = useRef(false) // the dashboard is on screen: errors are toasts, not the loading screen
-  const [data, setData] = useState<Overview | null>(null)
+  // The last account data seen in this tab: shown at once on a reload while fresh data is fetched (no blank page).
+  const [data, setDataState] = useState<Overview | null>(() => cachedOverview())
+  const setData = useCallback((d: Overview | null) => {
+    setDataState(d)
+    keepOverview(d)
+  }, [])
+  // The account data asked at start, alongside « who am I » (one round trip instead of two in a row).
+  const early = useRef<Promise<Overview | null> | null>(null)
   const [paying, setPaying] = useState(false)
   const [hosted, setHosted] = useState(false)
   // Word of mouth only (server's PAYBYBOT_INVITE_ONLY): the site opens through a user's link (?i=…).
@@ -102,7 +133,13 @@ export default function App() {
     if (me && !me.demo) markMember()
   }, [me])
 
+  // Signed out (expired cookie, other tab): the data kept for this tab goes too.
   useEffect(() => {
+    if (me === null) setData(null)
+  }, [me, setData])
+
+  useEffect(() => {
+    early.current = api.overview().catch(() => null) // not signed in: nothing, the usual flow follows
     api.me().then(setMe, () => setMe(null))
     api.config().then(
       (c) => {
@@ -157,6 +194,16 @@ export default function App() {
   }, [data])
 
   const refresh = useCallback(async () => {
+    const first = early.current
+    early.current = null
+    if (first) {
+      const ready = await first
+      if (ready) {
+        setData(ready)
+        setLoadError(null)
+        return
+      }
+    }
     try {
       setData(
         await api.overview().catch(async (e) => {
@@ -231,7 +278,11 @@ export default function App() {
       String(input).includes('/api/billing/subscription') || String(input).includes('/api/billing/cancel')
         ? Promise.resolve(new Response(JSON.stringify({ ...fake, cancelAtPeriodEnd: String(input).includes('cancel') }), { headers: { 'content-type': 'application/json' } }))
         : real(input, init)
-    return <SubscriptionDialog onClose={() => (window.location.hash = '#/')} />
+    return (
+      <Suspense fallback={null}>
+        <SubscriptionDialog onClose={() => (window.location.hash = '#/')} />
+      </Suspense>
+    )
   }
   // Development only: the screen shown after Stripe Checkout, without paying (#/apercu-paiement).
   if (import.meta.env.DEV && window.location.hash === '#/apercu-paiement')
@@ -243,7 +294,7 @@ export default function App() {
     )
 
   return (
-    <>
+    <Suspense fallback={<Loading />}>
       <Toaster />
       {/* Opened through a valid private link: « sur parrainage » first, then the screen lifts on the site. */}
       {inviteOnly && !me && invited === 'yes' && openedFromLink() && <InviteCurtain />}
@@ -336,6 +387,6 @@ export default function App() {
           )}
         </>
       )}
-    </>
+    </Suspense>
   )
 }

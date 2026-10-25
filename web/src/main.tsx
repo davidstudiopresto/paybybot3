@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from '@/components/NotFound'
-import { reactErrorHandler, startSentry } from '@/lib/sentry'
+import { reactErrorHandler, startMonitoringLater } from '@/lib/monitor'
 
-startSentry()
+startMonitoringLater() // Sentry after the page is shown, not before
 
 // The current build loaded: allow the one-time reload again for a future deployment switch.
 try {

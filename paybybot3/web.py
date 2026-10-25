@@ -3662,7 +3662,12 @@ RELOAD_ONCE_JS = ("try{var t=+sessionStorage.getItem('pbb-reloaded')||0;if(Date.
 class Assets(StaticFiles):
     async def get_response(self, path, scope):
         try:
-            return await super().get_response(path, scope)
+            response = await super().get_response(path, scope)
+            if response.status_code == 200:
+                # Built files carry their content's hash in their name: kept a year by the browser and Vercel's CDN,
+                # never downloaded twice (a new version has new names; the page itself is never cached).
+                response.headers["Cache-Control"] = "public, max-age=31536000, s-maxage=31536000, immutable"
+            return response
         except HTTPException as e:
             if e.status_code != 404:
                 raise

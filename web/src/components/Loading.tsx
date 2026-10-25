@@ -2,8 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { RotateCw } from 'lucide-react'
 import { Wordmark } from '@/components/signs'
 import { ui } from '@/lib/styles'
+import { cn } from '@/lib/utils'
 
 const SLOW_AFTER = 8000
+const SHOW_AFTER = 300
 
 /** Full-page wait: the logo and a short line, then a way out if it takes too long or fails. */
 export function Loading({
@@ -21,15 +23,18 @@ export function Loading({
   onLogout?: () => void
 }) {
   const [slow, setSlow] = useState(false)
+  // A quick load shows nothing (a plain white page for a blink, no logo flashing on and off).
+  const [visible, setVisible] = useState(false)
   useEffect(() => {
     const id = setTimeout(() => setSlow(true), SLOW_AFTER)
-    return () => clearTimeout(id)
+    const show = setTimeout(() => setVisible(true), SHOW_AFTER)
+    return () => (clearTimeout(id), clearTimeout(show))
   }, [])
   const stuck = !!error || slow
 
   return (
     <div className="grid min-h-dvh place-items-center bg-white px-6" aria-busy={!stuck} aria-live="polite">
-      <div className="rise flex w-full max-w-xs flex-col items-center gap-6 text-center">
+      <div className={cn('flex w-full max-w-xs flex-col items-center gap-6 text-center', visible || stuck ? 'rise' : 'invisible')}>
         <span className={stuck ? undefined : 'animate-pulse'}>
           <Wordmark />
         </span>

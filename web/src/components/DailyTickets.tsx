@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -350,16 +350,41 @@ export function DailyWizard({
           : [rateLabel(r.name), max]
   }
 
+  // The zone check and the rates, asked together while the user types (a pause of 350 ms on a full number): on
+  // « Suivant » they are usually already there, no wait.
+  const ahead = useRef<{ key: string; p: Promise<[boolean, Rate[] | Error]> } | null>(null)
+  const lookUp = (z: string, pl: string) =>
+    Promise.all([
+      api.zone(z).then((r) => r.found, () => true), // PayByPhone silent on the zone: the rates will tell
+      api.rates(z, pl).then((r) => r, (e) => e as Error),
+    ])
+  useEffect(() => {
+    if (!plate || !/^[0-9A-Za-z]{5,12}$/.test(zone)) return // a whole number (5 characters at least): no call per keystroke
+    const key = `${zone}|${plate}`
+    const t = setTimeout(() => {
+      if (ahead.current?.key !== key) ahead.current = { key, p: lookUp(zone, plate) }
+    }, 350)
+    return () => clearTimeout(t)
+  }, [zone, plate]) // eslint-disable-line react-hooks/exhaustive-deps
+
   async function findRates() {
     setLooking(true)
     setError(null)
     try {
+      const key = `${zone}|${plate}`
+      if (ahead.current?.key !== key) ahead.current = { key, p: lookUp(zone, plate) }
+      const [found, answer] = await ahead.current.p
       // PayByBot works in France: a number PayByPhone does not know there stops here, with a clear word.
-      if (!(await api.zone(zone)).found) {
+      if (!found) {
+        ahead.current = null
         setError('Cette zone n’existe pas chez PayByPhone en France. Vérifiez le numéro sur le panneau ou l’horodateur.')
         return
       }
-      const list = await api.rates(zone, plate)
+      if (answer instanceof Error) {
+        ahead.current = null // asked again on the next try
+        throw answer
+      }
+      const list = answer
       setRates(list)
       const first = list.filter((r) => !r.parkingNotAllowedReason && !resident(r))
       setRateId((first.find(handi) ?? first[0])?.ratePolicyId ?? null)

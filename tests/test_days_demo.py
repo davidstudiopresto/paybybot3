@@ -61,7 +61,8 @@ class DemoDays(unittest.TestCase):
         base = {"location": "75015", "rate": "101", "duration": 1, "unit": "Days", "plate": "AB123CD",
                 "paymentAccountId": "x"}
         self.assertEqual(Autopilot(**base, days=[1, 4], start="09:30").days, [1, 4])
-        for bad in ({"days": [6]}, {"days": []}, {"days": [1], "start": "25:00"}):
+        self.assertEqual(Autopilot(**base, days=[6]).days, [6])  # Sundays: paid outside Paris
+        for bad in ({"days": [7]}, {"days": []}, {"days": [1], "start": "25:00"}, {"days": [1], "tz": "../etc"}):
             with self.assertRaises(ValidationError):
                 Autopilot(**base, **bad)
 

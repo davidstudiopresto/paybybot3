@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import datetime
 from time import sleep
@@ -71,17 +72,29 @@ class Bot:
         self.expires_in = j.get("expires_in")
 
     def _graphql(self, query, variables=None):
-        r = requests.post(
-            self.GRAPHQL_URL,
-            headers={
-                **self.base_headers,
-                "Accept": "application/json, text/plain, */*",
-                "Content-Type": "application/json",
-                # The web app signs requests (x-signature), but the API still accepts a plain Bearer token.
-                "Authorization": self.authorization,
-            },
-            json={"operationName": None, "variables": variables or {}, "query": query},
-        )
+        # 429 (too many requests): PayByPhone did not process it, so it is sent again after a short wait, twice.
+        for attempt in range(3):
+            r = requests.post(
+                self.GRAPHQL_URL,
+                headers={
+                    **self.base_headers,
+                    "Accept": "application/json, text/plain, */*",
+                    "Content-Type": "application/json",
+                    # The web app signs requests (x-signature), but the API still accepts a plain Bearer token.
+                    "Authorization": self.authorization,
+                },
+                json={"operationName": None, "variables": variables or {}, "query": query},
+                timeout=45,
+            )
+            if r.status_code != 429 or attempt == 2:
+                break
+            try:
+                wait = min(float(r.headers.get("Retry-After") or 0), 5.0)
+            except ValueError:
+                wait = 0
+            sleep(wait or attempt + 1)
+        if r.status_code == 429:  # still refused: an error log, so Sentry warns that PayByPhone is limiting us
+            logging.getLogger("paybybot3.bot").error("PayByPhone answered 429 three times in a row (rate limited)")
         r.raise_for_status()
         j = r.json()
         if j.get("errors"):

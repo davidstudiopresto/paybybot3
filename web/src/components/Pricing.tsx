@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Bike, Car, CarFront, Check, Gift, Loader2, Lock, X, type LucideIcon } from 'lucide-react'
+import { Check, Gift, Loader2, Lock, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
@@ -192,38 +192,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
   )
 }
 
-/** What one forgotten ticket costs once majoré (paris.fr: FPS of 6 hours + 50 € after 3 months unpaid), by zone, to
- *  compare with the price above. Two-wheelers: half the light-vehicle FPS; « SUV »: heavy vehicles (over 1.6 t,
- *  2 t if low-emission). */
-const FINES: [LucideIcon, string, Record<1 | 2, string>][] = [
-  [Bike, 'Scooter', { 1: '87,50 €', 2: '75 €' }],
-  [Car, 'Voiture', { 1: '125 €', 2: '100 €' }],
-  [CarFront, 'SUV', { 1: '275 €', 2: '200 €' }],
-]
-
-function FinesNote({ zone, className }: { zone: 1 | 2; className?: string }) {
-  return (
-    <div className={cn('rounded-2xl border border-ink/10 px-5 py-5 text-center', className)}>
-      <p className="font-heading text-lg font-medium tracking-[-0.02em] text-ink">
-        Bon à savoir : montant des amendes majorées à Paris (zone {zone})
-      </p>
-      <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-[0.95rem] text-ink/60">
-        {FINES.map(([Icon, name, amount]) => (
-          <li key={name} className="flex items-center gap-2">
-            <Icon className="size-4 text-eu" strokeWidth={1.75} /> {name}{' '}
-            <span className="text-ink tabular-nums">{amount[zone]}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-3 text-xs text-ink/45">
-        Source : paris.fr, forfait post-stationnement non payé sous 3 mois (+50 €).
-      </p>
-    </div>
-  )
-}
-
-
-/** Pricing page (#/tarifs): the same two plans for everyone, and what a forgotten ticket costs. */
+/** Pricing page (#/tarifs): the same two plans for everyone. */
 export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
   return (
     <div className="flex min-h-dvh flex-col bg-white">
@@ -238,7 +207,6 @@ export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; sig
         <div className="mt-8 lg:mt-10">
           <PlanCards signedIn={signedIn} />
         </div>
-        <FinesNote zone={1} className="mx-auto mt-8 w-full max-w-3xl" />
         <p className="mt-8 text-center text-sm text-ink/50">
           Prix TTC, sans engagement.
         </p>

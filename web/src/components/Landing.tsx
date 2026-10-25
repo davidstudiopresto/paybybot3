@@ -227,7 +227,7 @@ function Testimonials() {
         Ils nous font confiance.
       </h2>
       <p className="mt-5 text-center text-lg text-ink/60">
-        <CountUp to={100} className="font-heading text-2xl font-semibold text-eu" /> Parisiens utilisent <PayByBot />
+        <CountUp to={100} className="font-heading text-2xl font-semibold text-eu" /> conducteurs utilisent <PayByBot />
       </p>
       <div className="relative left-1/2 mt-16 w-screen lg:mt-24 -translate-x-1/2 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent)]">
         <ul className="marquee flex w-max gap-4">
@@ -453,7 +453,7 @@ const QUESTIONS: Question[] = [
   [
     'Pour quels véhicules et quels stationnements ?',
     <>
-      Voiture, deux-roues ou utilitaire à Paris : ticket résident renouvelé chaque semaine, ticket visiteur ou carte
+      Partout où <PayByPhone /> fonctionne, pour une voiture, un deux-roues ou un utilitaire : ticket résident renouvelé chaque semaine, ticket visiteur ou carte
       handicapé (CMI-S) pris les jours choisis. Le tarif professionnel n’est pas encore proposé.
     </>,
   ],

@@ -677,11 +677,12 @@ def pause_bounds(first_day, last_day):
     return start.astimezone(timezone.utc).isoformat(), end.astimezone(timezone.utc).isoformat() if end else None
 
 
-def paris_text(value):
+def paris_text(value, tz=None):
+    """A date in words, in Paris time (or the given time zone: a ticket programmed elsewhere)."""
     dt = parse_dt(value)
     if not dt:
         return ""
-    local = dt.astimezone(PARIS)
+    local = dt.astimezone(tz or PARIS)
     days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
     months = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
               "novembre", "décembre"]
@@ -692,10 +693,15 @@ def plate_text(plate):
     return "%s-%s-%s" % (plate[:2], plate[2:5], plate[5:]) if re.fullmatch(r"[A-Z]{2}\d{3}[A-Z]{2}", plate or "") else plate
 
 
+CURRENCY_SIGNS = {"EUR": "€", "GBP": "£", "USD": "$", "CAD": "$ CA", "AUD": "$ AU", "CHF": "CHF"}
+
+
 def money_text(cost):
+    """« 9,00 € », « 2,50 £ »: the amount in PayByPhone's own currency (euros when it does not say)."""
     if not cost or cost.get("amount") is None:
         return ""
-    return ("%.2f €" % float(cost["amount"])).replace(".", ",")
+    sign = CURRENCY_SIGNS.get(str(cost.get("currency") or "EUR").upper(), str(cost.get("currency") or "€"))
+    return ("%.2f %s" % (float(cost["amount"]), sign)).replace(".", ",")
 
 
 RENEWAL_FOOTER = ("Vous recevez cet e-mail parce que vous avez activé le renouvellement automatique sur PayByBot. Pour ne "
@@ -772,11 +778,13 @@ def notify(details, event, **info):
     rule = rule_of(details)
     if event == "activated" and rule:
         lines = ["Les tickets automatiques sont activés pour %s, %s." % (car, rule_text(rule))]
+        tz = schedule.zone_of(rule)
         if info.get("expire"):
-            lines.append("Un ticket couvre déjà votre véhicule jusqu'au %s." % paris_text(info["expire"]))
+            lines.append("Un ticket couvre déjà votre véhicule jusqu'au %s." % paris_text(info["expire"], tz))
         if info.get("next"):
-            lines.append("Prochain ticket : %s." % paris_text(info["next"]))
-        lines.append("Rien n'est payé les dimanches et jours fériés, gratuits à Paris.")
+            lines.append("Prochain ticket : %s." % paris_text(info["next"], tz))
+        if schedule.in_paris(rule):
+            lines.append("Rien n'est payé les dimanches et jours fériés, gratuits à Paris.")
         send_email(to, "Tickets automatiques activés · %s" % plate_text(details.get("plate")),
                    "Tickets automatiques activés", lines, open_app)
     elif event == "activated":
@@ -826,7 +834,8 @@ def rule_of(details):
     if not days:
         return None
     return {"days": sorted({int(d) for d in days}), "start": details.get("start") or schedule.DEFAULT_START,
-            "unit": details.get("unit"), "duration": details.get("duration")}
+            "unit": details.get("unit"), "duration": details.get("duration"), "location": details.get("location"),
+            "tz": details.get("tz")}
 
 
 def duration_text(duration, unit):
@@ -1594,6 +1603,12 @@ def french_phone(username):
     return "+33" + digits if re.fullmatch(r"[1-9]\d{8}", digits) else None
 
 
+def international_phone(username):
+    """A number of any country where PayByPhone works, in international format (+ and 8 to 15 digits), or None."""
+    digits = re.sub(r"[\s.\-()]", "", username or "")
+    return digits if re.fullmatch(r"\+[1-9]\d{7,14}", digits) else None
+
+
 class Login(BaseModel):
     username: str = Field(max_length=120)
     password: str = Field(max_length=200)
@@ -1629,8 +1644,11 @@ class Autopilot(Parking):
     email: str = Field(default="", max_length=254, pattern=EMAIL_PATTERN)
     # Precise days (0 = Monday ... 5 = Saturday; Sundays are free) and the Paris time the ticket is taken.
     # No days: the continuous weekly renewal.
-    days: list[Annotated[int, Field(ge=0, le=5)]] | None = Field(default=None, min_length=1, max_length=6)
+    days: list[Annotated[int, Field(ge=0, le=6)]] | None = Field(default=None, min_length=1, max_length=7)
+    tz: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z_]+(/[A-Za-z0-9_+\-]+){0,2}$")
     start: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    # « Je suis titulaire de la carte CMI-S »: ticked for the Handi ticket, kept with the renewal as proof.
+    cmis: bool = False
 
 
 class Pause(BaseModel):
@@ -1652,8 +1670,8 @@ def login(body: Login, request: Request, response: Response):
         raise HTTPException(400, "Indiquez votre adresse e-mail.")
     if body.signup and not demo:
         check_email(body.email)
-        if "@" not in body.username and not french_phone(body.username):
-            raise HTTPException(400, "Numéro invalide : un numéro français à 10 chiffres (exemple : 06 12 34 56 78).")
+        if "@" not in body.username and not (french_phone(body.username) or international_phone(body.username)):
+            raise HTTPException(400, "Numéro invalide : vérifiez le numéro de votre compte PayByPhone.")
     if body.signup and not demo and INVITE_ONLY and not valid_invite(body.invite):
         raise HTTPException(403, "PayByBot est sur invitation : demandez son lien à un proche qui l'utilise déjà.")
     if HOSTED and not demo:
@@ -2532,7 +2550,9 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                 "data": encrypt_details({"label": body.label, "plate": body.plate, "location": body.location,
                                          "rate": body.rate, "duration": fmt_qty(body.duration), "unit": body.unit,
                                          "payment_account_id": body.paymentAccountId,
-                                         "email": body.email.strip(), "days": days, "start": start})})
+                                         "email": body.email.strip(), "days": days, "start": start,
+                                         **({"tz": body.tz} if days and body.tz else {}),
+                                         **({"cmis_attested_at": utc_iso(datetime.now(timezone.utc))} if body.cmis else {})})})
             # Paid below, in this request: the scheduler keeps off the new row meanwhile (never two payments at once).
             store("renewal_update", p_id=row["id"],
                   p_patch={"next_check": utc_iso(datetime.now(timezone.utc) + timedelta(minutes=10))})

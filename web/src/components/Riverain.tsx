@@ -18,7 +18,7 @@ export const WEEKLY_LABEL = 'Riverain hebdo'
 const PENDING_KEY = 'pbb-pending-renewals'
 
 /** A renewal kept for the way back from Stripe: weekly (no label) or a non-resident ticket on precise days. */
-export type PendingRenewal = Parking & { label?: string; days?: number[]; start?: string }
+export type PendingRenewal = Parking & { label?: string; days?: number[]; start?: string; cmis?: boolean; tz?: string }
 
 export function savePending(items: PendingRenewal[]) {
   try {

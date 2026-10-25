@@ -16,8 +16,11 @@ import { cn } from '@/lib/utils'
  */
 
 export const DAILY_LABEL = 'Jours précis'
-const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
-const DAY_NAMES = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
+const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+const DAY_NAMES = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
+/** A Paris zone (75001 to 75020, 75116): Sundays and holidays free, visitors 6 h at most. Anywhere else PayByPhone
+ *  works, every day can be chosen and PayByPhone itself says what it accepts. */
+const isParis = (zone: string | null | undefined) => /^75(0\d\d|116)$/.test(zone ?? '')
 
 /** « Du lundi au samedi », « Lundi, mercredi et vendredi ». */
 function daysText(days: number[]) {
@@ -28,16 +31,26 @@ function daysText(days: number[]) {
   return cap(names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} et ${names[names.length - 1]}`)
 }
 
+/** When the ticket ends: « 15 h », or « le lendemain 9 h » for a day ticket (or one running past midnight). */
+function endText(start: string, duration: number, unit: Unit) {
+  const minutes = unit === 'Days' ? duration * 24 * 60 : unit === 'Hours' ? duration * 60 : duration
+  const [h, m] = start.split(':').map(Number)
+  const days = Math.floor((h * 60 + m + minutes) / (24 * 60))
+  return `${days === 1 ? 'le lendemain ' : days > 1 ? `${days} jours après, ` : ''}${hourText(start, minutes)}`
+}
+
 /** « 9 h », « 14 h 30 »: the start time, plus some minutes when given (the ticket's end). */
 function hourText(start: string, plusMinutes = 0) {
   const [h, m] = start.split(':').map(Number)
   const t = (h * 60 + m + plusMinutes) % (24 * 60)
   const mm = t % 60
   return `${Math.floor(t / 60)} h${mm ? ` ${String(mm).padStart(2, '0')}` : ''}`
-} // 0 = Monday … 5 = Saturday; Sundays and holidays are free
+} // 0 = Monday … 6 = Sunday (never picked in Paris: Sundays and holidays are free)
 const TEAL = 'bg-[#4e9aa0]'
 
-const euros = (m?: Money | null) => (m ? m.amount.toFixed(2).replace('.', ',') + ' €' : '—')
+// In PayByPhone's own currency (euros, pounds, dollars…), French style.
+const euros = (m?: Money | null) =>
+  m ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: m.currency || 'EUR' }).format(m.amount) : '—'
 const keyOf = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
 const isDaily = (ap: Autopilot) => !!(ap as Autopilot & { days?: number[] }).days?.length
 const daysOf = (ap: Autopilot) => (ap as Autopilot & { days?: number[] }).days ?? []
@@ -103,7 +116,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
           </span>
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {DAYS.map((d, i) => (
+          {DAYS.map((d, i) => (i === 6 && isParis(ap.location) && !daysOf(ap).includes(6) ? null :
             <span
               key={d}
               className={cn(
@@ -217,6 +230,7 @@ export function DailyWizard({
   const [looking, setLooking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rateId, setRateId] = useState<string | null>(null)
+  const [cmis, setCmis] = useState(false) // « je suis titulaire de la carte CMI-S »: required for the Handi ticket
   const [duration, setDuration] = useState(6)
   const [unit, setUnit] = useState<Unit>('Hours')
   const [over, setOver] = useState(false)
@@ -230,7 +244,8 @@ export function DailyWizard({
   // way back from Stripe (nothing is charged before the end of the free month).
   const [paywall, setPaywall] = useState(false)
 
-  const place = /^\d{5}$/.test(zone) ? arrondissement(zone) : null
+  const paris = isParis(zone)
+  const place = paris ? arrondissement(zone) : null
   // The visitor rate comes as « léger » and « lourd »: PayByPhone does not know the weight, so one question instead.
   const usable = useMemo(() => (rates ?? []).filter((r) => !r.parkingNotAllowedReason && !resident(r)), [rates])
   const hasWeight = usable.some(light) && usable.some(heavy)
@@ -238,13 +253,15 @@ export function DailyWizard({
   const effective = usable.find((r) => r.ratePolicyId === rateId) ?? null
   // One question, every answer with its price: the CMI-S card first (always shown), then the visitor rates by weight.
   const options = [...(handiRate ? [handiRate] : []), ...usable.filter((r) => !handi(r)).sort((a, b) => Number(heavy(a)) - Number(heavy(b)))]
-  // PayByPhone gives no maximum stay with its rates: a day when the rate sells days, else Paris' 6 hours for visitors.
+  // PayByPhone gives no maximum stay with its rates: a day when the rate sells days; for visitors, Paris' 6 hours,
+  // elsewhere up to 24 hours (PayByPhone's quote refuses a longer stay than the zone allows).
   // The units offered per rate: Handi in days only, visitors in minutes or hours; each capped at the rate's maximum.
   const unitsOf = (r: Rate): Unit[] => (handi(r) ? ['Days'] : r.acceptedTimeUnits.filter((u) => u !== 'Days'))
-  const MAX: Record<Unit, number> = { Days: 1, Hours: 6, Minutes: 360 }
-  const maxStay = (r: Rate) => (r.acceptedTimeUnits.includes('Days') ? '1\u00a0jour' : '6\u00a0h')
+  const MAX: Record<Unit, number> = paris ? { Days: 1, Hours: 6, Minutes: 360 } : { Days: 1, Hours: 24, Minutes: 1440 }
+  const maxStay = (r: Rate) => (r.acceptedTimeUnits.includes('Days') ? '1\u00a0jour' : paris ? '6\u00a0h' : null)
   const optionText = (r: Rate): [string, string] => {
-    const max = `${maxStay(r)} maximum`
+    const stay = maxStay(r)
+    const max = stay ? `${stay} maximum` : r.acceptedTimeUnits.includes('Days') ? 'À la journée' : 'À l’heure'
     return handi(r)
       ? ['Carte handicapé (CMI-S)', max]
       : hasWeight && light(r)
@@ -278,7 +295,8 @@ export function DailyWizard({
     setUnit(u)
     setDuration(MAX[u])
     setOver(false)
-    setStart(handi(effective) ? '05:00' : '09:00') // Handi: taken before 9 h, the day's ticket covers the whole paid day
+    // Paris Handi: taken at 5 h, before 9 h, the day's ticket covers the whole paid day (elsewhere the user says when).
+    setStart(handi(effective) && paris ? '05:00' : '09:00')
   }, [effective?.ratePolicyId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Every option's price for its own preset length (a day, or 6 hours), so each answer shows what it costs.
@@ -342,6 +360,8 @@ export function DailyWizard({
     label: DAILY_LABEL,
     days,
     start,
+    tz: Intl.DateTimeFormat().resolvedOptions().timeZone, // the times are the user's local ones
+    ...(handi(effective!) ? { cmis: true } : {}),
   })
 
   async function activate() {
@@ -412,12 +432,13 @@ export function DailyWizard({
                 <p className={ui.label}>Où vous garez-vous ?</p>
                 <input
                   value={zone}
-                  onChange={(e) => setZone(e.target.value.replace(/\D/g, '').slice(0, 5))}
-                  inputMode="numeric"
-                  placeholder="Code postal, ex. 75016"
+                  onChange={(e) => setZone(e.target.value.replace(/[^0-9A-Za-z]/g, '').slice(0, 12))}
+                  placeholder="Numéro de zone PayByPhone"
                   className={ui.field}
                 />
-                <p className="mt-2 text-sm text-ink/50">{place ? `✓ ${place}` : 'À Paris, le code postal de l’arrondissement suffit.'}</p>
+                <p className="mt-2 text-sm text-ink/50">
+                  {place ? `✓ ${place}` : withPayByPhone('Le numéro de zone PayByPhone, sur le panneau ou l’horodateur. À Paris, le code postal suffit.')}
+                </p>
               </div>
               {error && <p className={ui.error}>{error}</p>}
             </>
@@ -453,7 +474,7 @@ export function DailyWizard({
                       </button>
                     )
                   })}
-                  {!handiRate && options.length > 0 && (
+                  {!handiRate && options.length > 0 && paris && (
                     // No Handi rate offered here by PayByPhone: shown anyway, greyed, so the option is not forgotten.
                     <div className="flex w-full items-center gap-3 rounded-xl border border-dashed border-ink/15 px-4 py-3 text-left">
                       <span className="min-w-0 flex-1">
@@ -469,17 +490,27 @@ export function DailyWizard({
                 </div>
                 {hasWeight && (
                   <p className="mt-2 text-xs text-ink/45">
-                    {withPayByPhone('PayByPhone ne connaît pas le poids du véhicule : à Paris, le tarif visiteur est trois fois plus cher au-delà de 1,6 t.')}
+                    {withPayByPhone('PayByPhone ne connaît pas le poids du véhicule : choisissez le tarif qui lui correspond.')}
                   </p>
                 )}
               </div>
+              {effective && handi(effective) && (
+                // PayByPhone does not check the card: the user states it, kept with the ticket.
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-ink/[0.03] px-4 py-3 text-sm leading-relaxed text-ink/80">
+                  <input type="checkbox" checked={cmis} onChange={(e) => setCmis(e.target.checked)} className="mt-1 size-4 shrink-0 accent-[#4e9aa0]" />
+                  <span>
+                    Je suis titulaire d’une carte mobilité inclusion mention stationnement (CMI-S) et je la place derrière le
+                    pare-brise. Sans elle, ce ticket gratuit ne me couvre pas.
+                  </span>
+                </label>
+              )}
             </>
           )}
 
           {step === 3 && effective && (
             <>
               {/* Handi: nothing to set but the days; a day's ticket taken at 5 h, before the paid hours */}
-              {!handi(effective) && (
+              {!(handi(effective) && paris) && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className={ui.label}>Durée du ticket</p>
@@ -527,16 +558,16 @@ export function DailyWizard({
                     <p className={ui.label}>Heure de prise</p>
                     <input type="time" value={start} onChange={(e) => setStart(e.target.value || '09:00')} className={ui.field} />
                     <p className="mt-2 text-xs text-ink/45">
-                      Fin du ticket : <span className="font-medium text-ink tabular-nums">{hourText(start, unit === 'Hours' ? duration * 60 : duration)}</span>
+                      Fin du ticket : <span className="font-medium text-ink tabular-nums">{endText(start, duration, unit)}</span>
                     </p>
                   </div>
                 </div>
               )}
               <div>
                 <p className={ui.label}>Jours</p>
-                {/* A week strip, same cards as the tickets above; Sunday shown but free, so never picked */}
+                {/* A week strip, same cards as the tickets above; in Paris Sunday is shown but free, so never picked */}
                 <div className="grid grid-cols-7 gap-1.5">
-                  {DAYS.map((d, i) => {
+                  {(paris ? DAYS.slice(0, 6) : DAYS).map((d, i) => {
                     const on = days.includes(i)
                     return (
                       <button
@@ -556,15 +587,17 @@ export function DailyWizard({
                       </button>
                     )
                   })}
-                  <div className="flex h-14 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-ink/10 text-sm text-ink/30">
-                    Dim
-                    <span className="text-[0.65rem] leading-none">gratuit</span>
-                  </div>
+                  {paris && (
+                    <div className="flex h-14 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-ink/10 text-sm text-ink/30">
+                      Dim
+                      <span className="text-[0.65rem] leading-none">gratuit</span>
+                    </div>
+                  )}
                 </div>
-                {handi(effective) && (
+                {handi(effective) && paris && (
                   <p className="mt-3 text-sm text-ink/70">Le ticket Handi d’une journée est pris automatiquement à 5 h, chaque jour choisi.</p>
                 )}
-                <p className="mt-2 text-xs text-ink/45">Le dimanche et les jours fériés sont gratuits : aucun ticket n’est pris.</p>
+                {paris && <p className="mt-2 text-xs text-ink/45">À Paris, le dimanche et les jours fériés sont gratuits : aucun ticket n’est pris.</p>}
               </div>
               <div className="rounded-xl bg-ink/[0.03] px-4 py-3 text-sm">
                 <div className="flex justify-between gap-4">
@@ -587,7 +620,7 @@ export function DailyWizard({
                   ['Zone', place ?? `Zone ${zone}`],
                   ['Ticket', optionText(effective)[0]],
                   ['Jours', daysText(days)],
-                  ['Horaire', handi(effective) ? 'Toute la journée' : `${hourText(start)} → ${hourText(start, unit === 'Hours' ? duration * 60 : duration)}`],
+                  ['Horaire', handi(effective) && paris ? 'Toute la journée' : `${hourText(start)} → ${endText(start, duration, unit)}`],
                   ['Prix', handi(effective) ? 'Gratuit' : cost ? `${euros(cost)} par jour` : '—'],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-2.5">
@@ -634,12 +667,12 @@ export function DailyWizard({
               </button>
             )}
             {step === 1 && (
-              <button onClick={findRates} disabled={!plate || zone.length !== 5 || looking} className={cn(ui.primary, 'flex-[2]')}>
+              <button onClick={findRates} disabled={!plate || !zone || looking} className={cn(ui.primary, 'flex-[2]')}>
                 {looking ? <Loader2 className="size-5 animate-spin" /> : 'Suivant'}
               </button>
             )}
             {step === 2 && (
-              <button onClick={() => setStep(3)} disabled={!effective} className={cn(ui.primary, 'flex-[2]')}>
+              <button onClick={() => setStep(3)} disabled={!effective || (handi(effective) && !cmis)} className={cn(ui.primary, 'flex-[2]')}>
                 Suivant
               </button>
             )}

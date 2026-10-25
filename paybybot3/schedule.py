@@ -1,8 +1,9 @@
 """When a "precise days" renewal should take a ticket (like Frequens: "every Saturday", "Tuesday to Friday").
 
 Pure functions, no PayByPhone or database access, so the decision can be tested on its own.
-Days are numbered like ``date.weekday()``: 0 = Monday ... 6 = Sunday. Times are Paris times.
-Paid street parking in Paris is free on Sundays and French public holidays: no ticket is taken then.
+Days are numbered like ``date.weekday()``: 0 = Monday ... 6 = Sunday. Times are local to the rule (its "tz",
+Paris by default). In Paris (zones 75xxx), street parking is free on Sundays and French public holidays: no
+ticket is taken then. Elsewhere PayByPhone works the same everywhere, so every chosen day is taken.
 """
 
 from datetime import date, datetime, time as dtime, timedelta, timezone
@@ -38,6 +39,21 @@ def free_day(day):
     return day.weekday() == SUNDAY or day in french_holidays(day.year)
 
 
+def in_paris(rule):
+    """A Paris zone (75001 to 75020, 75116): Sundays and holidays free, paid parking until 20:00. A rule saved
+    before zones were kept is a Paris one (PayByBot was Paris only)."""
+    zone = str(rule.get("location") or "75")
+    return zone.startswith("75") and len(zone) in (2, 5)
+
+
+def zone_of(rule):
+    """The rule's time zone: the one of the browser it was set in, Paris by default."""
+    try:
+        return ZoneInfo(rule.get("tz") or "Europe/Paris")
+    except Exception:
+        return PARIS
+
+
 def _aware(dt):
     if dt is None:
         return None
@@ -53,29 +69,33 @@ def _start_time(start):
 
 def slot_on(day, rule):
     """(start, end) of the ticket window on a Paris day, or None if no ticket is due that day."""
-    if day.weekday() not in rule["days"] or free_day(day):
+    paris = in_paris(rule)
+    if day.weekday() not in rule["days"] or (paris and free_day(day)):
         return None
-    begin = datetime.combine(day, _start_time(rule.get("start")), PARIS)
+    tz = zone_of(rule)
+    begin = datetime.combine(day, _start_time(rule.get("start")), tz)
     if rule.get("unit") == "Hours":
         end = begin + timedelta(hours=float(rule.get("duration") or 1))
     elif rule.get("unit") == "Minutes":
         end = begin + timedelta(minutes=float(rule.get("duration") or 60))
-    else:  # a day ticket: worth taking until paid parking ends that day
-        end = max(datetime.combine(day, PAID_UNTIL, PARIS), begin + timedelta(hours=1))
+    elif paris:  # a day ticket: worth taking until paid parking ends that day
+        end = max(datetime.combine(day, PAID_UNTIL, tz), begin + timedelta(hours=1))
+    else:  # elsewhere paid hours are not known: the ticket's own length
+        end = begin + timedelta(days=float(rule.get("duration") or 1))
     return begin, end
 
 
 def current_slot(rule, now):
     """The window containing now, if any."""
     now = _aware(now)
-    slot = slot_on(now.astimezone(PARIS).date(), rule)
+    slot = slot_on(now.astimezone(zone_of(rule)).date(), rule)
     return slot if slot and slot[0] <= now < slot[1] else None
 
 
 def next_slot(rule, after):
     """Start of the first window beginning strictly after `after` (None if the rule can never pay)."""
     after = _aware(after)
-    day = after.astimezone(PARIS).date()
+    day = after.astimezone(zone_of(rule)).date()
     for i in range(400):
         slot = slot_on(day + timedelta(days=i), rule)
         if slot and slot[0] > after:

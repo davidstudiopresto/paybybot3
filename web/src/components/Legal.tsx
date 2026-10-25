@@ -16,7 +16,7 @@ export const PUBLISHER = {
   email: 'contact@paybybot.fr',
 }
 
-export const LEGAL_UPDATED = '23 octobre 2026'
+export const LEGAL_UPDATED = '25 octobre 2026'
 export const REPO_URL = 'https://github.com/davidstudiopresto/paybybot3/tree/web-interface'
 
 export type LegalPage = 'securite' | 'confidentialite' | 'cgu' | 'mentions-legales'
@@ -111,11 +111,11 @@ export function SecurityDetails() {
         <DataTable
           rows={[
             ['Jetons de connexion PayByPhone', 'Dans votre navigateur (cookie)', 'Chiffrés avec une clé que seul le serveur possède', '12 h sans activité, 24 h au plus'],
-            ['Renouvellement résident : jeton de reconnexion PayByPhone', 'Base de données à Paris', 'Chiffré ; la clé est conservée ailleurs', 'Jusqu’à ce que vous l’arrêtiez'],
-            ['Renouvellement résident : plaque, zone, tarif, durée, moyen de paiement choisi', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à ce que vous l’arrêtiez'],
+            ['Renouvellement ou ticket programmé : jeton de reconnexion PayByPhone', 'Base de données à Paris', 'Chiffré ; la clé est conservée ailleurs', 'Jusqu’à ce que vous l’arrêtiez'],
+            ['Renouvellement ou ticket programmé : plaque, zone, tarif, durée, jours et heure, moyen de paiement choisi', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Compte PayByBot : e-mail et zone de résidence', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à la suppression du compte'],
-            ['Renouvellement résident : e-mail pour les confirmations', 'Base de données à Paris', 'Chiffré', 'Jusqu’à ce que vous le retiriez ou arrêtiez'],
-            ['Renouvellement résident : dates de pause, de vérification et de paiement', 'Base de données à Paris', 'Dates seules, sans lien lisible avec vous', 'Jusqu’à ce que vous l’arrêtiez'],
+            ['Renouvellement ou ticket programmé : e-mail pour les confirmations', 'Base de données à Paris', 'Chiffré', 'Jusqu’à ce que vous le retiriez ou arrêtiez'],
+            ['Renouvellement ou ticket programmé : dates de pause, de vérification et de paiement', 'Base de données à Paris', 'Dates seules, sans lien lisible avec vous', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Identifiant de votre compte', 'Base de données à Paris', 'Seulement une empreinte : le numéro n’y figure pas', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Tentatives de connexion (anti-piratage)', 'Base de données à Paris', 'Empreintes de l’appareil et du compte, jamais l’adresse IP ni l’identifiant en clair', '24 h au plus'],
             ['Journaux techniques', 'Hébergeur (Vercel)', 'Identifiant et plaque masqués', 'Durée limitée fixée par l’hébergeur'],
@@ -149,10 +149,10 @@ export function SecurityDetails() {
       <Section title="Garder la main">
         <ul>
           <li>Tous vos tickets restent visibles et gérables dans l’application <PayByPhone />.</li>
-          <li>Le lien « Arrêter » sur la carte résident supprime le renouvellement et le jeton gardé.</li>
+          <li>Le lien « Arrêter » sur la carte d’un renouvellement ou d’un ticket programmé le supprime, avec le jeton gardé.</li>
           <li>La « Pause vacances » suspend les paiements entre deux dates, sans rien supprimer.</li>
           <li>
-            Les e-mails de confirmation sont facultatifs : retirez votre adresse à tout moment depuis la carte résident. Ils
+            Les e-mails de confirmation sont facultatifs : retirez votre adresse à tout moment depuis la carte du renouvellement. Ils
             ne contiennent aucun suivi d’ouverture ni de clic.
           </li>
           <li>
@@ -244,8 +244,8 @@ function Privacy() {
             identifiants de client et d’abonnement Stripe, chiffrés.
           </li>
           <li>
-            <strong>Renouvellement résident (si vous l’activez) :</strong> un jeton de reconnexion <PayByPhone />, la plaque,
-            la zone, le tarif, la durée et le moyen de paiement choisis, tous chiffrés ; une empreinte de votre identifiant ;
+            <strong>Renouvellement résident ou ticket programmé (si vous l’activez) :</strong> un jeton de reconnexion <PayByPhone />, la plaque,
+            la zone, le tarif, la durée, les jours et l’heure choisis et le moyen de paiement, tous chiffrés ; une empreinte de votre identifiant ;
             les dates des dernières vérifications et du dernier paiement, les dates de pause éventuelles, et le dernier
             message d’erreur éventuel, et l’e-mail des confirmations, chiffré lui aussi.
           </li>
@@ -320,7 +320,7 @@ function Privacy() {
             souvenir de moi ».
           </li>
           <li>Compte <PayByBot /> (e-mail, zone de résidence) : jusqu’à la suppression du compte.</li>
-          <li>Renouvellement résident, y compris l’e-mail : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
+          <li>Renouvellement ou ticket programmé, y compris l’e-mail : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
           <li>
             Mois offert : une empreinte anonyme (chiffrée, impossible à relire) du compte <PayByPhone />, de l’e-mail et
             des plaques, avec la date de début du mois offert, gardée même après la suppression du compte, pour
@@ -360,7 +360,7 @@ function Privacy() {
         <p>
           Vous pouvez demander l’accès à vos données, leur rectification, leur effacement, la limitation de leur traitement
           ou leur portabilité, et vous opposer à un traitement fondé sur l’intérêt légitime. Écrivez à <Mailto /> : nous
-          répondons sous un mois. Arrêter votre renouvellement résident efface immédiatement les données correspondantes.
+          répondons sous un mois. Arrêter un renouvellement ou un ticket programmé efface immédiatement les données correspondantes.
         </p>
       </Section>
 
@@ -385,8 +385,10 @@ function Terms() {
       <Section title="1. Le service">
         <p>
           <PayByBot />, service appartenant à {PUBLISHER.name}, est une interface qui permet de piloter son propre compte <PayByPhone /> :
-          payer un stationnement, prolonger un ticket en cours et, si vous l’activez, renouveler automatiquement un forfait
-          résident chaque semaine. Le service est payant après un mois offert (voir « Abonnement et paiement »).
+          payer un stationnement, prolonger un ticket en cours et, si vous l’activez, renouveler automatiquement un ticket
+          résident chaque semaine ou prendre automatiquement un ticket (visiteur, carte handicapé…) les jours et à l’heure
+          que vous choisissez. Il s’adresse aux résidents comme aux non-résidents. Le service est payant après un mois
+          offert (voir « Abonnement et paiement »).
         </p>
       </Section>
 
@@ -401,9 +403,9 @@ function Terms() {
       <Section title="3. Mandat">
         <p>
           En utilisant <PayByBot />, vous l’autorisez à transmettre en votre nom à <PayByPhone /> les demandes que vous faites
-          (paiement, prolongation) et, si vous activez le renouvellement résident, à prendre automatiquement un nouveau
-          ticket à l’expiration du précédent, avec le véhicule, la zone, le tarif, la durée et le moyen de paiement que vous
-          avez choisis, jusqu’à ce que vous l’arrêtiez.
+          (paiement, prolongation) et, si vous activez un renouvellement résident ou un ticket programmé, à prendre
+          automatiquement un nouveau ticket, à l’expiration du précédent ou aux jours et à l’heure choisis, avec le véhicule,
+          la zone, le tarif, la durée et le moyen de paiement que vous avez choisis, jusqu’à ce que vous l’arrêtiez.
         </p>
         <p>
           Les tickets sont achetés par vous, depuis votre compte <PayByPhone />, au tarif de <PayByPhone />. <PayByBot /> n’encaisse pas
@@ -413,7 +415,11 @@ function Terms() {
 
       <Section title="4. Conditions d’accès">
         <ul>
-          <li>Avoir un compte <PayByPhone />, avec un véhicule et un moyen de paiement enregistrés.</li>
+          <li>
+            Avoir un compte <PayByPhone />, avec un véhicule et une carte bancaire enregistrés : les paiements automatiques
+            se font par carte. Le tarif résident n’est pas nécessaire.
+          </li>
+          <li>Être parrainé : l’inscription se fait par le lien d’un utilisateur de <PayByBot />.</li>
           <li>N’utiliser que son propre compte, ou un compte dont on a l’accord du titulaire.</li>
           <li>Être majeur ou disposer de l’accord de son représentant légal.</li>
         </ul>
@@ -424,31 +430,46 @@ function Terms() {
           <li>
             Vérifier que la zone, le tarif et la durée correspondent à votre stationnement et à la signalisation sur place.
           </li>
-          <li>Disposer des droits nécessaires aux tarifs spéciaux, comme le tarif résident, et les tenir à jour.</li>
+          <li>
+            Choisir le tarif qui vous correspond et disposer des droits nécessaires aux tarifs spéciaux, et les tenir à
+            jour : tarif résident, carte mobilité inclusion mention stationnement (CMI-S) pour le ticket handicapé, à placer
+            derrière le pare-brise. <PayByPhone /> ne vérifie pas ces droits au moment de l’achat ; un tarif pris sans y avoir
+            droit vous expose à un forfait post-stationnement et aux sanctions prévues.
+          </li>
+          <li>
+            Indiquer le bon type de véhicule (léger ou lourd) pour le ticket visiteur : <PayByPhone /> ne connaît pas le poids
+            du véhicule, et un tarif inférieur à celui dû ne vous couvre pas.
+          </li>
           <li>Garder vos identifiants <PayByPhone /> confidentiels.</li>
           <li>Payer vous-même votre stationnement dans l’application <PayByPhone /> quand un paiement automatique échoue.</li>
           <li>Ne pas perturber le service, ni tenter d’y accéder de façon non autorisée ou de l’utiliser de façon abusive.</li>
         </ul>
       </Section>
 
-      <Section title="6. Renouvellement résident">
+      <Section title="6. Renouvellement résident et tickets programmés">
         <p>
-          Une fois activé, le renouvellement paie automatiquement, sans nouvelle confirmation, une semaine au tarif résident
+          <strong>Renouvellement résident.</strong> Une fois activé, le renouvellement paie automatiquement, sans nouvelle confirmation, une semaine au tarif résident
           après l’autre, tant que vous ne l’arrêtez pas. Chaque semaine est payée la veille de la fin du ticket en cours,
           en prolongeant ce ticket ; si <PayByPhone /> ne permet pas de le prolonger, elle est achetée à sa fin. Le même
           véhicule n’est jamais payé deux fois pour la même période.
         </p>
         <p>
-          Vous pouvez le mettre en pause entre deux dates, ou sans date de fin : aucun paiement n’est fait pendant la pause, et
-          il reprend tout seul à la fin. Une semaine déjà payée avant le début de la pause n’est pas remboursée. <PayByBot /> vous envoie par e-mail une confirmation à chaque paiement et
+          <strong>Tickets programmés.</strong> Une fois activé, un ticket programmé est pris automatiquement, sans nouvelle
+          confirmation, chaque jour choisi à l’heure choisie, au tarif et pour la durée choisis, tant que vous ne l’arrêtez
+          pas. Aucun ticket n’est pris le dimanche ni les jours fériés, où le stationnement est gratuit à Paris. La durée ne
+          peut pas dépasser le maximum du tarif (par exemple 6 heures pour le ticket visiteur à Paris).
+        </p>
+        <p>
+          Vous pouvez mettre un renouvellement ou un ticket programmé en pause entre deux dates, ou sans date de fin : aucun paiement n’est fait pendant la pause, et
+          il reprend tout seul à la fin. Un ticket déjà payé avant le début de la pause n’est pas remboursé. <PayByBot /> vous envoie par e-mail une confirmation à chaque paiement et
           une alerte en cas de problème ; ces e-mails sont informatifs et ne remplacent pas la vérification de votre
           stationnement.
         </p>
         <p>
-          Il peut ne pas aboutir, par exemple si votre connexion <PayByPhone /> a expiré, si votre carte est refusée, si votre
-          droit au tarif résident a pris fin ou si <PayByPhone /> modifie son service. Dans ces cas, <PayByBot /> l’indique sur votre
+          Un paiement automatique peut ne pas aboutir, par exemple si votre connexion <PayByPhone /> a expiré, si votre carte est refusée, si votre
+          droit au tarif choisi (résident, handicapé) a pris fin ou si <PayByPhone /> modifie son service. Dans ces cas, <PayByBot /> l’indique sur votre
           tableau de bord, vous prévient par e-mail et réessaie automatiquement. Si votre banque refuse à nouveau, ou si un
-          paiement n’est pas confirmé par <PayByPhone />, le renouvellement est suspendu pour éviter un double paiement.
+          paiement n’est pas confirmé par <PayByPhone />, le renouvellement ou le ticket programmé est suspendu pour éviter un double paiement.
         </p>
         <p>
           En cas d’échec d’un paiement, <PayByBot /> vous en informera par e-mail. Le paiement de votre stationnement restera
@@ -463,7 +484,7 @@ function Terms() {
         </p>
         <p>
           <strong>Forfaits post-stationnement (FPS) et amendes.</strong> L’obligation de <PayByBot /> se limite à
-          tenter le renouvellement et à vous prévenir quand il n’aboutit pas. <PayByBot /> vous prévient, par e-mail et
+          tenter le paiement automatique et à vous prévenir quand il n’aboutit pas. <PayByBot /> vous prévient, par e-mail et
           sur votre tableau de bord, notamment dans les cas suivants :
         </p>
         <ul>
@@ -472,8 +493,8 @@ function Terms() {
             abonnement) : les renouvellements s’arrêtent jusqu’à la régularisation ;
           </li>
           <li>
-            votre véhicule ne bénéficie plus du tarif résident sur <PayByPhone /> (droit expiré, véhicule ou adresse
-            modifiés) ;
+            votre véhicule ne bénéficie plus, sur <PayByPhone />, du tarif choisi (droit résident expiré, véhicule ou adresse
+            modifiés, tarif plus proposé dans la zone) ;
           </li>
           <li>votre compte <PayByPhone /> n’a plus de carte bancaire utilisable (carte supprimée, expirée ou bloquée) ;</li>
           <li>
@@ -513,8 +534,8 @@ function Terms() {
       <Section title="10. Abonnement et paiement">
         <ul>
           <li>
-            <strong>Mois offert :</strong> chaque nouveau compte bénéficie d’un mois gratuit à compter de l’inscription, sans
-            carte bancaire.
+            <strong>Mois offert :</strong> chaque nouveau compte bénéficie d’un mois gratuit, qui commence quand vous
+            choisissez votre offre.
           </li>
           <li>
             <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC : 9,50 € par véhicule et par mois, quel que soit le ticket (résident, visiteur, carte handicapé) ou le type de véhicule,
@@ -522,19 +543,18 @@ function Terms() {
             prestataire de paiement Stripe ; <PayByBot /> ne voit ni ne conserve votre numéro de carte.
           </li>
           <li>
-            <strong>Changement de prix :</strong> si le nombre de véhicules renouvelés change, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
+            <strong>Changement de prix :</strong> si le nombre de véhicules avec un renouvellement ou un ticket programmé change, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
             effet sur la période déjà payée. Vous pouvez résilier à tout moment depuis « Mon compte ».
           </li>
           <li>
             <strong>Arrêt d’un ticket dans PayByPhone :</strong> <PayByBot /> n’est pas informé quand vous arrêtez vous-même
-            un ticket dans l’application <PayByPhone /> avant sa fin. Tant que le renouvellement est actif dans <PayByBot />,
-            une nouvelle semaine est achetée à son prochain passage, et elle reste due. Pour ne plus rien payer, mettez
+            un ticket dans l’application <PayByPhone /> avant sa fin. Tant que le renouvellement ou le ticket programmé est actif dans
+            <PayByBot />, un nouveau ticket est acheté à son prochain passage, et il reste dû. Pour ne plus rien payer, mettez
             le renouvellement en pause ou arrêtez-le depuis <PayByBot /> (« Gérer »). <PayByBot /> conserve, comme justificatif,
             la date et l’état de fin des tickets arrêtés avant leur terme, tels que <PayByPhone /> les indique.
           </li>
           <li>
-            <strong>Premier prélèvement :</strong> si vous souscrivez pendant votre mois offert, rien n’est prélevé avant
-            la fin de celui-ci.
+            <strong>Premier prélèvement :</strong> rien n’est prélevé avant la fin du mois offert.
           </li>
           <li>
             <strong>Renouvellement :</strong> l’abonnement se renouvelle automatiquement à la fin de chaque période (mois ou
@@ -551,7 +571,7 @@ function Terms() {
           </li>
           <li>
             <strong>Sans abonnement</strong> à la fin du mois offert, ou si un paiement de l’abonnement échoue, votre
-            compte est bloqué : le ticket en cours reste valable, mais le renouvellement suivant n’est pas payé. Vous en
+            compte est bloqué : le ticket en cours reste valable, mais le ticket suivant n’est pas payé. Vous en
             êtes prévenu par e-mail, et le renouvellement reprend dès que le paiement est fait.
           </li>
         </ul>

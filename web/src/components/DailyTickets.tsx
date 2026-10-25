@@ -181,14 +181,26 @@ export function DailyTickets({
   const daily = data.autopilots.filter(isDaily)
   return (
     <section id="tickets-programmes" className="rise mt-10 scroll-mt-20">
-      {/* Nothing automated and no resident vehicle: the one thing to do, as a card. Otherwise a small button. */}
-      {!daily.length && !data.autopilots.some((ap) => ap.enabled) && !data.vehicles.some((v) => v.zone) ? (
+      {/* No ticket programmed yet: a card that says what it is. Its button is blue when it is the one thing to do
+          (nothing automated, no resident car), grey next to a resident renewal. Once one exists, a small button. */}
+      {!daily.length ? (
         <div className="rounded-2xl border border-ink/10 bg-white p-6">
           <p className="font-heading text-[1.35rem] leading-tight font-medium tracking-[-0.02em] text-ink">Programmez vos tickets (non-résidents)</p>
           <p className="mt-2 leading-relaxed text-ink/60">
             {withPayByPhone('PayByBot les prend pour vous sur PayByPhone, les jours choisis et à l’heure voulue.')} Vous n’avez plus à y penser.
           </p>
-          <button onClick={() => setOpen(true)} className={cn('mt-5', ui.primary)}>
+          <button
+            onClick={() => setOpen(true)}
+            className={cn(
+              'mt-5',
+              !data.autopilots.some((ap) => ap.enabled) &&
+                !data.vehicles.some((v) => v.zone) &&
+                // a resident week running (more than two days) also makes it a resident account
+                !data.sessions.some((x) => new Date(x.expire).getTime() - new Date(x.start).getTime() > 2 * 86_400_000)
+                ? ui.primary
+                : ui.primaryGray,
+            )}
+          >
             <Plus className="size-5" /> Programmer un ticket
           </button>
         </div>

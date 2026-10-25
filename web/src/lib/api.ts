@@ -211,6 +211,7 @@ export const api = {
   /** Home zone guessed from the PayByPhone history (null if none). */
   residentZone: () => (zoneLookup ??= request<{ zone: string | null; manual?: boolean }>('/api/resident-zone').catch(() => ({ zone: null, manual: false }))),
   zone: (number: string) => request<{ found: boolean }>(`/api/zone?number=${encodeURIComponent(number)}`),
+  recentZones: () => request<string[]>('/api/zones/recent'),
   rates: (location: string, plate: string) =>
     request<Rate[]>(`/api/rates?${new URLSearchParams({ location, plate })}`),
   lastRate: (location: string, plate: string) =>

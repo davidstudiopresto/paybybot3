@@ -3322,6 +3322,24 @@ def history(pbb_session: str = Cookie(None)):
     return guarded(load)
 
 
+@app.get("/api/zones/recent")
+def recent_zones(pbb_session: str = Cookie(None)):
+    """The zones the user already parked in on PayByPhone, most recent first (suggested when typing a zone)."""
+    s = current(pbb_session)
+
+    def load():
+        try:
+            sessions = (s.call("get_parking_sessions") or []) + (s.call("get_past_sessions", limit=40) or [])
+        except Exception as e:
+            log.info("recent zones unavailable: %s", type(e).__name__)
+            return []
+        sessions.sort(key=lambda x: x.get("startTime") or datetime.min, reverse=True)
+        zones = dict.fromkeys(str(x.get("locationId")) for x in sessions if x.get("locationId"))
+        return list(zones)[:10]
+
+    return guarded(load)
+
+
 @app.get("/api/admin/clients")
 def admin_clients(pbb_admin: str = Cookie(None)):
     """The owner's client list: first name (PayByPhone, else the Stripe billing name), e-mail, sign-up date, offer,

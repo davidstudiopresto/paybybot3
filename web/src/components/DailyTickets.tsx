@@ -200,6 +200,84 @@ export function DailyTickets({
   )
 }
 
+const PARIS_ARRONDISSEMENTS = Array.from({ length: 20 }, (_, i) => `750${String(i + 1).padStart(2, '0')}`)
+
+/** The zone field with a list of suggestions under it, scrolling, while typing: the zones already used on
+ *  PayByPhone first (its history), then the Paris arrondissements that match (by number or by name). */
+function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string) => void }) {
+  const [recent, setRecent] = useState<string[]>([])
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  useEffect(() => {
+    api.recentZones().then(setRecent, () => {})
+  }, [])
+  const q = value.trim().toLowerCase()
+  const label = (z: string) => arrondissement(z) ?? `Zone ${z}`
+  const matches = (z: string) => !q || z.toLowerCase().startsWith(q) || label(z).toLowerCase().replace('er', '').includes(q.replace('er', ''))
+  const items = [
+    ...recent.filter(matches).map((z) => ({ zone: z, used: true })),
+    ...PARIS_ARRONDISSEMENTS.filter((z) => !recent.includes(z) && matches(z)).map((z) => ({ zone: z, used: false })),
+  ].filter((x) => x.zone !== value)
+  const shown = open && items.length > 0
+
+  function pick(zone: string) {
+    onChange(zone)
+    setOpen(false)
+  }
+
+  return (
+    <div className="relative">
+      <input
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value.replace(/[^0-9A-Za-z ]/g, '').slice(0, 12))
+          setOpen(true)
+          setActive(0)
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 120)} // a click on a suggestion lands first
+        onKeyDown={(e) => {
+          if (!shown) return
+          if (e.key === 'ArrowDown') (e.preventDefault(), setActive((a) => Math.min(items.length - 1, a + 1)))
+          else if (e.key === 'ArrowUp') (e.preventDefault(), setActive((a) => Math.max(0, a - 1)))
+          else if (e.key === 'Enter') (e.preventDefault(), pick(items[active].zone))
+          else if (e.key === 'Escape') setOpen(false)
+        }}
+        placeholder="Numéro de zone ou code postal"
+        role="combobox"
+        aria-expanded={shown}
+        aria-controls="zone-suggestions"
+        aria-autocomplete="list"
+        className={ui.field}
+      />
+      {shown && (
+        <ul
+          id="zone-suggestions"
+          role="listbox"
+          className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-ink/10 bg-white p-1 shadow-[0_18px_40px_-18px_rgb(11_16_36/0.25)]"
+        >
+          {items.map((x, i) => (
+            <li
+              key={x.zone}
+              role="option"
+              aria-selected={i === active}
+              onMouseDown={(e) => (e.preventDefault(), pick(x.zone))}
+              onMouseEnter={() => setActive(i)}
+              className={cn('flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[0.95rem]', i === active && 'bg-ink/[0.05]')}
+            >
+              <span className="text-ink">{label(x.zone)}</span>
+              <span className="flex items-center gap-2 text-sm text-ink/45 tabular-nums">
+                {x.used && <span className="rounded-full bg-[#4e9aa0]/12 px-2 py-0.5 text-xs font-medium text-[#3d7f84]">Déjà utilisée</span>}
+                {x.zone}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 /** Four steps, like the rest of the app: vehicle and zone, the ticket, its time and days, then check and activate. */
 export function DailyWizard({
   data,
@@ -434,12 +512,7 @@ export function DailyWizard({
               </div>
               <div>
                 <p className={ui.label}>Où vous garez-vous ?</p>
-                <input
-                  value={zone}
-                  onChange={(e) => setZone(e.target.value.replace(/[^0-9A-Za-z]/g, '').slice(0, 12))}
-                  placeholder="Numéro de zone PayByPhone"
-                  className={ui.field}
-                />
+                <ZoneInput value={zone} onChange={setZone} />
                 <p className="mt-2 text-sm text-ink/50">
                   {place ? `✓ ${place}` : withPayByPhone('Le numéro de zone PayByPhone, indiqué sur le panneau ou l’horodateur.')}
                 </p>

@@ -108,7 +108,7 @@ export default function App() {
   // "Démo" link on the home page: open the demo account directly.
   useEffect(() => {
     if (route !== 'demo' || me === undefined) return
-    history.replaceState(null, '', window.location.pathname)
+    history.replaceState(null, '', window.location.pathname + window.location.search)
     setRoute(null)
     if (me === null) api.login('demo', 'demo').then((m) => setMe(m as Me), (e) => toast.error((e as Error).message))
   }, [route, me])
@@ -116,7 +116,7 @@ export default function App() {
   // #/bienvenue: show the welcome page again (what PayByBot found in PayByPhone), once signed in.
   useEffect(() => {
     if (route !== 'bienvenue' || !me) return
-    history.replaceState(null, '', window.location.pathname)
+    history.replaceState(null, '', window.location.pathname + window.location.search)
     setRoute(null)
     setOnboarding(true)
   }, [route, me])
@@ -124,7 +124,7 @@ export default function App() {
   // Back from the e-mail's « Débloquer mon compte » once Stripe has taken the payment.
   useEffect(() => {
     if (window.location.hash !== '#/debloque') return
-    history.replaceState(null, '', window.location.pathname)
+    history.replaceState(null, '', window.location.pathname + window.location.search)
     toast.success('Compte débloqué : le renouvellement reprend.')
   }, [])
 
@@ -132,6 +132,21 @@ export default function App() {
   useEffect(() => {
     if (me && !me.demo) markMember()
   }, [me])
+
+  // Signed in: the address carries the user's referral code (?i=…), so copying it from the address bar shares a
+  // link that opens the site (not the blurred « sur parrainage » page), whatever page they are on.
+  useEffect(() => {
+    if (!me || me.demo || !inviteOnly) return
+    api.myInvite().then(
+      ({ code }) => {
+        const url = new URL(window.location.href)
+        if (url.searchParams.get('i') === code) return
+        url.searchParams.set('i', code)
+        history.replaceState(history.state, '', url.pathname + url.search + url.hash)
+      },
+      () => {},
+    )
+  }, [me, inviteOnly])
 
   // Signed out (expired cookie, other tab): the data kept for this tab goes too.
   useEffect(() => {
@@ -328,7 +343,7 @@ export default function App() {
                 // Long enough to read the message, even when PayByPhone answers fast.
                 Promise.all([api.residentZone(), new Promise((r) => setTimeout(r, 2500))]).finally(() => setZoneReady(true))
               }
-              history.replaceState(null, '', window.location.pathname)
+              history.replaceState(null, '', window.location.pathname + window.location.search)
               setRoute(null)
               setMe(m)
             }}
@@ -359,7 +374,7 @@ export default function App() {
         <>
           <Dashboard
             onDeleted={() => {
-              history.replaceState(null, '', window.location.pathname)
+              history.replaceState(null, '', window.location.pathname + window.location.search)
               setRoute(null)
               setData(null)
               setOnboarding(false)

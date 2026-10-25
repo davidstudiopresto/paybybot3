@@ -180,12 +180,7 @@ export function DailyTickets({
             <DailyCard key={ap.id} ap={ap} onChanged={onChanged} />
           ))}
         </div>
-      ) : (
-        <p className="mt-3 rounded-2xl border border-dashed border-ink/15 px-5 py-4 text-sm leading-relaxed text-ink/55">
-          Pas de tarif résident, ou besoin d’un ticket visiteur certains jours ? {withPayByPhone('PayByBot le prend sur PayByPhone')} à l’heure voulue, chaque
-          jour choisi.
-        </p>
-      )}
+      ) : null}
       {open && (
         <DailyWizard data={data} onClose={() => setOpen(false)} onDone={onChanged} needsOffer={needsOffer} locked={locked} onLogout={onLogout} />
       )}

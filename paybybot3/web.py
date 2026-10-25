@@ -1064,6 +1064,45 @@ def owner_id(username):
     return hmac.new(_subkey(_secrets()[0], "owner"), username.encode(), hashlib.sha256).hexdigest()
 
 
+def normal_email(email):
+    """The e-mail as one person's: lower case, without its +tag, nor dots for Gmail."""
+    local, _, domain = (email or "").strip().lower().rpartition("@")
+    local = local.split("+")[0]
+    if domain in ("gmail.com", "googlemail.com"):
+        local, domain = local.replace(".", ""), "gmail.com"
+    return local + "@" + domain
+
+
+def email_key(email):
+    """Keyed fingerprint of an account's e-mail (one e-mail per account): nothing readable is kept."""
+    return hmac.new(_subkey(_secrets()[0], "email"), normal_email(email).encode(), hashlib.sha256).hexdigest()
+
+
+def email_taken(email, owner):
+    """Another PayByBot account already uses this e-mail (online only; a failed lookup never blocks)."""
+    if not HOSTED or not email or "@" not in email:
+        return False
+    try:
+        other = store("account_email_owner", p_key=email_key(email))
+    except Exception as e:
+        log.warning("e-mail uniqueness check failed: %s", type(e).__name__)
+        return False
+    return bool(other) and other != owner
+
+
+EMAIL_TAKEN = "Cette adresse e-mail est déjà utilisée par un autre compte PayByBot. Utilisez-en une autre."
+
+
+def keep_email_key(owner, email):
+    """Records the account's e-mail fingerprint (after the account is saved)."""
+    if not HOSTED or not email or "@" not in email:
+        return
+    try:
+        store("account_set_email_key", p_owner=owner, p_key=email_key(email))
+    except Exception as e:
+        log.warning("e-mail fingerprint not kept: %s", type(e).__name__)
+
+
 def trial_keys(s, email=None):
     """Fingerprints of what identifies someone who already had the free month: the PayByPhone account, the sign-up
     e-mail (without its +tag, nor dots for Gmail) and the vehicles' plates. Keyed HMACs: nothing readable is kept."""
@@ -1073,11 +1112,7 @@ def trial_keys(s, email=None):
         return kind + ":" + hmac.new(key, value.encode(), hashlib.sha256).hexdigest()
     keys = [mark("o", s.username.strip())]
     if email and "@" in email:
-        local, _, domain = email.strip().lower().rpartition("@")
-        local = local.split("+")[0]
-        if domain in ("gmail.com", "googlemail.com"):
-            local, domain = local.replace(".", ""), "gmail.com"
-        keys.append(mark("e", local + "@" + domain))
+        keys.append(mark("e", normal_email(email)))
     try:
         vehicles = s.call("get_vehicles") or []
     except Exception as e:
@@ -1210,7 +1245,7 @@ def with_details(row):
 
 ACCOUNT_FIELDS = ("email", "first_name", "zone", "trial_start", "trial_kept", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "suv_plates", "zone_found",
-                  "vehicle_zones", "dunning", "check_mailed", "early_stops", "checkout_at", "chosen_plates")
+                  "vehicle_zones", "dunning", "check_mailed", "early_stops", "checkout_at", "chosen_plates", "email_keyed")
 TRIAL_DAYS = 30  # one free month for every new account, from the day the offer is chosen (never at sign-up)
 
 
@@ -1245,6 +1280,8 @@ def account_by_owner(owner):
 def save_account_by_owner(owner, patch):
     account = {**account_by_owner(owner), **{k: v for k, v in patch.items() if k in ACCOUNT_FIELDS}}
     store("account_save", p_owner=owner, p_data=_fernet("account").encrypt(json.dumps(account).encode()).decode())
+    if patch.get("email"):
+        keep_email_key(owner, patch["email"])
     return account
 
 
@@ -1253,6 +1290,8 @@ def save_account(s, patch):
     if HOSTED and not s.demo:
         store("account_save", p_owner=owner_id(s.username),
               p_data=_fernet("account").encrypt(json.dumps(account).encode()).decode())
+        if patch.get("email"):
+            keep_email_key(owner_id(s.username), patch["email"])
     else:
         s.account = account
     return account
@@ -1720,6 +1759,9 @@ def login(body: Login, request: Request, response: Response):
         # No card saved on PayByPhone does not stop the sign-up: the account then asks for one, full screen. No
         # resident rate needed any more: non-residents take visitor or Handi tickets on chosen days.
         zone = guarded(lambda: resident_home_zone(session))  # the resident zone when there is one, else None
+        if email_taken(body.email.strip(), owner_id(session.username)):  # one e-mail per PayByBot account
+            log.info("sign-up refused: e-mail already used by another account")
+            raise HTTPException(400, EMAIL_TAKEN)
         return start_verification(response, session, body.email.strip(), zone)
     if HOSTED:
         token = seal(session)
@@ -1949,6 +1991,14 @@ def my_invite(pbb_session: str = Cookie(None)):
 @app.get("/api/me")
 def me(pbb_session: str = Cookie(None)):
     s = current(pbb_session)
+    if HOSTED and not s.demo:  # accounts made before one e-mail per account: their fingerprint, once
+        try:
+            account = load_account(s)
+            if account.get("email") and not account.get("email_keyed"):
+                keep_email_key(owner_id(s.username), account["email"])
+                save_account(s, {"email_keyed": True})
+        except Exception as e:
+            log.info("e-mail fingerprint backfill skipped: %s", type(e).__name__)
     return {"username": s.username, "demo": s.demo, "hosted": HOSTED, "firstName": first_name(s)}
 
 
@@ -3254,6 +3304,8 @@ def billing_card(pbb_session: str = Cookie(None)):
 def update_account(body: AccountPatch, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
     check_email(body.email)
+    if body.email and not s.demo and email_taken(body.email, owner_id(s.username)):
+        raise HTTPException(400, EMAIL_TAKEN)
     # The e-mail only: the arrondissement is never typed, it comes from PayByPhone for each vehicle.
     patch = {k: v.strip() for k, v in body.model_dump().items() if v is not None and k != "zone"}
     account = guarded(lambda: save_account(s, patch))

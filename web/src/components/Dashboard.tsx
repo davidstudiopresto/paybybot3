@@ -93,7 +93,8 @@ function Ticket({
           <span className="text-[1.05rem] font-medium text-ink">{withPayByPhone('PayByPhone')}</span>
           <span className="tracking-wide text-ink/50 tabular-nums">{plateText(session.plate)}</span>
         </span>
-        <span className="text-sm text-ink/50">{place}</span>
+        {/* A discreet word on the kind of ticket: resident (renewed each week) or not. */}
+        <span className="text-sm text-ink/50">{daily ? place : `Ticket résident · ${place}`}</span>
       </div>
 
       {!renewable && (
@@ -439,8 +440,16 @@ export function Dashboard({
                 autoOpen={!!autoPlate && sameCar(autoPlate, s.plate)}
                 locked={locked}
                 onLogout={onLogout}
-                // Not a resident ticket (PayByPhone says so, or the car has no resident rate): tickets on chosen days.
-                daily={s.resident === false || (!!residentPlates && !residentPlates.has(plateKey(s.plate)))}
+                // Not a resident ticket: tickets on chosen days. A ticket of more than two days, or on a car with the
+                // resident rate, is a resident one whatever PayByPhone's rate type says (visitors: 6 h, Handi: a day).
+                daily={
+                  !(
+                    s.resident === true ||
+                    new Date(s.expire).getTime() - new Date(s.start).getTime() > 2 * 86_400_000 ||
+                    !!residentPlates?.has(plateKey(s.plate))
+                  ) &&
+                  (s.resident === false || (!!residentPlates && !residentPlates.has(plateKey(s.plate))))
+                }
                 needsOffer={needsOffer}
               />
             ))}

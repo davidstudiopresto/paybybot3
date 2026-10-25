@@ -36,43 +36,6 @@ const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' 
 const ends = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(':', 'h')
 
-/** Total sign-ups day after day (last 30 days, or since the first one), as a line with its area. */
-function UsersChart({ clients }: { clients: AdminClient[] }) {
-  const day = 86_400_000
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const first = clients.length ? Math.min(...clients.map((c) => new Date(c.created).getTime())) : today.getTime()
-  const start = Math.max(today.getTime() - 29 * day, new Date(first).setHours(0, 0, 0, 0))
-  const days = Math.max(1, Math.round((today.getTime() - start) / day) + 1)
-  const points = Array.from({ length: days }, (_, i) => {
-    const end = start + (i + 1) * day
-    return { at: start + i * day, total: clients.filter((c) => new Date(c.created).getTime() < end).length }
-  })
-  const max = Math.max(1, ...points.map((p) => p.total))
-  const W = 600
-  const H = 160
-  const x = (i: number) => (days === 1 ? W / 2 : (i / (days - 1)) * W)
-  const y = (v: number) => H - (v / max) * (H - 16) - 4
-  const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.total).toFixed(1)}`).join(' ')
-  const label = (t: number) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-  return (
-    <div className="mt-3 rounded-2xl border border-ink/10 p-5">
-      <div className="flex items-baseline justify-between">
-        <span className="font-heading text-3xl font-semibold tabular-nums text-ink">{clients.length}</span>
-        <span className="text-sm text-ink/50">inscrits au total</span>
-      </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 h-40 w-full overflow-visible" preserveAspectRatio="none" aria-hidden>
-        <path d={`${line} L${x(days - 1)},${H} L${x(0)},${H} Z`} fill="var(--eu)" opacity=".08" />
-        <path d={line} fill="none" stroke="var(--eu)" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      </svg>
-      <div className="mt-2 flex justify-between text-xs text-ink/45 tabular-nums">
-        <span>{label(points[0].at)}</span>
-        <span>{label(points[points.length - 1].at)}</span>
-      </div>
-    </div>
-  )
-}
-
 export function AdminPage(_: { signedIn?: boolean }) {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -149,8 +112,6 @@ export function AdminPage(_: { signedIn?: boolean }) {
               ))}
             </dl>
 
-            <h2 className="mt-12 text-sm font-semibold text-ink/55">Nombre d’inscrits</h2>
-            {clients ? <UsersChart clients={clients} /> : <div className="mt-3 h-56 animate-pulse rounded-2xl bg-ink/[0.04]" />}
 
             <h2 className="mt-12 text-sm font-semibold text-ink/55">Clients{clients ? ` (${clients.length})` : ''}</h2>
             {clients && clients.length === 0 && <p className="mt-3 text-ink/50">Aucun client pour l’instant.</p>}

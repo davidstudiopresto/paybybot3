@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { SampleTicket } from '@/components/Landing'
 import { PayByPhone } from '@/components/signs'
 
 /**
@@ -137,7 +138,8 @@ export function RemotePanel({ className }: { className?: string }) {
         <p className="relative mb-6 font-heading text-[1.6rem] font-semibold tracking-[-0.02em] text-ink">
           <span className="relative z-10">Fini les forfaits post-stationnement&nbsp;!</span>
         </p>
-        <RemoteScene className="h-[min(50vh,27rem)] w-auto max-w-full" />
+        {/* The same example card as the home page (renewal on, nothing to do), not an animation. */}
+        <SampleTicket className="text-left" />
         <p className="mt-8 max-w-[30rem] font-heading text-[2rem] leading-[1.1] font-medium tracking-[-0.035em] text-ink">
           Renouvelez votre ticket <PayByPhone /> sans y penser
         </p>

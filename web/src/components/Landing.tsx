@@ -252,7 +252,7 @@ export function Home({ hosted }: { hosted: boolean }) {
 }
 
 /** The home page's example: a ticket card as on the dashboard, renewal on, with made-up data (no real account). */
-function SampleTicket({ className }: { className?: string }) {
+export function SampleTicket({ className }: { className?: string }) {
   return (
     <div
       role="img"

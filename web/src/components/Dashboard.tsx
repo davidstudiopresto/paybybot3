@@ -4,7 +4,7 @@ import { LogOut } from 'lucide-react'
 import { arrondissement, Plate, plateText, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
-import { DailyTickets } from '@/components/DailyTickets'
+import { DailyTickets, DailyWizard } from '@/components/DailyTickets'
 import { AccountButton } from '@/components/Account'
 import { TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
@@ -52,6 +52,7 @@ function Ticket({
   locked = false,
   onLogout,
   daily = false,
+  needsOffer = false,
 }: {
   session: Session
   now: number
@@ -64,8 +65,13 @@ function Ticket({
   onLogout?: () => void
   /** A non-resident ticket: no weekly renewal switch. */
   daily?: boolean
+  /** Online without an offer yet: programming a ticket goes through the offer first. */
+  needsOffer?: boolean
 }) {
   const renewal = renewalOf(data, session)
+  // A non-resident ticket: « Renouvellement auto » opens the ticket wizard filled with this very ticket.
+  const [renewing, setRenewing] = useState(false)
+  const programmed = data.autopilots.some((ap) => ap.enabled && sameCar(ap.plate, session.plate))
   // The weekly renewal is for resident tickets only: a non-resident ticket (visitor, Handi…) shows no switch, unless
   // it is already renewed; tickets on chosen days are set up in « Tickets non-résident ».
   const renewable = (!daily && session.resident !== false) || !!renewal
@@ -90,6 +96,37 @@ function Ticket({
         <span className="text-sm text-ink/50">{place}</span>
       </div>
 
+      {!renewable && (
+        <div className="border-t border-ink/[0.06] px-5 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[1.05rem] text-ink">Renouvellement auto</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={programmed}
+              aria-label="Renouvellement auto"
+              onClick={() => (programmed ? document.getElementById('tickets-programmes')?.scrollIntoView({ behavior: 'smooth' }) : setRenewing(true))}
+              className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors', programmed ? 'bg-[#4e9aa0]' : 'bg-ink/15 hover:bg-ink/20')}
+            >
+              <span className={cn('absolute top-1 size-5 rounded-full bg-white shadow-sm transition-all', programmed ? 'right-1' : 'left-1')} />
+            </button>
+          </div>
+          {programmed && <p className="mt-2 text-sm text-[#3d7f84]">Ticket programmé : il est repris automatiquement les jours choisis.</p>}
+        </div>
+      )}
+      {renewing && (
+        <DailyWizard
+          data={data}
+          onClose={() => setRenewing(false)}
+          onDone={onRefresh}
+          needsOffer={needsOffer}
+          locked={locked}
+          onLogout={onLogout}
+          initialPlate={session.plate}
+          initialZone={session.location}
+          initialTicket={{ rate: session.rate, start: session.start, expire: session.expire }}
+        />
+      )}
       {renewable && (
       <div className="border-t border-ink/[0.06] px-5 py-4">
         <RenewalSwitch
@@ -222,8 +259,33 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogo
                 </div>
               )}
             </dl>
-            <div className="mt-5">
-              <ActivateRenewal data={data} onChanged={onChanged} hosted={hosted} demo={demo} plate={v.plate} autoOpen={!!autoPlate && key(autoPlate) === key(v.plate)} locked={!!locked && !!autoPlate && key(autoPlate) === key(v.plate)} onLogout={onLogout} />
+            {/* « Renouvellement auto » switch, off: turning it on opens the renewal setup (same as the ticket card). */}
+            <div className="mt-4 border-t border-ink/[0.06] pt-4">
+              <ActivateRenewal
+                data={data}
+                onChanged={onChanged}
+                hosted={hosted}
+                demo={demo}
+                plate={v.plate}
+                autoOpen={!!autoPlate && key(autoPlate) === key(v.plate)}
+                locked={!!locked && !!autoPlate && key(autoPlate) === key(v.plate)}
+                onLogout={onLogout}
+                trigger={(open) => (
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-[1.05rem] text-ink">Renouvellement auto</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={false}
+                      aria-label="Renouvellement auto"
+                      onClick={open}
+                      className="relative h-7 w-12 shrink-0 rounded-full bg-ink/15 transition-colors hover:bg-ink/20"
+                    >
+                      <span className="absolute top-1 left-1 size-5 rounded-full bg-white shadow-sm" />
+                    </button>
+                  </div>
+                )}
+              />
             </div>
           </div>
         )
@@ -379,6 +441,7 @@ export function Dashboard({
                 onLogout={onLogout}
                 // Not a resident ticket (PayByPhone says so, or the car has no resident rate): tickets on chosen days.
                 daily={s.resident === false || (!!residentPlates && !residentPlates.has(plateKey(s.plate)))}
+                needsOffer={needsOffer}
               />
             ))}
           </div>

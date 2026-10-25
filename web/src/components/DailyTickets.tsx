@@ -180,7 +180,7 @@ export function DailyTickets({
   }, [locked, autoOpen])
   const daily = data.autopilots.filter(isDaily)
   return (
-    <section className="rise mt-10">
+    <section id="tickets-programmes" className="rise mt-10 scroll-mt-20">
       {/* Nothing automated and no resident vehicle: the one thing to do, as a card. Otherwise a small button. */}
       {!daily.length && !data.autopilots.some((ap) => ap.enabled) && !data.vehicles.some((v) => v.zone) ? (
         <div className="rounded-2xl border border-ink/10 bg-white p-6">
@@ -302,6 +302,7 @@ export function DailyWizard({
   onLogout,
   initialPlate,
   initialZone,
+  initialTicket,
 }: {
   data: Overview
   onClose: () => void
@@ -312,6 +313,8 @@ export function DailyWizard({
   /** Opened from a running ticket: its vehicle and zone, already filled in. */
   initialPlate?: string
   initialZone?: string
+  /** Opened from a running ticket's « Renouvellement auto »: its rate, start and end, to take the same ticket again. */
+  initialTicket?: { rate: string; start: string; expire: string }
 }) {
   const [step, setStep] = useState(1)
   const [plate, setPlate] = useState(
@@ -421,6 +424,33 @@ export function DailyWizard({
     setStart(handi(effective) && paris ? '05:00' : '09:00')
   }, [effective?.ratePolicyId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // From a running ticket: its rates looked up at once, its rate chosen, its start time and length taken again, and
+  // straight to the days (the Handi ticket stops at step 2 for the CMI-S attestation).
+  const preset = useRef(initialTicket ?? null)
+  useEffect(() => {
+    if (preset.current && plate && zone) findRates()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const t = preset.current
+    if (!t || !rates) return
+    const same = usable.find((r) => r.ratePolicyId === String(t.rate))
+    if (!same) return void (preset.current = null) // not offered any more: the usual choice at step 2
+    if (rateId !== same.ratePolicyId) return setRateId(same.ratePolicyId)
+    if (!effective) return
+    const begin = new Date(t.start)
+    const minutes = Math.round((new Date(t.expire).getTime() - begin.getTime()) / 60000)
+    const units = unitsOf(effective)
+    if (!units.includes('Days') && minutes > 0) {
+      const u: Unit = minutes % 60 === 0 && units.includes('Hours') ? 'Hours' : units.includes('Minutes') ? 'Minutes' : 'Hours'
+      const n = u === 'Hours' ? Math.max(1, Math.round(minutes / 60)) : minutes
+      setUnit(u)
+      setDuration(Math.min(MAX[u], n))
+    }
+    if (!(handi(effective) && paris)) setStart(`${String(begin.getHours()).padStart(2, '0')}:${String(begin.getMinutes()).padStart(2, '0')}`)
+    preset.current = null
+    setStep(handi(effective) ? 2 : 3)
+  }, [rates, rateId, effective?.ratePolicyId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Every option's price for its own preset length (a day, or 6 hours), so each answer shows what it costs.
   const [prices, setPrices] = useState<Record<string, Money | null>>({})
   useEffect(() => {
@@ -517,7 +547,7 @@ export function DailyWizard({
           <p className="text-xs font-medium tracking-wide text-ink/45 uppercase">
             Étape {step} sur {steps.length} · {steps[step - 1]}
           </p>
-          <DialogTitle className={cn(ui.dialogTitle, 'mt-1')}>Programmer un ticket</DialogTitle>
+          <DialogTitle className={cn(ui.dialogTitle, 'mt-1')}>{initialTicket ? 'Renouveler ce ticket' : 'Programmer un ticket'}</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">Pris automatiquement les jours choisis, à l’heure voulue.</DialogDescription>
           <div className="mt-5 grid grid-cols-4 gap-1.5" aria-hidden>
             {[1, 2, 3, 4].map((n) => (

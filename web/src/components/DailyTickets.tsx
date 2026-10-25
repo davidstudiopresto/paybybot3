@@ -366,7 +366,14 @@ export function DailyWizard({
   const [duration, setDuration] = useState(6)
   const [unit, setUnit] = useState<Unit>('Hours')
   const [over, setOver] = useState(false)
-  const [start, setStart] = useState('09:00')
+  // Renewing a running ticket: the next one is taken by default at the time this one ends (not when it began).
+  const chainStart = initialTicket
+    ? (() => {
+        const end = new Date(initialTicket.expire)
+        return `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
+      })()
+    : null
+  const [start, setStart] = useState(chainStart ?? '09:00')
   const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4, 5])
   const [cost, setCost] = useState<Money | null | undefined>(undefined)
   const cards = data.payments.filter((p) => p.kind === 'card' && !p.expired)
@@ -458,7 +465,8 @@ export function DailyWizard({
     setDuration(MAX[u])
     setOver(false)
     // Paris Handi: taken at 5 h, before 9 h, the day's ticket covers the whole paid day (elsewhere the user says when).
-    setStart(handi(effective) && paris ? '05:00' : '09:00')
+    // Renewing a running ticket: the time it ends, whatever rate is picked (Paris Handi: 5 h, before paid hours).
+    setStart(handi(effective) && paris ? '05:00' : (chainStart ?? '09:00'))
   }, [effective?.ratePolicyId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // From a running ticket: its rates looked up at once, its rate chosen, its start time and length taken again, and
@@ -473,7 +481,8 @@ export function DailyWizard({
     const t = preset.current
     if (!t || !rates) return
     const same = usable.find((r) => r.ratePolicyId === String(t.rate))
-    if (!same) return void (preset.current = null) // not offered any more: the usual choice at step 2
+    setDays(paris ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6]) // renewed every day (Paris: Sundays are free)
+    if (!same) return void (preset.current = null) // its rate not offered here: chosen at step 2 (start still its end)
     if (rateId !== same.ratePolicyId) return setRateId(same.ratePolicyId)
     if (!effective) return
     const begin = new Date(t.start)
@@ -485,10 +494,6 @@ export function DailyWizard({
       setUnit(u)
       setDuration(Math.min(MAX[u], n))
     }
-    // The next ticket follows on from this one: taken at the time it ends (not when it began).
-    const end = new Date(t.expire)
-    if (!(handi(effective) && paris)) setStart(`${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`)
-    setDays(paris ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6]) // renewed every day (Paris: Sundays are free)
     preset.current = null
     setStep(handi(effective) ? 2 : 3)
   }, [rates, rateId, effective?.ratePolicyId]) // eslint-disable-line react-hooks/exhaustive-deps

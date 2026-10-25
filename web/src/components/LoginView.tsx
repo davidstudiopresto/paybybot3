@@ -198,9 +198,10 @@ export function LoginView({
       {/* On a computer, like Qonto: the form on the left, the animated scene on the right. */}
       <div className="flex flex-1 lg:grid lg:grid-cols-2">
       <div className="flex flex-1 flex-col">
-      <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center lg:pb-4 sm:pt-0">
+      {/* Centred when there is room, with margins kept when the form is taller than the screen (never cut). */}
+      <main className="flex flex-1 flex-col px-6 py-10 sm:py-12">
         <form
-          className="rise w-full max-w-[26rem]"
+          className="rise mx-auto my-auto w-full max-w-[26rem]"
           onSubmit={(e) => {
             e.preventDefault()
             submit()
@@ -509,9 +510,9 @@ function CodeStep({
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <PublicTopBar />
-      <main className="flex flex-1 items-start justify-center px-6 pt-[12vh] pb-12 sm:items-center sm:pt-0">
+      <main className="flex flex-1 flex-col px-6 py-10 sm:py-12">
         <form
-          className="rise w-full max-w-[26rem]"
+          className="mx-auto my-auto rise w-full max-w-[26rem]"
           onSubmit={(e) => {
             e.preventDefault()
             check()

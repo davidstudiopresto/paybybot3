@@ -1307,7 +1307,7 @@ function FullScreenNotice({ title, intro, steps, children }: { title: string; in
       role="dialog"
       aria-modal="true"
       aria-labelledby="full-screen-notice-title"
-      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-white/60 p-4 backdrop-blur-md sm:p-6"
+      className="fixed inset-0 z-50 grid center-safe overflow-y-auto bg-white/60 p-4 backdrop-blur-md sm:p-6"
     >
       <div className="rise w-full max-w-lg rounded-3xl border border-ink/10 bg-white p-7 shadow-[0_40px_80px_-30px_rgb(11_16_36/0.35)] sm:p-9">
         <span className="grid size-12 place-items-center rounded-2xl bg-eu font-heading text-2xl font-bold text-white">P</span>

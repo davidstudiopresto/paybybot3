@@ -89,7 +89,7 @@ export function CheckoutDone({ vehicle, onClose }: { vehicle?: DoneVehicle | nul
       role="dialog"
       aria-modal="true"
       aria-labelledby="checkout-done-title"
-      className="fixed inset-0 z-50 grid animate-in fade-in-0 duration-300 place-items-center overflow-y-auto bg-white/40 px-4 py-8 backdrop-blur-md"
+      className="fixed inset-0 z-50 grid animate-in fade-in-0 duration-300 center-safe overflow-y-auto bg-white/40 px-4 py-8 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* About 70 % of the page: the scene above (grows with the space), the sentence and the button below. */}

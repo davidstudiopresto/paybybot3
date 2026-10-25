@@ -772,8 +772,32 @@ def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER, co
         return False
 
 
+def alert_owner(details, info):
+    """A renewal that failed: PayByBot's owner hears of each one (an e-mail and an error in Sentry), not only the
+    customer, so nobody gets a fine unnoticed. No personal data: the plate cut short, the zone and the reason."""
+    plate = str((details or {}).get("plate") or "")
+    text = "renouvellement échoué : %s*** zone %s — %s%s" % (
+        plate[:2], (details or {}).get("location"), info.get("message", ""),
+        " (suspendu)" if info.get("suspended") else "")
+    log.error("owner alert, %s", text)  # an ERROR log: Sentry raises an issue for it
+    to = (os.environ.get("PAYBYBOT_ALERT_EMAIL") or os.environ.get("PAYBYBOT_ADMIN_EMAIL") or "").split(",")[0].strip()
+    if not to:
+        return
+    try:
+        send_email(to, "Alerte PayByBot · renouvellement échoué", "Un renouvellement a échoué",
+                   ["Véhicule %s***, zone %s." % (plate[:2], (details or {}).get("location")),
+                    "Raison : %s" % (info.get("message") or "inconnue"),
+                    "Renouvellement suspendu." if info.get("suspended") else "Nouvel essai automatique prévu.",
+                    "Le client a été prévenu par e-mail s'il en a donné un."],
+                   ("Ouvrir l'admin", APP_URL.rstrip("/") + "/#/admin"))
+    except Exception as e:
+        log.warning("owner alert not sent: %s", type(e).__name__)
+
+
 def notify(details, event, **info):
     """One message per renewal event; the address lives only in the encrypted details."""
+    if event == "problem":
+        alert_owner(details, info)
     to = (details or {}).get("email")
     if not to:
         return

@@ -231,3 +231,9 @@ input:-webkit-autofill::first-line {
 }
 .shiny { animation: shiny-sweep 3.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .shiny { animation: none; --x: -100%; } }
+
+/* Centred when it fits, top-aligned (and scrollable) when taller than the screen: never cut at the top. */
+.center-safe { place-items: center; }
+@supports (align-items: safe center) {
+  .center-safe { place-items: safe center; }
+}

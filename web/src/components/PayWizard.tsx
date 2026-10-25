@@ -171,7 +171,7 @@ export function PayWizard({
 
   if (done) {
     return (
-      <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-white p-6">
+      <div className="fixed inset-0 z-50 grid center-safe overflow-y-auto bg-white p-6">
         <div className="rise flex max-w-md flex-col items-center text-center">
           <span className="grid size-16 place-items-center rounded-full bg-eu text-white">
             <Check className="size-8" strokeWidth={3} />

@@ -325,13 +325,9 @@ export function Dashboard({
     )
   }, [me.hosted, me.demo, data?.vehicles.length])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
-  // A car with a resident ticket running (more than two days) is a resident one, even if the zone lookup did not say.
-  const residentPlates =
-    pricedResidents &&
-    new Set([
-      ...pricedResidents,
-      ...sessions.filter((x) => new Date(x.expire).getTime() - new Date(x.start).getTime() > 2 * 86_400_000).map((x) => plateKey(x.plate)),
-    ])
+  // The cars PayByPhone gives the resident rate (checked by the server, zone by zone). A ticket's length says
+  // nothing: a non-resident ticket can last several days.
+  const residentPlates = pricedResidents
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
   // Right after the welcome page, nothing renewed yet: the renewal of the car with a ticket (else the first car)
   // opens by itself, then the offer comes when it is activated.
@@ -426,16 +422,9 @@ export function Dashboard({
                 autoOpen={!!autoPlate && sameCar(autoPlate, s.plate)}
                 locked={locked}
                 onLogout={onLogout}
-                // Not a resident ticket: tickets on chosen days. A ticket of more than two days, or on a car with the
-                // resident rate, is a resident one whatever PayByPhone's rate type says (visitors: 6 h, Handi: a day).
-                daily={
-                  !(
-                    s.resident === true ||
-                    new Date(s.expire).getTime() - new Date(s.start).getTime() > 2 * 86_400_000 ||
-                    !!residentPlates?.has(plateKey(s.plate))
-                  ) &&
-                  (s.resident === false || (!!residentPlates && !residentPlates.has(plateKey(s.plate))))
-                }
+                // A resident ticket only when PayByPhone says so, or when the car has the resident rate (checked by
+                // the server with PayByPhone). Anything else is a non-resident ticket, whatever its length.
+                daily={!(s.resident === true || !!residentPlates?.has(plateKey(s.plate)))}
                 needsOffer={needsOffer}
               />
             ))}

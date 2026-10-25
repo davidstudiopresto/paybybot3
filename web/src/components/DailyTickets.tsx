@@ -194,9 +194,7 @@ export function DailyTickets({
             className={cn(
               'mt-5',
               !data.autopilots.some((ap) => ap.enabled) &&
-                !data.vehicles.some((v) => v.zone) &&
-                // a resident week running (more than two days) also makes it a resident account
-                !data.sessions.some((x) => new Date(x.expire).getTime() - new Date(x.start).getTime() > 2 * 86_400_000)
+                !data.vehicles.some((v) => v.zone)
                 ? ui.primary
                 : ui.primaryGray,
             )}

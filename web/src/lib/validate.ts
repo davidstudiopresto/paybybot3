@@ -80,13 +80,6 @@ export function frenchDigits(phone: string): string | null {
   return /^[1-9]\d{8}$/.test(digits) ? digits : null
 }
 
-/** A number of another country: its digits once the calling code and a leading 0 are left out (6 to 14). */
-export function foreignDigits(phone: string): string | null {
-  const digits = phone.trim().replace(/[\s.\-()]/g, '').replace(/^\+\d{1,3}(?=\d{6})/, '').replace(/^0/, '')
-  return /^\d{6,14}$/.test(digits) ? digits : null
-}
-
-export function phoneProblem(phone: string, code = '33'): string | null {
-  if (code === '33') return frenchDigits(phone) ? null : 'Numéro invalide : un numéro français à 10 chiffres (exemple : 06 12 34 56 78).'
-  return foreignDigits(phone) ? null : 'Numéro invalide : vérifiez le numéro de votre compte PayByPhone.'
+export function phoneProblem(phone: string): string | null {
+  return frenchDigits(phone) ? null : 'Numéro invalide : un numéro français à 10 chiffres (exemple : 06 12 34 56 78).'
 }

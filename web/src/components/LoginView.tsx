@@ -12,19 +12,8 @@ import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { emailProblem, frenchDigits, phoneProblem } from '@/lib/validate'
 
-/** The countries where PayByPhone works: the calling code of the account's phone number (France first). A number
- *  typed with its own + prefix is kept as is, whatever the country picked. */
-const COUNTRIES = [
-  { id: 'FR', name: 'France', code: '33', flag: ['v', '#0055a4', '#ffffff', '#ef4135'] },
-  { id: 'BE', name: 'Belgique', code: '32', flag: ['v', '#000000', '#fdda24', '#ef3340'] },
-  { id: 'CH', name: 'Suisse', code: '41', flag: null },
-  { id: 'DE', name: 'Allemagne', code: '49', flag: ['h', '#000000', '#dd0000', '#ffce00'] },
-  { id: 'IT', name: 'Italie', code: '39', flag: ['v', '#009246', '#ffffff', '#ce2b37'] },
-  { id: 'GB', name: 'Royaume-Uni', code: '44', flag: null },
-  { id: 'CA', name: 'Canada', code: '1', flag: null },
-  { id: 'US', name: 'États-Unis', code: '1', flag: null },
-  { id: 'AU', name: 'Australie', code: '61', flag: null },
-] as const
+/** PayByBot works in France: French numbers only (calling code and flag stripes). */
+const COUNTRIES = [{ id: 'FR', name: 'France', code: '33', flag: ['v', '#0055a4', '#ffffff', '#ef4135'] }] as const
 
 function Flag({ flag }: { flag: readonly string[] }) {
   const [dir, a, b, c] = flag
@@ -60,7 +49,7 @@ const PASSWORD_RESET_LINK = IS_ANDROID
 
 /** "06 12 34 56 78" + France -> "+33612345678"; a number typed with its + prefix is kept as is. */
 function phoneUsername(national: string, code: string) {
-  const digits = code === '33' ? frenchDigits(national) : null
+  const digits = frenchDigits(national)
   if (digits) return '+' + code + digits
   const raw = national.trim()
   if (raw.startsWith('+')) return '+' + raw.replace(/\D/g, '')
@@ -84,7 +73,7 @@ export function LoginView({
   title?: ReactNode // instead of « Inscription » / « Connexion à PayByBot » (the Tarifs page asks to sign up)
 }) {
   const [mode, setMode] = useState<'phone' | 'email'>('phone') // PayByPhone identifier: phone number by default
-  const [country, setCountry] = useState<string>('FR')
+  const country = 'FR'
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -146,7 +135,7 @@ export function LoginView({
     if (!demo && typed !== 'demo') {
       // No message: the field that cannot be right is framed in red, until it is changed.
       const bad = new Set<Field>()
-      if (mode === 'phone' && phoneProblem(phone, selected.code)) bad.add('phone')
+      if (mode === 'phone' && phoneProblem(phone)) bad.add('phone')
       if (mode === 'phone' && signup && emailProblem(signupEmail)) bad.add('signupEmail')
       if (mode === 'email' && emailProblem(email)) bad.add('email')
       setInvalid(bad)
@@ -265,23 +254,11 @@ export function LoginView({
             </div>
             {mode === 'phone' ? (
               <div className={box('phone')}>
-                {/* The country of the number: its flag and calling code, a native list behind (any PayByPhone country). */}
-                <label className="relative flex h-full shrink-0 cursor-pointer items-center gap-2 border-r border-ink/10 pr-3 pl-4" title={selected.name}>
-                  {selected.flag ? <Flag flag={selected.flag} /> : <span className="text-xs font-semibold text-ink/55">{selected.id}</span>}
-                  <span className="text-lg text-ink/45 tabular-nums">+{selected.code}</span>
-                  <select
-                    value={country}
-                    onChange={(e) => (setCountry(e.target.value), fixed('phone'))}
-                    aria-label="Pays du numéro"
-                    className="absolute inset-0 cursor-pointer opacity-0"
-                  >
-                    {COUNTRIES.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} (+{c.code})
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <span className="flex h-full shrink-0 items-center border-r border-ink/10 pr-3 pl-4" title="Numéro français">
+                  <span className="sr-only">France</span>
+                  <Flag flag={selected.flag} />
+                </span>
+                <span className="pl-3 text-lg text-ink/45 tabular-nums">+{selected.code}</span>
                 <input
                   id="username"
                   type="tel"

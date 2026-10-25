@@ -135,7 +135,7 @@ function planText(id: Plan, pricing: Pricing) {
 }
 
 const INCLUDED = [
-  'Tickets pris et renouvelés automatiquement',
+  'Tickets renouvelés automatiquement',
   'Pause en un clic, reprise automatique',
   'Alertes en cas d’échec',
   'Annulable à tout moment',

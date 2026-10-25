@@ -275,6 +275,11 @@ export function DailyWizard({
     setLooking(true)
     setError(null)
     try {
+      // PayByBot works in France: a number PayByPhone does not know there stops here, with a clear word.
+      if (!(await api.zone(zone)).found) {
+        setError('Cette zone n’existe pas chez PayByPhone en France. Vérifiez le numéro sur le panneau ou l’horodateur.')
+        return
+      }
       const list = await api.rates(zone, plate)
       setRates(list)
       const first = list.filter((r) => !r.parkingNotAllowedReason && !resident(r))
@@ -360,7 +365,6 @@ export function DailyWizard({
     label: DAILY_LABEL,
     days,
     start,
-    tz: Intl.DateTimeFormat().resolvedOptions().timeZone, // the times are the user's local ones
     ...(handi(effective!) ? { cmis: true } : {}),
   })
 
@@ -437,7 +441,7 @@ export function DailyWizard({
                   className={ui.field}
                 />
                 <p className="mt-2 text-sm text-ink/50">
-                  {place ? `✓ ${place}` : withPayByPhone('Le numéro de zone PayByPhone, sur le panneau ou l’horodateur. À Paris, le code postal suffit.')}
+                  {place ? `✓ ${place}` : withPayByPhone('Le numéro de zone PayByPhone, indiqué sur le panneau ou l’horodateur.')}
                 </p>
               </div>
               {error && <p className={ui.error}>{error}</p>}

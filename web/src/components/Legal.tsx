@@ -456,9 +456,9 @@ function Terms() {
         <p>
           <strong>Tickets programmés.</strong> Une fois activé, un ticket programmé est pris automatiquement, sans nouvelle
           confirmation, chaque jour choisi à l’heure choisie, au tarif et pour la durée choisis, tant que vous ne l’arrêtez
-          pas. Le service fonctionne partout où <PayByPhone /> fonctionne ; à Paris, aucun ticket n’est pris le dimanche
-          ni les jours fériés, où le stationnement est gratuit. Les heures sont celles du fuseau horaire de l’appareil
-          utilisé pour programmer le ticket. La durée ne peut pas dépasser le maximum du tarif (par exemple 6 heures pour
+          pas. Le service fonctionne en France, partout où <PayByPhone /> fonctionne ; à Paris, aucun ticket n’est pris le
+          dimanche ni les jours fériés, où le stationnement est gratuit. Les heures sont celles de Paris (heure de France
+          métropolitaine). La durée ne peut pas dépasser le maximum du tarif (par exemple 6 heures pour
           le ticket visiteur à Paris).
         </p>
         <p>

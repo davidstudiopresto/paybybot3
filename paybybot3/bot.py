@@ -276,6 +276,16 @@ class Bot:
             query, {"input": {"locationId": str(locationId), "licensePlate": licensePlate}}
         )["getRateOptionsV1"]
 
+    def find_locations(self, number):
+        """The PayByPhone zones advertised under this number (one per country it is used in): id and country."""
+        query = """query GetLocationsV1($input: GetLocationInput!) {
+  getLocationsV1(input: $input) {
+    locationId
+    countryCode
+  }
+}"""
+        return self._graphql(query, {"input": {"advertisedLocationNumber": str(number)}})["getLocationsV1"] or []
+
     def _get_vendor_id(self, locationId):
         query = """query GetLocationsV1($input: GetLocationInput!) {
   getLocationsV1(input: $input) {

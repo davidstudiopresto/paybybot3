@@ -107,6 +107,10 @@ class DemoBot:
                  "totalCost": {"amount": 9.0, "currency": "EUR"}} for i in (1, 2)]
         return sorted(self.sessions + past, key=lambda x: x["startTime"], reverse=True)
 
+    def find_locations(self, number):
+        # Any 4- or 5-digit number is a French zone in the demo.
+        return [{"locationId": str(number), "countryCode": "FR"}] if re.fullmatch(r"\d{4,5}", str(number)) else []
+
     def get_rate_options(self, locationId, licensePlate):
         if not str(locationId).isdigit():
             return []
@@ -1603,12 +1607,6 @@ def french_phone(username):
     return "+33" + digits if re.fullmatch(r"[1-9]\d{8}", digits) else None
 
 
-def international_phone(username):
-    """A number of any country where PayByPhone works, in international format (+ and 8 to 15 digits), or None."""
-    digits = re.sub(r"[\s.\-()]", "", username or "")
-    return digits if re.fullmatch(r"\+[1-9]\d{7,14}", digits) else None
-
-
 class Login(BaseModel):
     username: str = Field(max_length=120)
     password: str = Field(max_length=200)
@@ -1670,8 +1668,8 @@ def login(body: Login, request: Request, response: Response):
         raise HTTPException(400, "Indiquez votre adresse e-mail.")
     if body.signup and not demo:
         check_email(body.email)
-        if "@" not in body.username and not (french_phone(body.username) or international_phone(body.username)):
-            raise HTTPException(400, "Numéro invalide : vérifiez le numéro de votre compte PayByPhone.")
+        if "@" not in body.username and not french_phone(body.username):
+            raise HTTPException(400, "Numéro invalide : un numéro français à 10 chiffres (exemple : 06 12 34 56 78).")
     if body.signup and not demo and INVITE_ONLY and not valid_invite(body.invite):
         raise HTTPException(403, "PayByBot est sur invitation : demandez son lien à un proche qui l'utilise déjà.")
     if HOSTED and not demo:
@@ -2020,6 +2018,27 @@ def overview(pbb_session: str = Cookie(None)):
         }
 
     return guarded(load)
+
+
+def french_zone(s, number):
+    """Whether PayByPhone knows this zone number in France (PayByBot works in France only). True when PayByPhone
+    cannot tell right now: the rates asked next say it anyway."""
+    try:
+        found = s.call("find_locations", number) or []
+    except Exception as e:
+        log.info("zone lookup unavailable: %s", str(e)[:200])
+        return True
+    return any(str(x.get("countryCode") or "").upper() in ("FR", "FRA") for x in found)
+
+
+@app.get("/api/zone")
+def zone_check(number: str, pbb_session: str = Cookie(None)):
+    """Is this a PayByPhone zone in France? Checked before asking its rates."""
+    s = current(pbb_session)
+    number = number.strip()
+    if not re.fullmatch(r"[0-9A-Za-z]{1,12}", number):
+        return {"found": False}
+    return {"found": french_zone(s, number)}
 
 
 @app.get("/api/rates")

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
 import { CheckoutDone } from '@/components/CheckoutDone'
-import { ActivateRenewal, CardGate, RenewalActions, RenewalNote, RenewalSwitch, pauseState, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
+import { ActivateRenewal, CardGate, OpeningSwitch, RenewalActions, RenewalNote, RenewalSwitch, pauseState, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
 import { api, clock, remaining, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
@@ -99,19 +99,11 @@ function Ticket({
 
       {!renewable && (
         <div className="border-t border-ink/[0.06] px-5 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-[1.05rem] text-ink">Renouvellement auto</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={programmed}
-              aria-label="Renouvellement auto"
-              onClick={() => (programmed ? document.getElementById('tickets-programmes')?.scrollIntoView({ behavior: 'smooth' }) : setRenewing(true))}
-              className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors', programmed ? 'bg-[#4e9aa0]' : 'bg-ink/15 hover:bg-ink/20')}
-            >
-              <span className={cn('absolute top-1 size-5 rounded-full bg-white shadow-sm transition-all', programmed ? 'right-1' : 'left-1')} />
-            </button>
-          </div>
+          <OpeningSwitch
+            on={programmed}
+            isOpen={renewing}
+            open={() => (programmed ? document.getElementById('tickets-programmes')?.scrollIntoView({ behavior: 'smooth' }) : setRenewing(true))}
+          />
           {programmed && <p className="mt-2 text-sm text-[#3d7f84]">Ticket programmé : il est repris automatiquement les jours choisis.</p>}
         </div>
       )}
@@ -271,21 +263,7 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogo
                 autoOpen={!!autoPlate && key(autoPlate) === key(v.plate)}
                 locked={!!locked && !!autoPlate && key(autoPlate) === key(v.plate)}
                 onLogout={onLogout}
-                trigger={(open) => (
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-[1.05rem] text-ink">Renouvellement auto</span>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={false}
-                      aria-label="Renouvellement auto"
-                      onClick={open}
-                      className="relative h-7 w-12 shrink-0 rounded-full bg-ink/15 transition-colors hover:bg-ink/20"
-                    >
-                      <span className="absolute top-1 left-1 size-5 rounded-full bg-white shadow-sm" />
-                    </button>
-                  </div>
-                )}
+                trigger={(open, isOpen) => <OpeningSwitch open={open} isOpen={isOpen} />}
               />
             </div>
           </div>
@@ -338,7 +316,7 @@ export function Dashboard({
     confirm.then(() => api.account().then(setAccount, () => {}))
   }, [])
   // The vehicles with the resident rate on PayByPhone (a zone in the pricing); null while looking.
-  const [residentPlates, setResidentPlates] = useState<Set<string> | null>(null)
+  const [pricedResidents, setResidentPlates] = useState<Set<string> | null>(null)
   useEffect(() => {
     api.pricing().then(
       (p) => setResidentPlates(new Set((p.vehicles ?? []).filter((v) => v.zone).map((v) => plateKey(v.plate)))),
@@ -346,6 +324,13 @@ export function Dashboard({
     )
   }, [me.hosted, me.demo, data?.vehicles.length])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
+  // A car with a resident ticket running (more than two days) is a resident one, even if the zone lookup did not say.
+  const residentPlates =
+    pricedResidents &&
+    new Set([
+      ...pricedResidents,
+      ...sessions.filter((x) => new Date(x.expire).getTime() - new Date(x.start).getTime() > 2 * 86_400_000).map((x) => plateKey(x.plate)),
+    ])
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
   // Right after the welcome page, nothing renewed yet: the renewal of the car with a ticket (else the first car)
   // opens by itself, then the offer comes when it is activated.

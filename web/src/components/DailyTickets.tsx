@@ -320,7 +320,20 @@ export function DailyWizard({
   const [plate, setPlate] = useState(
     data.vehicles.find((v) => initialPlate && keyOf(v.plate) === keyOf(initialPlate))?.plate ?? data.vehicles[0]?.plate ?? '',
   )
-  const [zone, setZone] = useState(initialZone ?? '')
+  // The vehicle's usual zone by default: its resident zone, else the zone of its ticket running now.
+  const zoneFor = (p: string) =>
+    data.vehicles.find((v) => keyOf(v.plate) === keyOf(p))?.zone ??
+    data.sessions.find((x) => keyOf(x.plate) === keyOf(p) && new Date(x.expire).getTime() > Date.now())?.location ??
+    ''
+  const [zone, setZone] = useState(initialZone ?? zoneFor(plate))
+  const defaultZone = useRef(zone)
+  useEffect(() => {
+    // Another vehicle picked: its own zone, unless the user typed one.
+    if (zone && zone !== defaultZone.current) return
+    const z = zoneFor(plate)
+    defaultZone.current = z
+    setZone(z)
+  }, [plate]) // eslint-disable-line react-hooks/exhaustive-deps
   const [rates, setRates] = useState<Rate[] | null>(null)
   const [looking, setLooking] = useState(false)
   const [error, setError] = useState<string | null>(null)

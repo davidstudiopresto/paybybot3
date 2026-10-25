@@ -2280,20 +2280,32 @@ def vehicle_zones(s, keep=True):
     kept = dict(account.get("vehicle_zones") or {})
     now, found, changed = time.time(), [], False
     home, looked = None, False  # the home zone, only looked up when a vehicle needs it
+
+    def long_ticket(x):  # a resident week, not a visitor's hours or a Handi day
+        start, end = parse_dt(x.get("startTime")), parse_dt(x.get("expireTime"))
+        return bool(start and end and end - start >= timedelta(days=2))
+
+    try:  # the zone of a resident ticket running now: the first place to look, whatever was kept before
+        running = {plate_key((x.get("vehicle") or {}).get("licensePlate") or ""): str(x.get("locationId"))
+                   for x in s.call("get_parking_sessions") or [] if long_ticket(x) and x.get("locationId")}
+    except Exception as e:
+        log.info("running tickets unavailable for the zones: %s", type(e).__name__)
+        running = {}
     for vehicle in vehicles:
         key = plate_key(vehicle["licensePlate"])
         entry = kept.get(key) or {}
+        ticket_zone = running.get(key)
         zone = rate = None
         if entry.get("z"):
             rate = vehicle_resident_rate(s, entry["z"], vehicle)
             zone = entry["z"] if rate else None
-        elif entry and now - entry.get("t", 0) < VEHICLE_ZONE_RECHECK:
-            continue  # no resident rate a little while ago: not searched again yet
+        elif entry and now - entry.get("t", 0) < VEHICLE_ZONE_RECHECK and not ticket_zone:
+            continue  # no resident rate a little while ago (and no resident ticket now): not searched again yet
         if not zone:  # not known yet, or no resident rate there any more (a move)
             if not looked:
                 home, looked = (find_home_zone(s, scan=False) or {}).get("zone"), True
             tried = {entry.get("z")}
-            for z in dict.fromkeys([z for _, z, _ in found] + [home]):
+            for z in dict.fromkeys([ticket_zone] + [z for _, z, _ in found] + [home]):
                 if z and z not in tried:
                     tried.add(z)
                     rate = vehicle_resident_rate(s, z, vehicle)

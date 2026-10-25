@@ -411,6 +411,35 @@ export function RiverainCard({
   )
 }
 
+/** « Renouvellement auto », off: a tap turns it green first (the switch answers at once), then opens its window;
+ *  it stays green while the window is open and goes back to off if the window is closed without activating. */
+export function OpeningSwitch({ open, isOpen, on = false }: { open: () => void; isOpen: boolean; on?: boolean }) {
+  const [pressed, setPressed] = useState(false)
+  useEffect(() => {
+    if (isOpen) setPressed(false) // the window took over: green as long as it is open
+  }, [isOpen])
+  const checked = on || pressed || isOpen
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-[1.05rem] text-ink">Renouvellement auto</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label="Renouvellement auto"
+        onClick={() => {
+          if (pressed || isOpen) return
+          setPressed(true)
+          setTimeout(open, 280) // the knob slides to green, then the window opens
+        }}
+        className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200', checked ? 'bg-[#4e9aa0]' : 'bg-ink/15 hover:bg-ink/20')}
+      >
+        <span className={cn('absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform duration-200', checked && 'translate-x-5')} />
+      </button>
+    </div>
+  )
+}
+
 /** The « Activer le renouvellement résident » button and its dialog; with a plate, only that car is ticked. */
 /** The ticket card's « Renouvellement auto » switch, Qonto-like (muted teal). Off with no renewal: opens the
  *  setup; on: turning it off asks to confirm, then stops; off after a failure: tries the payment again. */
@@ -483,7 +512,7 @@ export function RenewalSwitch({
         autoOpen={autoOpen}
         locked={autoOpen && locked}
         onLogout={onLogout}
-        trigger={(open) => row(open)}
+        trigger={(open, isOpen) => <OpeningSwitch open={open} isOpen={isOpen} />}
       />
     )
   if (confirming)
@@ -528,8 +557,8 @@ export function ActivateRenewal({
   hosted?: boolean
   demo?: boolean
   plate?: string
-  /** Something else than the big button opens the dialog (the ticket card's switch). */
-  trigger?: (open: () => void) => ReactNode
+  /** Something else than the big button opens the dialog (the ticket card's switch); told whether it is open. */
+  trigger?: (open: () => void, isOpen: boolean) => ReactNode
   /** A ticket is running: the renewal only takes over when it ends. */
   label?: string
   /** Just signed up: the dialog opens by itself, like Frequens (then the offer, then the renewal). */
@@ -546,7 +575,7 @@ export function ActivateRenewal({
   return (
     <>
       {trigger ? (
-        trigger(() => data && setOpen(true))
+        trigger(() => data && setOpen(true), open)
       ) : (
         <ShinyButton onClick={() => setOpen(true)} disabled={!data} className="flex h-14 w-full items-center justify-center rounded-xl border border-eu/30 bg-eu/[0.07] px-6 text-lg font-bold text-eu hover:bg-eu/[0.1] disabled:opacity-50">
           {label}

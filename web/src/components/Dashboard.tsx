@@ -74,7 +74,8 @@ function Ticket({
   const programmed = data.autopilots.some((ap) => ap.enabled && sameCar(ap.plate, session.plate))
   // The weekly renewal is for resident tickets only: a non-resident ticket (visitor, Handi…) shows no switch, unless
   // it is already renewed; tickets on chosen days are set up in « Tickets non-résident ».
-  const renewable = (!daily && session.resident !== false) || !!renewal
+  // `daily` already weighs PayByPhone's rate type, the ticket's length and the car: a resident ticket is renewable.
+  const renewable = !daily || !!renewal
   const start = new Date(session.start).getTime()
   const end = new Date(session.expire).getTime()
   const left = end - now

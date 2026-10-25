@@ -19,8 +19,14 @@ export function captureInvite(): string | null {
   return captured
 }
 
+/** The code of a referral link: /r/<code> (the shared form), or ?i=<code> (older links, still valid). */
+export function linkCode(): string | null {
+  const path = window.location.pathname.match(/^\/r\/([0-9A-Za-z_-]{1,40})\/?$/)
+  return path ? path[1] : new URL(window.location.href).searchParams.get('i')
+}
+
 function readInvite(): string | null {
-  const fromLink = new URL(window.location.href).searchParams.get('i')
+  const fromLink = linkCode()
   if (fromLink) {
     try {
       localStorage.setItem(KEY, fromLink)

@@ -1943,7 +1943,7 @@ def my_invite(pbb_session: str = Cookie(None)):
     """The signed-in user's invitation link, to share with people around them."""
     s = current(pbb_session)
     code = SHARED_INVITE or invite_code(owner_id(s.username))
-    return {"code": code, "url": APP_URL.rstrip("/") + "/?i=" + code}
+    return {"code": code, "url": APP_URL.rstrip("/") + "/r/" + code}
 
 
 @app.get("/api/me")
@@ -3761,8 +3761,9 @@ def spa(path: str):
         raise HTTPException(404, "Interface non compilée : lancez `npm run build` dans web/.")
     # Never keep the page (no cache, no back/forward copy): a stale copy points to a previous deployment's assets.
     # Any other path gets the page with a 404 status: the app shows "page not found", search engines skip it.
-    return FileResponse(index, status_code=200 if path in ("", "index.html") else 404,
-                        headers={"Cache-Control": "no-store"})
+    # A referral link (/r/<code>) is the page itself: 200, so link previews (WhatsApp…) read its title and image.
+    ok = path in ("", "index.html") or re.fullmatch(r"r/[0-9A-Za-z_-]{1,40}/?", path)
+    return FileResponse(index, status_code=200 if ok else 404, headers={"Cache-Control": "no-store"})
 
 
 def serve(host="127.0.0.1", port=8765, open_browser=True):

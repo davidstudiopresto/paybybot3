@@ -133,16 +133,16 @@ export default function App() {
     if (me && !me.demo) markMember()
   }, [me])
 
-  // Signed in: the address carries the user's referral code (?i=…), so copying it from the address bar shares a
+  // Signed in: the address is the user's referral link (/r/<code>), so copying it from the address bar shares a
   // link that opens the site (not the blurred « sur parrainage » page), whatever page they are on.
   useEffect(() => {
     if (!me || me.demo || !inviteOnly) return
     api.myInvite().then(
       ({ code }) => {
         const url = new URL(window.location.href)
-        if (url.searchParams.get('i') === code) return
-        url.searchParams.set('i', code)
-        history.replaceState(history.state, '', url.pathname + url.search + url.hash)
+        if (url.pathname === `/r/${code}` && !url.searchParams.has('i')) return
+        url.searchParams.delete('i')
+        history.replaceState(history.state, '', `/r/${code}` + url.search + url.hash)
       },
       () => {},
     )
@@ -313,7 +313,7 @@ export default function App() {
       <Toaster />
       {/* Opened through a valid private link: « sur parrainage » first, then the screen lifts on the site. */}
       {inviteOnly && !me && invited === 'yes' && openedFromLink() && <InviteCurtain />}
-      {!['/', '/index.html'].includes(window.location.pathname) ? (
+      {!['/', '/index.html'].includes(window.location.pathname) && !/^\/r\/[0-9A-Za-z_-]{1,40}\/?$/.test(window.location.pathname) ? (
         <NotFoundPage hosted={hosted} />
       ) : legal ? (
         legal === 'securite' ? <SecurityPage hosted={hosted} signedIn={!!me} /> : <LegalView page={legal} hosted={hosted} signedIn={!!me} />

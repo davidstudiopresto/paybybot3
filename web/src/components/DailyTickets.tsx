@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { NoPayment } from '@/components/NoPayment'
 import { PlansDialog } from '@/components/Pricing'
 import { clearPending, RenewalActions, savePending, type PendingRenewal } from '@/components/Riverain'
-import { arrondissement, PayByPhone, Plate, plateText, withPayByPhone } from '@/components/signs'
+import { arrondissement, PayByPhone, Plate, withPayByPhone } from '@/components/signs'
 import { api, ApiError, unitLabel, type Autopilot, type Money, type Overview, type Rate, type Unit } from '@/lib/api'
 import { ui } from '@/lib/styles'
 import { cn } from '@/lib/utils'
@@ -107,12 +107,12 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
   const next = ap.enabled ? nextTicket(daysOf(ap), startOf(ap)) : null
   return (
     <article className="rise overflow-hidden rounded-2xl border border-ink/10 bg-white">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-4">
-        <span className="flex items-baseline gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-4">
+        <span className="flex items-center gap-3">
           <span className="text-[1.05rem] font-medium text-ink">
             <PayByPhone />
           </span>
-          <span className="tracking-wide text-ink/50 tabular-nums">{plateText(ap.plate)}</span>
+          <Plate plate={ap.plate} size="sm" />
         </span>
         <span className="text-sm text-ink/50">{arrondissement(ap.location) ?? `Zone ${ap.location}`}</span>
       </div>
@@ -842,7 +842,7 @@ export function DailyWizard({
             <>
               <dl className="divide-y divide-ink/[0.06] rounded-xl border border-ink/10 text-sm">
                 {[
-                  ['Véhicule', plateText(plate)],
+                  ['Véhicule', <Plate key="p" plate={plate} size="sm" />],
                   ['Zone', place ?? `Zone ${zone}`],
                   ['Ticket', optionText(effective)[0]],
                   ['Jours', chainFrom ? (paris ? 'Chaque jour, sauf dimanche et jours fériés' : 'Chaque jour') : daysText(days)],
@@ -858,7 +858,7 @@ export function DailyWizard({
                           : `${euros({ amount: cost.amount * days.length, currency: cost.currency })} par semaine (${euros(cost)} × ${days.length})`,
                   ],
                 ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-4 px-4 py-2.5">
+                  <div key={String(k)} className="flex items-center justify-between gap-4 px-4 py-2.5">
                     <dt className="text-ink/55">{k}</dt>
                     <dd className="text-right text-ink">{v}</dd>
                   </div>

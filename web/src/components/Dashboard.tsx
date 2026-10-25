@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LogOut } from 'lucide-react'
-import { arrondissement, Plate, plateText, vehicleType, withPayByPhone } from '@/components/signs'
+import { arrondissement, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
 import { DailyTickets, DailyWizard } from '@/components/DailyTickets'
@@ -89,10 +89,10 @@ function Ticket({
   // Qonto-like: one white card, hairline dividers, a muted teal accent.
   return (
     <article className="rise overflow-hidden rounded-2xl border border-ink/10 bg-white">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-4">
-        <span className="flex items-baseline gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-4">
+        <span className="flex items-center gap-3">
           <span className="text-[1.05rem] font-medium text-ink">{withPayByPhone('PayByPhone')}</span>
-          <span className="tracking-wide text-ink/50 tabular-nums">{plateText(session.plate)}</span>
+          <Plate plate={session.plate} size="sm" />
         </span>
         {/* A discreet word on the kind of ticket: resident (renewed each week) or not. */}
         <span className="text-sm text-ink/50">{daily ? place : `Ticket résident · ${place}`}</span>

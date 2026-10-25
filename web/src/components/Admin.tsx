@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Plate } from '@/components/signs'
 import { Loader2 } from 'lucide-react'
 import { ui } from '@/lib/styles'
 import { ApiError } from '@/lib/api'
@@ -161,7 +162,7 @@ export function AdminPage(_: { signedIn?: boolean }) {
                               <ul className="mt-1 space-y-0.5 text-xs">
                                 {c.vehicles.map((v) => (
                                   <li key={v.plate} className="whitespace-nowrap">
-                                    <span className="font-semibold tracking-wide text-ink/80">{v.plate}</span>{' '}
+                                    <Plate plate={v.plate} size="sm" />{' '}
                                     {v.expire ? (
                                       <span className="text-[#14703a]">· en cours, jusqu’au {ends(v.expire)}</span>
                                     ) : (

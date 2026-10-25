@@ -97,6 +97,12 @@ function rateLabel(name: string) {
 }
 
 /** One automatic ticket on precise days, in the style of the ticket card. */
+/** Every day there is paid parking: Monday to Saturday in Paris (Sundays free), all week elsewhere. */
+const everyDay = (ap: Autopilot) => {
+  const d = daysOf(ap)
+  return isParis(ap.location) ? [0, 1, 2, 3, 4, 5].every((x) => d.includes(x)) : d.length === 7
+}
+
 function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) {
   const next = ap.enabled ? nextTicket(daysOf(ap), startOf(ap)) : null
   return (
@@ -112,11 +118,16 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
       </div>
       <div className="border-t border-ink/[0.06] px-5 py-4">
         <div className="flex items-center justify-between">
-          <span className="text-ink">Ticket {lengthText(Number(ap.duration), ap.unit)}, jours précis</span>
+          <span className="text-ink">
+            Ticket de {lengthText(Number(ap.duration), ap.unit)}
+            {everyDay(ap) ? (isParis(ap.location) ? ', chaque jour sauf dimanche et jours fériés' : ', chaque jour') : ''}
+          </span>
           <span className={cn('relative h-6 w-11 rounded-full', ap.enabled ? TEAL : 'bg-ink/15')} aria-label={ap.enabled ? 'Actif' : 'Arrêté'}>
             <span className={cn('absolute top-1 size-4 rounded-full bg-white transition-all', ap.enabled ? 'right-1' : 'left-1')} />
           </span>
         </div>
+        {/* The days, unless it is every day (then said in words above). */}
+        {!everyDay(ap) && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {DAYS.map((d, i) => (i === 6 && isParis(ap.location) && !daysOf(ap).includes(6) ? null :
             <span
@@ -130,6 +141,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
             </span>
           ))}
         </div>
+        )}
         <dl className="mt-3 space-y-1 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-ink/50">Heure de prise</dt>
@@ -554,7 +566,7 @@ export function DailyWizard({
     setSaving(true)
     try {
       await api.addAutopilot(rule() as Parameters<typeof api.addAutopilot>[0])
-      toast.success('Ticket programmé.', {
+      toast.success(chainFrom ? 'Renouvellement activé.' : 'Ticket programmé.', {
         description: `Prochain ticket ${when(nextTicket(days, start, chainFrom)!)}.`,
       })
       onDone()
@@ -872,7 +884,7 @@ export function DailyWizard({
               )}
               {nextTicket(days, start, chainFrom) && (
                 <p className="rounded-xl bg-[#e7f6ec] px-4 py-3 text-sm text-[#14703a]">
-                  Premier ticket {when(nextTicket(days, start, chainFrom)!)}
+                  {chainFrom ? 'Prochain ticket' : 'Premier ticket'} {when(nextTicket(days, start, chainFrom)!)}
                   {chainFrom && Math.abs(nextTicket(days, start, chainFrom)!.getTime() - chainFrom.getTime()) < 120_000 ? ', dès la fin du ticket en cours' : ''}. Un e-mail à chaque ticket, et une alerte si {withPayByPhone('PayByPhone')} refuse.
                 </p>
               )}

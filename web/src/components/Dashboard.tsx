@@ -105,7 +105,7 @@ function Ticket({
             isOpen={renewing}
             open={() => (programmed ? document.getElementById('tickets-programmes')?.scrollIntoView({ behavior: 'smooth' }) : setRenewing(true))}
           />
-          {programmed && <p className="mt-2 text-sm text-[#3d7f84]">Ticket programmé : il est repris automatiquement les jours choisis.</p>}
+          {programmed && <p className="mt-2 text-sm text-[#3d7f84]">Renouvellement activé : le détail est plus bas.</p>}
         </div>
       )}
       {renewing && (

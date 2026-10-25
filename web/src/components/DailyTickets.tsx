@@ -753,9 +753,18 @@ export function DailyWizard({
                     <p className={ui.label}>Heure de prise</p>
                     <input type="time" value={start} onChange={(e) => setStart(e.target.value || '09:00')} className={ui.field} />
                     <p className="mt-2 text-xs text-ink/45">
-                      Fin du ticket : <span className="font-medium text-ink tabular-nums">{endText(start, duration, unit)}</span>
+                      {!chainFrom && (
+                        <>
+                          Fin du ticket : <span className="font-medium text-ink tabular-nums">{endText(start, duration, unit)}</span>
+                        </>
+                      )}
                       {chainFrom && (
-                        <span className="mt-1 block">Le ticket en cours se termine {when(chainFrom)}.</span>
+                        <span className="block">Le ticket en cours se termine {when(chainFrom)}.</span>
+                      )}
+                      {chainFrom && nextTicket(days, start, chainFrom) && (
+                        <span className="mt-1 block font-medium text-[#3d7f84]">
+                          Nouveau ticket : {when(nextTicket(days, start, chainFrom)!)} → {endText(start, duration, unit)}
+                        </span>
                       )}
                     </p>
                   </div>

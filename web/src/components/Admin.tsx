@@ -279,7 +279,8 @@ function AdminLoginForm({ onDone }: { onDone: () => void }) {
             className={ui.field}
           />
         </div>
-        <div ref={human.box} className="mt-4 empty:hidden" />
+        {/* The place of Cloudflare's box kept from the start: nothing moves when it shows up. */}
+        {human.enabled && <div ref={human.box} className="mt-4 h-[65px]" />}
         {(error || human.failed) && <p className={`mt-4 ${ui.error}`}>{error || human.failed}</p>}
         <button type="submit" disabled={busy} className={`mt-6 ${ui.primary}`}>
           {busy ? <Loader2 className="size-5 animate-spin" /> : 'Se connecter'}

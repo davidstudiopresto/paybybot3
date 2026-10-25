@@ -3753,7 +3753,9 @@ def contact(body: ContactMessage, request: Request, pbb_session: str = Cookie(No
 def spa(path: str):
     target = (STATIC_DIR / path).resolve()
     if path and target.is_file() and STATIC_DIR.resolve() in target.parents:
-        return FileResponse(target)
+        # Fonts and images keep their name across versions: kept a month (fonts) or a day, not asked again each visit.
+        ttl = 2592000 if path.startswith("fonts/") else 86400
+        return FileResponse(target, headers={"Cache-Control": "public, max-age=%d" % ttl})
     index = STATIC_DIR / "index.html"
     if not index.exists():
         raise HTTPException(404, "Interface non compilée : lancez `npm run build` dans web/.")

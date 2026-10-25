@@ -134,10 +134,6 @@ export function RemotePanel({ className }: { className?: string }) {
   return (
     <div className={className} style={{ background: '#f4f4f4' }}>
       <div className="flex h-full flex-col items-center justify-center px-10 py-10 text-center">
-        {/* The promise first, above the scene. */}
-        <p className="relative mb-6 font-heading text-[1.6rem] font-semibold tracking-[-0.02em] text-ink">
-          <span className="relative z-10">Fini les forfaits post-stationnement&nbsp;!</span>
-        </p>
         {/* The same example card as the home page (renewal on, nothing to do), not an animation. */}
         <SampleTicket className="text-left" />
         <p className="mt-8 max-w-[30rem] font-heading text-[2rem] leading-[1.1] font-medium tracking-[-0.035em] text-ink">

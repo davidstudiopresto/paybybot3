@@ -422,12 +422,15 @@ export function LoginView({
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}
           </button>
-          {/* Cloudflare's check runs unseen; its box only shows here when it needs a click. */}
-          <div ref={human.box} className="mt-4 empty:hidden" />
+          {/* Cloudflare's check runs unseen; its box, when it needs a click, comes over this line. Its place is
+              kept from the start (65 px, the box's height): nothing moves when it shows up a few seconds later. */}
           {human.enabled && (
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink/40">
-              <Lock className="size-3" /> Connexion protégée par Cloudflare
-            </p>
+            <div className="relative mt-4 grid h-[65px] place-items-center">
+              <p className="flex items-center justify-center gap-1.5 text-xs text-ink/40">
+                <Lock className="size-3" /> Connexion protégée par Cloudflare
+              </p>
+              <div ref={human.box} className="absolute inset-0" />
+            </div>
           )}
 
           <p className="mt-6 lg:mt-4 text-center text-sm text-ink/50">

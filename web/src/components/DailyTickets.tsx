@@ -744,12 +744,8 @@ export function DailyWizard({
                   </div>
                 </div>
               )}
-              {/* Renewing a running ticket: taken again every day (no days to pick); a new ticket: the days chosen. */}
-              {chainFrom ? (
-                <p className="text-sm text-ink/60">
-                  Repris chaque jour{paris ? ', sauf le dimanche et les jours fériés (gratuits à Paris)' : ''}.
-                </p>
-              ) : (
+              {/* Renewing a running ticket: no days to pick (taken again every day); a new ticket: the days chosen. */}
+              {chainFrom ? null : (
               <div>
                   <p className={ui.label}>Jours</p>
                   {/* A week strip, same cards as the tickets above; in Paris Sunday is shown but free, so never picked */}
@@ -788,7 +784,17 @@ export function DailyWizard({
                 </div>
               )}
               <div className="rounded-xl bg-ink/[0.03] px-4 py-3 text-sm">
-                {/* The total of the days ticked, each week; one ticket's price under it. */}
+                {/* Renewing a running ticket (every day, no days counted): the price of a day. A new ticket: the total of
+                    the days ticked, each week, and one ticket's price under it. */}
+                {chainFrom ? (
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-ink/55">Prix par jour</span>
+                    <span className="text-base font-semibold text-ink tabular-nums">
+                      {cost === undefined ? <Loader2 className="inline size-4 animate-spin text-ink/40" /> : euros(cost ?? { amount: 0, currency: 'EUR' })}
+                    </span>
+                  </div>
+                ) : (
+                <>
                 <div className="flex items-baseline justify-between gap-4">
                   <span className="text-ink/55">
                     Par semaine ({days.length} jour{days.length > 1 ? 's' : ''})
@@ -808,6 +814,8 @@ export function DailyWizard({
                     {cost === undefined ? '…' : euros(cost ?? { amount: 0, currency: 'EUR' })}
                   </span>
                 </div>
+                </>
+                )}
                 <p className="mt-2 text-xs text-ink/45">{withPayByPhone('Payé à PayByPhone au tarif habituel, à chaque ticket.')}</p>
               </div>
             </>
@@ -820,9 +828,18 @@ export function DailyWizard({
                   ['Véhicule', plateText(plate)],
                   ['Zone', place ?? `Zone ${zone}`],
                   ['Ticket', optionText(effective)[0]],
-                  ['Jours', daysText(days)],
+                  ['Jours', chainFrom ? (paris ? 'Chaque jour, sauf dimanche et jours fériés' : 'Chaque jour') : daysText(days)],
                   ['Horaire', handi(effective) && paris ? 'Toute la journée' : `${hourText(start)} → ${endText(start, duration, unit)}`],
-                  ['Prix', handi(effective) ? 'Gratuit' : cost ? `${euros({ amount: cost.amount * days.length, currency: cost.currency })} par semaine (${euros(cost)} × ${days.length})` : '—'],
+                  [
+                    'Prix',
+                    handi(effective)
+                      ? 'Gratuit'
+                      : !cost
+                        ? '—'
+                        : chainFrom
+                          ? `${euros(cost)} par jour`
+                          : `${euros({ amount: cost.amount * days.length, currency: cost.currency })} par semaine (${euros(cost)} × ${days.length})`,
+                  ],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-2.5">
                     <dt className="text-ink/55">{k}</dt>

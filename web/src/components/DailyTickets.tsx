@@ -68,13 +68,15 @@ function lengthText(duration: number, unit: Unit) {
 }
 
 /** The next ticket of a precise-days rule (Paris ≈ the browser's time): the next chosen day at the start time. */
-function nextTicket(days: number[], start: string) {
+function nextTicket(days: number[], start: string, after?: Date | null) {
   const [h, m] = start.split(':').map(Number)
-  const d = new Date()
-  for (let i = 0; i < 14; i++) {
+  // Renewing a running ticket: not before it ends (the next one follows on from it).
+  const from = Math.max(Date.now(), after ? after.getTime() - 60_000 : 0)
+  const d = new Date(from)
+  for (let i = 0; i < 15; i++) {
     const day = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i, h, m)
     const wd = (day.getDay() + 6) % 7
-    if (days.includes(wd) && day.getTime() > Date.now()) return day
+    if (days.includes(wd) && day.getTime() > from) return day
   }
   return null
 }
@@ -450,6 +452,8 @@ export function DailyWizard({
   // From a running ticket: its rates looked up at once, its rate chosen, its start time and length taken again, and
   // straight to the days (the Handi ticket stops at step 2 for the CMI-S attestation).
   const preset = useRef(initialTicket ?? null)
+  // The running ticket being renewed: the next one is not taken before it ends.
+  const chainFrom = initialTicket ? new Date(initialTicket.expire) : null
   useEffect(() => {
     if (preset.current && plate && zone) findRates()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -469,7 +473,10 @@ export function DailyWizard({
       setUnit(u)
       setDuration(Math.min(MAX[u], n))
     }
-    if (!(handi(effective) && paris)) setStart(`${String(begin.getHours()).padStart(2, '0')}:${String(begin.getMinutes()).padStart(2, '0')}`)
+    // The next ticket follows on from this one: taken at the time it ends (not when it began).
+    const end = new Date(t.expire)
+    if (!(handi(effective) && paris)) setStart(`${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`)
+    setDays(paris ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6]) // renewed every day (Paris: Sundays are free)
     preset.current = null
     setStep(handi(effective) ? 2 : 3)
   }, [rates, rateId, effective?.ratePolicyId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -548,7 +555,7 @@ export function DailyWizard({
     try {
       await api.addAutopilot(rule() as Parameters<typeof api.addAutopilot>[0])
       toast.success('Ticket programmé.', {
-        description: `Prochain ticket ${when(nextTicket(days, start)!)}.`,
+        description: `Prochain ticket ${when(nextTicket(days, start, chainFrom)!)}.`,
       })
       onDone()
       onClose()
@@ -561,7 +568,7 @@ export function DailyWizard({
     }
   }
 
-  const steps = ['Véhicule et zone', 'Votre ticket', 'Horaires et jours', 'Vérifier et activer']
+  const steps = ['Véhicule et zone', 'Votre ticket', initialTicket ? 'Horaires' : 'Horaires et jours', 'Vérifier et activer']
 
   return (
     <Dialog open onOpenChange={(o) => !o && !saving && !locked && onClose()}>
@@ -571,7 +578,9 @@ export function DailyWizard({
             Étape {step} sur {steps.length} · {steps[step - 1]}
           </p>
           <DialogTitle className={cn(ui.dialogTitle, 'mt-1')}>{initialTicket ? 'Renouveler ce ticket' : 'Programmer un ticket'}</DialogTitle>
-          <DialogDescription className="mt-1 text-ink/60">Pris automatiquement les jours choisis, à l’heure voulue.</DialogDescription>
+          <DialogDescription className="mt-1 text-ink/60">
+            {initialTicket ? 'Repris automatiquement chaque jour, à l’heure voulue.' : 'Pris automatiquement les jours choisis, à l’heure voulue.'}
+          </DialogDescription>
           <div className="mt-5 grid grid-cols-4 gap-1.5" aria-hidden>
             {[1, 2, 3, 4].map((n) => (
               <span key={n} className={cn('h-1 rounded-full', n <= step ? TEAL : 'bg-ink/[0.08]')} />
@@ -728,46 +737,56 @@ export function DailyWizard({
                     <input type="time" value={start} onChange={(e) => setStart(e.target.value || '09:00')} className={ui.field} />
                     <p className="mt-2 text-xs text-ink/45">
                       Fin du ticket : <span className="font-medium text-ink tabular-nums">{endText(start, duration, unit)}</span>
+                      {chainFrom && (
+                        <span className="mt-1 block">Le ticket en cours se termine {when(chainFrom)}.</span>
+                      )}
                     </p>
                   </div>
                 </div>
               )}
+              {/* Renewing a running ticket: taken again every day (no days to pick); a new ticket: the days chosen. */}
+              {chainFrom ? (
+                <p className="text-sm text-ink/60">
+                  Repris chaque jour{paris ? ', sauf le dimanche et les jours fériés (gratuits à Paris)' : ''}.
+                </p>
+              ) : (
               <div>
-                <p className={ui.label}>Jours</p>
-                {/* A week strip, same cards as the tickets above; in Paris Sunday is shown but free, so never picked */}
-                <div className="grid grid-cols-7 gap-1.5">
-                  {(paris ? DAYS.slice(0, 6) : DAYS).map((d, i) => {
-                    const on = days.includes(i)
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => setDays((list) => (list.includes(i) ? list.filter((x) => x !== i) : [...list, i].sort()))}
-                        className={cn(
-                          'flex h-14 flex-col items-center justify-center gap-1 rounded-xl border text-sm transition',
-                          on ? 'border-[#4e9aa0] bg-[#4e9aa0]/[0.06] font-medium text-ink' : 'border-ink/15 text-ink/45 hover:border-ink/30',
-                        )}
-                      >
-                        {d}
-                        <span className={cn('grid size-4 place-items-center rounded-full', on ? 'bg-[#4e9aa0] text-white' : 'border border-ink/20')}>
-                          {on && <Check className="size-3" strokeWidth={3} />}
-                        </span>
-                      </button>
-                    )
-                  })}
-                  {paris && (
-                    <div className="flex h-14 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-ink/10 text-sm text-ink/30">
-                      Dim
-                      <span className="text-[0.65rem] leading-none">gratuit</span>
-                    </div>
+                  <p className={ui.label}>Jours</p>
+                  {/* A week strip, same cards as the tickets above; in Paris Sunday is shown but free, so never picked */}
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {(paris ? DAYS.slice(0, 6) : DAYS).map((d, i) => {
+                      const on = days.includes(i)
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => setDays((list) => (list.includes(i) ? list.filter((x) => x !== i) : [...list, i].sort()))}
+                          className={cn(
+                            'flex h-14 flex-col items-center justify-center gap-1 rounded-xl border text-sm transition',
+                            on ? 'border-[#4e9aa0] bg-[#4e9aa0]/[0.06] font-medium text-ink' : 'border-ink/15 text-ink/45 hover:border-ink/30',
+                          )}
+                        >
+                          {d}
+                          <span className={cn('grid size-4 place-items-center rounded-full', on ? 'bg-[#4e9aa0] text-white' : 'border border-ink/20')}>
+                            {on && <Check className="size-3" strokeWidth={3} />}
+                          </span>
+                        </button>
+                      )
+                    })}
+                    {paris && (
+                      <div className="flex h-14 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-ink/10 text-sm text-ink/30">
+                        Dim
+                        <span className="text-[0.65rem] leading-none">gratuit</span>
+                      </div>
+                    )}
+                  </div>
+                  {handi(effective) && paris && (
+                    <p className="mt-3 text-sm text-ink/70">Le ticket Handi d’une journée est pris automatiquement à 5 h, chaque jour choisi.</p>
                   )}
+                  {paris && <p className="mt-2 text-xs text-ink/45">À Paris, le dimanche et les jours fériés sont gratuits : aucun ticket n’est pris.</p>}
                 </div>
-                {handi(effective) && paris && (
-                  <p className="mt-3 text-sm text-ink/70">Le ticket Handi d’une journée est pris automatiquement à 5 h, chaque jour choisi.</p>
-                )}
-                {paris && <p className="mt-2 text-xs text-ink/45">À Paris, le dimanche et les jours fériés sont gratuits : aucun ticket n’est pris.</p>}
-              </div>
+              )}
               <div className="rounded-xl bg-ink/[0.03] px-4 py-3 text-sm">
                 {/* The total of the days ticked, each week; one ticket's price under it. */}
                 <div className="flex items-baseline justify-between gap-4">
@@ -834,9 +853,10 @@ export function DailyWizard({
                   </div>
                 )
               )}
-              {nextTicket(days, start) && (
+              {nextTicket(days, start, chainFrom) && (
                 <p className="rounded-xl bg-[#e7f6ec] px-4 py-3 text-sm text-[#14703a]">
-                  Premier ticket {when(nextTicket(days, start)!)}. Un e-mail à chaque ticket, et une alerte si {withPayByPhone('PayByPhone')} refuse.
+                  Premier ticket {when(nextTicket(days, start, chainFrom)!)}
+                  {chainFrom && Math.abs(nextTicket(days, start, chainFrom)!.getTime() - chainFrom.getTime()) < 120_000 ? ', dès la fin du ticket en cours' : ''}. Un e-mail à chaque ticket, et une alerte si {withPayByPhone('PayByPhone')} refuse.
                 </p>
               )}
             </>

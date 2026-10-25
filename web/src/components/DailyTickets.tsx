@@ -202,8 +202,9 @@ export function DailyTickets({
 
 const PARIS_ARRONDISSEMENTS = Array.from({ length: 20 }, (_, i) => `750${String(i + 1).padStart(2, '0')}`)
 
-/** The zone field with a list of suggestions under it, scrolling, while typing: the zones already used on
- *  PayByPhone first (its history), then the Paris arrondissements that match (by number or by name). */
+/** The zone field with a list of suggestions under it, scrolling, appearing as soon as something is typed and
+ *  narrowing with each character: the zones already used on PayByPhone first (its history), then the Paris
+ *  arrondissements that match (by number or by name). */
 function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string) => void }) {
   const [recent, setRecent] = useState<string[]>([])
   const [open, setOpen] = useState(false)
@@ -218,7 +219,8 @@ function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string
     ...recent.filter(matches).map((z) => ({ zone: z, used: true })),
     ...PARIS_ARRONDISSEMENTS.filter((z) => !recent.includes(z) && matches(z)).map((z) => ({ zone: z, used: false })),
   ].filter((x) => x.zone !== value)
-  const shown = open && items.length > 0
+  // Only once something is typed, narrowing as the postcode grows: nothing shows on an empty field.
+  const shown = open && q.length > 0 && items.length > 0
 
   function pick(zone: string) {
     onChange(zone)
@@ -234,7 +236,6 @@ function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string
           setOpen(true)
           setActive(0)
         }}
-        onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 120)} // a click on a suggestion lands first
         onKeyDown={(e) => {
           if (!shown) return
@@ -677,11 +678,24 @@ export function DailyWizard({
                 {paris && <p className="mt-2 text-xs text-ink/45">À Paris, le dimanche et les jours fériés sont gratuits : aucun ticket n’est pris.</p>}
               </div>
               <div className="rounded-xl bg-ink/[0.03] px-4 py-3 text-sm">
-                <div className="flex justify-between gap-4">
-                  <span className="text-ink/55">Prix d’un ticket</span>
-                  <span className="font-medium text-ink tabular-nums">
+                {/* The total of the days ticked, each week; one ticket's price under it. */}
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="text-ink/55">
+                    Par semaine ({days.length} jour{days.length > 1 ? 's' : ''})
+                  </span>
+                  <span className="text-base font-semibold text-ink tabular-nums">
+                    {cost === undefined ? (
+                      <Loader2 className="inline size-4 animate-spin text-ink/40" />
+                    ) : (
+                      euros({ amount: (cost?.amount ?? 0) * days.length, currency: cost?.currency ?? 'EUR' })
+                    )}
+                  </span>
+                </div>
+                <div className="mt-1 flex justify-between gap-4">
+                  <span className="text-ink/45">Prix d’un ticket</span>
+                  <span className="text-ink/60 tabular-nums">
                     {/* No price from PayByPhone (a free ticket, e.g. Handi): 0 €, not a dash. */}
-                    {cost === undefined ? <Loader2 className="inline size-4 animate-spin text-ink/40" /> : cost ? euros(cost) : '0,00 €'}
+                    {cost === undefined ? '…' : euros(cost ?? { amount: 0, currency: 'EUR' })}
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-ink/45">{withPayByPhone('Payé à PayByPhone au tarif habituel, à chaque ticket.')}</p>
@@ -698,7 +712,7 @@ export function DailyWizard({
                   ['Ticket', optionText(effective)[0]],
                   ['Jours', daysText(days)],
                   ['Horaire', handi(effective) && paris ? 'Toute la journée' : `${hourText(start)} → ${endText(start, duration, unit)}`],
-                  ['Prix', handi(effective) ? 'Gratuit' : cost ? `${euros(cost)} par jour` : '—'],
+                  ['Prix', handi(effective) ? 'Gratuit' : cost ? `${euros({ amount: cost.amount * days.length, currency: cost.currency })} par semaine (${euros(cost)} × ${days.length})` : '—'],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-2.5">
                     <dt className="text-ink/55">{k}</dt>

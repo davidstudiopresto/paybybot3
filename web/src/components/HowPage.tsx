@@ -46,8 +46,9 @@ export function HowPage({ hosted, signedIn = false }: { hosted: boolean; signedI
 
         <ol className="mt-12 divide-y divide-ink/10 border-y border-ink/10">
           {STEPS.map(([title, text], i) => (
-            <li key={title} className="flex gap-6 py-7">
-              <span className="w-6 shrink-0 font-heading text-[1.6rem] leading-none font-medium text-eu tabular-nums">{i + 1}</span>
+            <li key={title} className="flex items-baseline gap-6 py-7">
+              {/* On the title's baseline: the number and the title read as one line. */}
+              <span className="w-6 shrink-0 font-heading text-[1.6rem] leading-snug font-medium text-eu tabular-nums">{i + 1}</span>
               <div>
                 <h2 className="font-heading text-[1.2rem] leading-snug font-semibold tracking-[-0.01em]">{title}</h2>
                 <p className="mt-2 leading-relaxed text-ink/65">{text}</p>

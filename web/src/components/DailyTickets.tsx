@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { NoPayment } from '@/components/NoPayment'
 import { PlansDialog } from '@/components/Pricing'
 import { isoDay, periodDays, periodText, RangeCalendar } from '@/components/RangeCalendar'
-import { clearPending, RenewalActions, savePending, type PendingRenewal } from '@/components/Riverain'
+import { clearPending, pauseState, RenewalActions, savePending, type PendingRenewal } from '@/components/Riverain'
 import { arrondissement, PayByPhone, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { api, ApiError, unitLabel, type Autopilot, type Money, type Overview, type Rate, type Unit } from '@/lib/api'
 import { ui } from '@/lib/styles'
@@ -53,7 +53,7 @@ const TEAL = 'bg-[#4e9aa0]'
 const euros = (m?: Money | null) =>
   m ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: m.currency || 'EUR' }).format(m.amount) : '—'
 const keyOf = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
-const isDaily = (ap: Autopilot) => !!(ap as Autopilot & { days?: number[] }).days?.length
+export const isDaily = (ap: Autopilot) => !!(ap as Autopilot & { days?: number[] }).days?.length
 const daysOf = (ap: Autopilot) => (ap as Autopilot & { days?: number[] }).days ?? []
 const startOf = (ap: Autopilot) => (ap as Autopilot & { start?: string | null }).start ?? '09:00'
 const heavy = (r: Rate) => /lourd/i.test(r.name)
@@ -88,7 +88,7 @@ function nextTicket(days: number[], start: string, after?: Date | null, period?:
   return null
 }
 
-function when(t: Date) {
+export function when(t: Date) {
   const day = t.toLocaleDateString('fr-FR', {
     weekday: 'short',
     day: 'numeric',
@@ -116,13 +116,71 @@ const periodOf = (ap: Autopilot) => {
   return p.dateFrom ? { from: p.dateFrom, to: p.dateTo ?? p.dateFrom } : null
 }
 
-function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) {
+/** How long a ticket of the rule lasts, in ms (a day ticket counted as a day). */
+const ruleLength = (ap: Autopilot) =>
+  Number(ap.duration) * (ap.unit === 'Minutes' ? 60_000 : ap.unit === 'Hours' ? 3_600_000 : 86_400_000)
+
+/** Where a programmed ticket stands, said in a word (no on/off switch: it is not a control). */
+export function ruleState(ap: Autopilot, now = Date.now()) {
   const period = periodOf(ap)
   const next = ap.enabled ? nextTicket(daysOf(ap), startOf(ap), null, period ?? undefined) : null
-  // A period whose last day is gone: nothing more will be taken.
-  const over = !!period && period.to < isoDay(new Date())
+  const last = ap.lastPayment ? new Date(ap.lastPayment) : null
+  const running = !!last && last.getTime() + ruleLength(ap) > now
+  // Today's ticket being taken right now (its window started, not paid yet: the scheduler is on it).
+  const [h, m] = startOf(ap).split(':').map(Number)
+  const today = new Date()
+  const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m)
+  const todayIso = isoDay(today)
+  const dueToday =
+    ap.enabled &&
+    daysOf(ap).includes((today.getDay() + 6) % 7) &&
+    !(isParis(ap.location) && today.getDay() === 0) &&
+    (!period || (period.from <= todayIso && todayIso <= period.to)) &&
+    startToday.getTime() <= now &&
+    now < startToday.getTime() + ruleLength(ap) &&
+    !(last && last >= startToday)
+  // Chosen on the calendar with nothing more to take: done (once its last ticket has ended). Same rule as the
+  // server's rule_over().
+  const finished = !!period && !next && !running && !dueToday
+  const { paused } = pauseState(ap)
+  const state = !ap.enabled ? 'stopped' : finished ? 'finished' : running ? 'running' : paused ? 'paused' : 'planned'
+  return { period, next: next ?? (dueToday ? startToday : null), last, running, finished, state } as const
+}
+
+const STATE_LABEL = {
+  planned: ['Programmé', 'bg-[#4e9aa0]/12 text-[#3d7f84]'],
+  running: ['En cours', 'bg-[#4e9aa0] text-white'],
+  paused: ['En pause', 'bg-amber/25 text-ink'],
+  finished: ['Terminé', 'bg-ink/[0.06] text-ink/55'],
+  stopped: ['Arrêté', 'bg-ink/[0.06] text-ink/55'],
+} as const
+
+function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) {
+  const { period, next, last, finished, state } = ruleState(ap)
+  const single = !!period && period.from === period.to
+  const [label, tone] = STATE_LABEL[state]
+  const [removing, setRemoving] = useState(false)
+
+  async function remove() {
+    setRemoving(true)
+    try {
+      await api.deleteAutopilot(ap.id)
+      onChanged()
+    } catch (e) {
+      toast.error((e as Error).message)
+      setRemoving(false)
+    }
+  }
+
+  const row = (term: string, value: string) => (
+    <div className="flex justify-between gap-4">
+      <dt className="text-ink/50">{term}</dt>
+      <dd className="text-ink tabular-nums">{value}</dd>
+    </div>
+  )
+
   return (
-    <article className="rise overflow-hidden rounded-2xl border border-ink/10 bg-white">
+    <article className={cn('rise overflow-hidden rounded-2xl border border-ink/10 bg-white', finished && 'opacity-80')}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-4">
         <span className="flex items-center gap-3">
           <span className="text-[1.05rem] font-medium text-ink">
@@ -133,7 +191,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
         <span className="text-sm text-ink/50">{arrondissement(ap.location) ?? `Zone ${ap.location}`}</span>
       </div>
       <div className="border-t border-ink/[0.06] px-5 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <span className="text-ink">
             Ticket de {lengthText(Number(ap.duration), ap.unit)}
             {period
@@ -142,9 +200,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
                 ? isParis(ap.location) ? ', chaque jour sauf dimanche et jours fériés' : ', chaque jour'
                 : ''}
           </span>
-          <span className={cn('relative h-6 w-11 rounded-full', ap.enabled ? TEAL : 'bg-ink/15')} aria-label={ap.enabled ? 'Actif' : 'Arrêté'}>
-            <span className={cn('absolute top-1 size-4 rounded-full bg-white transition-all', ap.enabled ? 'right-1' : 'left-1')} />
-          </span>
+          <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-xs font-medium', tone)}>{label}</span>
         </div>
         {/* The days, unless it is every day (then said in words above). */}
         {!period && !everyDay(ap) && (
@@ -162,29 +218,42 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
           ))}
         </div>
         )}
+        {/* One ticket on one day: when it is planned, or when it was taken. Several: the time, the next, the last. */}
         <dl className="mt-3 space-y-1 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink/50">Heure de prise</dt>
-            <dd className="text-ink tabular-nums">{startOf(ap).replace(':', 'h')}</dd>
-          </div>
-          {next && (
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink/50">Prochain ticket</dt>
-              <dd className="text-ink tabular-nums">{when(next)}</dd>
-            </div>
-          )}
-          {ap.lastPayment && (
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink/50">Dernier ticket</dt>
-              <dd className="text-ink tabular-nums">{when(new Date(ap.lastPayment))}</dd>
-            </div>
+          {single ? (
+            last ? row('Ticket pris', when(last)) : next ? row('Prévu', when(next)) : null
+          ) : (
+            <>
+              {/* The next ticket already says the time; the bare hour only when none is coming (paused). */}
+              {!next && row('Heure de prise', startOf(ap).replace(':', 'h'))}
+              {next && row('Prochain ticket', when(next))}
+              {last && row('Dernier ticket', when(last))}
+            </>
           )}
         </dl>
-        {over && <p className="mt-3 text-sm text-ink/55">Période terminée : plus aucun ticket ne sera pris.</p>}
-        {ap.lastError && <p className="mt-3 text-sm text-destructive">{ap.lastError}</p>}
+        {finished && !single && <p className="mt-3 text-sm text-ink/55">Période terminée : plus aucun ticket ne sera pris.</p>}
+        {finished && single && !last && !ap.lastError && <p className="mt-3 text-sm text-ink/55">Ce ticket n’a pas été pris.</p>}
+        {ap.lastError && !finished && <p className="mt-3 text-sm text-destructive">{ap.lastError}</p>}
       </div>
       <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
-        <RenewalActions ap={ap} onChanged={onChanged} stopLabel={period ? 'Annuler ce ticket' : 'Arrêter ces tickets'} />
+        {finished ? (
+          // Done: nothing to pause or stop, only to clear it away (the car is free for a new ticket).
+          <button
+            onClick={remove}
+            disabled={removing}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-ink/15 px-5 text-[0.95rem] font-medium text-ink transition hover:border-ink/40 disabled:opacity-60"
+          >
+            {removing ? <Loader2 className="size-4 animate-spin" /> : null} Retirer
+          </button>
+        ) : (
+          <RenewalActions
+            ap={ap}
+            onChanged={onChanged}
+            withPause={!single}
+            stopLabel={single ? 'Annuler ce ticket' : 'Arrêter ces tickets'}
+            stoppedText={single ? 'Ticket annulé.' : 'Tickets arrêtés.'}
+          />
+        )}
       </div>
     </article>
   )
@@ -221,7 +290,7 @@ export function DailyTickets({
   const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
   // The cars with nothing on them: no ticket running, no ticket programmed, not a resident car (renewed above).
   const busy = new Set([
-    ...data.autopilots.filter((ap) => ap.enabled).map((ap) => key(ap.plate)),
+    ...data.autopilots.filter((ap) => ap.enabled && !ruleState(ap).finished).map((ap) => key(ap.plate)),
     ...data.sessions.filter((s) => new Date(s.expire).getTime() > Date.now()).map((s) => key(s.plate)),
   ])
   const isResident = (v: { plate: string; zone?: string | null }) => (residentPlates ? residentPlates.has(key(v.plate)) : !!v.zone)

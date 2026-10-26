@@ -4,7 +4,7 @@ import { ChevronRight, LogOut } from 'lucide-react'
 import { arrondissement, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
-import { DailyTickets } from '@/components/DailyTickets'
+import { DailyTickets, isDaily, ruleState, when as whenAt } from '@/components/DailyTickets'
 import { AccountButton } from '@/components/Account'
 import { PlansDialog, TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
@@ -312,6 +312,13 @@ export function Dashboard({
     )
   }, [me.hosted, me.demo, data?.vehicles.length])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
+  // The soonest ticket a programmed day will take, to say when the car is next covered when none runs now.
+  const nextPlanned =
+    data?.autopilots
+      .filter((ap) => isDaily(ap) && ap.enabled)
+      .map((ap) => ruleState(ap).next)
+      .filter((t): t is Date => !!t)
+      .sort((a, b) => a.getTime() - b.getTime())[0] ?? null
   // The cars PayByPhone gives the resident rate (checked by the server, zone by zone). A ticket's length says
   // nothing: a non-resident ticket can last several days.
   // A car with a resident ticket running is resident too, whatever the pricing says (or when it is unknown).
@@ -408,14 +415,16 @@ export function Dashboard({
         <p className="mt-3 text-[1.05rem] text-ink/60">
           {!data
             ? withPayByPhone('Chargement de votre compte PayByPhone.')
-            : !data.autopilots.some((ap) => ap.enabled)
-              ? // Nothing automated yet: say it plainly (a running ticket is not renewed by itself).
+            : !data.autopilots.some((ap) => ap.enabled && !ruleState(ap).finished)
+              ? // Nothing automated (a finished one-off ticket does not count): say it plainly.
                 "Votre stationnement n'est pas encore automatisé."
             : sessions.length
               ? sessions.length > 1
                 ? `${sessions.length} tickets en cours.`
                 : 'Votre ticket en cours :'
-              : "Aucun véhicule n'est couvert en ce moment."}
+              : nextPlanned
+                ? `Aucun ticket en cours : le prochain est prévu ${whenAt(nextPlanned)}.`
+                : "Aucun véhicule n'est couvert en ce moment."}
         </p>
 
         {data && sessions.length > 0 && (

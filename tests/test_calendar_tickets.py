@@ -79,3 +79,36 @@ class Calendar(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Over(unittest.TestCase):
+    """A calendar ticket is over once nothing is left to take: it frees the car and leaves the subscription."""
+    DAY = "2026-10-27"  # a Tuesday
+
+    def details(self, last_payment=None, **extra):
+        return {"days": EVERY_DAY, "start": "09:00", "unit": "Hours", "duration": 2, "location": "75017",
+                "date_from": self.DAY, "date_to": self.DAY, "last_payment": last_payment, **extra}
+
+    def test_before_its_day_it_holds_the_car(self):
+        self.assertFalse(web.rule_over(self.details(), datetime(2026, 10, 26, 12, tzinfo=PARIS)))
+
+    def test_while_its_ticket_is_being_taken_it_holds_the_car(self):
+        self.assertFalse(web.rule_over(self.details(), datetime(2026, 10, 27, 9, 2, tzinfo=PARIS)))
+
+    def test_while_its_ticket_runs_it_holds_the_car(self):
+        paid = datetime(2026, 10, 27, 9, 1, tzinfo=PARIS).isoformat()
+        self.assertFalse(web.rule_over(self.details(paid), datetime(2026, 10, 27, 10, tzinfo=PARIS)))
+
+    def test_once_its_ticket_ended_the_car_is_free(self):
+        paid = datetime(2026, 10, 27, 9, 1, tzinfo=PARIS).isoformat()
+        self.assertTrue(web.rule_over(self.details(paid), datetime(2026, 10, 27, 11, 30, tzinfo=PARIS)))
+        self.assertTrue(web.rule_over(self.details(), datetime(2026, 10, 28, 8, tzinfo=PARIS)))  # never taken
+
+    def test_a_weekly_rule_is_never_over(self):
+        self.assertFalse(web.rule_over({"days": [1], "start": "09:00"}, datetime(2030, 1, 1, tzinfo=PARIS)))
+
+    def test_an_over_rule_lets_a_new_ticket_be_programmed(self):
+        s = web.UserSession("demo", "", demo=True)
+        s.autopilots["old"] = {"plate": "AB123CD", **self.details(datetime(2020, 1, 7, 9, 1, tzinfo=PARIS).isoformat(),
+                                                                   date_from="2020-01-07", date_to="2020-01-07")}
+        self.assertEqual(web.renewed_plates(s), set())

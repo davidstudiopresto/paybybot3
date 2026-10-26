@@ -189,7 +189,9 @@ export function RenewalActions({
   onChanged,
   className,
   withStop = true,
+  withPause = true,
   stopLabel = 'Arrêter le renouvellement',
+  stoppedText = 'Renouvellement arrêté.',
 }: {
   ap: Autopilot
   onChanged: () => void
@@ -197,6 +199,9 @@ export function RenewalActions({
   withStop?: boolean
   /** « Renouvellement » is the resident's word: programmed tickets say what stops instead. */
   stopLabel?: string
+  /** A single programmed ticket: nothing to pause. */
+  withPause?: boolean
+  stoppedText?: string
 }) {
   const [pausing, setPausing] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -233,7 +238,7 @@ export function RenewalActions({
     setBusy(true)
     try {
       await api.deleteAutopilot(ap.id)
-      toast.success('Renouvellement arrêté.', { description: 'Le ticket en cours reste valable.' })
+      toast.success(stoppedText, { description: 'Le ticket en cours reste valable.' })
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -257,7 +262,7 @@ export function RenewalActions({
         </button>
       ) : null}
       <div className="flex flex-col gap-2 sm:flex-row">
-        {!later && !paused && (
+        {withPause && !later && !paused && (
           <button onClick={() => setPausing(true)} className={cn(actionBtn, 'border-ink/15 text-ink hover:border-ink/40')}>
             <Pause className="size-4" /> Programmer une pause
           </button>

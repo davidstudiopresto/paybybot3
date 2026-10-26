@@ -2423,6 +2423,24 @@ def vehicle_zones(s, keep=True):
     return found
 
 
+def rule_over(details, now=None):
+    """A ticket chosen on the calendar with nothing left to take: no ticket to come, none being taken now, and the
+    last one it took has ended. It then neither holds the car (a new ticket can be programmed for it) nor counts in
+    the subscription. Same rule as ruleState() in DailyTickets.tsx."""
+    rule = rule_of(details)
+    if not rule or not rule.get("date_to"):
+        return False
+    now = now or datetime.now(timezone.utc)
+    if schedule.next_slot(rule, now) is not None:
+        return False
+    last = parse_dt((details or {}).get("last_payment") or (details or {}).get("lastPayment"))
+    slot = schedule.current_slot(rule, now)
+    if slot and not (last and last >= slot[0]):
+        return False  # its ticket of today is being taken
+    length = {"Minutes": timedelta(minutes=1), "Hours": timedelta(hours=1)}.get(rule.get("unit"), timedelta(days=1))
+    return not (last and last + length * float(rule.get("duration") or 1) > now)
+
+
 def renewed_plates(s):
     """Plates with an active resident renewal: the subscription is for these vehicles."""
     if HOSTED and not s.demo:
@@ -2430,11 +2448,13 @@ def renewed_plates(s):
         plates = []
         for row in rows:
             try:
-                plates.append(with_details(row)["plate"])
+                details = with_details(row)
+                if not rule_over(details):
+                    plates.append(details["plate"])
             except Exception as e:
                 log.warning("renewal %s: unreadable details: %s", row.get("id"), e)
     else:
-        plates = [ap["plate"] for ap in s.autopilots.values()]
+        plates = [ap["plate"] for ap in s.autopilots.values() if not rule_over(ap)]
     return {plate_key(p) for p in plates}
 
 

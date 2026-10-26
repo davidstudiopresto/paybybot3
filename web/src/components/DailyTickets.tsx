@@ -211,9 +211,6 @@ export function DailyTickets({
       <section id="tickets-programmes" className="rise mt-6 scroll-mt-20 space-y-3">
         {/* One card per car with nothing on it: its plate, and the one thing to do for it. Several cars: side by
             side on a wide screen (the row goes wider than the page's column), so all of them show at once. */}
-        <p className="text-center text-[0.95rem] leading-relaxed text-ink/60">
-          {withPayByPhone('PayByBot prend vos tickets PayByPhone pour vous, les jours choisis et à l’heure voulue.')}
-        </p>
         <div
           className={cn(
             'grid gap-3',

@@ -392,6 +392,19 @@ export function Dashboard({
           <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
         </button>
       )}
+      {/* Free month running: the same light blue bar, with the days left. */}
+      {!needsOffer && !me.demo && account?.subscribed && !account.blocked && account.trialEnd &&
+        new Date(account.trialEnd).getTime() > Date.now() && (() => {
+          const days = Math.ceil((new Date(account.trialEnd).getTime() - Date.now()) / 86_400_000)
+          return (
+            <div className="flex w-full items-center justify-center gap-1.5 bg-[#e3efff] px-4 py-2 text-sm font-semibold text-[#1f55e6]">
+              Période d’essai gratuite
+              <span className="font-normal text-[#1f55e6]/70">
+                · {days} jour{days > 1 ? 's' : ''} restant{days > 1 ? 's' : ''}
+              </span>
+            </div>
+          )
+        })()}
       {offerOpen && <PlansDialog onClose={() => setOfferOpen(false)} />}
       <TopBar>
         {me.demo && (

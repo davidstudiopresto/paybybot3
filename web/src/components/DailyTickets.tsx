@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Loader2, Plus } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
@@ -320,7 +320,7 @@ export function DailyTickets({
                 </p>
               )}
               <button onClick={() => program(v.plate)} className={cn(ui.primary, 'mt-4 h-12 text-base')}>
-                <Plus className="size-5" /> Programmer un ticket
+                Programmer un ticket
               </button>
             </article>
           ))}
@@ -350,13 +350,13 @@ export function DailyTickets({
                 : ui.primaryGray,
             )}
           >
-            <Plus className="size-5" /> Programmer un ticket
+            Programmer un ticket
           </button>
         </div>
       ) : (
         <div className="flex items-center justify-end gap-4">
-          <button onClick={() => setOpen(true)} className={cn(ui.pillGray, 'gap-1.5')}>
-            <Plus className="size-4" /> Programmer un ticket
+          <button onClick={() => setOpen(true)} className={ui.pillGray}>
+            Programmer un ticket
           </button>
         </div>
       )}

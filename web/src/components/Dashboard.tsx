@@ -388,7 +388,13 @@ export function Dashboard({
           className="group flex w-full items-center justify-center gap-1.5 bg-[#e3efff] px-4 py-2 text-sm font-semibold text-[#1f55e6] transition hover:bg-[#d4e6ff]"
         >
           Activer mon compte
-          <span className="font-normal text-[#1f55e6]/70">· 1er mois offert</span>
+          <span className="font-normal text-[#1f55e6]/70">
+            {/* Account re-created during its free month: only the days left of the first one, not a new month. */}
+            {(() => {
+              const left = account?.trialEnd ? Math.ceil((new Date(account.trialEnd).getTime() - Date.now()) / 86_400_000) : 0
+              return left > 0 ? `· ${left} jour${left > 1 ? 's' : ''} offert${left > 1 ? 's' : ''}` : '· 1er mois offert'
+            })()}
+          </span>
           <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
         </button>
       )}

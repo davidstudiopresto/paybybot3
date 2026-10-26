@@ -418,7 +418,7 @@ export function LoginView({
           <button
             type="submit"
             disabled={loading !== null || (signup && (!accepted || accountExists))}
-            className="mt-7 lg:mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+            className="mt-7 lg:mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-eu bg-transparent text-lg font-bold text-eu transition hover:bg-eu/[0.06] active:scale-[0.99] disabled:opacity-60"
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}
           </button>
@@ -550,7 +550,7 @@ function CodeStep({
           <button
             type="submit"
             disabled={code.length !== 6 || checking}
-            className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-lg font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+            className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-eu bg-transparent text-lg font-bold text-eu transition hover:bg-eu/[0.06] active:scale-[0.99] disabled:opacity-60"
           >
             {checking ? <Loader2 className="size-5 animate-spin" /> : 'Valider'}
           </button>

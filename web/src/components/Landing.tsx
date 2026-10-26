@@ -237,7 +237,7 @@ function Testimonials() {
       </div>
       <a
         href="#/inscription"
-        className={cn('mx-auto mt-14 w-full shadow-[0_14px_30px_-12px_var(--eu)] sm:w-fit sm:px-10 lg:mt-20 lg:h-14 lg:rounded-[12px] lg:text-lg', ui.primary)}
+        className={cn('mx-auto mt-14 w-full sm:w-fit sm:px-10 lg:mt-20 lg:h-14 lg:rounded-[12px] lg:text-lg', ui.primary)}
       >
         {TRY_LABEL} <ArrowRight className="size-5" />
       </a>
@@ -336,7 +336,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
           <a
             ref={cta}
             href="#/inscription"
-            className={cn('mt-10 w-full sm:px-10 shadow-[0_14px_30px_-12px_var(--eu)] sm:w-fit lg:mt-12 lg:h-14 lg:rounded-[12px] lg:px-10 lg:text-lg', heroOnly && 'xl:h-16 xl:px-12 xl:text-xl', ui.primary)}
+            className={cn('mt-10 w-full sm:px-10 sm:w-fit lg:mt-12 lg:h-14 lg:rounded-[12px] lg:px-10 lg:text-lg', heroOnly && 'xl:h-16 xl:px-12 xl:text-xl', ui.primary)}
           >
             {TRY_LABEL} <ArrowRight className="size-5" />
           </a>

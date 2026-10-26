@@ -209,29 +209,33 @@ export function DailyTickets({
   if (idle.length)
     return (
       <section id="tickets-programmes" className="rise mt-6 scroll-mt-20 space-y-3">
-        {/* One card per car with nothing on it: its plate, and the one thing to do for it. */}
-        {idle.map((v) => (
-          <article key={v.plate} className="flex flex-col items-center rounded-2xl border border-border bg-white p-5 text-center">
-            <Plate plate={v.plate} />
-            <span className="mt-3 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink/55">Aucun ticket</span>
-            <dl className="mt-4 space-y-1 text-[0.95rem] text-ink/60">
+        {/* One card per car with nothing on it: its plate, and the one thing to do for it. Several cars: side by
+            side on a wide screen (the row goes wider than the page's column), so all of them show at once. */}
+        <p className="text-center text-[0.95rem] leading-relaxed text-ink/60">
+          {withPayByPhone('PayByBot prend vos tickets PayByPhone pour vous, les jours choisis et à l’heure voulue.')}
+        </p>
+        <div
+          className={cn(
+            'grid gap-3',
+            idle.length > 1 &&
+              'sm:grid-cols-2 lg:relative lg:left-1/2 lg:w-[min(58rem,calc(100vw-3rem))] lg:-translate-x-1/2 lg:grid-cols-[repeat(auto-fit,minmax(15rem,18rem))] lg:justify-center',
+          )}
+        >
+          {idle.map((v) => (
+            <article key={v.plate} className="flex flex-col items-center rounded-2xl border border-border bg-white p-5 text-center">
+              <Plate plate={v.plate} />
+              <span className="mt-3 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink/55">Aucun ticket</span>
               {vehicleType(v.type) && (
-                <div>
-                  <dt className="inline">Véhicule : </dt>
-                  <dd className="inline text-ink">{vehicleType(v.type)}</dd>
-                </div>
+                <p className="mt-3 text-[0.95rem] text-ink/60">
+                  Véhicule : <span className="text-ink">{vehicleType(v.type)}</span>
+                </p>
               )}
-            </dl>
-            <p className="mt-1 text-[0.95rem] leading-relaxed text-ink/60">
-              {withPayByPhone('PayByBot prend ses tickets PayByPhone pour vous, les jours choisis et à l’heure voulue.')}
-            </p>
-            <div className="mt-4 w-full border-t border-ink/[0.06] pt-4">
-              <button onClick={() => program(v.plate)} className={ui.primary}>
+              <button onClick={() => program(v.plate)} className={cn(ui.primary, 'mt-4 h-12 text-base')}>
                 <Plus className="size-5" /> Programmer un ticket
               </button>
-            </div>
-          </article>
-        ))}
+            </article>
+          ))}
+        </div>
         {daily.map((ap) => (
           <DailyCard key={ap.id} ap={ap} onChanged={onChanged} />
         ))}

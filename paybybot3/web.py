@@ -76,6 +76,7 @@ class DemoBot:
             {"vehicleId": "v1", "licensePlate": "AB123CD", "country": "FR", "type": "Car", "archived": False},
             # A second car without the resident rate: the demo shows a car with no ticket to programme.
             {"vehicleId": "v2", "licensePlate": "GH456JK", "country": "FR", "type": "Car", "archived": False},
+            {"vehicleId": "v3", "licensePlate": "LM789NP", "country": "FR", "type": "Motorcycle", "archived": False},
         ]
 
     def get_payment_accounts(self):
@@ -128,7 +129,7 @@ class DemoBot:
             {"name": "Handi - toutes zones", "type": "Disabled", "ratePolicyId": "105", "maxStayStatus": None,
              "acceptedTimeUnits": ["Days"], "parkingNotAllowedReason": None},
         ]
-        if re.sub(r"[^0-9A-Z]", "", str(licensePlate).upper()) == "GH456JK":  # the demo's car without a resident rate
+        if re.sub(r"[^0-9A-Z]", "", str(licensePlate).upper()) in ("GH456JK", "LM789NP"):  # the demo's vehicles without a resident rate
             rates = [r for r in rates if r["type"] != "Resident"]
         return rates
 

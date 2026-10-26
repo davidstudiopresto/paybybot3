@@ -286,7 +286,6 @@ export function Dashboard({
             } else if (!failed.length) {
               toast.success('Votre compte est activé.', {
                 description: 'Activez maintenant le renouvellement de votre véhicule ou programmez un ticket.',
-                duration: 8000,
               })
             }
             if (failed.length) toast.error(failed.join('\n'))

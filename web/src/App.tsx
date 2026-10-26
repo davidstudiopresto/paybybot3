@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { Dashboard } from '@/components/Dashboard'
 import { LoginView } from '@/components/LoginView'
 import { FaqView, Home } from '@/components/Landing'
+import { HowPage } from '@/components/HowPage'
 import { PayWizard } from '@/components/PayWizard'
 import { PricingPage } from '@/components/Pricing'
 import { legalPageFromHash, type LegalPage } from '@/lib/legalPages'
@@ -22,11 +23,11 @@ const AdminPage = lazy(() => import('@/components/Admin').then((m) => ({ default
 const Welcome = lazy(() => import('@/components/Welcome').then((m) => ({ default: m.Welcome })))
 const SubscriptionDialog = lazy(() => import('@/components/Subscription').then((m) => ({ default: m.SubscriptionDialog })))
 
-type Route = 'faq' | 'tarifs' | 'connexion' | 'inscription' | 'demo' | 'admin' | 'bienvenue' | null
+type Route = 'faq' | 'comment-ca-marche' | 'tarifs' | 'connexion' | 'inscription' | 'demo' | 'admin' | 'bienvenue' | null
 
 function routeFromHash(hash: string): Route {
   const id = hash.replace(/^#\/?/, '').split('?')[0]
-  return id === 'faq' || id === 'tarifs' || id === 'connexion' || id === 'inscription' || id === 'demo' || id === 'admin' ||
+  return id === 'faq' || id === 'comment-ca-marche' || id === 'tarifs' || id === 'connexion' || id === 'inscription' || id === 'demo' || id === 'admin' ||
     id === 'bienvenue'
     ? id
     : null
@@ -330,6 +331,8 @@ export default function App() {
         <PricingPage hosted={hosted} signedIn={!!me} />
       ) : route === 'faq' ? (
         <FaqView hosted={hosted} signedIn={!!me} />
+      ) : route === 'comment-ca-marche' ? (
+        <HowPage hosted={hosted} signedIn={!!me} />
       ) : me === null ? (
         route === 'connexion' || route === 'inscription' ? (
           <LoginView

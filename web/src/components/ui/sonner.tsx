@@ -6,6 +6,7 @@ const Toaster = (props: ToasterProps) => (
     theme="light"
     position="top-right"
     richColors
+    duration={2000} // notices stay 2 seconds at most
     className="toaster group"
     toastOptions={{ style: { fontFamily: "var(--font-sans)", fontSize: "1rem" } }}
     {...props}

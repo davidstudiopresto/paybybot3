@@ -53,14 +53,12 @@ export function activationToast(activation: Activation, plate?: string) {
     // The reason is long: it stays under the vehicle, with « Réessayer ».
     toast.error(plate ? `${plate} : ${activation.title}` : activation.title, {
       description: 'La raison est affichée sous votre véhicule.',
-      duration: 10_000,
     })
     return
   }
   toast.success(plate ? `${plate} : ${activation.title}` : activation.title, {
     // Short on screen: what happens if a payment fails is in the e-mail.
     description: activation.text,
-    duration: 6_000,
   })
 }
 
@@ -121,7 +119,7 @@ export async function relaunch(ap: Autopilot, onChanged: () => void) {
   const waiting = toast.loading('Relance en cours…', { description: 'PayByBot vérifie votre compte PayByPhone et paie si besoin.' })
   try {
     const after = await api.resumeAutopilot(ap.id)
-    if (after.lastError) toast.error('Renouvellement non effectué', { id: waiting, description: 'La raison est affichée sous votre véhicule.', duration: 8000 })
+    if (after.lastError) toast.error('Renouvellement non effectué', { id: waiting, description: 'La raison est affichée sous votre véhicule.' })
     else if (after.lastPayment) toast.success('Forfait renouvelé.', { id: waiting })
     else toast.success('Renouvellement relancé.', { id: waiting, description: 'Un ticket est déjà en cours : il prendra le relais à sa fin.' })
   } catch (e) {

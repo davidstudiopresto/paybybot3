@@ -37,6 +37,9 @@ export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
           <a href="#/securite" className={navLink}>
             Sécurité
           </a>
+          <a href="#/comment-ca-marche" className={navLink}>
+            Comment ça marche
+          </a>
         </>
       }
     >

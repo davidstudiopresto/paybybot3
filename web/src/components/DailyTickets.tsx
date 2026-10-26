@@ -239,23 +239,37 @@ export function DailyTickets({
 
 const PARIS_ARRONDISSEMENTS = Array.from({ length: 20 }, (_, i) => `750${String(i + 1).padStart(2, '0')}`)
 
+/** Every PayByPhone zone number in France, from PayByPhone's own list of towns: loaded once, on demand. */
+let frZones: Promise<string[]> | null = null
+const loadFrZones = () => (frZones ??= import('@/lib/zones-fr.json').then((m) => m.default as string[]))
+
 /** The zone field with a list of suggestions under it, scrolling, appearing as soon as something is typed and
  *  narrowing with each character: the zones already used on PayByPhone first (its history), then the Paris
- *  arrondissements that match (by number or by name). */
+ *  arrondissements, then every PayByPhone zone number in France. */
 function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string) => void }) {
   const [recent, setRecent] = useState<string[]>([])
+  const [france, setFrance] = useState<string[]>([])
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   useEffect(() => {
     api.recentZones().then(setRecent, () => {})
+    loadFrZones().then(setFrance, () => {})
   }, [])
   const q = value.trim().toLowerCase()
-  const label = (z: string) => arrondissement(z) ?? `Zone ${z}`
-  const matches = (z: string) => !q || z.toLowerCase().startsWith(q) || label(z).toLowerCase().replace('er', '').includes(q.replace('er', ''))
-  const items = [
-    ...recent.filter(matches).map((z) => ({ zone: z, used: true })),
-    ...PARIS_ARRONDISSEMENTS.filter((z) => !recent.includes(z) && matches(z)).map((z) => ({ zone: z, used: false })),
-  ].filter((x) => x.zone !== value)
+  const label = (z: string) => arrondissement(z) ?? z
+  // By the start of the number; a Paris arrondissement also by its name (« Paris 17 », « 17e »).
+  const matches = (z: string) =>
+    !q || z.toLowerCase().startsWith(q) || (!!arrondissement(z) && label(z).toLowerCase().replace('er', '').includes(q.replace('er', '')))
+  const items = useMemo(() => {
+    const seen = new Set<string>()
+    const take = (z: string, used: boolean) => (seen.has(z) || z === value || !matches(z) ? [] : (seen.add(z), [{ zone: z, used }]))
+    return [
+      ...recent.flatMap((z) => take(z, true)),
+      ...PARIS_ARRONDISSEMENTS.flatMap((z) => take(z, false)),
+      ...france.flatMap((z) => take(z, false)),
+    ].slice(0, 80)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, recent, france, value])
   // Only once something is typed, narrowing as the postcode grows: nothing shows on an empty field.
   const shown = open && q.length > 0 && items.length > 0
 
@@ -303,10 +317,10 @@ function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string
               onMouseEnter={() => setActive(i)}
               className={cn('flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[0.95rem]', i === active && 'bg-ink/[0.05]')}
             >
-              <span className="text-ink">{label(x.zone)}</span>
-              <span className="flex items-center gap-2 text-sm text-ink/45 tabular-nums">
+              <span className="text-ink tabular-nums">{label(x.zone)}</span>
+              <span className="flex shrink-0 items-center gap-2 text-sm text-ink/45 tabular-nums">
                 {x.used && <span className="rounded-full bg-[#4e9aa0]/12 px-2 py-0.5 text-xs font-medium text-[#3d7f84]">Déjà utilisée</span>}
-                {x.zone}
+                {arrondissement(x.zone) && x.zone}
               </span>
             </li>
           ))}

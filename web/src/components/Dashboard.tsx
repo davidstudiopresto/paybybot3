@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { LogOut } from 'lucide-react'
+import { ChevronRight, LogOut } from 'lucide-react'
 import { arrondissement, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
 import { DailyTickets, DailyWizard } from '@/components/DailyTickets'
 import { AccountButton } from '@/components/Account'
-import { TrialBanner } from '@/components/Pricing'
+import { PlansDialog, TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
@@ -335,6 +335,7 @@ export function Dashboard({
   // Online, no offer chosen yet: PayByBot is not usable before choosing one. With a resident vehicle, its renewal
   // dialog stays open (then the offer); without one, the « Programmer un ticket » wizard does (then the offer).
   const needsOffer = !!me.hosted && !me.demo && !!account && !account.subscribed && !account.blocked
+  const [offerOpen, setOfferOpen] = useState(false) // « Activer mon compte »: the offer screen
   const live = data?.sessions.filter((s) => new Date(s.expire).getTime() > Date.now()) ?? []
   const isResidentCar = (plate: string) => (residentPlates ? residentPlates.has(plateKey(plate)) : true)
   // The car whose renewal opens: a resident ticket running, else a resident car without a ticket (its card is shown).
@@ -377,6 +378,19 @@ export function Dashboard({
         blocked={account?.blocked ?? null}
         graceEnd={account?.graceEnd ?? null}
       />
+      {/* No offer chosen yet: a thin light blue bar (the logo's blue) across the top, the way to activate the account. */}
+      {needsOffer && (
+        <button
+          type="button"
+          onClick={() => setOfferOpen(true)}
+          className="group flex w-full items-center justify-center gap-1.5 bg-[#e3efff] px-4 py-2.5 text-sm font-semibold text-[#1f55e6] transition hover:bg-[#d4e6ff]"
+        >
+          Activer mon compte
+          <span className="font-normal text-[#1f55e6]/70">· 1er mois offert</span>
+          <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+        </button>
+      )}
+      {offerOpen && <PlansDialog onClose={() => setOfferOpen(false)} />}
       <TopBar>
         {me.demo && (
           <span className="inline-flex h-9 items-center rounded-full bg-amber/25 px-3 text-sm font-semibold text-ink sm:h-10 sm:px-4 sm:text-[0.95rem]">

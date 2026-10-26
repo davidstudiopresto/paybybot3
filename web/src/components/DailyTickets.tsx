@@ -263,19 +263,19 @@ export function DailyTickets({
       </section>
     )
   return (
-    <section id="tickets-programmes" className="rise mt-10 scroll-mt-20">
+    <section id="tickets-programmes" className="rise mt-4 scroll-mt-20">
       {/* No ticket programmed yet: a card that says what it is. Its button is blue when it is the one thing to do
           (nothing automated, no resident car), grey next to a resident renewal. Once one exists, a small button. */}
       {!daily.length ? (
-        <div className="rounded-2xl border border-ink/10 bg-white p-6">
-          <p className="font-heading text-[1.35rem] leading-tight font-medium tracking-[-0.02em] text-ink">Programmez vos tickets (non-résidents)</p>
-          <p className="mt-2 leading-relaxed text-ink/60">
+        <div className="rounded-2xl border border-ink/10 bg-white px-6 py-5">
+          <p className="font-heading text-[1.25rem] leading-tight font-medium tracking-[-0.02em] text-ink">Programmez vos tickets (non-résidents)</p>
+          <p className="mt-1.5 text-[0.95rem] leading-relaxed text-ink/60">
             {withPayByPhone('PayByBot les prend pour vous sur PayByPhone, les jours choisis et à l’heure voulue.')} Vous n’avez plus à y penser.
           </p>
           <button
             onClick={() => setOpen(true)}
             className={cn(
-              'mt-5',
+              'mt-4 h-12',
               !data.autopilots.some((ap) => ap.enabled) &&
                 !data.vehicles.some((v) => v.zone)
                 ? ui.primary

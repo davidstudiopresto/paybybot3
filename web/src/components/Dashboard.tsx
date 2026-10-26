@@ -165,13 +165,13 @@ function Ticket({
       </div>
       )}
 
-      <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
+      <div className="border-t border-ink/[0.06] px-5 pt-3.5 pb-4">
         {/* Renewal on: no countdown (nothing to watch), only when the ticket ends. Without one, the time left. */}
         {renewal && renewal.enabled && !note && <p className="mb-1 text-[0.95rem] font-medium text-ink">Ticket en cours</p>}
         {!(renewal && renewal.enabled && !note) && (
           <>
             <p className="text-sm text-ink/50">Temps restant</p>
-            <p className={`mt-1 mb-2 font-heading text-[2.4rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
+            <p className={`mt-1 mb-2 font-heading text-[2.1rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
               {remaining(left)}
             </p>
           </>
@@ -186,7 +186,7 @@ function Ticket({
         </div>
         {/* Nothing will follow this ticket (no renewal, no programmed ticket for the car): said under it. */}
         {!renewal && !data.autopilots.some((ap) => ap.enabled && sameCar(ap.plate, session.plate)) && (
-          <p className="mt-4 text-sm text-ink/55">Ce ticket ne sera pas renouvelé : aucun ticket programmé pour ce véhicule.</p>
+          <p className="mt-3 text-sm text-ink/55">Ce ticket ne sera pas renouvelé.</p>
         )}
         {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} withStop={false} className="mt-5" />}
       </div>
@@ -226,7 +226,7 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogo
   if (!cars.length) return null
   const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
   return (
-    <div className="mt-6 space-y-3">
+    <div className="mt-5 space-y-3">
       {cars.map((v) => {
         const week = weeks[key(v.plate)]
         const place = v.zone ? arrondissement(v.zone) : null
@@ -349,10 +349,14 @@ export function Dashboard({
   const [offerOpen, setOfferOpen] = useState(false) // « Activer mon compte »: the offer screen
   const live = data?.sessions.filter((s) => new Date(s.expire).getTime() > Date.now()) ?? []
   const isResidentCar = (plate: string) => (residentPlates ? residentPlates.has(plateKey(plate)) : true)
-  // The car whose renewal opens: a resident ticket running, else a resident car without a ticket (its card is shown).
+  // The car whose renewal opens: a resident ticket running, else a resident car without a ticket (its card is shown),
+  // else a car known to have the resident rate even if PayByPhone does not call its running ticket « resident » (its
+  // ticket card shows « Ticket résident » and the renewal switch: that is the one to open, never the ticket wizard).
+  const knownResident = (plate: string) => !!residentPlates?.has(plateKey(plate))
   const residentPlate = data
     ? (live.find((s) => s.resident !== false && isResidentCar(s.plate))?.plate ??
       data.vehicles.find((v) => isResidentCar(v.plate) && !live.some((s) => sameCar(s.plate, v.plate)))?.plate ??
+      live.find((s) => knownResident(s.plate))?.plate ??
       null)
     : null
   const locked = needsOffer && !renewing && !!residentPlates && !!residentPlate
@@ -394,7 +398,7 @@ export function Dashboard({
         <button
           type="button"
           onClick={() => setOfferOpen(true)}
-          className="group flex w-full items-center justify-center gap-1.5 bg-[#e3efff] px-4 py-2.5 text-sm font-semibold text-[#1f55e6] transition hover:bg-[#d4e6ff]"
+          className="group flex w-full items-center justify-center gap-1.5 bg-[#e3efff] px-4 py-2 text-sm font-semibold text-[#1f55e6] transition hover:bg-[#d4e6ff]"
         >
           Activer mon compte
           <span className="font-normal text-[#1f55e6]/70">· 1er mois offert</span>
@@ -416,7 +420,7 @@ export function Dashboard({
         </button>
       </TopBar>
 
-      <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-12 pb-16">
+      <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-6 pb-6">
         {/* Just the greeting, large: the line below says whether a ticket is running. */}
         <h1 className="rise font-heading text-[2.6rem] leading-[1.05] font-medium tracking-[-0.035em]">
           {me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}
@@ -435,7 +439,7 @@ export function Dashboard({
         </p>
 
         {data && sessions.length > 0 && (
-          <div className="mt-6 space-y-3">
+          <div className="mt-5 space-y-3">
             {sessions.map((s) => (
               <Ticket
                 key={s.id}
@@ -484,7 +488,7 @@ export function Dashboard({
         )}
       </main>
 
-      <HostedFooter className="px-6 pb-8" hosted={!!me.hosted} />
+      <HostedFooter className="px-6 pb-5" hosted={!!me.hosted} />
     </div>
   )
 }

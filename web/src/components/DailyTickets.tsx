@@ -294,7 +294,7 @@ const loadFrZones = () => (frZones ??= import('@/lib/zones-fr.json').then((m) =>
 /** The zone field with a list of suggestions under it, scrolling, appearing as soon as something is typed and
  *  narrowing with each character: the zones already used on PayByPhone first (its history), then the Paris
  *  arrondissements, then every PayByPhone zone number in France. */
-function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string) => void }) {
+function ZoneInput({ value, onChange, hint }: { value: string; onChange: (zone: string) => void; hint: React.ReactNode }) {
   const [recent, setRecent] = useState<string[]>([])
   const [france, setFrance] = useState<string[]>([])
   const [open, setOpen] = useState(false)
@@ -320,6 +320,8 @@ function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string
   }, [q, recent, france, value])
   // Only once something is typed, narrowing as the postcode grows: nothing shows on an empty field.
   const shown = open && q.length > 0 && items.length > 0
+  // A zone PayByPhone has in France (a Paris arrondissement, or one of its listed numbers): the field says it is right.
+  const known = !shown && (!!arrondissement(value) || france.includes(value))
 
   function pick(zone: string) {
     onChange(zone)
@@ -348,8 +350,21 @@ function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string
         aria-expanded={shown}
         aria-controls="zone-suggestions"
         aria-autocomplete="list"
-        className={ui.field}
+        className={cn(ui.field, known && 'pr-14')}
+        style={known ? { borderColor: '#4e9aa0' } : undefined}
       />
+      {/* The zone is right: a teal ring goes out once, a check pops in the field and draws itself (played again for
+          each zone picked: the key is the zone). */}
+      {known && (
+        <span key={value} aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-14">
+          <span className="zone-ring absolute inset-0 rounded-xl" />
+          <span className="zone-pop absolute top-1/2 right-4 -mt-3.5 grid size-7 place-items-center rounded-full bg-[#4e9aa0] text-white">
+            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12.5l4.5 4.5L19 7.5" pathLength="1" className="zone-draw" />
+            </svg>
+          </span>
+        </span>
+      )}
       {shown && (
         <ul
           id="zone-suggestions"
@@ -373,6 +388,11 @@ function ZoneInput({ value, onChange }: { value: string; onChange: (zone: string
             </li>
           ))}
         </ul>
+      )}
+      {!shown && (
+        <p key={known ? `ok-${value}` : 'hint'} className={cn('mt-2 text-sm', known ? 'rise font-medium text-[#3d7f84]' : 'text-ink/50')}>
+          {known ? (arrondissement(value) ?? `Zone ${value}`) + ' · zone PayByPhone reconnue' : hint}
+        </p>
       )}
     </div>
   )
@@ -692,10 +712,7 @@ export function DailyWizard({
               </div>
               <div>
                 <p className={ui.label}>Où vous garez-vous ?</p>
-                <ZoneInput value={zone} onChange={setZone} />
-                <p className="mt-2 text-sm text-ink/50">
-                  {place ? `✓ ${place}` : withPayByPhone('Le numéro de zone PayByPhone, indiqué sur le panneau ou l’horodateur.')}
-                </p>
+                <ZoneInput value={zone} onChange={setZone} hint={withPayByPhone('Le numéro de zone PayByPhone, indiqué sur le panneau ou l’horodateur.')} />
               </div>
               {error && <p className={ui.error}>{error}</p>}
             </>

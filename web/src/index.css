@@ -183,8 +183,17 @@
 @media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }
 .blink { animation: blink 1.6s ease-in-out infinite; }
 
+/* Zone field: the zone is right. A ring goes out once, the check pops in and draws itself. */
+@keyframes zone-ring { from { box-shadow: 0 0 0 0 rgb(78 154 160 / .45); } to { box-shadow: 0 0 0 12px rgb(78 154 160 / 0); } }
+@keyframes zone-pop { 0% { transform: scale(0); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes zone-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.zone-ring { animation: zone-ring .7s ease-out both; }
+.zone-pop { animation: zone-pop .38s cubic-bezier(.3,1.4,.5,1) both; }
+.zone-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: zone-draw .3s .2s ease-out forwards; }
+
 @media (prefers-reduced-motion: reduce) {
-  .rise, .blink, .marquee { animation: none; }
+  .rise, .blink, .marquee, .zone-ring, .zone-pop { animation: none; }
+  .zone-draw { animation: none; stroke-dashoffset: 0; }
 }
 
 /* Indeterminate progress line under the logo while loading. */

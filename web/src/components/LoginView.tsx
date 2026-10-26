@@ -422,14 +422,13 @@ export function LoginView({
           >
             {loading === 'login' ? <Loader2 className="size-5 animate-spin" /> : <>{signup ? 'Continuer' : 'Se connecter'} <ArrowRight className="size-5" /></>}
           </button>
-          {/* Cloudflare's check runs unseen; its box, when it needs a click, comes over this line. Its place is
-              kept from the start (65 px, the box's height): nothing moves when it shows up a few seconds later. */}
+          {/* Cloudflare's check runs unseen (the widget is « Invisible » on Cloudflare): no box, no space kept for it. */}
           {human.enabled && (
-            <div className="relative mt-4 grid h-[65px] place-items-center">
+            <div className="relative mt-4">
               <p className="flex items-center justify-center gap-1.5 text-xs text-ink/40">
                 <Lock className="size-3" /> Connexion protégée par Cloudflare
               </p>
-              <div ref={human.box} className="absolute inset-0" />
+              <div ref={human.box} className="absolute inset-0 overflow-hidden" />
             </div>
           )}
 

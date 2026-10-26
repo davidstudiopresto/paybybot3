@@ -107,9 +107,10 @@ function VehicleChoice({
                 <Plate plate={v.plate} size="sm" />
                 {/* A ticked vehicle shows its price (per month, the yearly total beside it on the yearly plan); the others
                     none, they are not counted. */}
+                {/* On a phone the yearly total goes under the monthly price, which never breaks. */}
                 {on && (
-                  <span className="ml-auto text-right text-ink tabular-nums">
-                    {plan === 'yearly' && <span className="mr-2 text-xs text-ink/45">{euros(v.yearly)} / an ·</span>}
+                  <span className="ml-auto flex flex-col-reverse items-end text-right whitespace-nowrap text-ink tabular-nums sm:block">
+                    {plan === 'yearly' && <span className="text-xs text-ink/45 sm:mr-2">{euros(v.yearly)} / an<span className="hidden sm:inline"> ·</span></span>}
                     {plan === 'monthly' ? euros(v.monthly) : euros(Math.round(v.yearly / 12))} / mois
                   </span>
                 )}

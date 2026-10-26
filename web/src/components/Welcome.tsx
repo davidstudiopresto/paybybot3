@@ -129,8 +129,8 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                           <ZonePlate zone={v.zone} />
                         </span>
                         {ticket && (
-                          <span className="flex items-center gap-1.5 text-sm text-ink/70">
-                            <Ticket className="size-4 text-eu" /> Ticket en cours {until(ticket.expire)}
+                          <span className="flex items-start gap-1.5 text-sm text-ink/70">
+                            <Ticket className="mt-0.5 size-4 shrink-0 text-eu" /> Ticket en cours {until(ticket.expire)}
                           </span>
                         )}
                       </span>
@@ -138,7 +138,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
                   })}
                   {!residents && (
                     <span className="text-sm leading-relaxed text-ink/60">
-                      Pas de tarif résident sur {withPayByPhone('PayByPhone')} : <PayByBot /> prendra vos tickets
+                      Pas de tarif résident sur {withPayByPhone('PayByPhone')} : <PayByBot /> prendra vos tickets
                       non-résident les jours choisis.
                     </span>
                   )}

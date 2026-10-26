@@ -2290,7 +2290,12 @@ def plate_key(plate):
 def vehicle_resident_rate(s, zone, vehicle):
     """The resident rate PayByPhone offers this vehicle in the zone (two-wheelers: the two-wheeler one), or None."""
     wants_two = bool(TWO_WHEELS.search(str(vehicle.get("type") or "")))
-    rates = s.call("get_rate_options", zone, vehicle["licensePlate"]) or []
+    try:
+        rates = s.call("get_rate_options", zone, vehicle["licensePlate"]) or []
+    except Exception as e:
+        if "getRateOptions" in str(e):  # PayByPhone has no rate there for this vehicle: no resident rate, a real « no »
+            return None
+        raise  # busy (429) or unreachable: not known, never taken for « no »
     return next((r for r in rates if RESIDENT_RATE.search("%s %s" % (r.get("name"), r.get("type")))
                  and bool(TWO_WHEELS.search("%s %s" % (r.get("name"), r.get("type")))) == wants_two
                  and not r.get("parkingNotAllowedReason")), None)
@@ -2429,8 +2434,14 @@ def account_pricing(s):
     """The account's prices: one monthly price per riverain vehicle (its type, its arrondissement's zone), and the
     subscription, for the vehicles with a renewal (the first one while none has). The billed prices are kept on the
     account for checkout and the e-mail links. Without a riverain vehicle, every vehicle of the account; None without
-    any vehicle."""
-    found = vehicle_zones(s)
+    any vehicle; the vehicles are listed even when their zones cannot be looked for (then without a zone)."""
+    try:
+        found, zones_known = vehicle_zones(s), True
+    except HTTPException:
+        raise
+    except Exception as e:  # PayByPhone busy or refusing: every vehicle listed anyway, nothing kept from this answer
+        log.warning("pricing without the vehicle zones: %s", str(e)[:200])
+        found, zones_known = [], False
     account = load_account(s)
     suvs = set(account.get("suv_plates") or [])
     payments = normalize_accounts(s.call("get_payment_accounts") or {}) if found else []
@@ -2463,7 +2474,7 @@ def account_pricing(s):
     chosen = set(account.get("chosen_plates") or [])
     billed = [v for v in vehicles if plate_key(v["plate"]) in renewed or plate_key(v["plate"]) in chosen] or vehicles[:1]
     monthlies = sorted(v["monthly"] for v in billed)
-    if account.get("monthlies") != monthlies or account.get("price_zone") != zone:
+    if zones_known and (account.get("monthlies") != monthlies or account.get("price_zone") != zone):
         account = save_account(s, {"monthlies": monthlies, "price_zone": zone})
         reprice(account, owner_id(s.username) if HOSTED and not s.demo else None)
     return {"zone": zone, "monthly": plan_total(monthlies), "yearly": plan_total(monthlies, "yearly"),
@@ -2890,7 +2901,7 @@ def notify_blocked(details, state):
     car = "%s, zone %s" % (plate_text(details.get("plate")), details.get("location"))
     first = ("Le dernier paiement de votre abonnement PayByBot n'a pas abouti : votre compte est bloqué."
              if state == "unpaid" else
-             "Votre mois offert est terminé et aucun abonnement n'a été souscrit : votre compte est bloqué.")
+             "Votre mois offert est terminé et aucun abonnement n'est en cours : votre compte est bloqué.")
     send_email(to, "Compte PayByBot bloqué · paiement requis",
                "Paiement refusé : compte bloqué" if state == "unpaid" else "Votre compte est bloqué",
                [first,
@@ -3103,6 +3114,7 @@ def pricing(pbb_session: str = Cookie(None)):
     found = guarded(lambda: account_pricing(s))
     if found:  # « resident » only says whether a vehicle has the resident rate: nothing is locked without one
         return {**found, "resident": any(v["zone"] for v in found["vehicles"])}
+    log.info("pricing without any vehicle: PayByPhone lists none for this account")
     status = guarded(lambda: resident_status(s))
     return {"zone": status["zone"], "monthly": None, "yearly": None, "resident": status["resident"]}
 

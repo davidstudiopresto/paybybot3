@@ -102,7 +102,7 @@ export function SecurityDetails() {
             ['Jetons de connexion PayByPhone', 'Dans votre navigateur (cookie)', 'Chiffrés avec une clé que seul le serveur possède', '12 h sans activité, 24 h au plus'],
             ['Renouvellement ou ticket programmé : jeton de reconnexion PayByPhone', 'Base de données à Paris', 'Chiffré ; la clé est conservée ailleurs', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Renouvellement ou ticket programmé : plaque, zone, tarif, durée, jours et heure, moyen de paiement choisi', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à ce que vous l’arrêtiez'],
-            ['Compte PayByBot : e-mail et zone de résidence', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à la suppression du compte'],
+            ['Compte PayByBot : e-mail (seule donnée saisie), prénom et arrondissement de résidence repris de PayByPhone', 'Base de données à Paris', 'Chiffrés', 'Jusqu’à la suppression du compte'],
             ['Renouvellement ou ticket programmé : e-mail pour les confirmations', 'Base de données à Paris', 'Chiffré', 'Jusqu’à ce que vous le retiriez ou arrêtiez'],
             ['Renouvellement ou ticket programmé : dates de pause, de vérification et de paiement', 'Base de données à Paris', 'Dates seules, sans lien lisible avec vous', 'Jusqu’à ce que vous l’arrêtiez'],
             ['Identifiant de votre compte', 'Base de données à Paris', 'Seulement une empreinte : le numéro n’y figure pas', 'Jusqu’à ce que vous l’arrêtiez'],
@@ -228,8 +228,9 @@ function Privacy() {
             <PayByPhone /> pour prendre le ticket.
           </li>
           <li>
-            <strong>Compte <PayByBot /> :</strong> votre e-mail, vérifié par un code à l’inscription, et votre zone de
-            résidence, chiffrés ; une empreinte de votre identifiant ; si vous vous abonnez, l’offre choisie et les
+            <strong>Compte <PayByBot /> :</strong> votre e-mail, vérifié par un code à l’inscription (la seule donnée que
+            vous saisissez), ainsi que votre prénom et l’arrondissement de résidence de vos véhicules, repris de votre
+            compte <PayByPhone />, chiffrés ; une empreinte de votre identifiant ; si vous vous abonnez, l’offre choisie et les
             identifiants de client et d’abonnement Stripe, chiffrés.
           </li>
           <li>
@@ -308,7 +309,7 @@ function Privacy() {
             Jetons de connexion (cookie) : 12 heures sans activité, 24 heures au plus ; 30 jours si vous cochez « Se
             souvenir de moi ».
           </li>
-          <li>Compte <PayByBot /> (e-mail, zone de résidence) : jusqu’à la suppression du compte.</li>
+          <li>Compte <PayByBot /> (e-mail, prénom, arrondissement de résidence) : jusqu’à la suppression du compte.</li>
           <li>Renouvellement ou ticket programmé, y compris l’e-mail : tant qu’il est actif ; supprimé dès que vous l’arrêtez.</li>
           <li>
             Mois offert : une empreinte anonyme (chiffrée, impossible à relire) du compte <PayByPhone />, de l’e-mail et
@@ -480,8 +481,8 @@ function Terms() {
         </p>
         <ul>
           <li>
-            votre abonnement <PayByBot /> n’est pas payé (paiement refusé par votre banque ou mois offert terminé sans
-            abonnement) : les renouvellements s’arrêtent jusqu’à la régularisation ;
+            votre abonnement <PayByBot /> n’est pas payé (paiement refusé par votre banque, ou mois offert
+            utilisé sans abonnement en cours) : les renouvellements s’arrêtent jusqu’à la régularisation ;
           </li>
           <li>
             votre véhicule ne bénéficie plus, sur <PayByPhone />, du tarif choisi (droit résident expiré, véhicule ou adresse
@@ -525,8 +526,8 @@ function Terms() {
       <Section title="10. Abonnement et paiement">
         <ul>
           <li>
-            <strong>Mois offert :</strong> chaque nouveau compte bénéficie d’un mois gratuit, qui commence quand vous
-            choisissez votre offre.
+            <strong>Mois offert :</strong> un mois gratuit, offert une seule fois par personne (même
+            compte <PayByPhone />, e-mail ou plaque). Il commence quand vous choisissez votre offre, et non à l’inscription.
           </li>
           <li>
             <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC : 9,50 € par véhicule et par mois, quel que soit le ticket (résident, visiteur, carte handicapé) ou le type de véhicule,
@@ -561,7 +562,7 @@ function Terms() {
             de ce délai, le montant correspondant au service déjà fourni reste dû ; le reste vous est remboursé.
           </li>
           <li>
-            <strong>Sans abonnement</strong> à la fin du mois offert, ou si un paiement de l’abonnement échoue, votre
+            <strong>Sans abonnement en cours</strong> une fois le mois offert utilisé (par exemple s’il a été résilié pendant ce mois), ou si un paiement de l’abonnement échoue, votre
             compte est bloqué : le ticket en cours reste valable, mais le ticket suivant n’est pas payé. Vous en
             êtes prévenu par e-mail, et le renouvellement reprend dès que le paiement est fait.
           </li>

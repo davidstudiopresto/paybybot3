@@ -184,7 +184,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
         {ap.lastError && <p className="mt-3 text-sm text-destructive">{ap.lastError}</p>}
       </div>
       <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
-        <RenewalActions ap={ap} onChanged={onChanged} />
+        <RenewalActions ap={ap} onChanged={onChanged} stopLabel={period ? 'Annuler ce ticket' : 'Arrêter ces tickets'} />
       </div>
     </article>
   )
@@ -229,16 +229,13 @@ export function DailyTickets({
   const program = (plate?: string) => (setForPlate(plate), setOpen(true))
   if (idle.length)
     return (
-      <section id="tickets-programmes" className="rise mt-6 scroll-mt-20 space-y-3">
-        {/* One card per car with nothing on it: its plate, and the one thing to do for it. Several cars: side by
-            side on a wide screen (the row goes wider than the page's column), so all of them show at once. */}
-        <div
-          className={cn(
-            'grid gap-3',
-            idle.length > 1 &&
-              'sm:grid-cols-2 lg:relative lg:left-1/2 lg:w-[min(58rem,calc(100vw-3rem))] lg:-translate-x-1/2 lg:grid-cols-[repeat(auto-fit,minmax(15rem,18rem))] lg:justify-center',
-          )}
-        >
+      <section id="tickets-programmes" className="rise mt-5 scroll-mt-20 space-y-3">
+        {/* The tickets already programmed first (right under the running ticket they follow), then one card per car
+            with nothing on it, two side by side within the page's column. */}
+        {daily.map((ap) => (
+          <DailyCard key={ap.id} ap={ap} onChanged={onChanged} />
+        ))}
+        <div className={cn('grid gap-3', idle.length > 1 && 'sm:grid-cols-2')}>
           {idle.map((v) => (
             <article key={v.plate} className="flex flex-col items-center rounded-2xl border border-border bg-white p-5 text-center">
               <Plate plate={v.plate} />
@@ -254,9 +251,6 @@ export function DailyTickets({
             </article>
           ))}
         </div>
-        {daily.map((ap) => (
-          <DailyCard key={ap.id} ap={ap} onChanged={onChanged} />
-        ))}
         {open && (
           <DailyWizard data={data} onClose={() => setOpen(false)} onDone={onChanged} needsOffer={needsOffer} locked={locked} onLogout={onLogout} initialPlate={forPlate} />
         )}

@@ -4,7 +4,7 @@ import { ChevronRight, LogOut } from 'lucide-react'
 import { arrondissement, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
-import { DailyTickets, DailyWizard } from '@/components/DailyTickets'
+import { DailyTickets } from '@/components/DailyTickets'
 import { AccountButton } from '@/components/Account'
 import { PlansDialog, TrialBanner } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
@@ -52,7 +52,6 @@ function Ticket({
   locked = false,
   onLogout,
   daily = false,
-  needsOffer = false,
 }: {
   session: Session
   now: number
@@ -65,13 +64,8 @@ function Ticket({
   onLogout?: () => void
   /** A non-resident ticket: no weekly renewal switch. */
   daily?: boolean
-  /** Online without an offer yet: programming a ticket goes through the offer first. */
-  needsOffer?: boolean
 }) {
   const renewal = renewalOf(data, session)
-  // A non-resident ticket: « Renouvellement auto » opens the ticket wizard filled with this very ticket.
-  const [renewing, setRenewing] = useState(false)
-  const programmed = data.autopilots.some((ap) => ap.enabled && sameCar(ap.plate, session.plate))
   // The weekly renewal is for resident tickets only: a non-resident ticket (visitor, Handi…) shows no switch, unless
   // it is already renewed; tickets on chosen days are set up in « Tickets non-résident ».
   // `daily` already weighs PayByPhone's rate type, the ticket's length and the car: a resident ticket is renewable.
@@ -98,29 +92,8 @@ function Ticket({
         <span className="text-sm text-ink/50">{daily ? place : `Ticket résident · ${place}`}</span>
       </div>
 
-      {!renewable && (
-        <div className="border-t border-ink/[0.06] px-5 py-4">
-          <OpeningSwitch
-            on={programmed}
-            isOpen={renewing}
-            open={() => (programmed ? document.getElementById('tickets-programmes')?.scrollIntoView({ behavior: 'smooth' }) : setRenewing(true))}
-          />
-          {programmed && <p className="mt-2 text-sm text-[#3d7f84]">Renouvellement activé : le détail est plus bas.</p>}
-        </div>
-      )}
-      {renewing && (
-        <DailyWizard
-          data={data}
-          onClose={() => setRenewing(false)}
-          onDone={onRefresh}
-          needsOffer={needsOffer}
-          locked={locked}
-          onLogout={onLogout}
-          initialPlate={session.plate}
-          initialZone={session.location}
-          initialTicket={{ rate: session.rate, start: session.start, expire: session.expire }}
-        />
-      )}
+      {/* « Renouvellement auto » is for resident tickets only: a non-resident ticket card has no switch (tickets on
+          chosen days or dates are programmed below, with « Programmer un ticket »). */}
       {renewable && (
       <div className="border-t border-ink/[0.06] px-5 py-4">
         <RenewalSwitch
@@ -302,13 +275,20 @@ export function Dashboard({
       ? api.confirmCheckout(done[1]).then(
           async () => {
             history.replaceState(null, '', window.location.pathname)
-            // The confirmation screen (its animation says it); the renewal chosen just before Stripe is activated now.
-            setCheckoutDone(true)
+            // The renewal or ticket chosen just before Stripe is activated now. The « Votre stationnement est
+            // désormais automatisé » screen only when one really was: paid from the banner or « Mon compte » with
+            // nothing set up yet, a short word says the account is active and what to do next.
             const { done: renewed, failed, shown } = await runPendingRenewals()
             if (renewed) {
+              setCheckoutDone(true)
               if (!shown)
                 toast.success(renewed > 1 ? `Renouvellement activé pour ${renewed} véhicules.` : 'Renouvellement activé.')
               onRefresh()
+            } else if (!failed.length) {
+              toast.success('Votre compte est activé.', {
+                description: 'Activez maintenant le renouvellement de votre véhicule ou programmez un ticket.',
+                duration: 8000,
+              })
             }
             if (failed.length) toast.error(failed.join('\n'))
           },
@@ -379,7 +359,7 @@ export function Dashboard({
           // The car whose renewal was just activated (else the first car of the account).
           vehicle={(() => {
             const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
-            const renewed = data?.autopilots.find((ap) => ap.label === WEEKLY_LABEL)
+            const renewed = data?.autopilots.find((ap) => ap.label === WEEKLY_LABEL) ?? data?.autopilots.at(-1) // or the ticket just programmed
             const car = data?.vehicles.find((v) => !renewed || key(v.plate) === key(renewed.plate)) ?? data?.vehicles[0]
             return car ? { plate: car.plate, type: car.type, zone: car.zone ?? renewed?.location ?? null } : null
           })()}
@@ -455,7 +435,6 @@ export function Dashboard({
                 // A resident ticket only when PayByPhone says so, or when the car has the resident rate (checked by
                 // the server with PayByPhone). Anything else is a non-resident ticket, whatever its length.
                 daily={!(s.resident === true || !!residentPlates?.has(plateKey(s.plate)))}
-                needsOffer={needsOffer}
               />
             ))}
           </div>

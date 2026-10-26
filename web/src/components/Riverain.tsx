@@ -184,7 +184,20 @@ export function RenewalNote({ ap, onChanged }: { ap: Autopilot; onChanged?: () =
 /** Under a ticket: the vacation pause (planned, or a link to plan one), then the way to stop, in red. */
 const actionBtn = 'flex h-11 w-full items-center justify-center gap-2 rounded-xl border font-semibold transition active:scale-[0.99] sm:w-auto sm:px-5'
 
-export function RenewalActions({ ap, onChanged, className, withStop = true }: { ap: Autopilot; onChanged: () => void; className?: string; withStop?: boolean }) {
+export function RenewalActions({
+  ap,
+  onChanged,
+  className,
+  withStop = true,
+  stopLabel = 'Arrêter le renouvellement',
+}: {
+  ap: Autopilot
+  onChanged: () => void
+  className?: string
+  withStop?: boolean
+  /** « Renouvellement » is the resident's word: programmed tickets say what stops instead. */
+  stopLabel?: string
+}) {
   const [pausing, setPausing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const { later, paused } = pauseState(ap)
@@ -259,7 +272,7 @@ export function RenewalActions({ ap, onChanged, className, withStop = true }: { 
               : 'border-destructive/30 text-destructive hover:border-destructive',
           )}
         >
-          {confirming ? 'Confirmer l’arrêt' : 'Arrêter le renouvellement'}
+          {confirming ? 'Confirmer l’arrêt' : stopLabel}
         </button>}
       </div>
       {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}

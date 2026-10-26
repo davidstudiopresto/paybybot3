@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
 import { emailProblem } from '@/lib/validate'
 import { api, ApiError, clock, remaining, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { LoadingLine } from '@/components/Loading'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
 
@@ -18,7 +19,16 @@ export const WEEKLY_LABEL = 'Riverain hebdo'
 const PENDING_KEY = 'pbb-pending-renewals'
 
 /** A renewal kept for the way back from Stripe: weekly (no label) or a non-resident ticket on precise days. */
-export type PendingRenewal = Parking & { label?: string; days?: number[]; start?: string; cmis?: boolean; tz?: string }
+export type PendingRenewal = Parking & {
+  label?: string
+  days?: number[]
+  start?: string
+  cmis?: boolean
+  tz?: string
+  /** Chosen on the calendar: the first and last day (ISO), equal for a single day. */
+  dateFrom?: string
+  dateTo?: string
+}
 
 export function savePending(items: PendingRenewal[]) {
   try {
@@ -787,7 +797,9 @@ function RiverainDialog({
           <div>
             <p className={ui.label}>{plates && plates.length > 1 ? 'Véhicules résidents' : 'Véhicule résident'}</p>
             {plates === null ? (
-              <div className="h-12 animate-pulse rounded-xl bg-ink/[0.05]" />
+              <div className="grid h-12 place-items-center rounded-xl border border-ink/10">
+                <LoadingLine className="items-center" />
+              </div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {plates.map((plate) =>

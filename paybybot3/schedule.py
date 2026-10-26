@@ -72,6 +72,10 @@ def slot_on(day, rule):
     paris = in_paris(rule)
     if day.weekday() not in rule["days"] or (paris and free_day(day)):
         return None
+    # A rule chosen on the calendar: only between its first and last day (ISO dates, both included).
+    if (rule.get("date_from") and day < date.fromisoformat(rule["date_from"])) or (
+            rule.get("date_to") and day > date.fromisoformat(rule["date_to"])):
+        return None
     tz = zone_of(rule)
     begin = datetime.combine(day, _start_time(rule.get("start")), tz)
     if rule.get("unit") == "Hours":

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { api, type Subscription } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
+import { LoadingLine } from '@/components/Loading'
 
 const euros = (cents: number | null) => (cents == null ? '—' : (cents / 100).toFixed(2).replace('.', ',') + ' €')
 const day = (iso: string | null) =>
@@ -58,7 +59,9 @@ export function SubscriptionDialog({ onClose }: { onClose: () => void }) {
         {error ? (
           <p className="mx-6 mb-6 rounded-xl bg-destructive/8 px-4 py-3 text-sm text-destructive">{error}</p>
         ) : !sub ? (
-          <div className="mx-6 mb-6 h-48 animate-pulse rounded-xl bg-ink/[0.05]" />
+          <div className="mx-6 mb-6 grid h-48 place-items-center rounded-xl border border-ink/10">
+            <LoadingLine className="items-center" label="Chargement de votre abonnement…" />
+          </div>
         ) : (
           <div className="px-6 pb-6">
             <div className="mt-4 rounded-2xl border border-ink/10 p-5">

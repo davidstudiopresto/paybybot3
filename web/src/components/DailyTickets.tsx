@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
 import { PlansDialog } from '@/components/Pricing'
+import { isoDay, periodDays, periodText, RangeCalendar } from '@/components/RangeCalendar'
 import { clearPending, RenewalActions, savePending, type PendingRenewal } from '@/components/Riverain'
 import { arrondissement, PayByPhone, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { api, ApiError, unitLabel, type Autopilot, type Money, type Overview, type Rate, type Unit } from '@/lib/api'
@@ -68,14 +69,20 @@ function lengthText(duration: number, unit: Unit) {
 }
 
 /** The next ticket of a precise-days rule (Paris ≈ the browser's time): the next chosen day at the start time. */
-function nextTicket(days: number[], start: string, after?: Date | null) {
+function nextTicket(days: number[], start: string, after?: Date | null, period?: { from?: string | null; to?: string | null }) {
   const [h, m] = start.split(':').map(Number)
   // Renewing a running ticket: not before it ends (the next one follows on from it).
   const from = Math.max(Date.now(), after ? after.getTime() - 60_000 : 0)
   const d = new Date(from)
-  for (let i = 0; i < 15; i++) {
+  // Chosen on the calendar: only between the first and the last day (ISO days compare as text).
+  const first = period?.from ?? null
+  const last = period?.to ?? first
+  for (let i = 0; i < (first ? 400 : 15); i++) {
     const day = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i, h, m)
     const wd = (day.getDay() + 6) % 7
+    const iso = isoDay(day)
+    if (first && iso < first) continue
+    if (last && iso > last) return null
     if (days.includes(wd) && day.getTime() > from) return day
   }
   return null
@@ -103,8 +110,17 @@ const everyDay = (ap: Autopilot) => {
   return isParis(ap.location) ? [0, 1, 2, 3, 4, 5].every((x) => d.includes(x)) : d.length === 7
 }
 
+/** Chosen on the calendar: the rule's first and last day (ISO), else null. */
+const periodOf = (ap: Autopilot) => {
+  const p = ap as Autopilot & { dateFrom?: string | null; dateTo?: string | null }
+  return p.dateFrom ? { from: p.dateFrom, to: p.dateTo ?? p.dateFrom } : null
+}
+
 function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) {
-  const next = ap.enabled ? nextTicket(daysOf(ap), startOf(ap)) : null
+  const period = periodOf(ap)
+  const next = ap.enabled ? nextTicket(daysOf(ap), startOf(ap), null, period ?? undefined) : null
+  // A period whose last day is gone: nothing more will be taken.
+  const over = !!period && period.to < isoDay(new Date())
   return (
     <article className="rise overflow-hidden rounded-2xl border border-ink/10 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-4">
@@ -120,14 +136,18 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
         <div className="flex items-center justify-between">
           <span className="text-ink">
             Ticket de {lengthText(Number(ap.duration), ap.unit)}
-            {everyDay(ap) ? (isParis(ap.location) ? ', chaque jour sauf dimanche et jours fériés' : ', chaque jour') : ''}
+            {period
+              ? ` ${periodText(period.from, period.to)}`
+              : everyDay(ap)
+                ? isParis(ap.location) ? ', chaque jour sauf dimanche et jours fériés' : ', chaque jour'
+                : ''}
           </span>
           <span className={cn('relative h-6 w-11 rounded-full', ap.enabled ? TEAL : 'bg-ink/15')} aria-label={ap.enabled ? 'Actif' : 'Arrêté'}>
             <span className={cn('absolute top-1 size-4 rounded-full bg-white transition-all', ap.enabled ? 'right-1' : 'left-1')} />
           </span>
         </div>
         {/* The days, unless it is every day (then said in words above). */}
-        {!everyDay(ap) && (
+        {!period && !everyDay(ap) && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {DAYS.map((d, i) => (i === 6 && isParis(ap.location) && !daysOf(ap).includes(6) ? null :
             <span
@@ -160,6 +180,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
             </div>
           )}
         </dl>
+        {over && <p className="mt-3 text-sm text-ink/55">Période terminée : plus aucun ticket ne sera pris.</p>}
         {ap.lastError && <p className="mt-3 text-sm text-destructive">{ap.lastError}</p>}
       </div>
       <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
@@ -457,6 +478,15 @@ export function DailyWizard({
     : null
   const [start, setStart] = useState(chainStart ?? '09:00')
   const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4, 5])
+  // « Chaque semaine »: the days ticked above; « Calendrier »: one day, or a period from a first to a last day.
+  const [planMode, setPlanMode] = useState<'week' | 'calendar'>('week')
+  const [range, setRange] = useState<{ from: string | null; to: string | null }>({ from: null, to: null })
+  const calendar = planMode === 'calendar'
+  const period = calendar && range.from ? { from: range.from, to: range.to ?? range.from } : undefined
+  // On the calendar every day of the period counts (Sundays stay free in Paris, the server skips them).
+  const ruleDays = calendar ? [0, 1, 2, 3, 4, 5, 6] : days
+  // Tickets counted in the price: the days of the period (Sundays free in Paris), or the days ticked each week.
+  const count = calendar ? (period ? periodDays(period.from, period.to, isParis(zone)) : 0) : days.length
   const [cost, setCost] = useState<Money | null | undefined>(undefined)
   const cards = data.payments.filter((p) => p.kind === 'card' && !p.expired)
   const [payment, setPayment] = useState(cards[0]?.id ?? '')
@@ -639,8 +669,9 @@ export function DailyWizard({
     plate,
     paymentAccountId: payment,
     label: DAILY_LABEL,
-    days,
+    days: ruleDays,
     start,
+    ...(period ? { dateFrom: period.from, dateTo: period.to } : {}),
     ...(handi(effective!) ? { cmis: true } : {}),
   })
 
@@ -654,7 +685,7 @@ export function DailyWizard({
     try {
       await api.addAutopilot(rule() as Parameters<typeof api.addAutopilot>[0])
       toast.success(chainFrom ? 'Renouvellement activé.' : 'Ticket programmé.', {
-        description: `Prochain ticket ${when(nextTicket(days, start, chainFrom)!)}.`,
+        description: `Prochain ticket ${when(nextTicket(ruleDays, start, chainFrom, period)!)}.`,
       })
       onDone()
       onClose()
@@ -672,12 +703,13 @@ export function DailyWizard({
   return (
     <Dialog open onOpenChange={(o) => !o && !saving && !locked && onClose()}>
       <DialogContent className={ui.dialog} showCloseButton={!locked}>
-        <div className="px-6 pt-7">
+        <div className="px-6 pt-6">
           <p className="text-xs font-medium tracking-wide text-ink/45 uppercase">
             Étape {step} sur {steps.length} · {steps[step - 1]}
           </p>
           <DialogTitle className={cn(ui.dialogTitle, 'mt-1')}>{initialTicket ? 'Renouveler ce ticket' : 'Programmer un ticket'}</DialogTitle>
-          <DialogDescription className="mt-1 text-ink/60">
+          {/* The sentence under the title only on the first step: the others need the height. */}
+          <DialogDescription className={cn('mt-1 text-ink/60', step > 1 && 'sr-only')}>
             {initialTicket ? 'Repris automatiquement chaque jour, à l’heure voulue.' : 'Pris automatiquement les jours choisis, à l’heure voulue.'}
           </DialogDescription>
           <div className="mt-5 grid grid-cols-4 gap-1.5" aria-hidden>
@@ -687,7 +719,7 @@ export function DailyWizard({
           </div>
         </div>
 
-        <div className="space-y-6 p-6">
+        <div className="space-y-4 p-6 pt-4">
           {step === 1 && (
             <>
               <div>
@@ -840,9 +872,9 @@ export function DailyWizard({
                       {chainFrom && (
                         <span className="block">Le ticket en cours se termine {when(chainFrom)}.</span>
                       )}
-                      {chainFrom && nextTicket(days, start, chainFrom) && (
+                      {chainFrom && nextTicket(ruleDays, start, chainFrom, period) && (
                         <span className="mt-1 block font-medium text-[#3d7f84]">
-                          Nouveau ticket : {when(nextTicket(days, start, chainFrom)!)} → {endText(start, duration, unit)}
+                          Nouveau ticket : {when(nextTicket(ruleDays, start, chainFrom, period)!)} → {endText(start, duration, unit)}
                         </span>
                       )}
                     </p>
@@ -851,42 +883,78 @@ export function DailyWizard({
               )}
               {/* Renewing a running ticket: no days to pick (taken again every day); a new ticket: the days chosen. */}
               {chainFrom ? null : (
-              <div>
-                  <p className={ui.label}>Jours</p>
-                  {/* A week strip, same cards as the tickets above; in Paris Sunday is shown but free, so never picked */}
-                  <div className="grid grid-cols-7 gap-1.5">
-                    {(paris ? DAYS.slice(0, 6) : DAYS).map((d, i) => {
-                      const on = days.includes(i)
-                      return (
-                        <button
-                          key={d}
-                          type="button"
-                          aria-pressed={on}
-                          onClick={() => setDays((list) => (list.includes(i) ? list.filter((x) => x !== i) : [...list, i].sort()))}
-                          className={cn(
-                            'flex h-14 flex-col items-center justify-center gap-1 rounded-xl border text-sm transition',
-                            on ? 'border-[#4e9aa0] bg-[#4e9aa0]/[0.06] font-medium text-ink' : 'border-ink/15 text-ink/45 hover:border-ink/30',
-                          )}
-                        >
-                          {d}
-                          <span className={cn('grid size-4 place-items-center rounded-full', on ? 'bg-[#4e9aa0] text-white' : 'border border-ink/20')}>
-                            {on && <Check className="size-3" strokeWidth={3} />}
-                          </span>
-                        </button>
-                      )
-                    })}
-                    {paris && (
-                      <div className="flex h-14 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-ink/10 text-sm text-ink/30">
-                        Dim
-                        <span className="text-[0.65rem] leading-none">gratuit</span>
-                      </div>
-                    )}
-                  </div>
-                  {handi(effective) && paris && (
-                    <p className="mt-3 text-sm text-ink/70">Le ticket Handi d’une journée est pris automatiquement à 5 h, chaque jour choisi.</p>
-                  )}
-                  {paris && <p className="mt-2 text-xs text-ink/45">À Paris, le dimanche et les jours fériés sont gratuits : aucun ticket n’est pris.</p>}
+              <div className="space-y-2.5">
+                {/* Every week on the days ticked, or on the calendar: one day, or a period from a first to a last day. */}
+                <div className="grid grid-cols-2 gap-1 rounded-xl bg-ink/[0.05] p-1">
+                  {(
+                    [
+                      ['week', 'Récurrent'],
+                      ['calendar', 'Date spécifique'],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={planMode === id}
+                      onClick={() => setPlanMode(id)}
+                      className={cn(
+                        'rounded-lg py-2 text-sm font-semibold transition',
+                        planMode === id ? 'bg-white text-ink shadow-sm' : 'text-ink/50 hover:text-ink/70',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
+                {calendar ? (
+                  <div>
+                    <RangeCalendar from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+                    <p className="mt-2 text-sm text-ink/60">
+                      {period
+                        ? `Un ticket ${periodText(period.from, period.to)}${period.to !== period.from ? ', chaque jour' : ''}`.replace(/\.?$/, '.')
+                        : 'Touchez un jour, puis le dernier jour pour une période.'}
+                      {paris && <span className="text-ink/45"> Dimanches et jours fériés gratuits à Paris.</span>}
+                    </p>
+                  </div>
+                ) : (
+                <div>
+                    <p className={ui.label}>Jours</p>
+                    {/* A week strip, same cards as the tickets above; in Paris Sunday is shown but free, so never picked */}
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {(paris ? DAYS.slice(0, 6) : DAYS).map((d, i) => {
+                        const on = days.includes(i)
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => setDays((list) => (list.includes(i) ? list.filter((x) => x !== i) : [...list, i].sort()))}
+                            className={cn(
+                              'flex h-14 flex-col items-center justify-center gap-1 rounded-xl border text-sm transition',
+                              on ? 'border-[#4e9aa0] bg-[#4e9aa0]/[0.06] font-medium text-ink' : 'border-ink/15 text-ink/45 hover:border-ink/30',
+                            )}
+                          >
+                            {d}
+                            <span className={cn('grid size-4 place-items-center rounded-full', on ? 'bg-[#4e9aa0] text-white' : 'border border-ink/20')}>
+                              {on && <Check className="size-3" strokeWidth={3} />}
+                            </span>
+                          </button>
+                        )
+                      })}
+                      {paris && (
+                        <div className="flex h-14 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-ink/10 text-sm text-ink/30">
+                          Dim
+                          <span className="text-[0.65rem] leading-none">gratuit</span>
+                        </div>
+                      )}
+                    </div>
+                    {handi(effective) && paris && (
+                      <p className="mt-3 text-sm text-ink/70">Le ticket Handi d’une journée est pris automatiquement à 5 h, chaque jour choisi.</p>
+                    )}
+                    {paris && <p className="mt-2 text-xs text-ink/45">À Paris, le dimanche et les jours fériés sont gratuits : aucun ticket n’est pris.</p>}
+                  </div>
+                )}
+              </div>
               )}
               <div className="rounded-xl bg-ink/[0.03] px-4 py-3 text-sm">
                 {/* Renewing a running ticket (every day, no days counted): the price of a day. A new ticket: the total of
@@ -902,17 +970,20 @@ export function DailyWizard({
                 <>
                 <div className="flex items-baseline justify-between gap-4">
                   <span className="text-ink/55">
-                    Par semaine ({days.length} jour{days.length > 1 ? 's' : ''})
+                    {calendar
+                      ? `Au total : ${count} ticket${count > 1 ? 's' : ''}${cost ? ` à ${euros(cost)}` : ''}`
+                      : `Par semaine (${days.length} jour${days.length > 1 ? 's' : ''})`}
                   </span>
                   <span className="text-base font-semibold text-ink tabular-nums">
                     {cost === undefined ? (
                       <Loader2 className="inline size-4 animate-spin text-ink/40" />
                     ) : (
-                      euros({ amount: (cost?.amount ?? 0) * days.length, currency: cost?.currency ?? 'EUR' })
+                      euros({ amount: (cost?.amount ?? 0) * count, currency: cost?.currency ?? 'EUR' })
                     )}
                   </span>
                 </div>
-                <div className="mt-1 flex justify-between gap-4">
+                {/* On a specific date the ticket's price is already in the line above. */}
+                <div className={cn('mt-1 flex justify-between gap-4', calendar && 'hidden')}>
                   <span className="text-ink/45">Prix d’un ticket</span>
                   <span className="text-ink/60 tabular-nums">
                     {/* No price from PayByPhone (a free ticket, e.g. Handi): 0 €, not a dash. */}
@@ -921,7 +992,7 @@ export function DailyWizard({
                 </div>
                 </>
                 )}
-                <p className="mt-2 text-xs text-ink/45">{withPayByPhone('Payé à PayByPhone au tarif habituel, à chaque ticket.')}</p>
+                <p className={cn('mt-2 text-xs text-ink/45', calendar && 'hidden')}>{withPayByPhone('Payé à PayByPhone au tarif habituel, à chaque ticket.')}</p>
               </div>
             </>
           )}
@@ -933,7 +1004,14 @@ export function DailyWizard({
                   ['Véhicule', <Plate key="p" plate={plate} size="sm" />],
                   ['Zone', place ?? `Zone ${zone}`],
                   ['Ticket', optionText(effective)[0]],
-                  ['Jours', chainFrom ? (paris ? 'Chaque jour, sauf dimanche et jours fériés' : 'Chaque jour') : daysText(days)],
+                  [
+                    calendar && period && period.to === period.from ? 'Jour' : 'Jours',
+                    chainFrom
+                      ? paris ? 'Chaque jour, sauf dimanche et jours fériés' : 'Chaque jour'
+                      : period
+                        ? periodText(period.from, period.to).replace(/^le /, '').replace(/^du /, 'Du ')
+                        : daysText(days),
+                  ],
                   ['Horaire', handi(effective) && paris ? 'Toute la journée' : `${hourText(start)} → ${endText(start, duration, unit)}`],
                   [
                     'Prix',
@@ -975,10 +1053,10 @@ export function DailyWizard({
                   </div>
                 )
               )}
-              {nextTicket(days, start, chainFrom) && (
+              {nextTicket(ruleDays, start, chainFrom, period) && (
                 <p className="rounded-xl bg-[#e7f6ec] px-4 py-3 text-sm text-[#14703a]">
-                  {chainFrom ? 'Prochain ticket' : 'Premier ticket'} {when(nextTicket(days, start, chainFrom)!)}
-                  {chainFrom && Math.abs(nextTicket(days, start, chainFrom)!.getTime() - chainFrom.getTime()) < 120_000 ? ', dès la fin du ticket en cours' : ''}. Un e-mail à chaque ticket, et une alerte si {withPayByPhone('PayByPhone')} refuse.
+                  {chainFrom ? 'Prochain ticket' : 'Premier ticket'} {when(nextTicket(ruleDays, start, chainFrom, period)!)}
+                  {chainFrom && Math.abs(nextTicket(ruleDays, start, chainFrom, period)!.getTime() - chainFrom.getTime()) < 120_000 ? ', dès la fin du ticket en cours' : ''}. Un e-mail à chaque ticket, et une alerte si {withPayByPhone('PayByPhone')} refuse.
                 </p>
               )}
             </>
@@ -1001,7 +1079,7 @@ export function DailyWizard({
               </button>
             )}
             {step === 3 && (
-              <button onClick={() => setStep(4)} disabled={!effective || !days.length} className={cn(ui.primary, 'flex-[2]')}>
+              <button onClick={() => setStep(4)} disabled={!effective || (calendar ? !count : !days.length)} className={cn(ui.primary, 'flex-[2]')}>
                 Suivant
               </button>
             )}

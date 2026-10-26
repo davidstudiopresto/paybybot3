@@ -64,3 +64,13 @@ export function Loading({
     </div>
   )
 }
+
+/** The same sliding blue bar inside a page, wherever a part of it is being fetched, with what is happening. */
+export function LoadingLine({ label, className }: { label?: ReactNode; className?: string }) {
+  return (
+    <span role="status" aria-live="polite" className={cn('flex flex-col items-start gap-2.5', className)}>
+      <span className="loading-bar" aria-hidden />
+      {label && <span className="text-sm text-ink/50">{label}</span>}
+    </span>
+  )
+}

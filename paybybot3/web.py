@@ -561,6 +561,11 @@ class BankCheck(Unconfirmed):
 PAYBYPHONE_URL = "https://paybyphone.onelink.me/ZQkh/"
 RETRY_AFTER = timedelta(hours=1)  # a renewal that could not pay is tried again this long after
 
+# PayByPhone bills each SMS confirmation apart from the ticket; PayByBot cannot pay it, so a payment can fail.
+SMS_HINT = ("À vérifier aussi : dans l'application PayByPhone, « Notifications relatives au stationnement », la "
+            "« Confirmation par SMS » doit être désactivée. Chaque SMS y est facturé 0,50 € à part, et ces frais ne "
+            "peuvent pas être payés automatiquement.")
+
 UNCONFIRMED = ("PayByPhone n'a pas confirmé ce stationnement. Vérifiez dans l'application PayByPhone "
                "avant de réessayer, pour ne pas payer deux fois.")
 
@@ -855,8 +860,8 @@ def notify(details, event, **info):
                      "Réglez-le dans l'application PayByPhone : nous réessayons automatiquement dans une heure.")
         send_email(to, "Action requise · renouvellement %s" % plate_text(details.get("plate")),
                    "Le renouvellement a besoin de vous",
-                   ["Le renouvellement automatique pour %s n'a pas pu payer :" % car, message, next_step],
-                   ("Ouvrir PayByPhone", PAYBYPHONE_URL))
+                   ["Le renouvellement automatique pour %s n'a pas pu payer :" % car, message, next_step,
+                    SMS_HINT], ("Ouvrir PayByPhone", PAYBYPHONE_URL))
 
 
 DAY_NAMES = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
@@ -869,7 +874,10 @@ def rule_of(details):
         return None
     return {"days": sorted({int(d) for d in days}), "start": details.get("start") or schedule.DEFAULT_START,
             "unit": details.get("unit"), "duration": details.get("duration"), "location": details.get("location"),
-            "tz": details.get("tz")}
+            "tz": details.get("tz"),
+            # Chosen on the calendar: a single day or a period (stored snake_case, sent camelCase by the demo).
+            "date_from": details.get("date_from") or details.get("dateFrom") or None,
+            "date_to": details.get("date_to") or details.get("dateTo") or None}
 
 
 def duration_text(duration, unit):
@@ -881,7 +889,10 @@ def duration_text(duration, unit):
 def rule_text(rule):
     """'chaque samedi', 'du mardi au vendredi'... with the time the ticket is taken."""
     days = rule["days"]
-    if len(days) > 2 and days == list(range(days[0], days[-1] + 1)):
+    first, last = rule.get("date_from"), rule.get("date_to")
+    if first and last:  # chosen on the calendar: the day, or the period
+        when = ("le %s" % day_text(first)) if first == last else "du %s au %s" % (day_text(first), day_text(last))
+    elif len(days) > 2 and days == list(range(days[0], days[-1] + 1)):
         when = "du %s au %s" % (DAY_NAMES[days[0]], DAY_NAMES[days[-1]])
     else:
         names = [DAY_NAMES[d] for d in days]
@@ -891,6 +902,16 @@ def rule_text(rule):
     if rule.get("unit") == "Days":
         return "%s, ticket d'une journée pris à %s" % (when, start)
     return "%s, ticket de %s pris à %s" % (when, duration_text(rule.get("duration"), rule.get("unit")), start)
+
+
+MONTH_NAMES = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
+               "novembre", "décembre"]
+
+
+def day_text(iso):
+    """'2026-10-26' -> 'lundi 26 octobre'."""
+    d = date.fromisoformat(iso)
+    return "%s %d %s" % (DAY_NAMES[d.weekday()], d.day, MONTH_NAMES[d.month - 1])
 
 
 def same_plate(a, b):
@@ -1236,7 +1257,7 @@ def bot_from_refresh(refresh, owner=None):
 
 
 RENEWAL_FIELDS = ("label", "plate", "location", "rate", "duration", "unit", "payment_account_id", "email", "days",
-                  "start")
+                  "start", "tz", "cmis_attested_at", "date_from", "date_to")
 
 
 def encrypt_details(details):
@@ -1378,6 +1399,7 @@ def stored_to_autopilot(row):
         "nextCheck": row.get("next_check"),
         "email": row.get("email") or "", "pausedFrom": row.get("paused_from"), "pausedUntil": row.get("paused_until"),
         "days": row.get("days") or None, "start": row.get("start") or None,
+        "dateFrom": row.get("date_from") or None, "dateTo": row.get("date_to") or None,
     }
 
 
@@ -1714,6 +1736,9 @@ class Autopilot(Parking):
     days: list[Annotated[int, Field(ge=0, le=6)]] | None = Field(default=None, min_length=1, max_length=7)
     tz: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z_]+(/[A-Za-z0-9_+\-]+){0,2}$")
     start: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    # Chosen on the calendar: the first and last day (included) the tickets are taken; one day when both are equal.
+    dateFrom: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    dateTo: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     # « Je suis titulaire de la carte CMI-S »: ticked for the Handi ticket, kept with the renewal as proof.
     cmis: bool = False
 
@@ -2479,6 +2504,8 @@ def account_pricing(s):
         account = save_account(s, {"monthlies": monthlies, "price_zone": zone})
         reprice(account, owner_id(s.username) if HOSTED and not s.demo else None)
     return {"zone": zone, "monthly": plan_total(monthlies), "yearly": plan_total(monthlies, "yearly"),
+            # False when PayByPhone could not be asked for the zones: no zone then does not mean « not resident ».
+            "zonesKnown": zones_known,
             "billed": [v["plate"] for v in billed],
             "vehicles": [{**v, "yearly": plan_total([v["monthly"]], "yearly"), "renewed": plate_key(v["plate"]) in renewed}
                          for v in vehicles]}
@@ -2641,6 +2668,13 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
         except Exception as e:
             log.warning("account e-mail unreadable: %s", e)
     days = sorted(set(body.days)) if body.days else None
+    if body.dateFrom or body.dateTo:  # chosen on the calendar: a day or a period, never in the past
+        first, last = body.dateFrom or body.dateTo, body.dateTo or body.dateFrom
+        today = datetime.now(PARIS).date()
+        if not days or first > last or date.fromisoformat(last) < today or \
+                date.fromisoformat(last) - date.fromisoformat(first) > timedelta(days=366):
+            raise HTTPException(400, "Choisissez un jour ou une période à venir, d'un an au plus.")
+        body.dateFrom, body.dateTo = first, last
     start = (body.start or schedule.DEFAULT_START) if days else None
     # Only the account's own vehicles (they are what the subscription bills).
     own = {plate_key(v.get("licensePlate") or "") for v in guarded(lambda: s.call("get_vehicles")) or []
@@ -2674,6 +2708,7 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                                          "payment_account_id": body.paymentAccountId,
                                          "email": body.email.strip(), "days": days, "start": start,
                                          **({"tz": body.tz} if days and body.tz else {}),
+                                         **({"date_from": body.dateFrom, "date_to": body.dateTo} if days and body.dateFrom else {}),
                                          **({"cmis_attested_at": utc_iso(datetime.now(timezone.utc))} if body.cmis else {})})})
             # Paid below, in this request: the scheduler keeps off the new row meanwhile (never two payments at once).
             store("renewal_update", p_id=row["id"],

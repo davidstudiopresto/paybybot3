@@ -7,6 +7,7 @@ import { arrondissement, PayByBot, PayByPhone, Plate, ZonePlate } from '@/compon
 import { api, clock, type Account, type Overview, type PricedVehicle } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
+import { LoadingLine } from '@/components/Loading'
 
 /** "Mon compte" in the top bar: what PayByBot reads from the PayByPhone account, the home zone and e-mail. */
 export function AccountButton({
@@ -100,7 +101,7 @@ function AccountDialog({
             </dt>
             <dd className="flex flex-col items-end gap-2">
               {vehicles === undefined ? (
-                <span className="inline-block h-5 w-32 animate-pulse rounded bg-ink/10" />
+                <LoadingLine className="pt-1.5" />
               ) : vehicles.length ? (
                 vehicles.map((v) => (
                   <span key={v.plate} className="flex flex-wrap items-center justify-end gap-2">

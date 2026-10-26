@@ -321,14 +321,25 @@ export function Dashboard({
   const [pricedResidents, setResidentPlates] = useState<Set<string> | null>(null)
   useEffect(() => {
     api.pricing().then(
-      (p) => setResidentPlates(new Set((p.vehicles ?? []).filter((v) => v.zone).map((v) => plateKey(v.plate)))),
-      () => setResidentPlates(new Set()),
+      // Zones not looked up (PayByPhone busy) or no answer: unknown, never taken for « no resident car ».
+      (p) =>
+        setResidentPlates(
+          (p as { zonesKnown?: boolean }).zonesKnown === false
+            ? null
+            : new Set((p.vehicles ?? []).filter((v) => v.zone).map((v) => plateKey(v.plate))),
+        ),
+      () => setResidentPlates(null),
     )
   }, [me.hosted, me.demo, data?.vehicles.length])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
   // The cars PayByPhone gives the resident rate (checked by the server, zone by zone). A ticket's length says
   // nothing: a non-resident ticket can last several days.
-  const residentPlates = pricedResidents
+  // A car with a resident ticket running is resident too, whatever the pricing says (or when it is unknown).
+  const residentTickets = (data?.sessions ?? [])
+    .filter((s) => s.resident === true && new Date(s.expire).getTime() > Date.now())
+    .map((s) => plateKey(s.plate))
+  const residentPlates =
+    pricedResidents || residentTickets.length ? new Set([...(pricedResidents ?? []), ...residentTickets]) : null
   const renewing = !!data?.autopilots.some((ap) => ap.label === WEEKLY_LABEL)
   // Right after the welcome page, nothing renewed yet: the renewal of the car with a ticket (else the first car)
   // opens by itself, then the offer comes when it is activated.

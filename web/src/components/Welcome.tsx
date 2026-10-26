@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowRight, Car, Check, CreditCard, Minus, Phone, Ticket, UserRound } from 'lucide-react'
+import { LoadingLine } from '@/components/Loading'
 import { RemotePanel } from '@/components/RemoteScene'
 import { CardGate } from '@/components/Riverain'
 import { arrondissement, PayByBot, PayByPhone, Plate, withPayByPhone, Wordmark, ZonePlate } from '@/components/signs'
@@ -21,6 +22,7 @@ function Row({
   children,
   delay,
   found = true,
+  loading = false,
   highlight = false,
 }: {
   icon: ReactNode
@@ -28,6 +30,8 @@ function Row({
   children: ReactNode
   delay: number
   found?: boolean
+  /** Still looking: a small spinner instead of the check or the dash. */
+  loading?: boolean
   /** The resident vehicle, what the whole service is about: framed in blue. */
   highlight?: boolean
 }) {
@@ -41,7 +45,9 @@ function Row({
         <p className="text-sm text-ink/55">{label}</p>
         <div className="mt-1 text-ink">{children}</div>
       </div>
-      {found ? (
+      {loading ? (
+        <span className="mt-2.5 size-6 shrink-0 rounded-full bg-ink/[0.05]" aria-hidden />
+      ) : found ? (
         <span className="mt-2.5 grid size-6 shrink-0 place-items-center rounded-full bg-[#e7f6ec] text-[#1a9a4a]">
           <Check className="size-3.5" strokeWidth={3} />
         </span>
@@ -73,9 +79,14 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
   // Without a resident rate, the pricing lists every vehicle with no zone: they take non-resident tickets.
   const residents = vehicles?.some((v) => v.zone) ?? false
   const n = vehicles?.length ?? 0
-  const vehiclesLabel = residents
-    ? n > 1 ? `${n} véhicules résidents` : 'Véhicule résident'
-    : n > 1 ? `${n} véhicules` : 'Véhicule'
+  // Only the vehicles with a resident rate are called « résident »: 3 vehicles, 1 of them resident, says so.
+  const r = vehicles?.filter((v) => v.zone).length ?? 0
+  const vehiclesLabel =
+    r && r === n
+      ? n > 1 ? `${n} véhicules résidents` : 'Véhicule résident'
+      : r
+        ? `${n} véhicules, dont ${r} résident${r > 1 ? 's' : ''}`
+        : n > 1 ? `${n} véhicules` : 'Véhicule'
 
   // PayByBot pays with a card saved on PayByPhone: without one it cannot be used.
   const cards = data.payments.filter((p) => p.kind === 'card')
@@ -112,10 +123,12 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               label={vehiclesLabel}
               delay={next()}
               found={!!vehicles?.length}
+              loading={vehicles === undefined}
               highlight
             >
               {vehicles === undefined ? (
-                <span className="inline-block h-5 w-40 animate-pulse rounded bg-ink/10" />
+                // Looking for the vehicles on PayByPhone (a few seconds): the app's loading bar, and what is happening.
+                <LoadingLine className="pt-1.5" label={<>Recherche de vos véhicules sur <PayByPhone />…</>} />
               ) : vehicles.length ? (
                 <span className="flex flex-col gap-1.5 pt-0.5">
                   {vehicles.map((v) => {
@@ -170,6 +183,21 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
               )}
             </Row>
           </ul>
+
+          {/* PayByPhone bills each SMS confirmation (0,50 €) apart from the ticket: PayByBot cannot pay it, so the
+              automatic ticket can fail while it is on. */}
+          <div
+            className="rise mt-5 rounded-2xl border border-amber/50 bg-amber/10 px-4 py-3.5 text-sm leading-relaxed text-ink"
+            style={{ animationDelay: `${next()}ms` }}
+          >
+            <p className="font-semibold">Un réglage à faire dans <PayByPhone /></p>
+            <p className="mt-1 text-ink/70">
+              Dans l’application <PayByPhone />, ouvrez « Notifications relatives au stationnement » et désactivez
+              «&nbsp;Confirmation par SMS&nbsp;». Chaque SMS y est facturé 0,50&nbsp;€ à part, et <PayByBot /> ne
+              peut pas payer ces frais : sans ce réglage, vos tickets risquent de ne pas être pris. Le rappel SMS avant
+              la fin peut rester activé.
+            </p>
+          </div>
 
           <p className="rise mt-4 text-sm leading-relaxed text-ink/55" style={{ animationDelay: `${next()}ms` }}>
             Rien n’a été modifié dans votre compte <PayByPhone />, et votre mot de passe n’est pas enregistré. Un véhicule

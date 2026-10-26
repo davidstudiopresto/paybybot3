@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { Dialog, DialogClose, DialogDescription, DialogPortal, DialogTitle } from '@/components/ui/dialog'
 import { Horodateur } from '@/components/Horodateur'
+import { LoadingLine } from '@/components/Loading'
 import { PayByPhone, Plate, Wordmark } from '@/components/signs'
 import { HostedFooter } from '@/components/Footer'
 import { PublicTopBar } from '@/components/TopBar'
@@ -393,7 +394,12 @@ export function PlansDialog({
                     Votre prix n’a pas pu être calculé avec <PayByPhone /> pour le moment. Réessayez dans quelques minutes.
                   </p>
                 )}
-                {!pricing && <div className="h-40 animate-pulse rounded-2xl bg-ink/[0.05]" />}
+                {/* The account's price is being worked out with PayByPhone: the app's loading bar. */}
+                {!pricing && (
+                  <div className="grid h-40 place-items-center rounded-2xl border border-ink/10">
+                    <LoadingLine className="items-center" label="Calcul de votre prix…" />
+                  </div>
+                )}
                 {pricing?.monthly != null && pricing.yearly != null &&
                   PLANS.map((p) => ({ ...p, ...planText(p.id, pricing) })).map((p) => (
                     <button

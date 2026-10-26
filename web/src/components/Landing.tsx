@@ -469,6 +469,15 @@ const QUESTIONS: Question[] = [
     <>Un e-mail à chaque paiement, et le ticket apparaît dans votre application <PayByPhone />.</>,
   ],
   [
+    'Faut-il changer un réglage dans PayByPhone ?',
+    <>
+      Oui, un seul : dans l’application <PayByPhone />, ouvrez « Notifications relatives au stationnement » et
+      désactivez « Confirmation par SMS ». Chaque SMS y est facturé 0,50 € à part, et ces frais ne peuvent pas être
+      payés automatiquement : sans ce réglage, vos tickets risquent de ne pas être pris. Le rappel SMS avant la fin peut
+      rester activé.
+    </>,
+  ],
+  [
     'Que se passe-t-il si le renouvellement échoue ?',
     <>
       Vous êtes prévenu par e-mail avec la raison (carte refusée, droit au tarif expiré…), et vous relancez en un clic

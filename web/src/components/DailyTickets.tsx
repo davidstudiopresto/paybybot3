@@ -319,7 +319,7 @@ export function DailyTickets({
                   Véhicule : <span className="text-ink">{vehicleType(v.type)}</span>
                 </p>
               )}
-              <button onClick={() => program(v.plate)} className={cn(ui.primary, 'mt-4 h-12 text-base')}>
+              <button onClick={() => program(v.plate)} className={cn(ui.primary, 'mt-4 h-12 rounded-[10px] text-base')}>
                 Programmer un ticket
               </button>
             </article>
@@ -343,7 +343,7 @@ export function DailyTickets({
           <button
             onClick={() => setOpen(true)}
             className={cn(
-              'mt-4 h-12',
+              'mt-4 h-12 rounded-[10px]',
               !data.autopilots.some((ap) => ap.enabled) &&
                 !data.vehicles.some((v) => v.zone)
                 ? ui.primary

@@ -237,7 +237,7 @@ function DeleteConfirm({ data, onCancel, onDeleted }: { data: Overview; onCancel
             <button
               onClick={erase}
               disabled={busy}
-              className="flex h-14 w-full items-center justify-center rounded-xl bg-destructive text-lg font-bold text-white transition hover:bg-destructive/90 disabled:opacity-60"
+              className="flex h-14 w-full items-center justify-center rounded-xl border border-destructive/30 text-lg font-semibold text-destructive transition hover:bg-destructive/5 disabled:opacity-60"
             >
               {busy ? <Loader2 className="size-5 animate-spin" /> : 'Supprimer définitivement'}
             </button>

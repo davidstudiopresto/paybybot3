@@ -74,6 +74,8 @@ class DemoBot:
     def get_vehicles(self):
         return [
             {"vehicleId": "v1", "licensePlate": "AB123CD", "country": "FR", "type": "Car", "archived": False},
+            # A second car without the resident rate: the demo shows a car with no ticket to programme.
+            {"vehicleId": "v2", "licensePlate": "GH456JK", "country": "FR", "type": "Car", "archived": False},
         ]
 
     def get_payment_accounts(self):
@@ -114,7 +116,7 @@ class DemoBot:
     def get_rate_options(self, locationId, licensePlate):
         if not str(locationId).isdigit():
             return []
-        return [  # listed first, like PayByPhone does in Paris: it must not be picked for a car
+        rates = [  # listed first, like PayByPhone does in Paris: it must not be picked for a car
             {"name": "2 roues - Résident", "type": "Resident", "ratePolicyId": "103", "maxStayStatus": None,
              "acceptedTimeUnits": ["Days"], "parkingNotAllowedReason": None},
             {"name": "Résident", "type": "Resident", "ratePolicyId": "101", "maxStayStatus": None,
@@ -126,6 +128,9 @@ class DemoBot:
             {"name": "Handi - toutes zones", "type": "Disabled", "ratePolicyId": "105", "maxStayStatus": None,
              "acceptedTimeUnits": ["Days"], "parkingNotAllowedReason": None},
         ]
+        if re.sub(r"[^0-9A-Z]", "", str(licensePlate).upper()) == "GH456JK":  # the demo's car without a resident rate
+            rates = [r for r in rates if r["type"] != "Resident"]
+        return rates
 
     def _price(self, ratePolicyId, quantity, unit):
         quantity = float(quantity)

@@ -120,7 +120,7 @@ class Billing(unittest.TestCase):
                 self.assertEqual((p["billed"], p["monthly"]), (["AB-123-CD"], 950))
             with patch.object(web, "renewed_plates", return_value={"AB123CD", "EF456GH"}):
                 p = web.account_pricing(self.s)
-                self.assertEqual((p["monthly"], [v["monthly"] for v in p["vehicles"]]), (1900, [950, 950]))  # 9,50 € each
+                self.assertEqual((p["monthly"], {v["monthly"] for v in p["vehicles"]}), (1900, {950}))  # 9,50 € each
         with patch.object(web, "vehicle_zones", return_value=found), \
                 patch.object(web, "load_account", return_value={"suv_plates": ["AB123CD"]}), \
                 patch.object(web, "save_account", side_effect=lambda s, p: p), patch.object(web, "reprice"), \

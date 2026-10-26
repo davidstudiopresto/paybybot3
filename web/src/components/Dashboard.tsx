@@ -231,8 +231,9 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogo
         const week = weeks[key(v.plate)]
         const place = v.zone ? arrondissement(v.zone) : null
         return (
-          <div key={v.plate} className="rounded-2xl border border-border p-5">
+          <div key={v.plate} className="flex flex-col items-center rounded-2xl border border-border p-5 text-center">
             <Plate plate={v.plate} />
+            <span className="mt-3 rounded-full bg-[#4e9aa0]/12 px-2.5 py-1 text-xs font-medium text-[#3d7f84]">Résident</span>
             <dl className="mt-4 space-y-1 text-[0.95rem] text-ink/60">
               {vehicleTypeLabel(v.type) && (
                 <div>
@@ -254,7 +255,7 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogo
               )}
             </dl>
             {/* « Renouvellement auto » switch, off: turning it on opens the renewal setup (same as the ticket card). */}
-            <div className="mt-4 border-t border-ink/[0.06] pt-4">
+            <div className="mt-4 w-full border-t border-ink/[0.06] pt-4 text-left">
               <ActivateRenewal
                 data={data}
                 onChanged={onChanged}
@@ -444,6 +445,7 @@ export function Dashboard({
             // Just past the welcome page (or no offer yet) without a resident car to renew: the wizard opens by itself.
             autoOpen={offerDaily || (autoRenew && !renewing && !!residentPlates && !residentPlate)}
             onLogout={onLogout}
+            residentPlates={residentPlates}
           />
         )}
 

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { NoPayment } from '@/components/NoPayment'
 import { PlansDialog } from '@/components/Pricing'
 import { clearPending, RenewalActions, savePending, type PendingRenewal } from '@/components/Riverain'
-import { arrondissement, PayByPhone, Plate, withPayByPhone } from '@/components/signs'
+import { arrondissement, PayByPhone, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { api, ApiError, unitLabel, type Autopilot, type Money, type Overview, type Rate, type Unit } from '@/lib/api'
 import { ui } from '@/lib/styles'
 import { cn } from '@/lib/utils'
@@ -177,9 +177,12 @@ export function DailyTickets({
   locked = false,
   autoOpen = false,
   onLogout,
+  residentPlates,
 }: {
   data: Overview
   onChanged: () => void
+  /** The cars with the resident rate (checked with PayByPhone): renewed above, not offered a ticket here. */
+  residentPlates?: Set<string> | null
   /** Online, no offer chosen yet: activating leads to the offer screen first. */
   needsOffer?: boolean
   /** Online, no offer and no resident vehicle: the wizard opens by itself and stays open (then the offer). */
@@ -189,10 +192,54 @@ export function DailyTickets({
   onLogout?: () => void
 }) {
   const [open, setOpen] = useState(false)
+  const [forPlate, setForPlate] = useState<string | undefined>()
   useEffect(() => {
     if (locked || autoOpen) setOpen(true)
   }, [locked, autoOpen])
   const daily = data.autopilots.filter(isDaily)
+  const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
+  // The cars with nothing on them: no ticket running, no ticket programmed, not a resident car (renewed above).
+  const busy = new Set([
+    ...data.autopilots.filter((ap) => ap.enabled).map((ap) => key(ap.plate)),
+    ...data.sessions.filter((s) => new Date(s.expire).getTime() > Date.now()).map((s) => key(s.plate)),
+  ])
+  const isResident = (v: { plate: string; zone?: string | null }) => (residentPlates ? residentPlates.has(key(v.plate)) : !!v.zone)
+  const idle = data.vehicles.filter((v) => !isResident(v) && !busy.has(key(v.plate)))
+  const program = (plate?: string) => (setForPlate(plate), setOpen(true))
+  if (idle.length)
+    return (
+      <section id="tickets-programmes" className="rise mt-6 scroll-mt-20 space-y-3">
+        {/* One card per car with nothing on it: its plate, and the one thing to do for it. */}
+        {idle.map((v) => (
+          <article key={v.plate} className="flex flex-col items-center rounded-2xl border border-border bg-white p-5 text-center">
+            <Plate plate={v.plate} />
+            <span className="mt-3 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink/55">Aucun ticket</span>
+            <dl className="mt-4 space-y-1 text-[0.95rem] text-ink/60">
+              {vehicleType(v.type) && (
+                <div>
+                  <dt className="inline">Véhicule : </dt>
+                  <dd className="inline text-ink">{vehicleType(v.type)}</dd>
+                </div>
+              )}
+            </dl>
+            <p className="mt-1 text-[0.95rem] leading-relaxed text-ink/60">
+              {withPayByPhone('PayByBot prend ses tickets PayByPhone pour vous, les jours choisis et à l’heure voulue.')}
+            </p>
+            <div className="mt-4 w-full border-t border-ink/[0.06] pt-4">
+              <button onClick={() => program(v.plate)} className={ui.primary}>
+                <Plus className="size-5" /> Programmer un ticket
+              </button>
+            </div>
+          </article>
+        ))}
+        {daily.map((ap) => (
+          <DailyCard key={ap.id} ap={ap} onChanged={onChanged} />
+        ))}
+        {open && (
+          <DailyWizard data={data} onClose={() => setOpen(false)} onDone={onChanged} needsOffer={needsOffer} locked={locked} onLogout={onLogout} initialPlate={forPlate} />
+        )}
+      </section>
+    )
   return (
     <section id="tickets-programmes" className="rise mt-10 scroll-mt-20">
       {/* No ticket programmed yet: a card that says what it is. Its button is blue when it is the one thing to do

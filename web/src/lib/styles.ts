@@ -14,6 +14,9 @@ export const ui = {
   /** Top bar buttons: a grey pill and a blue one (blue outline, a light blue fill on hover). */
   pillGray:
     'inline-flex h-9 items-center rounded-[10px] bg-ink/[0.06] px-3 text-sm sm:h-10 sm:px-4 sm:text-[0.95rem] font-semibold whitespace-nowrap text-ink transition hover:bg-ink/[0.1]',
+  /** A top bar action as plain text: a light highlight on hover and while pressed. */
+  navText:
+    'inline-flex h-9 items-center rounded-[10px] px-3 text-sm font-medium whitespace-nowrap text-ink/75 transition hover:bg-ink/[0.04] hover:text-ink active:bg-ink/[0.08] disabled:opacity-50 sm:h-10 sm:text-[0.95rem]',
   pillBlue:
     'inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-eu bg-transparent px-3 text-sm font-semibold whitespace-nowrap text-eu sm:h-10 sm:px-4 sm:text-[0.95rem] transition hover:bg-eu/[0.06]',
   /** A secondary action, outlined. */

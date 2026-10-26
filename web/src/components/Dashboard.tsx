@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ChevronRight, LogOut } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { arrondissement, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
 import { DailyTickets, isDaily, ruleState, when as whenAt } from '@/components/DailyTickets'
 import { AccountButton } from '@/components/Account'
 import { PlansDialog, TrialBanner } from '@/components/Pricing'
-import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { HostedFooter } from '@/components/Footer'
 import { CheckoutDone } from '@/components/CheckoutDone'
@@ -421,8 +420,8 @@ export function Dashboard({
         {/* Inviting a friend: always offered to a signed-in account (word of mouth is the only way in). */}
         {!me.demo && <InviteButton disabled={!data} />}
         <AccountButton data={data} onDeleted={onDeleted ?? onLogout} demo={me.demo} />
-        <button onClick={onLogout} aria-label="Déconnexion" title="Déconnexion" className={cn(ui.pillGray, 'gap-2')}>
-          <LogOut className="size-4" /> <span className="hidden sm:inline">Déconnexion</span>
+        <button onClick={onLogout} className={ui.navText}>
+          Déconnexion
         </button>
       </TopBar>
 

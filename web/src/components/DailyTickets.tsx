@@ -286,7 +286,12 @@ export function DailyTickets({
   useEffect(() => {
     if (locked || autoOpen) setOpen(true)
   }, [locked, autoOpen])
-  const daily = data.autopilots.filter(isDaily)
+  // A one-off ticket (a single day) that has ended is no longer shown.
+  const daily = data.autopilots.filter((ap) => {
+    if (!isDaily(ap)) return false
+    const { period, finished } = ruleState(ap)
+    return !(finished && period && period.from === period.to)
+  })
   const key = (p: string) => p.replace(/[^0-9a-z]/gi, '').toUpperCase()
   // The cars with nothing on them: no ticket running, no ticket programmed, not a resident car (renewed above).
   const busy = new Set([

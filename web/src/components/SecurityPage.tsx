@@ -6,7 +6,7 @@ const PRACTICE = [
   [Lock, 'Chiffrement', 'AES-128 avec signature HMAC-SHA256, une clé distincte par usage. HTTPS imposé partout (HSTS).'],
   [Building2, 'Hébergement en UE', 'Application et base de données hébergées à Paris, dans l’Union européenne.'],
   [KeyRound, 'Zéro mot de passe stocké', 'Seul un jeton de connexion chiffré est utilisé, effacé au bout de 24 h au plus.'],
-  [ShieldCheck, 'Accès verrouillé', 'Base de données fermée, tentatives de connexion limitées, requêtes d’autres sites refusées.'],
+  [ShieldCheck, 'Accès verrouillé', 'Base de données fermée, tentatives de connexion limitées, requêtes d’autres sites refusées, vérification anti-robots à l’inscription et à la connexion, pare-feu qui bloque les appels en rafale.'],
 ] as const
 
 const FRAMEWORK: { title: string; icon: typeof Lock; rows: [string, ReactNode][] }[] = [
@@ -36,6 +36,7 @@ const SUBPROCESSORS = [
   ['Vercel', 'Hébergement de l’application', 'Paris (UE)', 'ISO 27001, SOC 2'],
   ['Supabase', 'Base de données des renouvellements', 'Paris (UE)', 'SOC 2'],
   ['Resend', 'E-mails de confirmation', 'Irlande (UE)', 'SOC 2'],
+  ['Stripe', 'Paiement de l’abonnement', 'Irlande (UE)', 'PCI DSS niveau 1, SOC 2'],
 ]
 
 /** The security page, like the other legal pages: a way back, the title, the date, then small text in one column. */

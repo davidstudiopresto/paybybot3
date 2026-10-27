@@ -1,7 +1,8 @@
+import { Loading } from '@/components/Loading'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ChevronRight } from 'lucide-react'
-import { arrondissement, Plate, vehicleType, withPayByPhone } from '@/components/signs'
+import { arrondissement, PayByPhone, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
 import { DailyTickets, isDaily, ruleState, when as whenAt } from '@/components/DailyTickets'
@@ -51,6 +52,7 @@ function Ticket({
   locked = false,
   onLogout,
   daily = false,
+  pending = false,
 }: {
   session: Session
   now: number
@@ -63,6 +65,8 @@ function Ticket({
   onLogout?: () => void
   /** A non-resident ticket: no weekly renewal switch. */
   daily?: boolean
+  /** Not known yet whether the car is resident (PayByPhone still answering): the switch's line is kept, greyed. */
+  pending?: boolean
 }) {
   const renewal = renewalOf(data, session)
   // The weekly renewal is for resident tickets only: a non-resident ticket (visitor, Handi…) shows no switch, unless
@@ -93,6 +97,13 @@ function Ticket({
 
       {/* « Renouvellement auto » is for resident tickets only: a non-resident ticket card has no switch (tickets on
           chosen days or dates are programmed below, with « Programmer un ticket »). */}
+      {/* Still looking whether the car is resident: the switch's line holds its place (the card does not grow later). */}
+      {!renewable && pending && (
+        <div className="flex items-center justify-between gap-4 border-t border-ink/[0.06] px-5 py-4" aria-hidden>
+          <span className="text-[1.05rem] text-ink/40">Renouvellement auto</span>
+          <span className="h-7 w-12 shrink-0 rounded-full bg-ink/10" />
+        </div>
+      )}
       {renewable && (
       <div className="border-t border-ink/[0.06] px-5 py-4">
         <RenewalSwitch
@@ -290,6 +301,8 @@ export function Dashboard({
   // Kept for this tab like the account data: on a reload the trial bar and the switches are there at once, instead
   // of pushing the page down a moment later.
   const [account, setAccountState] = useState<Account | null>(() => kept<Account>(ACCOUNT_KEY, me.username))
+  // The account asked once (answer or not): the page shows only then, so the trial bar never pushes it down.
+  const [accountAsked, setAccountAsked] = useState(() => !!account)
   const setAccount = (a: Account) => {
     setAccountState(a)
     keep(ACCOUNT_KEY, me.username, a)
@@ -321,7 +334,7 @@ export function Dashboard({
           (e) => toast.error((e as Error).message),
         )
       : Promise.resolve()
-    confirm.then(() => api.account().then(setAccount, () => {}))
+    confirm.then(() => api.account().then(setAccount, () => {}).finally(() => setAccountAsked(true)))
   }, [])
   // The vehicles with the resident rate on PayByPhone (a zone in the pricing); null while looking.
   const [pricedResidents, setPricedResidents] = useState<Set<string> | null>(() => {
@@ -398,6 +411,8 @@ export function Dashboard({
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [onRefresh])
+
+  if (!accountAsked) return <Loading label={<>Chargement de votre compte <PayByPhone />…</>} />
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -504,6 +519,7 @@ export function Dashboard({
                 // A resident ticket only when PayByPhone says so, or when the car has the resident rate (checked by
                 // the server with PayByPhone). Anything else is a non-resident ticket, whatever its length.
                 daily={!(s.resident === true || !!residentPlates?.has(plateKey(s.plate)))}
+                pending={pricedResidents === null && s.resident !== false}
               />
             ))}
           </div>

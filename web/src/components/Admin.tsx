@@ -42,8 +42,9 @@ function ServicePanel() {
       setBusy(null)
     }
   }
-  if (!state && !error) return null
   const on = !!state?.interrupted_at
+  // Only while PayByBot is interrupted: nothing to see or do otherwise (the detection is automatic).
+  if (!on && !error) return null
   const n = state?.recipients ?? 0
   return (
     <section className={`mt-8 rounded-2xl border p-5 ${on ? 'border-[#741b11]/30 bg-[#741b11]/[0.04]' : 'border-ink/10 bg-white'}`}>
@@ -408,16 +409,6 @@ export function AdminPage(_: { signedIn?: boolean }) {
     )
   }
 
-  const tiles: [string, number | undefined][] = [
-    ['Inscrits', stats?.accounts],
-    ['Inscrits, 7 jours', stats?.accounts_7d],
-    ['Inscrits, 30 jours', stats?.accounts_30d],
-    ['Renouvellements actifs', stats?.renewals_active],
-    ['En pause', stats?.renewals_paused],
-    ['En erreur', stats?.renewals_error],
-    ['Payés, 7 jours', stats?.paid_7d],
-    ['Renouvellements au total', stats?.renewals],
-  ]
 
   return (
     <div className="min-h-dvh bg-background">
@@ -437,16 +428,6 @@ export function AdminPage(_: { signedIn?: boolean }) {
           <Loader2 className="mt-8 size-6 animate-spin text-ink/40" />
         ) : (
           <>
-            <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-ink/10 bg-ink/10 sm:grid-cols-4">
-              {tiles.map(([label, value]) => (
-                <div key={label} className="bg-white p-5">
-                  <dt className="text-sm text-ink/55">{label}</dt>
-                  <dd className="mt-1 font-heading text-3xl font-semibold tabular-nums text-ink">{value ?? '—'}</dd>
-                </div>
-              ))}
-            </dl>
-
-
             <ServicePanel />
 
             <h2 className="mt-12 text-sm font-semibold text-ink/55">Clients{clients ? ` (${clients.length})` : ''}</h2>

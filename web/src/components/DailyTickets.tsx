@@ -311,8 +311,11 @@ export function DailyTickets({
   ])
   const isResident = (v: { plate: string; zone?: string | null }) => (residentPlates ? residentPlates.has(key(v.plate)) : !!v.zone)
   const idle = data.vehicles.filter((v) => !isResident(v) && !busy.has(key(v.plate)))
+  // An account with a resident car: its other cars' tickets start from « Tickets non-résidents » (top bar) only.
+  // Without one, every car with nothing on it keeps its own card and button.
+  const anyResident = data.vehicles.some(isResident)
   const program = (plate?: string) => (setForPlate(plate), setOpen(true))
-  if (idle.length)
+  if (idle.length && !anyResident)
     return (
       <section id="tickets-programmes" className="rise mt-5 scroll-mt-20 space-y-3">
         {/* The tickets already programmed first (right under the running ticket they follow), then one card per car

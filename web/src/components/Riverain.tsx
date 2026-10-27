@@ -640,6 +640,7 @@ function RiverainDialog({
   const [plates, setPlates] = useState<string[] | null>(null) // the « riverain » vehicles (null: looking)
   const [selected, setSelected] = useState<string[]>([])
   const [zones, setZones] = useState<Record<string, string>>({}) // each riverain vehicle's arrondissement, from PayByPhone
+  const [knownRates, setKnownRates] = useState<Record<string, Rate | null>>({}) // each one's resident rate, from the prices
   const [weeks, setWeeks] = useState<Record<string, number | null>>({}) // the resident week's price, in cents
   const [payment, setPayment] = useState('')
   const [found, setFound] = useState<Record<string, Found>>({})
@@ -670,10 +671,11 @@ function RiverainDialog({
     setError(null)
     setFound({})
     setPlates(null)
-    api.pricing().then(
+    api.pricing(60_000).then(
       (p) => {
         const riverain = (p.vehicles ?? []).filter((v) => v.zone)
         setZones(Object.fromEntries(riverain.map((v) => [v.plate, v.zone as string])))
+        setKnownRates(Object.fromEntries(riverain.map((v) => [v.plate, v.rate ?? null])))
         setWeeks(Object.fromEntries(riverain.map((v) => [v.plate, v.weekly ?? null])))
         setPlates(riverain.map((v) => v.plate))
         const same = (x: string) => !plate || x.replace(/[^0-9a-z]/gi, '').toUpperCase() === plate.replace(/[^0-9a-z]/gi, '').toUpperCase()
@@ -713,8 +715,9 @@ function RiverainDialog({
       const results = await Promise.all(
         selected.map(async (plate): Promise<[string, Found]> => {
           try {
-            const rates = await api.rates(zones[plate], plate)
-            const resident = residentRateFor(rates, data.vehicles.find((v) => v.plate === plate)?.type)
+            // The rate the account's prices already found, else asked to PayByPhone.
+            const resident =
+              knownRates[plate] ?? residentRateFor(await api.rates(zones[plate], plate), data.vehicles.find((v) => v.plate === plate)?.type)
             if (!resident) throw new Error('Pas de tarif résident pour ce véhicule dans cette zone.')
             if (!resident.acceptedTimeUnits.includes('Days')) throw new Error('Le tarif résident de cette zone ne se paie pas à la journée.')
             const quote = await api.quote({ ...parking(resident, plate), renewal: true })
@@ -728,7 +731,7 @@ function RiverainDialog({
         setFound(Object.fromEntries(results))
         setLoading(false)
       }
-    }, 350)
+    }, Object.keys(found).length ? 350 : 0) // at once when the window opens, then after the ticks settle
     return () => {
       cancelled = true
       clearTimeout(timer)

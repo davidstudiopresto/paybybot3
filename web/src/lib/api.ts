@@ -109,6 +109,8 @@ export type PricedVehicle = {
   renewed: boolean
   /** The resident week PayByPhone charges for it, in cents (null if unknown). */
   weekly?: number | null
+  /** Its resident rate in that zone, as PayByPhone gives it (riverain vehicles only). */
+  rate?: Rate | null
 }
 
 export class ApiError extends Error {
@@ -190,9 +192,10 @@ export const api = {
   unlock: () => post<{ url: string }>('/api/billing/unlock'),
   // Several parts of a page ask at once (top of the page, vehicles, account): one request for them all, as
   // each one makes PayByBot ask PayByPhone again (too many in a row and PayByPhone answers 429).
-  pricing: () => {
+  /** maxAge: how old an answer may be reused (the renewal window takes the dashboard's, asked a moment before). */
+  pricing: (maxAge = 3000) => {
     const now = Date.now()
-    if (!pricingCall || now - pricingCall.at > 3000) pricingCall = { at: now, p: request<Pricing>('/api/pricing') }
+    if (!pricingCall || now - pricingCall.at > maxAge) pricingCall = { at: now, p: request<Pricing>('/api/pricing') }
     return pricingCall.p
   },
   residentStatus: () => request<{ zone: string | null; resident: boolean | null }>('/api/resident-status'),

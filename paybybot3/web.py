@@ -2504,7 +2504,8 @@ def account_pricing(s):
         week = weekly(zone, v["licensePlate"], rate)
         vehicles.append({"plate": v["licensePlate"], "type": v.get("type"), "zone": zone,
                          "suv": plate_key(v["licensePlate"]) in suvs,
-                         "monthly": monthly_cents(v.get("type"), zone, weekly=week), "weekly": week})
+                         "monthly": monthly_cents(v.get("type"), zone, weekly=week), "weekly": week,
+                         "rate": rate})  # the renewal window uses it as is (no second rate lookup)
     # Then the other vehicles (no resident rate: tickets on chosen days), at the same single price: a ticket
     # programmed on one of them is billed like a resident renewal.
     seen = {plate_key(v["plate"]) for v in vehicles}

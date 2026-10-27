@@ -297,7 +297,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
   const cta = useRef<HTMLAnchorElement>(null)
   const sticky = useStickyCta(cta)
   return (
-    <div className={cn("flex min-h-dvh flex-col overflow-x-clip bg-background lg:pb-0", !heroOnly && "pb-20")}>
+    <div className={cn("flex min-h-dvh flex-col overflow-x-clip bg-white lg:pb-0", !heroOnly && "pb-20")}>
       <PublicTopBar />
 
       {/* Centered hero filling the window on a computer (under the 4rem top bar): the kicker as a pill, the title on
@@ -305,31 +305,35 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
       {/* Home (hero only): the page fits the window, the footer stays in view at the bottom. */}
       <section
         className={cn(
-          'rise relative w-full overflow-hidden px-6 pt-14 sm:px-8 lg:flex lg:items-center lg:py-20',
+          'rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:items-center lg:py-20',
           heroOnly ? 'flex flex-1 items-center pb-16' : 'lg:min-h-[calc(100dvh-4rem)]',
         )}
       >
         {/* Home: the text on the left and an example ticket card on the right (one column on a phone). */}
-        <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14 xl:max-w-7xl xl:gap-20 2xl:max-w-[90rem]')}>
-        <div className={cn('flex flex-col items-center text-center', heroOnly && 'items-start text-left')}>
-          {/* One sentence in two tones: the promise in warm ink, the how in grey. */}
-          <h1 className="oi-title max-w-[40rem] text-left">
-            <span className="block text-[#151311]">Votre stationnement résident se renouvelle tout seul.</span>
-            <span className="block text-[#151311]/45">
-              Vos tickets <PayByPhone /> repris avant l’expiration. Zéro oubli, zéro amende.
-            </span>
+        <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14')}>
+        <div className={cn('flex flex-col items-center text-center', heroOnly && 'lg:items-start lg:text-left')}>
+          <h1
+            className={cn(
+              'font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]',
+              heroOnly && 'lg:text-[2.7rem] lg:[&>span]:whitespace-nowrap',
+            )}
+          >
+            <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
+            <span className="block">de votre stationnement résident</span>
+            <span className="block">sur <PayByPhone /></span>
           </h1>
-          {/* The offer in a floating pill, its button inside. */}
-          <div className="mt-10 inline-flex max-w-full items-center gap-2 rounded-full border border-ink/10 bg-white/90 p-1.5 shadow-[0_14px_38px_rgb(0_0_0/0.12)] lg:mt-12">
-            <span className="min-w-0 truncate pr-1 pl-4 font-mono text-[0.78rem] text-ink/80 sm:pl-5 sm:text-sm">9,50 €/mois<span className="hidden sm:inline"> · sans engagement</span></span>
-            <a
-              ref={cta}
-              href="#/inscription"
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-eu px-5 text-sm font-semibold text-white transition hover:bg-eu/90 active:scale-[0.98]"
-            >
-              Essayer <ArrowRight className="size-4" />
-            </a>
-          </div>
+          <p className="mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]">
+            <PayByBot /> renouvelle votre stationnement résident sur <PayByPhone />, sans interruption.{' '}
+            <span className="font-semibold text-ink/80">Zéro oubli, zéro amende.</span>
+          </p>
+          <a
+            ref={cta}
+            href="#/inscription"
+            // The hero's button keeps the filled blue gradient (the shared ui.primary is an outline now).
+            className={cn('mt-10 w-full sm:px-10 shadow-[0_14px_30px_-12px_var(--eu)] sm:w-fit lg:mt-12 lg:h-14 lg:rounded-[12px] lg:px-10 lg:text-lg', ui.primary, 'border-0 bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] text-white hover:bg-transparent hover:brightness-110')}
+          >
+            {TRY_LABEL} <ArrowRight className="size-5" />
+          </a>
           {!heroOnly && !lean && (
             <>
               <p className="mt-4 text-sm text-ink/55">
@@ -339,7 +343,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
             </>
           )}
         </div>
-        {heroOnly && <SampleTicket className="mx-auto lg:mx-0 lg:justify-self-end xl:origin-right xl:scale-[1.15] 2xl:scale-[1.3]" />}
+        {heroOnly && <SampleTicket className="mx-auto lg:mx-0 lg:justify-self-end" />}
         </div>
       </section>
 

@@ -343,7 +343,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
             </>
           )}
         </div>
-        {heroOnly && <SampleTicket className="mx-auto lg:mx-0 lg:justify-self-end" />}
+        {heroOnly && <SampleTicket className="mx-auto lg:mx-0 lg:justify-self-end lg:origin-right lg:scale-[1.15] xl:scale-[1.25] 2xl:scale-[1.35]" />}
         </div>
       </section>
 

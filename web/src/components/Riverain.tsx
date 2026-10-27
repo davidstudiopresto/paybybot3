@@ -270,7 +270,7 @@ export function RenewalActions({
             {/* The pause on the switch's line (one line less on the card). */}
             <span className="ml-auto" />
             {withPause && !later && !paused && (
-              <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm text-ink/55 transition hover:text-ink">
+              <button onClick={() => setPausing(true)} className="inline-flex shrink-0 items-center gap-1.5 text-sm whitespace-nowrap text-ink/55 transition hover:text-ink">
                 <Pause className="size-3.5" />
                 <span className="sm:hidden">Pause</span>
                 <span className="hidden sm:inline">Programmer une pause</span>
@@ -587,7 +587,7 @@ export function RenewalSwitch({
       <SwitchLabel on={on} />
       <span className="ml-auto" />
       {pausable && (
-        <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm text-ink/55 transition hover:text-ink">
+        <button onClick={() => setPausing(true)} className="inline-flex shrink-0 items-center gap-1.5 text-sm whitespace-nowrap text-ink/55 transition hover:text-ink">
           <Pause className="size-3.5" />
           <span className="sm:hidden">Pause</span>
           <span className="hidden sm:inline">Programmer une pause</span>

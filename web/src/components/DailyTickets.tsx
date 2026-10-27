@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Loader2, Plus } from 'lucide-react'
+import { Check, Loader2, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
@@ -147,19 +147,11 @@ export function ruleState(ap: Autopilot, now = Date.now()) {
   return { period, next: next ?? (dueToday ? startToday : null), last, running, finished, state } as const
 }
 
-const STATE_LABEL = {
-  planned: 'Programmé',
-  running: 'En cours',
-  paused: 'En pause',
-  finished: 'Terminé',
-  stopped: 'Arrêté',
-} as const
-
-function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) {
-  const { period, next, last, finished, state } = ruleState(ap)
+function DailyCard({ ap, data, onChanged }: { ap: Autopilot; data: Overview; onChanged: () => void }) {
+  const { period, next, last, finished } = ruleState(ap)
   const single = !!period && period.from === period.to
-  const label = STATE_LABEL[state]
   const [removing, setRemoving] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   async function remove() {
     setRemoving(true)
@@ -188,9 +180,9 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
           </span>
           <Plate plate={ap.plate} size="sm" />
         </span>
-        {/* The state then the place, in grey, like the resident card's « Ticket résident · Paris 5e ». */}
+        {/* The kind of ticket then the place, in grey, like the resident card's « Ticket résident · Paris 5e ». */}
         <span className="text-sm text-ink/50">
-          {label} · {arrondissement(ap.location) ?? `Zone ${ap.location}`}
+          Non-résident · {arrondissement(ap.location) ?? `Zone ${ap.location}`}
         </span>
       </div>
       {/* Same order as the resident card: the switch right under the header, then the details. */}
@@ -216,7 +208,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
         )}
       </div>
       <div className="border-t border-ink/[0.06] px-5 pt-3.5 pb-4">
-        <div>
+        <div className="flex items-start justify-between gap-4">
           <span className="text-ink">
             Ticket de {lengthText(Number(ap.duration), ap.unit)}
             {period
@@ -225,6 +217,15 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
                 ? isParis(ap.location) ? ', chaque jour sauf dimanche et jours fériés' : ', chaque jour'
                 : ''}
           </span>
+          {/* Zone, ticket, length, days, time, card: changed in the same steps as when it was programmed. */}
+          {!finished && (
+            <button
+              onClick={() => setEditing(true)}
+              className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-ink/55 transition hover:text-ink"
+            >
+              <Pencil className="size-3.5" /> Modifier
+            </button>
+          )}
         </div>
         {/* The days, unless it is every day (then said in words above). */}
         {!period && !everyDay(ap) && (
@@ -242,15 +243,13 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
           ))}
         </div>
         )}
-        {/* One ticket on one day: when it is planned, or when it was taken. Several: the time, the next, the last. */}
+        {/* One ticket on one day: when it is planned, or when it was taken. Several: the time and the last. */}
         <dl className="mt-3 space-y-1 text-sm">
           {single ? (
             last ? row('Ticket pris', when(last)) : next ? row('Prévu', when(next)) : null
           ) : (
             <>
-              {/* The next ticket already says the time; the bare hour only when none is coming (paused). */}
-              {!next && row('Heure de prise', startOf(ap).replace(':', 'h'))}
-              {next && row('Prochain ticket', when(next))}
+              {row('Heure de prise', startOf(ap).replace(':', 'h'))}
               {last && row('Dernier ticket', when(last))}
             </>
           )}
@@ -259,6 +258,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
         {finished && single && !last && !ap.lastError && <p className="mt-3 text-sm text-ink/55">Ce ticket n’a pas été pris.</p>}
         {ap.lastError && !finished && <p className="mt-3 text-sm text-destructive">{ap.lastError}</p>}
       </div>
+      {editing && <DailyWizard data={data} editing={ap} onClose={() => setEditing(false)} onDone={onChanged} needsOffer={false} />}
     </article>
   )
 }
@@ -311,7 +311,7 @@ export function DailyTickets({
         {/* The tickets already programmed first (right under the running ticket they follow), then one card per car
             with nothing on it, two side by side within the page's column. */}
         {daily.map((ap) => (
-          <DailyCard key={ap.id} ap={ap} onChanged={onChanged} />
+          <DailyCard key={ap.id} ap={ap} data={data} onChanged={onChanged} />
         ))}
         <div className={cn('grid gap-3', idle.length > 1 && 'sm:grid-cols-2')}>
           {idle.map((v) => (
@@ -362,7 +362,7 @@ export function DailyTickets({
         <>
           <div className="space-y-3">
             {daily.map((ap) => (
-              <DailyCard key={ap.id} ap={ap} onChanged={onChanged} />
+              <DailyCard key={ap.id} ap={ap} data={data} onChanged={onChanged} />
             ))}
           </div>
           <div className="mt-5 flex justify-center">
@@ -503,6 +503,7 @@ export function DailyWizard({
   initialPlate,
   initialZone,
   initialTicket,
+  editing,
 }: {
   data: Overview
   onClose: () => void
@@ -515,17 +516,23 @@ export function DailyWizard({
   initialZone?: string
   /** Opened from a running ticket's « Renouvellement auto »: its rate, start and end, to take the same ticket again. */
   initialTicket?: { rate: string; start: string; expire: string }
+  /** A programmed ticket being changed: every step filled with its settings, its vehicle fixed, saved in place. */
+  editing?: Autopilot
 }) {
   const [step, setStep] = useState(1)
   const [plate, setPlate] = useState(
-    data.vehicles.find((v) => initialPlate && keyOf(v.plate) === keyOf(initialPlate))?.plate ?? data.vehicles[0]?.plate ?? '',
+    editing?.plate ??
+      data.vehicles.find((v) => initialPlate && keyOf(v.plate) === keyOf(initialPlate))?.plate ?? data.vehicles[0]?.plate ?? '',
   )
+  // Its settings, applied once its rate is found again (then the user's own choices win).
+  const edit = useRef(editing ?? null)
+  const editPeriod = editing ? periodOf(editing) : null
   // The vehicle's usual zone by default: its resident zone, else the zone of its ticket running now.
   const zoneFor = (p: string) =>
     data.vehicles.find((v) => keyOf(v.plate) === keyOf(p))?.zone ??
     data.sessions.find((x) => keyOf(x.plate) === keyOf(p) && new Date(x.expire).getTime() > Date.now())?.location ??
     ''
-  const [zone, setZone] = useState(initialZone ?? zoneFor(plate))
+  const [zone, setZone] = useState(editing?.location ?? initialZone ?? zoneFor(plate))
   const defaultZone = useRef(zone)
   useEffect(() => {
     // Another vehicle picked: its own zone, unless the user typed one.
@@ -538,7 +545,7 @@ export function DailyWizard({
   const [looking, setLooking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rateId, setRateId] = useState<string | null>(null)
-  const [cmis, setCmis] = useState(false) // « je suis titulaire de la carte CMI-S »: required for the Handi ticket
+  const [cmis, setCmis] = useState(!!editing) // « je suis titulaire de la carte CMI-S »: required for the Handi ticket
   const [duration, setDuration] = useState(6)
   const [unit, setUnit] = useState<Unit>('Hours')
   const [over, setOver] = useState(false)
@@ -550,10 +557,12 @@ export function DailyWizard({
       })()
     : null
   const [start, setStart] = useState(chainStart ?? '09:00')
-  const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4, 5])
+  const [days, setDays] = useState<number[]>(editing && !editPeriod ? daysOf(editing) : [0, 1, 2, 3, 4, 5])
   // « Chaque semaine »: the days ticked above; « Calendrier »: one day, or a period from a first to a last day.
-  const [planMode, setPlanMode] = useState<'week' | 'calendar'>('week')
-  const [range, setRange] = useState<{ from: string | null; to: string | null }>({ from: null, to: null })
+  const [planMode, setPlanMode] = useState<'week' | 'calendar'>(editPeriod ? 'calendar' : 'week')
+  const [range, setRange] = useState<{ from: string | null; to: string | null }>(
+    editPeriod ? { from: editPeriod.from, to: editPeriod.to } : { from: null, to: null },
+  )
   const calendar = planMode === 'calendar'
   const period = calendar && range.from ? { from: range.from, to: range.to ?? range.from } : undefined
   // On the calendar every day of the period counts (Sundays stay free in Paris, the server skips them).
@@ -562,7 +571,9 @@ export function DailyWizard({
   const count = calendar ? (period ? periodDays(period.from, period.to, isParis(zone)) : 0) : days.length
   const [cost, setCost] = useState<Money | null | undefined>(undefined)
   const cards = data.payments.filter((p) => p.kind === 'card' && !p.expired)
-  const [payment, setPayment] = useState(cards[0]?.id ?? '')
+  const [payment, setPayment] = useState(
+    cards.find((c) => c.id === editing?.paymentAccountId)?.id ?? cards[0]?.id ?? '',
+  )
   const [saving, setSaving] = useState(false)
   // Online, no offer chosen yet: the offer screen first, as for the weekly renewal; the ticket is programmed on the
   // way back from Stripe (nothing is charged before the end of the free month).
@@ -632,7 +643,8 @@ export function DailyWizard({
       const list = answer
       setRates(list)
       const first = list.filter((r) => !r.parkingNotAllowedReason && !resident(r))
-      setRateId((first.find(handi) ?? first[0])?.ratePolicyId ?? null)
+      const kept = edit.current && first.find((r) => r.ratePolicyId === String(edit.current!.rate))
+      setRateId((kept || first.find(handi) || first[0])?.ratePolicyId ?? null)
       setStep(2)
     } catch (e) {
       setError((e as Error).message)
@@ -645,6 +657,17 @@ export function DailyWizard({
   useEffect(() => {
     if (!effective) return
     const units = unitsOf(effective)
+    const e = edit.current
+    if (e && effective.ratePolicyId === String(e.rate) && units.includes(e.unit as Unit)) {
+      // Its own length and time, as programmed.
+      setUnit(e.unit as Unit)
+      setDuration(Math.min(MAX[e.unit as Unit], Number(e.duration)))
+      setOver(false)
+      setStart(startOf(e))
+      edit.current = null
+      return
+    }
+    edit.current = null
     const u: Unit = units.includes('Hours') ? 'Hours' : (units[0] ?? 'Days')
     setUnit(u)
     setDuration(MAX[u])
@@ -750,6 +773,7 @@ export function DailyWizard({
 
   async function activate() {
     if (!effective) return
+    if (editing) return save()
     if (needsOffer) {
       setPaywall(true)
       return
@@ -771,7 +795,21 @@ export function DailyWizard({
     }
   }
 
-  const steps = ['Véhicule et zone', 'Votre ticket', initialTicket ? 'Horaires' : 'Horaires et jours', 'Vérifier et activer']
+  async function save() {
+    setSaving(true)
+    try {
+      await api.editAutopilot(editing!.id, rule() as Parameters<typeof api.editAutopilot>[1])
+      toast.success('Ticket modifié.')
+      onDone()
+      onClose()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const steps = [editing ? 'Zone' : 'Véhicule et zone', 'Votre ticket', initialTicket ? 'Horaires' : 'Horaires et jours', editing ? 'Vérifier et enregistrer' : 'Vérifier et activer']
 
   return (
     <Dialog open onOpenChange={(o) => !o && !saving && !locked && onClose()}>
@@ -780,10 +818,12 @@ export function DailyWizard({
           <p className="text-xs font-medium tracking-wide text-ink/45 uppercase">
             Étape {step} sur {steps.length} · {steps[step - 1]}
           </p>
-          <DialogTitle className={cn(ui.dialogTitle, 'mt-1')}>{initialTicket ? 'Renouveler ce ticket' : 'Programmer un ticket'}</DialogTitle>
+          <DialogTitle className={cn(ui.dialogTitle, 'mt-1')}>{editing ? 'Modifier le ticket' : initialTicket ? 'Renouveler ce ticket' : 'Programmer un ticket'}</DialogTitle>
           {/* The sentence under the title only on the first step: the others need the height. */}
           <DialogDescription className={cn('mt-1 text-ink/60', step > 1 && 'sr-only')}>
-            {initialTicket ? 'Repris automatiquement chaque jour, à l’heure voulue.' : 'Pris automatiquement les jours choisis, à l’heure voulue.'}
+            {editing
+              ? 'Les nouveaux réglages valent pour les prochains tickets.'
+              : initialTicket ? 'Repris automatiquement chaque jour, à l’heure voulue.' : 'Pris automatiquement les jours choisis, à l’heure voulue.'}
           </DialogDescription>
           <div className="mt-5 grid grid-cols-4 gap-1.5" aria-hidden>
             {[1, 2, 3, 4].map((n) => (
@@ -798,7 +838,7 @@ export function DailyWizard({
               <div>
                 <p className={ui.label}>Véhicule</p>
                 <div className="flex flex-wrap gap-2">
-                  {data.vehicles.map((v) => (
+                  {data.vehicles.filter((v) => !editing || keyOf(v.plate) === keyOf(editing.plate)).map((v) => (
                     <button
                       key={v.plate}
                       onClick={() => setPlate(v.plate)}
@@ -1128,7 +1168,7 @@ export function DailyWizard({
               )}
               {nextTicket(ruleDays, start, chainFrom, period) && (
                 <p className="rounded-xl bg-[#e7f6ec] px-4 py-3 text-sm text-[#14703a]">
-                  {chainFrom ? 'Prochain ticket' : 'Premier ticket'} {when(nextTicket(ruleDays, start, chainFrom, period)!)}
+                  {chainFrom || editing ? 'Prochain ticket' : 'Premier ticket'} {when(nextTicket(ruleDays, start, chainFrom, period)!)}
                   {chainFrom && Math.abs(nextTicket(ruleDays, start, chainFrom, period)!.getTime() - chainFrom.getTime()) < 120_000 ? ', dès la fin du ticket en cours' : ''}. Un e-mail à chaque ticket, et une alerte si {withPayByPhone('PayByPhone')} refuse.
                 </p>
               )}
@@ -1158,7 +1198,7 @@ export function DailyWizard({
             )}
             {step === 4 && (
               <button onClick={activate} disabled={saving || !payment || !effective} className={cn(ui.primary, 'flex-[2]')}>
-                {saving ? <Loader2 className="size-5 animate-spin" /> : 'Activer'}
+                {saving ? <Loader2 className="size-5 animate-spin" /> : editing ? 'Enregistrer' : 'Activer'}
               </button>
             )}
           </div>

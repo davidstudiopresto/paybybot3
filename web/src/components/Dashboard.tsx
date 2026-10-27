@@ -154,7 +154,7 @@ function Ticket({
         {!(renewal && renewal.enabled && !note) && (
           <>
             <p className="text-sm text-ink/50">Temps restant</p>
-            <p className={`mt-1 mb-2 font-heading text-[2.1rem] leading-none font-bold tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
+            <p className={`mt-1 mb-2 font-heading text-[2.1rem] leading-none font-medium tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
               {remaining(left)}
             </p>
           </>

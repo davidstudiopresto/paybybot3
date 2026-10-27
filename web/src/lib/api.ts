@@ -231,6 +231,9 @@ export const api = {
   resumeAutopilot: (id: string) => request<Autopilot>(`/api/autopilots/${id}/pause`, { method: 'DELETE' }),
   setAutopilotEmail: (id: string, email: string) =>
     request<Autopilot>(`/api/autopilots/${id}/email`, { method: 'PUT', body: JSON.stringify({ email }) }),
+  /** A programmed ticket's settings changed in place (its vehicle stays). */
+  editAutopilot: (id: string, p: Parking & { label: string }) =>
+    request<Autopilot>(`/api/autopilots/${id}`, { method: 'PUT', body: JSON.stringify(p) }),
   deleteAutopilot: (id: string) => request(`/api/autopilots/${id}`, { method: 'DELETE' }),
 }
 

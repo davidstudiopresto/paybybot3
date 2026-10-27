@@ -494,10 +494,10 @@ export function Dashboard({
         <button
           onClick={() => setProgramAsked((n) => n + 1)}
           disabled={!data}
-          aria-label="Programmer un ticket"
+          aria-label="Carte Handicapé (CMI-S)"
           className={cn(ui.pillGray, 'gap-2')}
         >
-          <Plus className="size-4" /> <span className="hidden sm:inline">Programmer un ticket</span>
+          <Plus className="size-4" /> <span className="hidden sm:inline">Carte Handicapé (CMI-S)</span>
         </button>
         {!me.demo && <InviteButton disabled={!data} />}
         <AccountButton data={data} onDeleted={onDeleted ?? onLogout} demo={me.demo} />

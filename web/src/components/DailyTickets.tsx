@@ -334,7 +334,7 @@ export function DailyTickets({
                 </p>
               )}
               <button onClick={() => program(v.plate)} className={cn(ui.primary, 'mt-4 h-12 rounded-[10px] text-base')}>
-                Programmer un ticket
+                Carte Handicapé (CMI-S)
               </button>
             </article>
           ))}
@@ -568,8 +568,8 @@ export function DailyWizard({
   const hasWeight = usable.some(light) && usable.some(heavy)
   const handiRate = usable.find(handi) ?? null
   const effective = usable.find((r) => r.ratePolicyId === rateId) ?? null
-  // One question, every answer with its price: the CMI-S card first (always shown), then the visitor rates by weight.
-  const options = [...(handiRate ? [handiRate] : []), ...usable.filter((r) => !handi(r)).sort((a, b) => Number(heavy(a)) - Number(heavy(b)))]
+  // Programmed tickets are for the CMI-S card only (no visitor rates offered any more).
+  const options = handiRate ? [handiRate] : []
   // PayByPhone gives no maximum stay with its rates: a day when the rate sells days; for visitors, Paris' 6 hours,
   // elsewhere up to 24 hours (PayByPhone's quote refuses a longer stay than the zone allows).
   // The units offered per rate: Handi in days only, visitors in minutes or hours; each capped at the rate's maximum.
@@ -580,7 +580,7 @@ export function DailyWizard({
     const stay = maxStay(r)
     const max = stay ? `${stay} maximum` : r.acceptedTimeUnits.includes('Days') ? 'À la journée' : 'À l’heure'
     return handi(r)
-      ? ['Carte handicapé (CMI-S)', max]
+      ? ['Carte Handicapé (CMI-S)', max]
       : hasWeight && light(r)
         ? ['Visiteur · véhicule léger', `Moins de 1,6 t · ${max}`]
         : hasWeight && heavy(r)
@@ -626,7 +626,7 @@ export function DailyWizard({
       setRates(list)
       const first = list.filter((r) => !r.parkingNotAllowedReason && !resident(r))
       const kept = edit.current && first.find((r) => r.ratePolicyId === String(edit.current!.rate))
-      setRateId((kept || first.find(handi) || first[0])?.ratePolicyId ?? null)
+      setRateId((kept || first.find(handi))?.ratePolicyId ?? null)
       setStep(2)
     } catch (e) {
       setError((e as Error).message)
@@ -876,11 +876,11 @@ export function DailyWizard({
                       </button>
                     )
                   })}
-                  {!handiRate && options.length > 0 && paris && (
-                    // No Handi rate offered here by PayByPhone: shown anyway, greyed, so the option is not forgotten.
+                  {!handiRate && (
+                    // No Handi rate offered here by PayByPhone: shown greyed, with the reason.
                     <div className="flex w-full items-center gap-3 rounded-xl border border-dashed border-ink/15 px-4 py-3 text-left">
                       <span className="min-w-0 flex-1">
-                        <span className="block font-medium text-ink/45">Carte handicapé (CMI-S)</span>
+                        <span className="block font-medium text-ink/45">Carte Handicapé (CMI-S)</span>
                         <span className="block text-sm text-ink/45">
                           {withPayByPhone('PayByPhone ne le propose pas pour ce véhicule dans cette zone.')}
                         </span>
@@ -888,13 +888,7 @@ export function DailyWizard({
                       <span className="shrink-0 text-sm text-ink/45">Gratuit</span>
                     </div>
                   )}
-                  {!options.length && <p className="text-sm text-ink/55">Aucun ticket disponible pour ce véhicule dans cette zone.</p>}
                 </div>
-                {hasWeight && (
-                  <p className="mt-2 text-xs text-ink/45">
-                    {withPayByPhone('PayByPhone ne connaît pas le poids du véhicule : choisissez le tarif qui lui correspond.')}
-                  </p>
-                )}
               </div>
               {effective && handi(effective) && (
                 // PayByPhone does not check the card: the user states it, kept with the ticket.

@@ -424,7 +424,7 @@ export function Dashboard({
         </button>
       </TopBar>
 
-      <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-6 pb-6">
+      <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-4 pb-6">
         {/* Just the greeting, large: the line below says whether a ticket is running. */}
         <h1 className="rise font-heading text-[2.6rem] leading-[1.05] font-medium tracking-[-0.035em]">
           {me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}

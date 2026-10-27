@@ -266,6 +266,15 @@ export function RenewalActions({
         ) : (
           <div className="flex items-center justify-between gap-4">
             <span className="text-ink">{switchLabel}</span>
+            {/* The pause on the switch's line (one line less on the card). */}
+            <span className="ml-auto" />
+            {withPause && !later && !paused && (
+              <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm text-ink/55 transition hover:text-ink">
+                <Pause className="size-3.5" />
+                <span className="sm:hidden">Pause</span>
+                <span className="hidden sm:inline">Programmer une pause</span>
+              </button>
+            )}
             <button
               type="button"
               role="switch"
@@ -291,10 +300,6 @@ export function RenewalActions({
         ) : paused ? (
           <button onClick={resume} disabled={busy} className={cn('text-sm', ui.link)}>
             Reprendre maintenant
-          </button>
-        ) : withPause ? (
-          <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm text-ink/55 transition hover:text-ink">
-            <Pause className="size-3.5" /> Programmer une pause
           </button>
         ) : null}
         {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}

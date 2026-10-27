@@ -190,7 +190,29 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
         </span>
         <span className="text-sm text-ink/50">{arrondissement(ap.location) ?? `Zone ${ap.location}`}</span>
       </div>
+      {/* Same order as the resident card: the switch right under the header, then the details. */}
       <div className="border-t border-ink/[0.06] px-5 py-4">
+        {finished ? (
+          // Done: nothing to pause or stop, only to clear it away (the car is free for a new ticket).
+          <button
+            onClick={remove}
+            disabled={removing}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-ink/15 px-5 text-[0.95rem] font-medium text-ink transition hover:border-ink/40 disabled:opacity-60"
+          >
+            {removing ? <Loader2 className="size-4 animate-spin" /> : null} Retirer
+          </button>
+        ) : (
+          <RenewalActions
+            ap={ap}
+            onChanged={onChanged}
+            withPause={!single}
+            stopLabel={single ? 'Annuler ce ticket' : 'Arrêter ces tickets'}
+            switchLabel={single ? 'Ticket programmé' : 'Renouvellement auto'}
+            stoppedText={single ? 'Ticket annulé.' : 'Tickets arrêtés.'}
+          />
+        )}
+      </div>
+      <div className="border-t border-ink/[0.06] px-5 pt-3.5 pb-4">
         <div className="flex items-center justify-between gap-3">
           <span className="text-ink">
             Ticket de {lengthText(Number(ap.duration), ap.unit)}
@@ -234,27 +256,6 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
         {finished && !single && <p className="mt-3 text-sm text-ink/55">Période terminée : plus aucun ticket ne sera pris.</p>}
         {finished && single && !last && !ap.lastError && <p className="mt-3 text-sm text-ink/55">Ce ticket n’a pas été pris.</p>}
         {ap.lastError && !finished && <p className="mt-3 text-sm text-destructive">{ap.lastError}</p>}
-      </div>
-      <div className="border-t border-ink/[0.06] px-5 pt-4 pb-5">
-        {finished ? (
-          // Done: nothing to pause or stop, only to clear it away (the car is free for a new ticket).
-          <button
-            onClick={remove}
-            disabled={removing}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-ink/15 px-5 text-[0.95rem] font-medium text-ink transition hover:border-ink/40 disabled:opacity-60"
-          >
-            {removing ? <Loader2 className="size-4 animate-spin" /> : null} Retirer
-          </button>
-        ) : (
-          <RenewalActions
-            ap={ap}
-            onChanged={onChanged}
-            withPause={!single}
-            stopLabel={single ? 'Annuler ce ticket' : 'Arrêter ces tickets'}
-            switchLabel={single ? 'Ticket programmé' : 'Renouvellement auto'}
-            stoppedText={single ? 'Ticket annulé.' : 'Tickets arrêtés.'}
-          />
-        )}
       </div>
     </article>
   )

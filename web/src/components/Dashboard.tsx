@@ -247,6 +247,28 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogo
   )
 }
 
+/** Account details kept for this tab only (sessionStorage, cleared at logout), for the signed-in user only. */
+export const ACCOUNT_KEY = 'pbb-account'
+export const RESIDENTS_KEY = 'pbb-residents'
+
+function kept<T>(key: string, user: string): T | null {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(key) ?? 'null') as { u: string; v: T } | null
+    return v && v.u === user ? v.v : null
+  } catch {
+    return null
+  }
+}
+
+function keep(key: string, user: string, value: unknown) {
+  try {
+    if (value == null) sessionStorage.removeItem(key)
+    else sessionStorage.setItem(key, JSON.stringify({ u: user, v: value }))
+  } catch {
+    // storage blocked: nothing kept
+  }
+}
+
 export function Dashboard({
   me,
   data,
@@ -265,7 +287,13 @@ export function Dashboard({
   onDeleted?: () => void
 }) {
   const now = useNow()
-  const [account, setAccount] = useState<Account | null>(null)
+  // Kept for this tab like the account data: on a reload the trial bar and the switches are there at once, instead
+  // of pushing the page down a moment later.
+  const [account, setAccountState] = useState<Account | null>(() => kept<Account>(ACCOUNT_KEY, me.username))
+  const setAccount = (a: Account) => {
+    setAccountState(a)
+    keep(ACCOUNT_KEY, me.username, a)
+  }
   const [checkoutDone, setCheckoutDone] = useState(false)
   useEffect(() => {
     // Back from Stripe Checkout: record the subscription, then show the account as it is now.
@@ -296,7 +324,14 @@ export function Dashboard({
     confirm.then(() => api.account().then(setAccount, () => {}))
   }, [])
   // The vehicles with the resident rate on PayByPhone (a zone in the pricing); null while looking.
-  const [pricedResidents, setResidentPlates] = useState<Set<string> | null>(null)
+  const [pricedResidents, setPricedResidents] = useState<Set<string> | null>(() => {
+    const plates = kept<string[]>(RESIDENTS_KEY, me.username)
+    return plates ? new Set(plates) : null
+  })
+  const setResidentPlates = (plates: Set<string> | null) => {
+    setPricedResidents(plates)
+    keep(RESIDENTS_KEY, me.username, plates && [...plates])
+  }
   useEffect(() => {
     api.pricing().then(
       // Zones not looked up (PayByPhone busy) or no answer: unknown, never taken for « no resident car ».
@@ -306,7 +341,8 @@ export function Dashboard({
             ? null
             : new Set((p.vehicles ?? []).filter((v) => v.zone).map((v) => plateKey(v.plate))),
         ),
-      () => setResidentPlates(null),
+      // No answer: what was known in this tab stays (unknown is never taken for « no resident car »).
+      () => {},
     )
   }, [me.hosted, me.demo, data?.vehicles.length])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []

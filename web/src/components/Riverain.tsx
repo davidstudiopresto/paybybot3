@@ -250,7 +250,8 @@ export function RenewalActions({
   if (!ap.enabled) return null
   if (switchLabel)
     return (
-      <div className={cn('space-y-3 text-[0.95rem]', className)}>
+      // The card's own text size, like the resident card's « Renouvellement auto ».
+      <div className={cn('space-y-3', className)}>
         {confirming ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="text-ink">{stopLabel} ?</span>
@@ -265,7 +266,7 @@ export function RenewalActions({
           </div>
         ) : (
           <div className="flex items-center justify-between gap-4">
-            <span className="text-ink">{switchLabel}</span>
+            <span className="text-[1.05rem] text-ink">{switchLabel}</span>
             {/* The pause on the switch's line (one line less on the card). */}
             <span className="ml-auto" />
             {withPause && !later && !paused && (
@@ -570,7 +571,7 @@ export function RenewalSwitch({
 
   const row = (onClick: () => void) => (
     <div className="flex items-center justify-between gap-4">
-      <span className="text-ink">Renouvellement auto</span>
+      <span className="text-[1.05rem] text-ink">Renouvellement auto</span>
       <button
         type="button"
         role="switch"

@@ -2,7 +2,7 @@ import { Loading } from '@/components/Loading'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
-import { Dashboard } from '@/components/Dashboard'
+import { ACCOUNT_KEY, Dashboard, RESIDENTS_KEY } from '@/components/Dashboard'
 import { LoginView } from '@/components/LoginView'
 import { FaqView, Home } from '@/components/Landing'
 import { HowPage } from '@/components/HowPage'
@@ -48,7 +48,7 @@ function cachedOverview(): Overview | null {
 function keepOverview(d: Overview | null) {
   try {
     if (d) sessionStorage.setItem(OVERVIEW_KEY, JSON.stringify(d))
-    else sessionStorage.removeItem(OVERVIEW_KEY)
+    else for (const key of [OVERVIEW_KEY, ACCOUNT_KEY, RESIDENTS_KEY]) sessionStorage.removeItem(key)
   } catch {
     // storage blocked: nothing kept
   }

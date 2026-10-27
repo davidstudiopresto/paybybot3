@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Loader2, Pencil, Plus } from 'lucide-react'
+import { Check, Loader2, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
@@ -272,9 +272,12 @@ export function DailyTickets({
   autoOpen = false,
   onLogout,
   residentPlates,
+  openAsked = 0,
 }: {
   data: Overview
   onChanged: () => void
+  /** Counts the clicks on « Tickets non-résidents » (top bar): each one opens the wizard. */
+  openAsked?: number
   /** The cars with the resident rate (checked with PayByPhone): renewed above, not offered a ticket here. */
   residentPlates?: Set<string> | null
   /** Online, no offer chosen yet: activating leads to the offer screen first. */
@@ -290,6 +293,10 @@ export function DailyTickets({
   useEffect(() => {
     if (locked || autoOpen) setOpen(true)
   }, [locked, autoOpen])
+  useEffect(() => {
+    // A car with nothing on it first (not the resident one, renewed above).
+    if (openAsked) (setForPlate(idle[0]?.plate), setOpen(true))
+  }, [openAsked]) // eslint-disable-line react-hooks/exhaustive-deps
   // A one-off ticket (a single day) that has ended is no longer shown.
   const daily = data.autopilots.filter((ap) => {
     if (!isDaily(ap)) return false
@@ -336,44 +343,16 @@ export function DailyTickets({
     )
   return (
     <section id="tickets-programmes" className="rise mt-4 scroll-mt-20">
-      {/* No ticket programmed yet: a card that says what it is. Its button is blue when it is the one thing to do
-          (nothing automated, no resident car), grey next to a resident renewal. Once one exists, a small button. */}
-      {!daily.length ? (
-        <div className="rounded-2xl border border-ink/10 bg-white px-6 py-5">
-          <p className="font-heading text-[1.25rem] leading-tight font-medium tracking-[-0.02em] text-ink">Programmez vos tickets (non-résidents)</p>
-          <p className="mt-1.5 text-[0.95rem] leading-relaxed text-ink/60">
-            {withPayByPhone('PayByBot les prend pour vous sur PayByPhone, les jours choisis et à l’heure voulue.')} Vous n’avez plus à y penser.
-          </p>
-          <button
-            onClick={() => setOpen(true)}
-            className={cn(
-              'mt-4 h-12 rounded-[10px]',
-              !data.autopilots.some((ap) => ap.enabled) &&
-                !data.vehicles.some((v) => v.zone)
-                ? ui.primary
-                : ui.primaryGray,
-            )}
-          >
-            Programmer un ticket
-          </button>
+      {/* The programmed tickets; a new one starts from « Tickets non-résidents » in the top bar. */}
+      {daily.length > 0 && (
+        <div className="space-y-3">
+          {daily.map((ap) => (
+            <DailyCard key={ap.id} ap={ap} data={data} onChanged={onChanged} needsOffer={needsOffer} />
+          ))}
         </div>
-      ) : (
-        // Once tickets exist: the cards, then the way to add one under them.
-        <>
-          <div className="space-y-3">
-            {daily.map((ap) => (
-              <DailyCard key={ap.id} ap={ap} data={data} onChanged={onChanged} needsOffer={needsOffer} />
-            ))}
-          </div>
-          <div className="mt-5 flex justify-center">
-            <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-[0.95rem] font-semibold text-eu transition hover:text-eu/80">
-              <Plus className="size-4" strokeWidth={2.25} /> Programmer un ticket
-            </button>
-          </div>
-        </>
       )}
       {open && (
-        <DailyWizard data={data} onClose={() => setOpen(false)} onDone={onChanged} needsOffer={needsOffer} locked={locked} onLogout={onLogout} />
+        <DailyWizard data={data} onClose={() => setOpen(false)} onDone={onChanged} needsOffer={needsOffer} locked={locked} onLogout={onLogout} initialPlate={forPlate} />
       )}
     </section>
   )

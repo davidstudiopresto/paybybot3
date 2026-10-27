@@ -1,7 +1,7 @@
 import { Loading } from '@/components/Loading'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Ticket as TicketIcon } from 'lucide-react'
 import { arrondissement, PayByPhone, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
@@ -9,6 +9,7 @@ import { DailyTickets, isDaily, ruleState, when as whenAt } from '@/components/D
 import { AccountButton } from '@/components/Account'
 import { PlansDialog, TrialBanner } from '@/components/Pricing'
 import { ui } from '@/lib/styles'
+import { cn } from '@/lib/utils'
 import { HostedFooter } from '@/components/Footer'
 import { CheckoutDone } from '@/components/CheckoutDone'
 import { ActivateRenewal, CardGate, OpeningSwitch, RenewalActions, RenewalNote, RenewalSwitch, pauseState, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
@@ -161,12 +162,15 @@ function Ticket({
         )}
         {/* No renewal yet: the end of the ticket in red, to urge setting one up. */}
         <p className={`text-sm ${renewal || !renewable ? 'text-ink/50' : 'font-medium text-destructive'}`}>Expire {clock(session.expire)}</p>
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
-          <div
-            className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-[#4e9aa0]'}`}
-            style={{ width: `${(1 - progress) * 100}%` }}
-          />
-        </div>
+        {/* Renewal on: no progress bar either, the next ticket follows by itself. */}
+        {!(renewal && renewal.enabled && !note) && (
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
+            <div
+              className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-[#4e9aa0]'}`}
+              style={{ width: `${(1 - progress) * 100}%` }}
+            />
+          </div>
+        )}
         {/* Nothing will follow this ticket (no renewal, no programmed ticket for the car): said under it. */}
         {!renewal && !data.autopilots.some((ap) => ap.enabled && sameCar(ap.plate, session.plate)) && (
           <p className="mt-3 text-sm text-ink/55">Ce ticket ne sera pas renouvelé.</p>
@@ -390,6 +394,7 @@ export function Dashboard({
   // dialog stays open (then the offer); without one, the « Programmer un ticket » wizard does (then the offer).
   const needsOffer = !!me.hosted && !me.demo && !!account && !account.subscribed && !account.blocked
   const [offerOpen, setOfferOpen] = useState(false) // « Activer mon compte »: the offer screen
+  const [programAsked, setProgramAsked] = useState(0) // « Tickets non-résidents »: each click opens the ticket wizard
   const live = data?.sessions.filter((s) => new Date(s.expire).getTime() > Date.now()) ?? []
   const isResidentCar = (plate: string) => (residentPlates ? residentPlates.has(plateKey(plate)) : true)
   // The car whose renewal opens: a resident ticket running, else a resident car without a ticket (its card is shown),
@@ -477,6 +482,15 @@ export function Dashboard({
           </span>
         )}
         {/* Inviting a friend: always offered to a signed-in account (word of mouth is the only way in). */}
+        {/* Programming a non-resident ticket: a sober button beside the invitation, no card in the page. */}
+        <button
+          onClick={() => setProgramAsked((n) => n + 1)}
+          disabled={!data}
+          aria-label="Tickets non-résidents"
+          className={cn(ui.pillGray, 'gap-2')}
+        >
+          <TicketIcon className="size-4" /> <span className="hidden sm:inline">Tickets non-résidents</span>
+        </button>
         {!me.demo && <InviteButton disabled={!data} />}
         <AccountButton data={data} onDeleted={onDeleted ?? onLogout} demo={me.demo} />
         <button onClick={onLogout} className={ui.navText}>
@@ -535,6 +549,7 @@ export function Dashboard({
             data={data}
             onChanged={onRefresh}
             needsOffer={needsOffer}
+            openAsked={programAsked}
             // Just past the welcome page (or no offer yet) without a resident car to renew: the wizard opens by itself.
             autoOpen={offerDaily || (autoRenew && !renewing && !!residentPlates && !residentPlate)}
             onLogout={onLogout}

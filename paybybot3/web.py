@@ -2292,7 +2292,9 @@ def my_invite(pbb_session: str = Cookie(None)):
     """The signed-in user's invitation link, to share with people around them."""
     s = current(pbb_session)
     code = SHARED_INVITE or invite_code(owner_id(s.username))
-    return {"code": code, "url": APP_URL.rstrip("/") + "/r/" + code}
+    # The trailing slash makes a new address for WhatsApp, which keeps a link's preview: it then reads the current
+    # one (og-v7, « stationnement résident »). Change it again (e.g. /r/<code>/?v=8) after a new preview image.
+    return {"code": code, "url": APP_URL.rstrip("/") + "/r/" + code + "/"}
 
 
 @app.get("/api/me")

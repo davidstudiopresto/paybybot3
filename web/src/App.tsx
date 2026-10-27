@@ -143,9 +143,10 @@ export default function App() {
     api.myInvite().then(
       ({ code }) => {
         const url = new URL(window.location.href)
-        if (url.pathname === `/r/${code}` && !url.searchParams.has('i')) return
+        // With the trailing slash, like the shared link (see /api/invite): its WhatsApp preview is the current one.
+        if (url.pathname === `/r/${code}/` && !url.searchParams.has('i')) return
         url.searchParams.delete('i')
-        history.replaceState(history.state, '', `/r/${code}` + url.search + url.hash)
+        history.replaceState(history.state, '', `/r/${code}/` + url.search + url.hash)
       },
       () => {},
     )

@@ -482,7 +482,7 @@ export function RiverainCard({
           </ul>
         )}
         {another && (
-          <button onClick={() => setOpen(true)} className={cn('text-sm', ui.link)}>
+          <button onClick={() => setOpen(true)} className={cn('mx-auto block text-sm', ui.link)}>
             Renouveler un autre véhicule
           </button>
         )}
@@ -499,11 +499,14 @@ export function RiverainCard({
 }
 
 /** The switch's name, with whether it is on: « Renouvellement résident automatique », « Activé » or « Désactivé ». */
-function SwitchLabel({ on }: { on: boolean }) {
+function SwitchLabel({ on, children }: { on: boolean; children?: ReactNode }) {
   return (
     <span className="min-w-0">
       <span className="block text-[1.05rem] text-ink">Renouvellement résident automatique</span>
-      <span className={cn('block text-sm', on ? 'font-medium text-[#3d7f84]' : 'text-ink/50')}>{on ? 'Activé' : 'Désactivé'}</span>
+      <span className="flex items-center gap-3">
+        <span className={cn('text-sm', on ? 'font-medium text-[#3d7f84]' : 'text-ink/50')}>{on ? 'Activé' : 'Désactivé'}</span>
+        {children}
+      </span>
     </span>
   )
 }
@@ -584,13 +587,19 @@ export function RenewalSwitch({
 
   const row = (onClick: () => void) => (
     <div className="flex items-center justify-between gap-4">
-      <SwitchLabel on={on} />
+      {/* On a phone, « Pause » goes under the title, beside « Activé »: the title keeps the width it needs. */}
+      <SwitchLabel on={on}>
+        {pausable && (
+          <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm whitespace-nowrap text-ink/55 transition hover:text-ink sm:hidden">
+            <Pause className="size-3.5" /> Pause
+          </button>
+        )}
+      </SwitchLabel>
       <span className="ml-auto" />
       {pausable && (
-        <button onClick={() => setPausing(true)} className="inline-flex shrink-0 items-center gap-1.5 text-sm whitespace-nowrap text-ink/55 transition hover:text-ink">
+        <button onClick={() => setPausing(true)} className="hidden shrink-0 items-center gap-1.5 text-sm whitespace-nowrap text-ink/55 transition hover:text-ink sm:inline-flex">
           <Pause className="size-3.5" />
-          <span className="sm:hidden">Pause</span>
-          <span className="hidden sm:inline">Programmer une pause</span>
+          Programmer une pause
         </button>
       )}
       {pausing && ap && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}

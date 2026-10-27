@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { PlansDialog } from '@/components/Pricing'
@@ -22,8 +22,10 @@ export function AccountButton({
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button onClick={() => setOpen(true)} disabled={!data} className={ui.navText}>
-        Mon compte
+      {/* On a phone, the icon alone (the top bar must fit 375 px). */}
+      <button onClick={() => setOpen(true)} disabled={!data} className={ui.navText} aria-label="Mon compte">
+        <UserRound className="size-5 sm:hidden" />
+        <span className="hidden sm:inline">Mon compte</span>
       </button>
       {open && data && <AccountDialog data={data} onClose={() => setOpen(false)} onDeleted={onDeleted} demo={demo} />}
     </>

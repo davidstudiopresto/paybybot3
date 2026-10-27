@@ -1,7 +1,7 @@
 import { Loading } from '@/components/Loading'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ChevronRight, Plus } from 'lucide-react'
+import { ChevronRight, LogOut, Plus } from 'lucide-react'
 import { arrondissement, PayByPhone, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
@@ -44,11 +44,12 @@ function nextRenewal(nextCheck: string | null | undefined, expire: string) {
 
 /** « Activer le renouvellement automatique » under a card: the same as turning its switch on (same window, same checks). */
 function ActivateButton() {
+  // One line on a phone too: the text shrinks a little on the narrowest screens.
   return (
     <button
       type="button"
       onClick={(e) => e.currentTarget.closest('[data-renewal-card]')?.querySelector<HTMLButtonElement>('[role=switch]')?.click()}
-      className={cn(ui.primary, 'mt-5')}
+      className={cn(ui.primary, 'mt-5 px-3 text-[length:min(0.95rem,calc((100vw-96px)/18))] whitespace-nowrap sm:text-lg')}
     >
       Activer le renouvellement automatique
     </button>
@@ -141,12 +142,12 @@ function Ticket({
           <dl className="mt-3 space-y-1 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-ink/50">Prochain renouvellement</dt>
-              <dd className="text-ink tabular-nums">{when(nextRenewal(renewal.nextCheck, session.expire))}</dd>
+              <dd className="text-right whitespace-nowrap text-ink tabular-nums">{when(nextRenewal(renewal.nextCheck, session.expire))}</dd>
             </div>
             {renewal.lastPayment && (
               <div className="flex justify-between gap-4">
                 <dt className="text-ink/50">Dernier paiement</dt>
-                <dd className="text-ink tabular-nums">{when(new Date(renewal.lastPayment).getTime())}</dd>
+                <dd className="text-right whitespace-nowrap text-ink tabular-nums">{when(new Date(renewal.lastPayment).getTime())}</dd>
               </div>
             )}
           </dl>
@@ -485,7 +486,7 @@ export function Dashboard({
       {offerOpen && <PlansDialog onClose={() => setOfferOpen(false)} />}
       <TopBar>
         {me.demo && (
-          <span className="inline-flex h-9 items-center rounded-full bg-amber/25 px-3 text-sm font-semibold text-ink sm:h-10 sm:px-4 sm:text-[0.95rem]">
+          <span className="hidden h-9 items-center rounded-full bg-amber/25 px-3 text-sm font-semibold text-ink min-[400px]:inline-flex sm:h-10 sm:px-4 sm:text-[0.95rem]">
             Démo
           </span>
         )}
@@ -501,8 +502,9 @@ export function Dashboard({
         </button>
         {!me.demo && <InviteButton disabled={!data} />}
         <AccountButton data={data} onDeleted={onDeleted ?? onLogout} demo={me.demo} />
-        <button onClick={onLogout} className={ui.navText}>
-          Déconnexion
+        <button onClick={onLogout} className={ui.navText} aria-label="Déconnexion">
+          <LogOut className="size-5 sm:hidden" />
+          <span className="hidden sm:inline">Déconnexion</span>
         </button>
       </TopBar>
 

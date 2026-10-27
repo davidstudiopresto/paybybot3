@@ -502,7 +502,7 @@ export function RiverainCard({
 function SwitchLabel({ on, children }: { on: boolean; children?: ReactNode }) {
   return (
     <span className="min-w-0">
-      <span className="block text-[1.05rem] text-ink">Renouvellement automatique</span>
+      <span className="block text-[1.05rem] whitespace-nowrap text-ink">Renouvellement automatique</span>
       <span className="flex items-center gap-3">
         <span className={cn('text-sm', on ? 'font-medium text-[#3d7f84]' : 'text-ink/50')}>{on ? 'Activé' : 'Désactivé'}</span>
         {children}
@@ -587,21 +587,14 @@ export function RenewalSwitch({
 
   const row = (onClick: () => void) => (
     <div className="flex items-center justify-between gap-4">
-      {/* On a phone, « Pause » goes under the title, beside « Activé »: the title keeps the width it needs. */}
+      {/* « Programmer une pause » under the title, beside « Activé »: the title stays on one line. */}
       <SwitchLabel on={on}>
         {pausable && (
-          <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm whitespace-nowrap text-ink/55 transition hover:text-ink sm:hidden">
-            <Pause className="size-3.5" /> Pause
+          <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm whitespace-nowrap text-ink/55 transition hover:text-ink">
+            <Pause className="size-3.5" /> Programmer une pause
           </button>
         )}
       </SwitchLabel>
-      <span className="ml-auto" />
-      {pausable && (
-        <button onClick={() => setPausing(true)} className="hidden shrink-0 items-center gap-1.5 text-sm whitespace-nowrap text-ink/55 transition hover:text-ink sm:inline-flex">
-          <Pause className="size-3.5" />
-          Programmer une pause
-        </button>
-      )}
       {pausing && ap && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
       <button
         type="button"

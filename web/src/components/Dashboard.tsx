@@ -107,7 +107,7 @@ function Ticket({
           <Plate plate={session.plate} size="sm" />
         </span>
         {/* A discreet word on the kind of ticket: resident (renewed each week) or not. */}
-        <span className="text-sm text-ink/50">{daily ? place : `Ticket résident · ${place}`}</span>
+        <span className="text-sm text-ink/50">{daily ? place : `Stationnement résident ${place}`}</span>
       </div>
 
       {/* « Renouvellement auto » is for resident tickets only: a non-resident ticket card has no switch (tickets on
@@ -517,10 +517,10 @@ export function Dashboard({
               ? // Nothing automated (a finished one-off ticket does not count): say it plainly.
                 "Votre stationnement n'est pas encore automatisé."
             : sessions.length
-              ? // One card: « Votre ticket en cours », several (running or programmed): « Vos tickets ».
+              ? // One card: « Votre stationnement résident en cours », several (running or programmed): « Vos tickets ».
                 sessions.length + shownDaily > 1
                 ? 'Vos tickets :'
-                : 'Votre ticket en cours :'
+                : 'Votre stationnement résident en cours :'
               : nextPlanned
                 ? `Aucun ticket en cours : le prochain est prévu ${whenAt(nextPlanned)}.`
                 : "Aucun véhicule n'est couvert en ce moment."}

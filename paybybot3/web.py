@@ -295,22 +295,28 @@ class UserSession:
         return self
 
     def call(self, method, *args, **kwargs):
-        """Call a bot method, logging in again once if the token expired."""
-        with self.lock:
-            try:
+        """Call a bot method, logging in again once if the token expired. Calls run side by side (the dashboard
+        sends several at once); only logging in again waits for the others, and is done once."""
+        if self.demo:  # the demo bot keeps its state in memory: one call at a time
+            with self.lock:
                 return getattr(self.bot, method)(*args, **kwargs)
-            except requests.HTTPError as e:
-                if e.response is None or e.response.status_code != 401 or self.demo:
-                    raise
+        bot = self.bot
+        try:
+            return getattr(bot, method)(*args, **kwargs)
+        except requests.HTTPError as e:
+            if e.response is None or e.response.status_code != 401:
+                raise
+        with self.lock:
+            if self.bot is bot:  # not logged in again by a call that failed at the same time
                 if self._password is None:  # hosted mode: the password is not kept, the refresh token is
                     try:
-                        self.bot = bot_from_refresh(getattr(self.bot, "refresh_token", None),
+                        self.bot = bot_from_refresh(getattr(bot, "refresh_token", None),
                                                     owner_id(self.username) if HOSTED else None)
                     except Exception:
                         raise HTTPException(401, "Votre session PayByPhone a expiré, reconnectez-vous.")
-                    return getattr(self.bot, method)(*args, **kwargs)
-                self.bot = Bot(self.username, self._password)
-                return getattr(self.bot, method)(*args, **kwargs)
+                else:
+                    self.bot = Bot(self.username, self._password)
+            return getattr(self.bot, method)(*args, **kwargs)
 
     def log(self, kind, message):
         self.history.insert(0, {"at": datetime.now(timezone.utc).isoformat(), "kind": kind, "message": message})
@@ -2101,24 +2107,37 @@ def overview(pbb_session: str = Cookie(None)):
             for ap in list(s.autopilots.values()):
                 if ap.get("enabled"):
                     run_autopilot(s, ap)
-        vehicles = [v for v in s.call("get_vehicles") if not v.get("archived")]
-        accounts = s.call("get_payment_accounts") or {}
+        def kept_zones():  # each vehicle's resident arrondissement, as found on PayByPhone and kept (see vehicle_zones)
+            try:
+                return load_account(s).get("vehicle_zones") or {}
+            except Exception:
+                return {}
+
+        def renewals():
+            if HOSTED and not s.demo:
+                return [stored_to_autopilot(r) for r in store("renewal_list", p_owner=owner_id(s.username))]
+            return [with_next_ticket(a) for a in s.autopilots.values()]
+
+        # The five reads go out together: the page waits for the slowest one, not for their sum.
+        jobs = {"vehicles": lambda: s.call("get_vehicles"), "accounts": lambda: s.call("get_payment_accounts"),
+                "sessions": lambda: s.call("get_parking_sessions"), "kept": kept_zones, "renewals": renewals}
+        with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
+            futures = {k: pool.submit(contextvars.copy_context().run, f) for k, f in jobs.items()}
+            got = {k: f.result() for k, f in futures.items()}
+        vehicles = [v for v in got["vehicles"] if not v.get("archived")]
+        accounts = got["accounts"] or {}
         payments = normalize_accounts(accounts)
         if not payments and not s.demo:
             # Only types and counts, never card details: helps spot a payment type we don't handle yet.
             log.info("no usable payment method; PayByPhone returned %s",
                      {k: len(v) if isinstance(v, list) else type(v).__name__ for k, v in accounts.items()})
-        try:  # each vehicle's resident arrondissement, as found on PayByPhone and kept (see vehicle_zones)
-            kept = load_account(s).get("vehicle_zones") or {}
-        except Exception:
-            kept = {}
+        kept = got["kept"]
         return {
             "vehicles": [{"plate": v["licensePlate"], "country": v.get("country"), "type": v.get("type"),
                           "zone": (kept.get(plate_key(v["licensePlate"])) or {}).get("z")} for v in vehicles],
             "payments": payments,
-            "sessions": [serialize_session(x) for x in s.call("get_parking_sessions")],
-            "autopilots": ([stored_to_autopilot(r) for r in store("renewal_list", p_owner=owner_id(s.username))]
-                           if HOSTED and not s.demo else [with_next_ticket(a) for a in s.autopilots.values()]),
+            "sessions": [serialize_session(x) for x in got["sessions"]],
+            "autopilots": got["renewals"],
             "history": s.history[:10],
         }
 
@@ -2680,14 +2699,8 @@ def mail_check_failed(s, plate, message):
         log.warning("check e-mail failed: %s", str(e)[:200])
 
 
-@app.post("/api/autopilots")
-def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
-    s = current(pbb_session)
-    if not body.email.strip():  # confirmations go to the account e-mail by default
-        try:
-            body.email = load_account(s).get("email") or ""
-        except Exception as e:
-            log.warning("account e-mail unreadable: %s", e)
+def checked_days(body):
+    """The days and time of a programmed ticket (none for the weekly renewal), the calendar dates checked."""
     days = sorted(set(body.days)) if body.days else None
     if body.dateFrom or body.dateTo:  # chosen on the calendar: a day or a period, never in the past
         first, last = body.dateFrom or body.dateTo, body.dateTo or body.dateFrom
@@ -2696,7 +2709,25 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                 date.fromisoformat(last) - date.fromisoformat(first) > timedelta(days=366):
             raise HTTPException(400, "Choisissez un jour ou une période à venir, d'un an au plus.")
         body.dateFrom, body.dateTo = first, last
-    start = (body.start or schedule.DEFAULT_START) if days else None
+    return days, ((body.start or schedule.DEFAULT_START) if days else None)
+
+
+def check_card(s, payment_account_id):
+    """Renewals pay with a card saved on PayByPhone (nothing else is charged reliably without the user)."""
+    cards = {p["id"] for p in guarded(lambda: normalize_accounts(s.call("get_payment_accounts") or {})) if p["kind"] == "card"}
+    if payment_account_id not in cards:
+        raise HTTPException(400, "Le renouvellement automatique se paie avec une carte bancaire enregistrée sur PayByPhone.")
+
+
+@app.post("/api/autopilots")
+def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
+    s = current(pbb_session)
+    if not body.email.strip():  # confirmations go to the account e-mail by default
+        try:
+            body.email = load_account(s).get("email") or ""
+        except Exception as e:
+            log.warning("account e-mail unreadable: %s", e)
+    days, start = checked_days(body)
     # Only the account's own vehicles (they are what the subscription bills).
     own = {plate_key(v.get("licensePlate") or "") for v in guarded(lambda: s.call("get_vehicles")) or []
            if not v.get("archived")}
@@ -2705,10 +2736,7 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     # One renewal per vehicle: two would each pay for the same car.
     if plate_key(body.plate) in guarded(lambda: renewed_plates(s)):
         raise HTTPException(409, "Ce véhicule a déjà un renouvellement automatique.")
-    # Renewals pay with a card saved on PayByPhone (nothing else is charged reliably without the user).
-    cards = {p["id"] for p in guarded(lambda: normalize_accounts(s.call("get_payment_accounts") or {})) if p["kind"] == "card"}
-    if body.paymentAccountId not in cards:
-        raise HTTPException(400, "Le renouvellement automatique se paie avec une carte bancaire enregistrée sur PayByPhone.")
+    check_card(s, body.paymentAccountId)
     if HOSTED and not s.demo:
         refresh = getattr(s.bot, "refresh_token", None)
         if not refresh:
@@ -3797,6 +3825,45 @@ def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
     response.delete_cookie(COOKIE, path="/")
     log.info("data deleted for %s***", s.username[:4])
     return {"ok": True}
+
+
+@app.put("/api/autopilots/{ap_id}")
+def edit_autopilot(ap_id: str, body: Autopilot, pbb_session: str = Cookie(None)):
+    """A programmed ticket (non-resident) changed in place: zone, rate, length, days, time, card. Its vehicle stays:
+    another car is another ticket. The tickets already taken are kept, so nothing is paid twice the same day."""
+    s = current(pbb_session)
+    days, start = checked_days(body)
+    if not days:
+        raise HTTPException(400, "Seuls les tickets programmés se modifient.")
+    same_car = "Le véhicule ne se change pas : arrêtez ce ticket et programmez-en un pour l'autre véhicule."
+    if HOSTED and not s.demo:
+        row = next((r for r in guarded(lambda: store("renewal_list", p_owner=owner_id(s.username))) if r["id"] == ap_id),
+                   None)
+        if not row:
+            raise HTTPException(404, "Ticket introuvable.")
+        old = with_details(row)
+        if plate_key(old["plate"]) != plate_key(body.plate):
+            raise HTTPException(400, same_car)
+        check_card(s, body.paymentAccountId)
+        details = {**old, "location": body.location, "rate": body.rate, "duration": fmt_qty(body.duration),
+                   "unit": body.unit, "payment_account_id": body.paymentAccountId, "days": days, "start": start,
+                   "tz": body.tz or old.get("tz") or "", "date_from": body.dateFrom or "", "date_to": body.dateTo or "",
+                   "cmis_attested_at": (old.get("cmis_attested_at") or utc_iso(datetime.now(timezone.utc)))
+                   if body.cmis else ""}
+        ap = update_own_renewal(s, ap_id, {"data": encrypt_details(details), "last_error": None,
+                                           "next_check": utc_iso(datetime.now(timezone.utc))})
+        log.info("renewal %s edited", ap_id)
+        return with_next_ticket(ap)
+    ap = s.autopilots.get(ap_id)
+    if not ap:
+        raise HTTPException(404, "Ticket introuvable.")
+    if plate_key(ap["plate"]) != plate_key(body.plate):
+        raise HTTPException(400, same_car)
+    check_card(s, body.paymentAccountId)
+    ap.update(location=body.location, rate=body.rate, duration=fmt_qty(body.duration), unit=body.unit,
+              paymentAccountId=body.paymentAccountId, days=days, start=start, dateFrom=body.dateFrom,
+              dateTo=body.dateTo, cmis=body.cmis, lastError=None)
+    return ap
 
 
 @app.delete("/api/autopilots/{ap_id}")

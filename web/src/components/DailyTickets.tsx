@@ -251,6 +251,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
             onChanged={onChanged}
             withPause={!single}
             stopLabel={single ? 'Annuler ce ticket' : 'Arrêter ces tickets'}
+            switchLabel={single ? 'Ticket programmé' : 'Renouvellement auto'}
             stoppedText={single ? 'Ticket annulé.' : 'Tickets arrêtés.'}
           />
         )}

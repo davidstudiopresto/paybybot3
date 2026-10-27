@@ -190,10 +190,13 @@ export function RenewalActions({
   withPause = true,
   stopLabel = 'Arrêter le renouvellement',
   stoppedText = 'Renouvellement arrêté.',
+  switchLabel,
 }: {
   ap: Autopilot
   onChanged: () => void
   className?: string
+  /** Shown as an on/off switch with this label (programmed tickets) instead of the stop button; the pause a link. */
+  switchLabel?: string
   withStop?: boolean
   /** « Renouvellement » is the resident's word: programmed tickets say what stops instead. */
   stopLabel?: string
@@ -245,6 +248,58 @@ export function RenewalActions({
   }
 
   if (!ap.enabled) return null
+  if (switchLabel)
+    return (
+      <div className={cn('space-y-3 text-[0.95rem]', className)}>
+        {confirming ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="text-ink">{stopLabel} ?</span>
+            <span className="flex gap-2">
+              <button onClick={() => setConfirming(false)} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-ink/70 hover:bg-ink/[0.05]">
+                Annuler
+              </button>
+              <button onClick={stop} disabled={busy} className="rounded-lg bg-destructive px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60">
+                Confirmer
+              </button>
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-ink">{switchLabel}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked
+              aria-label={switchLabel}
+              disabled={busy}
+              onClick={() => setConfirming(true)}
+              className="relative h-7 w-12 shrink-0 rounded-full bg-[#4e9aa0] transition-colors disabled:opacity-60"
+            >
+              <span className="absolute top-1 left-1 grid size-5 translate-x-5 place-items-center rounded-full bg-white shadow transition-transform">
+                {busy && <Loader2 className="size-3 animate-spin text-ink/50" />}
+              </span>
+            </button>
+          </div>
+        )}
+        {later ? (
+          <div className="flex items-center justify-between gap-3">
+            <PlannedPause ap={ap} className="flex-1" />
+            <button onClick={resume} disabled={busy} className={cn('shrink-0', ui.link)}>
+              Annuler
+            </button>
+          </div>
+        ) : paused ? (
+          <button onClick={resume} disabled={busy} className={cn('text-sm', ui.link)}>
+            Reprendre maintenant
+          </button>
+        ) : withPause ? (
+          <button onClick={() => setPausing(true)} className="text-sm text-ink/55 underline decoration-ink/25 underline-offset-[3px] hover:text-ink">
+            Programmer une pause
+          </button>
+        ) : null}
+        {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
+      </div>
+    )
   return (
     <div className={cn('space-y-3 text-[0.95rem]', className)}>
       {later ? (

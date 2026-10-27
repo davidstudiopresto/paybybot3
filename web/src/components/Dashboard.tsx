@@ -346,6 +346,12 @@ export function Dashboard({
     )
   }, [me.hosted, me.demo, data?.vehicles.length])
   const sessions = data?.sessions.filter((s) => new Date(s.expire).getTime() > now) ?? []
+  // The programmed-ticket cards shown below (as DailyTickets lists them: a finished one-off ticket is not).
+  const shownDaily = (data?.autopilots ?? []).filter((ap) => {
+    if (!isDaily(ap)) return false
+    const { period, finished } = ruleState(ap)
+    return !(finished && period && period.from === period.to)
+  }).length
   // The soonest ticket a programmed day will take, to say when the car is next covered when none runs now.
   const nextPlanned =
     data?.autopilots
@@ -472,8 +478,9 @@ export function Dashboard({
               ? // Nothing automated (a finished one-off ticket does not count): say it plainly.
                 "Votre stationnement n'est pas encore automatisé."
             : sessions.length
-              ? sessions.length > 1
-                ? `${sessions.length} tickets en cours.`
+              ? // One card: « Votre ticket en cours », several (running or programmed): « Vos tickets ».
+                sessions.length + shownDaily > 1
+                ? 'Vos tickets :'
                 : 'Votre ticket en cours :'
               : nextPlanned
                 ? `Aucun ticket en cours : le prochain est prévu ${whenAt(nextPlanned)}.`

@@ -356,21 +356,20 @@ export function DailyTickets({
           </button>
         </div>
       ) : (
-        // Once tickets exist: a heading for them, the way to add one on the same line.
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-          <p className="text-[1.05rem] text-ink/60">Vos tickets programmés :</p>
-          <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-[0.95rem] font-semibold text-eu transition hover:text-eu/80">
-            <Plus className="size-4" strokeWidth={2.25} /> Programmer un ticket
-          </button>
-        </div>
+        // Once tickets exist: the cards, then the way to add one under them.
+        <>
+          <div className="space-y-3">
+            {daily.map((ap) => (
+              <DailyCard key={ap.id} ap={ap} onChanged={onChanged} />
+            ))}
+          </div>
+          <div className="mt-5 flex justify-center">
+            <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-[0.95rem] font-semibold text-eu transition hover:text-eu/80">
+              <Plus className="size-4" strokeWidth={2.25} /> Programmer un ticket
+            </button>
+          </div>
+        </>
       )}
-      {daily.length ? (
-        <div className="mt-3 space-y-3">
-          {daily.map((ap) => (
-            <DailyCard key={ap.id} ap={ap} onChanged={onChanged} />
-          ))}
-        </div>
-      ) : null}
       {open && (
         <DailyWizard data={data} onClose={() => setOpen(false)} onDone={onChanged} needsOffer={needsOffer} locked={locked} onLogout={onLogout} />
       )}

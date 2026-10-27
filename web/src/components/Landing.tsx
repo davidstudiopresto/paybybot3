@@ -285,7 +285,7 @@ export function SampleTicket({ className }: { className?: string }) {
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-ink/50">Dernier paiement</dt>
-            <dd className="text-ink tabular-nums">il y a 6 jours · 9,00 €</dd>
+            <dd className="text-ink tabular-nums">il y a 6 jours</dd>
           </div>
         </dl>
       </div>

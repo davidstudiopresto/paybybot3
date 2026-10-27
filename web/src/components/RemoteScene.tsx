@@ -51,7 +51,7 @@ export function RemoteScene({ className }: { className?: string }) {
         @media (prefers-reduced-motion: reduce) { .${c} * { animation: none !important; } .${c}-before { opacity: 0 } .${c}-after, .${c}-row, .${c}-on { opacity: 1 } .${c}-inf { stroke-dashoffset: 0 } .${c}-knob { transform: translateX(14px) } }
       `}</style>
 
-      <g className={c} fontFamily="Inter Variable, sans-serif">
+      <g className={c} fontFamily="Figtree Variable, sans-serif">
         {/* the ticket card: PayByBot's logo and name, the plate, time left, then the weeks paid piling up */}
         <rect x="340" y="40" width="190" height="320" rx="10" fill="#fff" stroke={LINE} strokeWidth="1.5" />
         <defs>

@@ -38,7 +38,7 @@ function DoneScene({ vehicle, className }: { vehicle?: DoneVehicle | null; class
           .cd-line, .cd-on { opacity: 1 } .cd-knob { transform: translateX(14px) } .cd-badge { transform: none } .cd-tick { stroke-dashoffset: 0 }
         }
       `}</style>
-      <g className="cd" fontFamily="Inter Variable, sans-serif">
+      <g className="cd" fontFamily="Figtree Variable, sans-serif">
         <g className="cd-card">
           <rect x="30" y="20" width="200" height="160" rx="12" fill="#fff" stroke={LINE} strokeWidth="1.5" />
           <text x="50" y="50" fontWeight="500" fontSize="15" fill={INK}>

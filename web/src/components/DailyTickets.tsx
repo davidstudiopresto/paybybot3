@@ -148,17 +148,17 @@ export function ruleState(ap: Autopilot, now = Date.now()) {
 }
 
 const STATE_LABEL = {
-  planned: ['Programmé', 'bg-[#4e9aa0]/12 text-[#3d7f84]'],
-  running: ['En cours', 'bg-[#4e9aa0] text-white'],
-  paused: ['En pause', 'bg-amber/25 text-ink'],
-  finished: ['Terminé', 'bg-ink/[0.06] text-ink/55'],
-  stopped: ['Arrêté', 'bg-ink/[0.06] text-ink/55'],
+  planned: 'Programmé',
+  running: 'En cours',
+  paused: 'En pause',
+  finished: 'Terminé',
+  stopped: 'Arrêté',
 } as const
 
 function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) {
   const { period, next, last, finished, state } = ruleState(ap)
   const single = !!period && period.from === period.to
-  const [label, tone] = STATE_LABEL[state]
+  const label = STATE_LABEL[state]
   const [removing, setRemoving] = useState(false)
 
   async function remove() {
@@ -188,7 +188,10 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
           </span>
           <Plate plate={ap.plate} size="sm" />
         </span>
-        <span className="text-sm text-ink/50">{arrondissement(ap.location) ?? `Zone ${ap.location}`}</span>
+        {/* The state then the place, in grey, like the resident card's « Ticket résident · Paris 5e ». */}
+        <span className="text-sm text-ink/50">
+          {label} · {arrondissement(ap.location) ?? `Zone ${ap.location}`}
+        </span>
       </div>
       {/* Same order as the resident card: the switch right under the header, then the details. */}
       <div className="border-t border-ink/[0.06] px-5 py-4">
@@ -213,7 +216,7 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
         )}
       </div>
       <div className="border-t border-ink/[0.06] px-5 pt-3.5 pb-4">
-        <div className="flex items-center justify-between gap-3">
+        <div>
           <span className="text-ink">
             Ticket de {lengthText(Number(ap.duration), ap.unit)}
             {period
@@ -222,7 +225,6 @@ function DailyCard({ ap, onChanged }: { ap: Autopilot; onChanged: () => void }) 
                 ? isParis(ap.location) ? ', chaque jour sauf dimanche et jours fériés' : ', chaque jour'
                 : ''}
           </span>
-          <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-xs font-medium', tone)}>{label}</span>
         </div>
         {/* The days, unless it is every day (then said in words above). */}
         {!period && !everyDay(ap) && (

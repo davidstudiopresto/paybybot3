@@ -485,11 +485,8 @@ export function Dashboard({
       </TopBar>
 
       <main className="mx-auto w-full max-w-[34rem] flex-1 px-6 pt-4 pb-6">
-        {/* Just the greeting, large: the line below says whether a ticket is running. */}
-        <h1 className="rise font-heading text-[2.6rem] leading-[1.05] font-medium tracking-[-0.035em]">
-          {me.firstName ? `Bonjour ${me.firstName},` : 'Bonjour,'}
-        </h1>
-        <p className="mt-3 text-[1.05rem] text-ink/60">
+        {/* No greeting: the page opens on what matters, whether a ticket is running. */}
+        <h1 className="mt-2 text-[1.05rem] text-ink/60">
           {!data
             ? withPayByPhone('Chargement de votre compte PayByPhone.')
             : !data.autopilots.some((ap) => ap.enabled && !ruleState(ap).finished)
@@ -503,7 +500,7 @@ export function Dashboard({
               : nextPlanned
                 ? `Aucun ticket en cours : le prochain est prévu ${whenAt(nextPlanned)}.`
                 : "Aucun véhicule n'est couvert en ce moment."}
-        </p>
+        </h1>
 
         {data && sessions.length > 0 && (
           <div className="mt-5 space-y-3">

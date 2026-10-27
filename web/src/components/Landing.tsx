@@ -314,7 +314,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
         <div className={cn('flex flex-col items-center text-center', heroOnly && 'items-start text-left')}>
           {/* One sentence in two tones: the promise in warm ink, the how in grey. */}
           <h1 className="oi-title max-w-[40rem] text-left">
-            <span className="block text-[#151311]">Votre stationnement se renouvelle tout seul.</span>
+            <span className="block text-[#151311]">Votre stationnement résident se renouvelle tout seul.</span>
             <span className="block text-[#151311]/45">
               Vos tickets <PayByPhone /> repris avant l’expiration. Zéro oubli, zéro amende.
             </span>

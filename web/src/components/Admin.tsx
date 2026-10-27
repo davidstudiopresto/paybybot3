@@ -134,12 +134,9 @@ export type AdminActivity = { id: number | null; at: string; event: string; who:
 
 const LINK_OPENED = 'Lien privé ouvert'
 
-/** Total private-link opens over time (a step up at each open), from the first one to now. */
-function LinkOpensChart({ rows }: { rows: AdminActivity[] }) {
-  const opens = rows
-    .filter((r) => r.event === LINK_OPENED)
-    .map((r) => new Date(r.at).getTime())
-    .sort((a, b) => a - b)
+/** A running total over time (a step up at each event), from the first one to now, refreshed live. */
+function StepChart({ times, unit }: { times: string[]; unit: string }) {
+  const opens = times.map((t) => new Date(t).getTime()).sort((a, b) => a - b)
   const now = Date.now()
   const start = opens.length ? Math.min(opens[0], now - 3600_000) : now - 86_400_000
   const W = 600
@@ -156,7 +153,7 @@ function LinkOpensChart({ rows }: { rows: AdminActivity[] }) {
       <div className="flex items-baseline justify-between">
         <span className="font-heading text-3xl font-semibold tabular-nums text-ink">{opens.length}</span>
         <span className="flex items-center gap-2 text-sm text-ink/50">
-          <span className="size-2 animate-pulse rounded-full bg-[#16a34a]" aria-hidden /> liens ouverts · en direct
+          <span className="size-2 animate-pulse rounded-full bg-[#16a34a]" aria-hidden /> {unit} · en direct
         </span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 h-36 w-full overflow-visible" preserveAspectRatio="none" aria-hidden>
@@ -457,7 +454,26 @@ export function AdminPage(_: { signedIn?: boolean }) {
             {clients && clients.length > 0 && <VehicleTable clients={clients} />}
 
             <h2 className="mt-12 text-sm font-semibold text-ink/55">Liens privés ouverts</h2>
-            {activity ? <LinkOpensChart rows={activity} /> : <div className="mt-3 h-52 animate-pulse rounded-2xl bg-ink/[0.04]" />}
+            {activity ? (
+              <StepChart times={activity.filter((r) => r.event === LINK_OPENED).map((r) => r.at)} unit="liens ouverts" />
+            ) : (
+              <div className="mt-3 h-52 animate-pulse rounded-2xl bg-ink/[0.04]" />
+            )}
+
+            {/* Sign-ups from the accounts themselves (all of them), paid subscriptions from « Activité ». */}
+            <h2 className="mt-12 text-sm font-semibold text-ink/55">Inscriptions</h2>
+            {clients ? (
+              <StepChart times={clients.map((c) => c.created)} unit="inscriptions" />
+            ) : (
+              <div className="mt-3 h-52 animate-pulse rounded-2xl bg-ink/[0.04]" />
+            )}
+
+            <h2 className="mt-12 text-sm font-semibold text-ink/55">Abonnements payants</h2>
+            {activity ? (
+              <StepChart times={activity.filter((r) => r.event === 'Abonnement souscrit').map((r) => r.at)} unit="abonnements" />
+            ) : (
+              <div className="mt-3 h-52 animate-pulse rounded-2xl bg-ink/[0.04]" />
+            )}
 
             <h2 className="mt-12 text-sm font-semibold text-ink/55">Activité{activity ? ` (${activity.length})` : ''}</h2>
             {!activity ? (

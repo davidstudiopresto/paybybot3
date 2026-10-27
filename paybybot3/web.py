@@ -767,8 +767,9 @@ def email_html(title, lines, button=None, footer=RENEWAL_FOOTER, code=None):
     )
 
 
-def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER, code=None, reply_to=None):
-    """Transactional e-mail through Resend. Silently skipped without an address or an API key."""
+def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER, code=None, reply_to=None, count=True):
+    """Transactional e-mail through Resend. Silently skipped without an address or an API key. Each one sent is
+    counted against Resend's quota (`count=False` for the capacity alerts themselves)."""
     key = os.environ.get("RESEND_API_KEY")
     if not to or not key:
         return False
@@ -783,6 +784,14 @@ def send_email(to, subject, title, lines, button=None, footer=RENEWAL_FOOTER, co
         log.info("e-mail '%s': %s", title, r.status_code)  # the title, never the address nor a code from the subject
         if not r.ok:
             log.warning("e-mail refused by Resend: %s", r.text[:200])
+            if count and (r.status_code == 429 or "quota" in r.text):
+                capacity_alert("email-refused:" + paris_day(), "Resend refuse les e-mails",
+                               ["Resend refuse d'envoyer : quota d'e-mails atteint (%s)." % r.text[:120],
+                                "Les clients ne reçoivent plus les e-mails de PayByBot (les tickets sont toujours "
+                                "payés). Passez Resend sur un plan supérieur, puis réglez PAYBYBOT_EMAIL_DAY_LIMIT "
+                                "et PAYBYBOT_EMAIL_MONTH_LIMIT sur Vercel."])
+        elif count:
+            count_email()
         return r.ok
     except Exception as e:
         log.warning("e-mail '%s' failed: %s", title, e)
@@ -809,6 +818,91 @@ def alert_owner(details, info):
                    ("Ouvrir l'admin", APP_URL.rstrip("/") + "/#/admin"))
     except Exception as e:
         log.warning("owner alert not sent: %s", type(e).__name__)
+
+
+# --------------------------------------------------------------------------
+# Capacity alerts: the owner hears before a limit of the stack is reached
+# --------------------------------------------------------------------------
+
+USER_STEPS = (20, 50, 100, 200, 500, 1000)  # accounts with something running: each step crossed is told once
+DB_LIMIT_BYTES = 500 * 2**20  # Supabase free plan
+
+
+def paris_day(now=None):
+    return (now or datetime.now(timezone.utc)).astimezone(ZoneInfo("Europe/Paris")).strftime("%Y-%m-%d")
+
+
+def capacity_alert(key, subject, lines):
+    """One alert per key, ever (put the day or the month in the key to repeat it): an ERROR log for Sentry and an
+    e-mail to the owner. Never raises; True when it went out."""
+    try:
+        counts = store("usage_add", p_keys=["alert:" + key]) or {}
+    except Exception as e:
+        log.warning("capacity alert not recorded: %s", type(e).__name__)
+        return False
+    if counts.get("alert:" + key) != 1:
+        return False
+    log.error("capacity alert: %s", subject)
+    try:
+        send_email(owner_address(), "Alerte PayByBot · " + subject, subject, lines,
+                   ("Ouvrir l'admin", APP_URL.rstrip("/") + "/#/admin"), count=False)
+    except Exception as e:
+        log.warning("capacity alert not sent: %s", type(e).__name__)
+    return True
+
+
+def count_email(now=None):
+    """One more e-mail sent: at 80 % of Resend's daily or monthly quota, the owner is told (once a day / a month)."""
+    if not HOSTED:
+        return
+    day = paris_day(now)
+    month = day[:7]
+    day_limit = int(os.environ.get("PAYBYBOT_EMAIL_DAY_LIMIT") or 100)  # Resend free plan
+    month_limit = int(os.environ.get("PAYBYBOT_EMAIL_MONTH_LIMIT") or 3000)
+    try:
+        counts = store("usage_add", p_keys=["email:day:" + day, "email:month:" + month]) or {}
+    except Exception as e:
+        log.info("e-mail not counted: %s", type(e).__name__)
+        return
+    advice = "Au-delà, les e-mails aux clients ne partent plus (les tickets sont toujours payés). Passez Resend sur " \
+             "un plan supérieur, puis réglez PAYBYBOT_EMAIL_DAY_LIMIT et PAYBYBOT_EMAIL_MONTH_LIMIT sur Vercel."
+    sent_today, sent_month = counts.get("email:day:" + day, 0), counts.get("email:month:" + month, 0)
+    if sent_today >= 0.8 * day_limit:
+        capacity_alert("email-day:" + day, "quota d'e-mails du jour bientôt atteint",
+                       ["%s e-mails envoyés aujourd'hui sur %s autorisés par Resend." % (sent_today, day_limit), advice])
+    if sent_month >= 0.8 * month_limit:
+        capacity_alert("email-month:" + month, "quota d'e-mails du mois bientôt atteint",
+                       ["%s e-mails envoyés ce mois-ci sur %s autorisés par Resend." % (sent_month, month_limit),
+                        advice])
+
+
+def check_capacity(now=None):
+    """Run by the scheduler: the renewals queue, the number of customers, the database size. Never raises."""
+    try:
+        snap = store("capacity_snapshot")
+    except Exception as e:
+        log.info("capacity not checked: %s", type(e).__name__)
+        return
+    if not isinstance(snap, dict):
+        return
+    day = paris_day(now)
+    if snap.get("overdue"):
+        capacity_alert("queue:" + day, "renouvellements en retard",
+                       ["%s renouvellement(s) attendent depuis plus de 10 minutes après leur heure : le robot ne suit "
+                        "plus (il en traite %s toutes les 5 minutes)." % (snap["overdue"], CLAIM_PER_RUN),
+                        "Risque d'amende pour ces clients. Augmentez CLAIM_PER_RUN dans web.py."])
+    owners = snap.get("owners") or 0
+    for step in USER_STEPS:
+        if owners >= step:
+            capacity_alert("users:%s" % step, "%s clients actifs" % step,
+                           ["%s comptes ont un renouvellement ou un ticket programmé actif." % owners,
+                            "À vérifier à ce palier : le quota d'e-mails Resend, les plans Vercel et Supabase, et "
+                            "les erreurs « trop de requêtes » de PayByPhone dans Sentry."])
+    if (snap.get("db_bytes") or 0) >= 0.8 * DB_LIMIT_BYTES:
+        capacity_alert("db:" + day[:7], "base de données bientôt pleine",
+                       ["La base Supabase fait %s Mo sur %s Mo du plan gratuit."
+                        % (snap["db_bytes"] // 2**20, DB_LIMIT_BYTES // 2**20),
+                        "Passez Supabase en Pro avant d'atteindre la limite."])
 
 
 def owner_address():
@@ -1730,6 +1824,9 @@ def process_renewal(row, refresh_token=None, activating=False, refused=False):
     return outcome
 
 
+CLAIM_PER_RUN = 4  # renewals handled side by side at each scheduler run (every 5 minutes)
+
+
 @app.api_route("/api/cron/renew", methods=["GET", "POST"])
 def cron_renew(request: Request):
     """Called every few minutes by the scheduler. Only acts on renewals that are due."""
@@ -1739,7 +1836,7 @@ def cron_renew(request: Request):
         raise HTTPException(401, "Unauthorized")
     # Side by side, so a slow one (a payment to confirm can take a minute) never pushes the others past the
     # function's time limit; one failing never stops the others.
-    rows = store("renewal_claim_due", p_limit=4) or []
+    rows = store("renewal_claim_due", p_limit=CLAIM_PER_RUN) or []
 
     def safe(row):
         try:
@@ -1751,6 +1848,7 @@ def cron_renew(request: Request):
         results = list(pool.map(safe, rows))
     # Once an hour (the scheduler calls every 5 minutes): the e-mails of the grace week after a refused charge.
     dunned = run_dunning() if datetime.now(timezone.utc).minute < 5 else None
+    check_capacity()
     return {"processed": len(results), "outcomes": results, "dunning": dunned}
 
 
@@ -3692,6 +3790,9 @@ def admin_service_action(body: ServiceAction, pbb_admin: str = Cookie(None)):
     return guarded(lambda: service_action(body.action))
 
 
+_admin_parking = {}  # owner -> (when read, its vehicles and running tickets)
+
+
 @app.get("/api/admin/clients")
 def admin_clients(pbb_admin: str = Cookie(None)):
     """The owner's client list: first name (PayByPhone, else the Stripe billing name), e-mail, sign-up date, offer,
@@ -3719,8 +3820,18 @@ def admin_clients(pbb_admin: str = Cookie(None)):
                         "price": plan_total(account_monthlies(account), plan) if account else None,
                         "renewals": row.get("renewals_active", 0)})
 
-    # Each client's vehicles and running tickets, read from PayByPhone with the stored login (in parallel).
+    # Each client's vehicles and running tickets, read from PayByPhone with the stored login (in parallel), kept
+    # 5 minutes: reopening the admin does not log in to every client's PayByPhone account again.
     def parking(owner):
+        kept = _admin_parking.get(owner)
+        if kept and time.time() - kept[0] < 300:
+            return kept[1]
+        found = read_parking(owner)
+        if found is not None:
+            _admin_parking[owner] = (time.time(), found)
+        return found
+
+    def read_parking(owner):
         try:
             bot = bot_from_refresh(None, owner)
             vehicles = [v["licensePlate"] for v in bot.get_vehicles() if not v.get("archived")]
@@ -3804,7 +3915,7 @@ def scan_resident_zone(s):
                    for r in rates)
 
     for vehicle in vehicles:
-        with ThreadPoolExecutor(max_workers=10) as pool:
+        with ThreadPoolExecutor(max_workers=4) as pool:  # 10 at once made PayByPhone answer 429
             hits = list(pool.map(lambda z: resident_in(z, vehicle), PARIS_ZONES))
         if any(hits):
             return PARIS_ZONES[hits.index(True)]

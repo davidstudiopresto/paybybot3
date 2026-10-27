@@ -265,13 +265,16 @@ export default function App() {
 
   useEffect(() => {
     if (!me) return
+    // A tab in the background asks nothing: each refresh costs PayByBot 3 calls to PayByPhone, and hundreds of tabs
+    // left open would add up (the dashboard refreshes anyway as soon as the tab is back in front).
+    const tick = () => (document.visibilityState === 'visible' ? refresh() : undefined)
     if (!renewing) {
-      const id = setInterval(refresh, 60_000)
+      const id = setInterval(tick, 60_000)
       return () => clearInterval(id)
     }
     let left = 36
-    const id = setInterval(() => (left-- > 0 ? refresh() : undefined), 5_000)
-    const slow = setInterval(refresh, 60_000)
+    const id = setInterval(() => (left-- > 0 ? tick() : undefined), 5_000)
+    const slow = setInterval(tick, 60_000)
     return () => {
       clearInterval(id)
       clearInterval(slow)

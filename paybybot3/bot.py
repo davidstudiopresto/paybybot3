@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 import uuid
 from datetime import datetime
 from time import sleep
@@ -17,6 +18,9 @@ def _parse_dt(value):
         except ValueError:
             continue
     return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+
+
+_VENDORS = {}  # zone number -> PayByPhone vendor id (never changes)
 
 
 class Bot:
@@ -251,7 +255,10 @@ class Bot:
     def _resolve_payment(self, paymentAccountId):
         if not paymentAccountId:
             return "", ""
-        accounts = self.get_payment_accounts()
+        # The account's cards, asked once per minute at most: a payment asks for them several times in a row.
+        if not getattr(self, "_accounts", None) or time.time() - self._accounts[0] > 60:
+            self._accounts = (time.time(), self.get_payment_accounts())
+        accounts = self._accounts[1]
         for card in accounts.get("paymentCards") or []:
             if card.get("paymentAccountId") == paymentAccountId:
                 return card.get("cardType") or "", card.get("paymentScope") or ""
@@ -287,6 +294,15 @@ class Bot:
         return self._graphql(query, {"input": {"advertisedLocationNumber": str(number)}})["getLocationsV1"] or []
 
     def _get_vendor_id(self, locationId):
+        # A zone's vendor never changes: asked to PayByPhone once per zone, then kept (shared by all accounts).
+        if str(locationId) in _VENDORS:
+            return _VENDORS[str(locationId)]
+        vendor = self._fetch_vendor_id(locationId)
+        if vendor:
+            _VENDORS[str(locationId)] = vendor
+        return vendor
+
+    def _fetch_vendor_id(self, locationId):
         query = """query GetLocationsV1($input: GetLocationInput!) {
   getLocationsV1(input: $input) {
     locationId

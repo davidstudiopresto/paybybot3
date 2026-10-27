@@ -276,7 +276,7 @@ export function DailyTickets({
 }: {
   data: Overview
   onChanged: () => void
-  /** Counts the clicks on « Tickets non-résidents » (top bar): each one opens the wizard. */
+  /** Counts the clicks on « Programmer un ticket » (top bar): each one opens the wizard. */
   openAsked?: number
   /** The cars with the resident rate (checked with PayByPhone): renewed above, not offered a ticket here. */
   residentPlates?: Set<string> | null
@@ -311,7 +311,7 @@ export function DailyTickets({
   ])
   const isResident = (v: { plate: string; zone?: string | null }) => (residentPlates ? residentPlates.has(key(v.plate)) : !!v.zone)
   const idle = data.vehicles.filter((v) => !isResident(v) && !busy.has(key(v.plate)))
-  // An account with a resident car: its other cars' tickets start from « Tickets non-résidents » (top bar) only.
+  // An account with a resident car: its other cars' tickets start from « Programmer un ticket » (top bar) only.
   // Without one, every car with nothing on it keeps its own card and button.
   const anyResident = data.vehicles.some(isResident)
   const program = (plate?: string) => (setForPlate(plate), setOpen(true))
@@ -346,7 +346,7 @@ export function DailyTickets({
     )
   return (
     <section id="tickets-programmes" className="rise mt-4 scroll-mt-20">
-      {/* The programmed tickets; a new one starts from « Tickets non-résidents » in the top bar. */}
+      {/* The programmed tickets; a new one starts from « Programmer un ticket » in the top bar. */}
       {daily.length > 0 && (
         <div className="space-y-3">
           {daily.map((ap) => (

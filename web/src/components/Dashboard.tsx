@@ -1,7 +1,7 @@
 import { Loading } from '@/components/Loading'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ChevronRight, Ticket as TicketIcon } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import { arrondissement, PayByPhone, Plate, vehicleType, withPayByPhone } from '@/components/signs'
 import { TopBar } from '@/components/TopBar'
 import { InviteButton } from '@/components/Invite'
@@ -386,7 +386,7 @@ export function Dashboard({
   // dialog stays open (then the offer); without one, the « Programmer un ticket » wizard does (then the offer).
   const needsOffer = !!me.hosted && !me.demo && !!account && !account.subscribed && !account.blocked
   const [offerOpen, setOfferOpen] = useState(false) // « Activer mon compte »: the offer screen
-  const [programAsked, setProgramAsked] = useState(0) // « Tickets non-résidents »: each click opens the ticket wizard
+  const [programAsked, setProgramAsked] = useState(0) // « Programmer un ticket »: each click opens the ticket wizard
   const live = data?.sessions.filter((s) => new Date(s.expire).getTime() > Date.now()) ?? []
   const isResidentCar = (plate: string) => (residentPlates ? residentPlates.has(plateKey(plate)) : true)
   // The car whose renewal opens: a resident ticket running, else a resident car without a ticket (its card is shown),
@@ -478,10 +478,10 @@ export function Dashboard({
         <button
           onClick={() => setProgramAsked((n) => n + 1)}
           disabled={!data}
-          aria-label="Tickets non-résidents"
+          aria-label="Programmer un ticket"
           className={cn(ui.pillGray, 'gap-2')}
         >
-          <TicketIcon className="size-4" /> <span className="hidden sm:inline">Tickets non-résidents</span>
+          <Plus className="size-4" /> <span className="hidden sm:inline">Programmer un ticket</span>
         </button>
         {!me.demo && <InviteButton disabled={!data} />}
         <AccountButton data={data} onDeleted={onDeleted ?? onLogout} demo={me.demo} />

@@ -888,7 +888,7 @@ function RiverainDialog({
   return (
     // Always closable with the cross, even when it opened by itself (locked): the dashboard stays behind it.
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={ui.dialog}>
+      <DialogContent className={cn(ui.dialog, 'sm:max-w-lg')}>
         <div className="px-6 pt-7">
           <DialogTitle className={cn(ui.dialogTitle, 'font-semibold')}>Renouvellement résident</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">

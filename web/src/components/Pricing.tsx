@@ -185,7 +185,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
         ))}
       </div>
       <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-ink/45">
-        Par véhicule : voiture, deux-roues ou utilitaire · ticket résident, visiteur ou carte handicapé.
+        Par véhicule : voiture, deux-roues ou utilitaire · ticket résident, visiteur ou carte mobilité CMI-S.
       </p>
     </>
   )

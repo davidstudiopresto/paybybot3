@@ -376,7 +376,7 @@ function Terms() {
         <p>
           <PayByBot />, service appartenant à {PUBLISHER.name}, est une interface qui permet de piloter son propre compte <PayByPhone /> :
           payer un stationnement, prolonger un ticket en cours et, si vous l’activez, renouveler automatiquement un ticket
-          résident chaque semaine ou prendre automatiquement un ticket (visiteur, carte handicapé…) les jours et à l’heure
+          résident chaque semaine ou prendre automatiquement un ticket (visiteur, carte mobilité CMI-S…) les jours et à l’heure
           que vous choisissez. Il s’adresse aux résidents comme aux non-résidents. Le service est payant après un mois
           offert (voir « Abonnement et paiement »).
         </p>
@@ -422,7 +422,7 @@ function Terms() {
           </li>
           <li>
             Choisir le tarif qui vous correspond et disposer des droits nécessaires aux tarifs spéciaux, et les tenir à
-            jour : tarif résident, carte mobilité inclusion mention stationnement (CMI-S) pour le ticket handicapé, à placer
+            jour : tarif résident, carte mobilité inclusion mention stationnement (CMI-S) pour le ticket carte mobilité CMI-S, à placer
             derrière le pare-brise. <PayByPhone /> ne vérifie pas ces droits au moment de l’achat ; un tarif pris sans y avoir
             droit vous expose à un forfait post-stationnement et aux sanctions prévues.
           </li>
@@ -459,7 +459,7 @@ function Terms() {
         </p>
         <p>
           Un paiement automatique peut ne pas aboutir, par exemple si votre connexion <PayByPhone /> a expiré, si votre carte est refusée, si votre
-          droit au tarif choisi (résident, handicapé) a pris fin ou si <PayByPhone /> modifie son service. Dans ces cas, <PayByBot /> l’indique sur votre
+          droit au tarif choisi (résident, carte mobilité CMI-S) a pris fin ou si <PayByPhone /> modifie son service. Dans ces cas, <PayByBot /> l’indique sur votre
           tableau de bord, vous prévient par e-mail et réessaie automatiquement. Si votre banque refuse à nouveau, ou si un
           paiement n’est pas confirmé par <PayByPhone />, le renouvellement ou le ticket programmé est suspendu pour éviter un double paiement.
         </p>
@@ -530,7 +530,7 @@ function Terms() {
             compte <PayByPhone />, e-mail ou plaque). Il commence quand vous choisissez votre offre, et non à l’inscription.
           </li>
           <li>
-            <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC : 9,50 € par véhicule et par mois, quel que soit le ticket (résident, visiteur, carte handicapé) ou le type de véhicule,
+            <strong>Offres et prix :</strong> abonnement mensuel, ou annuel avec 20 % de remise, TTC : 9,50 € par véhicule et par mois, quel que soit le ticket (résident, visiteur, carte mobilité CMI-S) ou le type de véhicule,
             ou 91,20 € par véhicule et par an. Le prix exact est affiché avant tout paiement. Le paiement se fait par carte bancaire, via notre
             prestataire de paiement Stripe ; <PayByBot /> ne voit ni ne conserve votre numéro de carte.
           </li>

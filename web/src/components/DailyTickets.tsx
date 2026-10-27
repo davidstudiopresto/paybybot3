@@ -6,7 +6,7 @@ import { NoPayment } from '@/components/NoPayment'
 import { PlansDialog } from '@/components/Pricing'
 import { isoDay, periodDays, periodText, RangeCalendar } from '@/components/RangeCalendar'
 import { clearPending, pauseState, RenewalActions, savePending, type PendingRenewal } from '@/components/Riverain'
-import { arrondissement, PayByPhone, Plate, vehicleType, withPayByPhone } from '@/components/signs'
+import { arrondissement, PayByPhone, Plate, withPayByPhone } from '@/components/signs'
 import { api, ApiError, unitLabel, type Autopilot, type Money, type Overview, type Rate, type Unit } from '@/lib/api'
 import { ui } from '@/lib/styles'
 import { cn } from '@/lib/utils'
@@ -311,42 +311,10 @@ export function DailyTickets({
   ])
   const isResident = (v: { plate: string; zone?: string | null }) => (residentPlates ? residentPlates.has(key(v.plate)) : !!v.zone)
   const idle = data.vehicles.filter((v) => !isResident(v) && !busy.has(key(v.plate)))
-  // An account with a resident car: its other cars' tickets start from « Programmer un ticket » (top bar) only.
-  // Without one, every car with nothing on it keeps its own card and button.
-  const anyResident = data.vehicles.some(isResident)
-  const program = (plate?: string) => (setForPlate(plate), setOpen(true))
-  if (idle.length && !anyResident)
-    return (
-      <section id="tickets-programmes" className="rise mt-5 scroll-mt-20 space-y-3">
-        {/* The tickets already programmed first (right under the running ticket they follow), then one card per car
-            with nothing on it, two side by side within the page's column. */}
-        {daily.map((ap) => (
-          <DailyCard key={ap.id} ap={ap} data={data} onChanged={onChanged} needsOffer={needsOffer} />
-        ))}
-        <div className={cn('grid gap-3', idle.length > 1 && 'sm:grid-cols-2')}>
-          {idle.map((v) => (
-            <article key={v.plate} className="flex flex-col items-center rounded-2xl border border-border bg-white p-5 text-center">
-              <Plate plate={v.plate} />
-              <span className="mt-3 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink/55">Aucun ticket</span>
-              {vehicleType(v.type) && (
-                <p className="mt-3 text-[0.95rem] text-ink/60">
-                  Véhicule : <span className="text-ink">{vehicleType(v.type)}</span>
-                </p>
-              )}
-              <button onClick={() => program(v.plate)} className={cn(ui.primary, 'mt-4 h-12 rounded-[10px] text-base')}>
-                Carte Handicapé (CMI-S)
-              </button>
-            </article>
-          ))}
-        </div>
-        {open && (
-          <DailyWizard data={data} onClose={() => setOpen(false)} onDone={onChanged} needsOffer={needsOffer} locked={locked} onLogout={onLogout} initialPlate={forPlate} />
-        )}
-      </section>
-    )
+  // No card per car with nothing on it: a new ticket starts from the top bar button only.
   return (
     <section id="tickets-programmes" className="rise mt-4 scroll-mt-20">
-      {/* The programmed tickets; a new one starts from « Programmer un ticket » in the top bar. */}
+      {/* The programmed tickets; a new one starts from the top bar button. */}
       {daily.length > 0 && (
         <div className="space-y-3">
           {daily.map((ap) => (
@@ -580,7 +548,7 @@ export function DailyWizard({
     const stay = maxStay(r)
     const max = stay ? `${stay} maximum` : r.acceptedTimeUnits.includes('Days') ? 'À la journée' : 'À l’heure'
     return handi(r)
-      ? ['Carte Handicapé (CMI-S)', max]
+      ? ['Carte mobilité CMI-S', max]
       : hasWeight && light(r)
         ? ['Visiteur · véhicule léger', `Moins de 1,6 t · ${max}`]
         : hasWeight && heavy(r)
@@ -880,7 +848,7 @@ export function DailyWizard({
                     // No Handi rate offered here by PayByPhone: shown greyed, with the reason.
                     <div className="flex w-full items-center gap-3 rounded-xl border border-dashed border-ink/15 px-4 py-3 text-left">
                       <span className="min-w-0 flex-1">
-                        <span className="block font-medium text-ink/45">Carte Handicapé (CMI-S)</span>
+                        <span className="block font-medium text-ink/45">Carte mobilité CMI-S</span>
                         <span className="block text-sm text-ink/45">
                           {withPayByPhone('PayByPhone ne le propose pas pour ce véhicule dans cette zone.')}
                         </span>
@@ -1039,7 +1007,7 @@ export function DailyWizard({
                       )}
                     </div>
                     {handi(effective) && paris && (
-                      <p className="mt-3 text-sm text-ink/70">Le ticket Handi d’une journée est pris automatiquement à 5 h, chaque jour choisi.</p>
+                      <p className="mt-3 text-sm text-ink/70">Le ticket carte mobilité CMI-S d’une journée est pris automatiquement à 5 h, chaque jour choisi.</p>
                     )}
                     {paris && <p className="mt-2 text-xs text-ink/45">À Paris, le dimanche et les jours fériés sont gratuits : aucun ticket n’est pris.</p>}
                   </div>

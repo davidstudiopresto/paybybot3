@@ -311,35 +311,31 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
       {/* Home (hero only): the page fits the window, the footer stays in view at the bottom. */}
       <section
         className={cn(
-          'rise relative w-full overflow-hidden bg-[radial-gradient(60rem_30rem_at_50%_0%,color-mix(in_srgb,var(--eu)_7%,transparent),transparent)] px-6 pt-14 sm:px-8 lg:flex lg:items-center lg:py-20',
+          'rise relative w-full overflow-hidden px-6 pt-14 sm:px-8 lg:flex lg:items-center lg:py-20',
           heroOnly ? 'flex flex-1 items-center pb-16' : 'lg:min-h-[calc(100dvh-4rem)]',
         )}
       >
         {/* Home: the text on the left and an example ticket card on the right (one column on a phone). */}
         <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14 xl:max-w-7xl xl:gap-20 2xl:max-w-[90rem]')}>
-        <div className={cn('flex flex-col items-center text-center', heroOnly && 'lg:items-start lg:text-left')}>
-          <h1
-            className={cn(
-              'font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]',
-              // Full screen: larger, so the hero fills a wide window.
-              heroOnly && 'lg:text-[2.7rem] lg:[&>span]:whitespace-nowrap xl:text-[3.5rem] 2xl:text-[4.2rem]',
-            )}
-          >
-            <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
-            <span className="block">de votre stationnement</span>
-            <span className="block">sur <PayByPhone /></span>
+        <div className={cn('flex flex-col items-center text-center', heroOnly && 'items-start text-left')}>
+          {/* One sentence in two tones: the promise in warm ink, the how in grey. */}
+          <h1 className="oi-title max-w-[40rem] text-left">
+            <span className="block text-[#151311]">Votre stationnement se renouvelle tout seul.</span>
+            <span className="block text-[#151311]/45">
+              Vos tickets <PayByPhone /> repris avant l’expiration. Zéro oubli, zéro amende.
+            </span>
           </h1>
-          <p className={cn('mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]', heroOnly && 'xl:max-w-[42rem] xl:text-[1.4rem] 2xl:max-w-[48rem] 2xl:text-[1.6rem]')}>
-            <PayByBot /> prend et renouvelle vos tickets de stationnement sur <PayByPhone />, sans interruption.{' '}
-            <span className="font-semibold text-ink/80">Zéro oubli, zéro amende.</span>
-          </p>
-          <a
-            ref={cta}
-            href="#/inscription"
-            className={cn('mt-10 w-full sm:px-10 sm:w-fit lg:mt-12 lg:h-14 lg:rounded-[12px] lg:px-10 lg:text-lg', heroOnly && 'xl:h-16 xl:px-12 xl:text-xl', ui.primary)}
-          >
-            {TRY_LABEL} <ArrowRight className="size-5" />
-          </a>
+          {/* The offer in a floating pill, its button inside. */}
+          <div className="mt-10 inline-flex max-w-full items-center gap-2 rounded-full border border-ink/10 bg-white/90 p-1.5 shadow-[0_14px_38px_rgb(0_0_0/0.12)] lg:mt-12">
+            <span className="truncate pr-1 pl-4 font-mono text-[0.78rem] text-ink/80 sm:pl-5 sm:text-sm">9,50 €/mois · sans engagement</span>
+            <a
+              ref={cta}
+              href="#/inscription"
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-eu px-5 text-sm font-semibold text-white transition hover:bg-eu/90 active:scale-[0.98]"
+            >
+              Essayer <ArrowRight className="size-4" />
+            </a>
+          </div>
           {!heroOnly && !lean && (
             <>
               <p className="mt-4 text-sm text-ink/55">

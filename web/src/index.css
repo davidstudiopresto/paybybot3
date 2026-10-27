@@ -2,34 +2,34 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/overpass";
-/* Figtree from the same file the page preloads (/fonts/figtree.woff2): downloaded once and ready at the first
+/* Inter from the same file the page preloads (/fonts/inter.woff2): downloaded once and ready at the first
    paint, so the text never switches font (and moves) a moment after showing. */
 @font-face {
-  font-family: 'Figtree Variable';
+  font-family: 'Inter Variable';
   font-style: normal;
   font-display: swap;
-  font-weight: 300 900;
-  src: url(/fonts/figtree.woff2) format('woff2-variations');
+  font-weight: 100 900;
+  src: url(/fonts/inter.woff2) format('woff2-variations');
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 @font-face {
-  font-family: 'Figtree Variable';
+  font-family: 'Inter Variable';
   font-style: normal;
   font-display: swap;
-  font-weight: 300 900;
-  src: url(/fonts/figtree-ext.woff2) format('woff2-variations');
+  font-weight: 100 900;
+  src: url(/fonts/inter-ext.woff2) format('woff2-variations');
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    /* Figtree everywhere (soft and round, like Meta AI); Overpass only for plates, zones and the P sign. */
-    --font-heading: 'Figtree Variable', sans-serif;
-    --font-sans: 'Figtree Variable', sans-serif;
+    /* Inter everywhere (as on openinterpreter.com); Overpass only for plates, zones and the P sign. */
+    --font-heading: 'Inter Variable', sans-serif;
+    --font-sans: 'Inter Variable', sans-serif;
     --font-plate: 'Overpass Variable', sans-serif;
     /* The home page only: a quiet book serif, like a note on paper. */
-    --font-serif: 'Figtree Variable', sans-serif;
+    --font-serif: 'Inter Variable', sans-serif;
     --color-eu: var(--eu);
     --color-signal: var(--signal);
     --color-signal-deep: var(--signal-deep);
@@ -241,7 +241,7 @@ input:-webkit-autofill:focus {
 /* Chrome previews an autofill suggestion in its own smaller font, then switches to ours on click (the text seems
    to grow): give the preview the field's own font and size. */
 input:-webkit-autofill::first-line {
-  font-family: 'Figtree Variable', sans-serif;
+  font-family: 'Inter Variable', sans-serif;
   font-size: 1.125rem;
 }
 
@@ -263,3 +263,6 @@ input:-webkit-autofill::first-line {
 @supports (align-items: safe center) {
   .center-safe { place-items: safe center; }
 }
+
+/* Home title: the size and spacing of openinterpreter.com. */
+.oi-title { font-size: 29px; font-weight: 400; line-height: 33px; letter-spacing: -1.02px; }

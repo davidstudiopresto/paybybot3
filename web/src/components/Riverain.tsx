@@ -553,7 +553,10 @@ export function RenewalSwitch({
 }) {
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [pausing, setPausing] = useState(false)
   const on = !!ap && ap.enabled && !ap.lastError
+  // On and not paused (nor a pause planned): the pause offered on the switch's line, like programmed tickets.
+  const pausable = on && !!ap && !pauseState(ap).paused && !pauseState(ap).later
 
   async function stop() {
     if (!ap || busy) return
@@ -572,6 +575,15 @@ export function RenewalSwitch({
   const row = (onClick: () => void) => (
     <div className="flex items-center justify-between gap-4">
       <span className="text-[1.05rem] text-ink">Renouvellement auto</span>
+      <span className="ml-auto" />
+      {pausable && (
+        <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm text-ink/55 transition hover:text-ink">
+          <Pause className="size-3.5" />
+          <span className="sm:hidden">Pause</span>
+          <span className="hidden sm:inline">Programmer une pause</span>
+        </button>
+      )}
+      {pausing && ap && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
       <button
         type="button"
         role="switch"

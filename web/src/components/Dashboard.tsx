@@ -171,7 +171,10 @@ function Ticket({
         {!renewal && !data.autopilots.some((ap) => ap.enabled && sameCar(ap.plate, session.plate)) && (
           <p className="mt-3 text-sm text-ink/55">Ce ticket ne sera pas renouvelé.</p>
         )}
-        {renewal && <RenewalActions ap={renewal} onChanged={onRefresh} withStop={false} className="mt-5" />}
+        {/* The pause is offered on the switch's line; here only « Reprendre » or the planned pause, when there is one. */}
+        {renewal && (pauseState(renewal).paused || pauseState(renewal).later) && (
+          <RenewalActions ap={renewal} onChanged={onRefresh} withStop={false} withPause={false} className="mt-5" />
+        )}
       </div>
     </article>
   )
@@ -458,7 +461,7 @@ export function Dashboard({
         new Date(account.trialEnd).getTime() > Date.now() && (() => {
           const days = Math.ceil((new Date(account.trialEnd).getTime() - Date.now()) / 86_400_000)
           return (
-            <div className="flex w-full items-center justify-center gap-1.5 bg-[#e3efff] px-4 py-2 text-sm font-semibold text-[#1f55e6]">
+            <div className="trial-bar flex w-full items-center justify-center gap-1.5 bg-[#e3efff] px-4 py-2 text-sm font-semibold text-[#1f55e6]">
               Période d’essai gratuite
               <span className="font-normal text-[#1f55e6]/70">
                 · {days} jour{days > 1 ? 's' : ''} restant{days > 1 ? 's' : ''}

@@ -274,3 +274,11 @@ input:-webkit-autofill::first-line {
   src: url(/fonts/inter.woff2) format('woff2-variations');
 }
 .oi-title { font-family: 'Inter Variable', sans-serif; font-size: 29px; font-weight: 400; line-height: 33px; letter-spacing: -1.02px; }
+
+/* The free-month bar opens down softly (height and fade) instead of pushing the page at once. */
+@keyframes trial-bar-in {
+  from { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; }
+  to { max-height: 3rem; opacity: 1; }
+}
+.trial-bar { overflow: hidden; animation: trial-bar-in .5s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .trial-bar { animation: none; } }

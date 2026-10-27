@@ -498,6 +498,16 @@ export function RiverainCard({
   )
 }
 
+/** The switch's name, with whether it is on: « Renouvellement résident automatique », « Activé » or « Désactivé ». */
+function SwitchLabel({ on }: { on: boolean }) {
+  return (
+    <span className="min-w-0">
+      <span className="block text-[1.05rem] text-ink">Renouvellement résident automatique</span>
+      <span className={cn('block text-sm', on ? 'font-medium text-[#3d7f84]' : 'text-ink/50')}>{on ? 'Activé' : 'Désactivé'}</span>
+    </span>
+  )
+}
+
 /** « Renouvellement auto », off: a tap turns it green first (the switch answers at once), then opens its window;
  *  it stays green while the window is open and goes back to off if the window is closed without activating. */
 export function OpeningSwitch({ open, isOpen, on = false }: { open: () => void; isOpen: boolean; on?: boolean }) {
@@ -508,12 +518,12 @@ export function OpeningSwitch({ open, isOpen, on = false }: { open: () => void; 
   const checked = on || pressed || isOpen
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className="text-[1.05rem] text-ink">Renouvellement auto</span>
+      <SwitchLabel on={checked} />
       <button
         type="button"
         role="switch"
         aria-checked={checked}
-        aria-label="Renouvellement auto"
+        aria-label="Renouvellement résident automatique"
         onClick={() => {
           if (pressed || isOpen) return
           setPressed(true)
@@ -574,7 +584,7 @@ export function RenewalSwitch({
 
   const row = (onClick: () => void) => (
     <div className="flex items-center justify-between gap-4">
-      <span className="text-[1.05rem] text-ink">Renouvellement auto</span>
+      <SwitchLabel on={on} />
       <span className="ml-auto" />
       {pausable && (
         <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm text-ink/55 transition hover:text-ink">
@@ -588,7 +598,7 @@ export function RenewalSwitch({
         type="button"
         role="switch"
         aria-checked={on}
-        aria-label="Renouvellement automatique"
+        aria-label="Renouvellement résident automatique"
         disabled={busy}
         onClick={onClick}
         className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60', on ? 'bg-[#4e9aa0]' : 'bg-ink/15')}

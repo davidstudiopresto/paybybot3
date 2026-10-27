@@ -42,6 +42,19 @@ function nextRenewal(nextCheck: string | null | undefined, expire: string) {
   return Math.max(dayBefore.getTime(), end - 86_400_000 + 60_000)
 }
 
+/** « Activer le renouvellement automatique » under a card: the same as turning its switch on (same window, same checks). */
+function ActivateButton() {
+  return (
+    <button
+      type="button"
+      onClick={(e) => e.currentTarget.closest('[data-renewal-card]')?.querySelector<HTMLButtonElement>('[role=switch]')?.click()}
+      className={cn(ui.primary, 'mt-5')}
+    >
+      Activer le renouvellement automatique
+    </button>
+  )
+}
+
 function Ticket({
   session,
   now,
@@ -86,7 +99,7 @@ function Ticket({
 
   // Qonto-like: one white card, hairline dividers, a muted teal accent.
   return (
-    <article className="rise overflow-hidden rounded-2xl border border-ink/10 bg-white">
+    <article data-renewal-card className="rise overflow-hidden rounded-2xl border border-ink/10 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-4">
         <span className="flex items-center gap-3">
           <span className="text-[1.05rem] font-medium text-ink">{withPayByPhone('PayByPhone')}</span>
@@ -171,6 +184,8 @@ function Ticket({
         {renewal && (pauseState(renewal).paused || pauseState(renewal).later) && (
           <RenewalActions ap={renewal} onChanged={onRefresh} withStop={false} withPause={false} className="mt-5" />
         )}
+        {/* A resident ticket not renewed yet: the switch's action again, as a button at the bottom of the card. */}
+        {renewable && !renewal && !pending && <ActivateButton />}
       </div>
     </article>
   )
@@ -213,7 +228,7 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogo
         const week = weeks[key(v.plate)]
         const place = v.zone ? arrondissement(v.zone) : null
         return (
-          <div key={v.plate} className="flex flex-col items-center rounded-2xl border border-border p-5 text-center">
+          <div key={v.plate} data-renewal-card className="flex flex-col items-center rounded-2xl border border-border p-5 text-center">
             <Plate plate={v.plate} />
             <span className="mt-3 rounded-full bg-[#4e9aa0]/12 px-2.5 py-1 text-xs font-medium text-[#3d7f84]">Résident</span>
             <dl className="mt-4 space-y-1 text-[0.95rem] text-ink/60">
@@ -249,6 +264,7 @@ function IdleVehicles({ data, onChanged, hosted, demo, autoPlate, locked, onLogo
                 onLogout={onLogout}
                 trigger={(open, isOpen) => <OpeningSwitch open={open} isOpen={isOpen} />}
               />
+              <ActivateButton />
             </div>
           </div>
         )

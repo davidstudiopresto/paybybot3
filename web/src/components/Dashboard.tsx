@@ -515,7 +515,7 @@ export function Dashboard({
             ? withPayByPhone('Chargement de votre compte PayByPhone.')
             : !data.autopilots.some((ap) => ap.enabled && !ruleState(ap).finished)
               ? // Nothing automated (a finished one-off ticket does not count): say it plainly.
-                "Votre stationnement n'est pas encore automatisé."
+                "Votre stationnement résident n'est pas encore automatisé."
             : sessions.length
               ? // One card: « Votre stationnement résident en cours », several (running or programmed): « Vos tickets ».
                 sessions.length + shownDaily > 1

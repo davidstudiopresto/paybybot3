@@ -316,7 +316,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
         )}
       >
         {/* Home: the text on the left and an example ticket card on the right (one column on a phone). */}
-        <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14 xl:max-w-7xl xl:gap-20 2xl:max-w-[90rem]')}>
+        <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14 xl:max-w-7xl xl:gap-20 2xl:max-w-[90rem]')}>
         <div className={cn('flex flex-col items-center text-center', heroOnly && 'items-start text-left')}>
           {/* One sentence in two tones: the promise in warm ink, the how in grey. */}
           <h1 className="oi-title max-w-[40rem] text-left">
@@ -327,7 +327,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
           </h1>
           {/* The offer in a floating pill, its button inside. */}
           <div className="mt-10 inline-flex max-w-full items-center gap-2 rounded-full border border-ink/10 bg-white/90 p-1.5 shadow-[0_14px_38px_rgb(0_0_0/0.12)] lg:mt-12">
-            <span className="truncate pr-1 pl-4 font-mono text-[0.78rem] text-ink/80 sm:pl-5 sm:text-sm">9,50 €/mois · sans engagement</span>
+            <span className="min-w-0 truncate pr-1 pl-4 font-mono text-[0.78rem] text-ink/80 sm:pl-5 sm:text-sm">9,50 €/mois<span className="hidden sm:inline"> · sans engagement</span></span>
             <a
               ref={cta}
               href="#/inscription"

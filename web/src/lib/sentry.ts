@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/react'
 export function startSentry() {
   const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined
   if (!dsn) return // local development: nothing sent
+  if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return // a local copy of the built site: nothing sent either
   Sentry.init({
     dsn,
     environment: 'production',

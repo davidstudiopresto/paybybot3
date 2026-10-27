@@ -455,7 +455,7 @@ export function LoginView({
 
       <HostedFooter className="px-6 pb-8" hosted={hosted} linksOnly={signup} />
       </div>
-      <RemotePanel className="hidden lg:block" />
+      <RemotePanel className="hidden lg:block" sticky />
       </div>
     </div>
   )

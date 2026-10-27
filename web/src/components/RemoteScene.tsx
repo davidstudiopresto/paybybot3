@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils'
 import { useId } from 'react'
 import { SampleTicket } from '@/components/Landing'
 import { PayByPhone } from '@/components/signs'
@@ -130,10 +131,11 @@ export function RemoteScene({ className }: { className?: string }) {
 }
 
 /** The scene with Qonto's caption: a small kicker and a strong two-line sentence, on light grey. */
-export function RemotePanel({ className }: { className?: string }) {
+/** `sticky`: the card stays centred in the window under the 4rem top bar, however tall the form beside it grows. */
+export function RemotePanel({ className, sticky = false }: { className?: string; sticky?: boolean }) {
   return (
     <div className={className} style={{ background: '#f4f4f4' }}>
-      <div className="flex h-full flex-col items-center justify-center px-10 py-10 text-center">
+      <div className={cn('flex flex-col items-center justify-center px-10 py-10 text-center', sticky ? 'sticky top-16 h-[calc(100dvh-4rem)]' : 'h-full')}>
         {/* The same example card as the home page (renewal on, nothing to do), not an animation. */}
         <SampleTicket className="text-left" />
         <p className="mt-8 max-w-[30rem] font-heading text-[2rem] leading-[1.1] font-medium tracking-[-0.035em] text-ink">

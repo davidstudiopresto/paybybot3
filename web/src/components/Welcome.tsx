@@ -184,21 +184,6 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
             </Row>
           </ul>
 
-          {/* PayByPhone bills each SMS confirmation (0,50 €) apart from the ticket: PayByBot cannot pay it, so the
-              automatic ticket can fail while it is on. */}
-          <div
-            className="rise mt-5 rounded-2xl border border-amber/50 bg-amber/10 px-4 py-3.5 text-sm leading-relaxed text-ink"
-            style={{ animationDelay: `${next()}ms` }}
-          >
-            <p className="font-semibold">Un réglage à faire dans <PayByPhone /></p>
-            <p className="mt-1 text-ink/70">
-              Dans l’application <PayByPhone />, ouvrez « Notifications relatives au stationnement » et désactivez
-              «&nbsp;Confirmation par SMS&nbsp;». Chaque SMS y est facturé 0,50&nbsp;€ à part, et <PayByBot /> ne
-              peut pas payer ces frais : sans ce réglage, vos tickets risquent de ne pas être pris. Le rappel SMS avant
-              la fin peut rester activé.
-            </p>
-          </div>
-
           <p className="rise mt-4 text-sm leading-relaxed text-ink/55" style={{ animationDelay: `${next()}ms` }}>
             Rien n’a été modifié dans votre compte <PayByPhone />, et votre mot de passe n’est pas enregistré. Un véhicule
             ou une carte à changer ? Faites-le dans l’application <PayByPhone /> : <PayByBot /> suit automatiquement.

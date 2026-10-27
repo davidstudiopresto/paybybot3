@@ -37,10 +37,10 @@ export const Mailto = () => (
   </a>
 )
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function BaseSection({ title, children, plain = false }: { title: string; children: ReactNode; plain?: boolean }) {
   return (
     <section className="mt-7">
-      <h2 className="text-[0.95rem] leading-[1.5] font-semibold text-ink">{withPayByPhone(title)}</h2>
+      <h2 className="text-[0.95rem] leading-[1.5] font-semibold text-ink">{plain ? title : withPayByPhone(title)}</h2>
       <div className="mt-1.5 space-y-3 text-[0.95rem] leading-[1.5] text-ink/70 [&_li]:ml-5 [&_li]:list-disc [&_li]:pl-1 [&_strong]:font-semibold [&_strong]:text-ink [&_ul]:space-y-1">
         {children}
       </div>
@@ -364,7 +364,15 @@ function Privacy() {
   )
 }
 
+const Section = BaseSection
+
+/** « PayByPhone » in plain text, without its green « By »: the terms name the brand without its visual identity. */
+const PlainPayByPhone = () => <span className="whitespace-nowrap">PayByPhone</span>
+
 function Terms() {
+  // In the terms only, the brand stays in plain text (the other pages keep the green « By »).
+  const PayByPhone = PlainPayByPhone
+  const Section = (p: { title: string; children: ReactNode }) => <BaseSection {...p} plain />
   return (
     <>
       <p>

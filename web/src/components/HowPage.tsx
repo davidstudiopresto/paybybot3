@@ -9,20 +9,19 @@ const STEPS = [
     'Connectez votre compte PayByPhone',
     <>
       Avec le numéro et le mot de passe de votre compte <PayByPhone />. Votre mot de passe n’est jamais enregistré : <PayByBot />{' '}
-      retrouve seul vos véhicules, votre zone résidentielle et votre carte bancaire.
+      retrouve seul vos véhicules et votre zone résidentielle.
     </>,
   ],
   [
     'Activez le renouvellement',
     <>
-      Un interrupteur par véhicule. <PayByBot /> vérifie d’abord que votre tarif résident est actif et que votre carte peut payer.
+      Un interrupteur par véhicule. <PayByBot /> vérifie d’abord que votre tarif résident est actif.
     </>,
   ],
   [
     'Votre ticket se renouvelle chaque semaine',
     <>
-      La veille de la fin du ticket en cours, la semaine suivante est payée sur <PayByPhone />, au tarif habituel, avec votre
-      carte. Un e-mail confirme chaque paiement.
+      La veille de la fin du ticket en cours, la semaine suivante est payée sur <PayByPhone />, au tarif habituel. Un e-mail confirme chaque paiement.
     </>,
   ],
 ] as const
@@ -30,7 +29,7 @@ const STEPS = [
 const CONTROL = [
   ['Pause', 'Mettez le renouvellement en pause pendant vos vacances : il reprend seul à la date choisie.'],
   ['Arrêt', 'Coupez l’interrupteur à tout moment. Le ticket en cours reste valable jusqu’à sa fin.'],
-  ['Alerte', 'Si un paiement échoue (carte expirée, refus de la banque), vous êtes prévenu par e-mail avec la cause.'],
+  ['Alerte', 'Si un paiement échoue, vous êtes prévenu par e-mail avec la cause.'],
 ] as const
 
 /** « Comment ça marche », in the top bar: three numbered steps and what stays in the user's hands, text only. */

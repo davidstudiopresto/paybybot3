@@ -442,7 +442,7 @@ const QUESTIONS: Question[] = [
   ],
   [
     'Le stationnement coûte-t-il plus cher ?',
-    <>Non. Il est payé à <PayByPhone />, avec votre carte, au même prix que dans l'application.</>,
+    <>Non. Il est payé à <PayByPhone />, au même prix que dans l'application.</>,
   ],
   [
     'Pour quels véhicules et quels stationnements ?',
@@ -454,7 +454,7 @@ const QUESTIONS: Question[] = [
   [
     'Mes identifiants PayByPhone sont-ils protégés ?',
     <>
-      Oui. Votre mot de passe n'est jamais enregistré, ni votre numéro de carte : seule une clé de reconnexion chiffrée
+      Oui. Votre mot de passe n'est jamais enregistré : seule une clé de reconnexion chiffrée
       est gardée, et effacée dès que vous arrêtez. <a href="#/securite">Tout le détail sur la sécurité</a>
     </>,
   ],
@@ -474,7 +474,7 @@ const QUESTIONS: Question[] = [
   [
     'Que se passe-t-il si le renouvellement échoue ?',
     <>
-      Vous êtes prévenu par e-mail avec la raison (carte refusée, droit au tarif expiré…), et vous relancez en un clic
+      Vous êtes prévenu par e-mail avec la raison, et vous relancez en un clic
       une fois le problème réglé.
     </>,
   ],

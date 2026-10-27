@@ -52,7 +52,10 @@ type Row = {
   name: string
   email: string
   created: string
-  offer: 'Annuel' | 'Mensuel' | 'Sans offre'
+  /** The plan chosen (kept after it stops), « — » when none was ever chosen. */
+  offer: 'Annuel' | 'Mensuel' | '—'
+  /** Whether the subscription is running now (Stripe), trial month included. */
+  active: 'Actif' | 'Inactif'
   price: string
   ticket: 'En cours' | 'Aucun' | 'Illisible'
   expire: string | null
@@ -61,16 +64,17 @@ type Row = {
   status: 'ok' | 'alert' | 'none'
 }
 
-const STATUS_TEXT = { ok: 'OK', alert: 'Problème', none: 'Sans offre' } as const
+const STATUS_TEXT = { ok: 'OK', alert: 'Problème', none: 'Non suivi' } as const
 const COLUMNS: { key: keyof Row; label: string; choices?: string[] }[] = [
   { key: 'plate', label: 'Véhicule' },
   { key: 'name', label: 'Client' },
   { key: 'email', label: 'E-mail' },
   { key: 'created', label: 'Inscrit le' },
-  { key: 'offer', label: 'Offre', choices: ['Annuel', 'Mensuel', 'Sans offre'] },
+  { key: 'offer', label: 'Offre', choices: ['Annuel', 'Mensuel', '—'] },
+  { key: 'active', label: 'Statut de l’offre', choices: ['Actif', 'Inactif'] },
   { key: 'ticket', label: 'Ticket', choices: ['En cours', 'Aucun', 'Illisible'] },
   { key: 'left', label: 'Expire' },
-  { key: 'status', label: 'État', choices: ['OK', 'Problème', 'Sans offre'] },
+  { key: 'status', label: 'État', choices: ['OK', 'Problème', 'Non suivi'] },
 ]
 
 function rowsOf(clients: AdminClient[], now: number): Row[] {
@@ -79,7 +83,8 @@ function rowsOf(clients: AdminClient[], now: number): Row[] {
       name: c.name || '—',
       email: c.email || '—',
       created: new Date(c.created).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }),
-      offer: (c.subscribed ? (c.plan === 'yearly' ? 'Annuel' : 'Mensuel') : 'Sans offre') as Row['offer'],
+      offer: (c.plan === 'yearly' ? 'Annuel' : c.plan === 'monthly' || c.subscribed ? 'Mensuel' : '—') as Row['offer'],
+      active: (c.subscribed ? 'Actif' : 'Inactif') as Row['active'],
       price: c.price != null ? `${euros(c.price)} / ${c.plan === 'yearly' ? 'an' : 'mois'}` : '',
     }
     if (c.vehicles === null) return [{ ...base, plate: null, ticket: 'Illisible', expire: null, left: null, status: c.subscribed ? 'alert' : 'none' } as Row]
@@ -159,12 +164,15 @@ function VehicleTable({ clients }: { clients: AdminClient[] }) {
                 <td className="px-3 py-3 text-ink/70">{r.email}</td>
                 <td className="px-3 py-3 whitespace-nowrap text-ink/70 tabular-nums">{r.created}</td>
                 <td className="px-3 py-3">
+                  <span className="text-ink">{r.offer}</span>
+                  {r.price && <span className="mt-0.5 block text-xs whitespace-nowrap text-ink/60 tabular-nums">{r.price}</span>}
+                </td>
+                <td className="px-3 py-3">
                   <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${r.offer === 'Sans offre' ? 'bg-ink/[0.06] text-ink/60' : 'bg-[#e7f6ec] text-[#14703a]'}`}
+                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${r.active === 'Actif' ? 'bg-[#e7f6ec] text-[#14703a]' : 'bg-ink/[0.06] text-ink/60'}`}
                   >
-                    {r.offer}
+                    {r.active}
                   </span>
-                  {r.price && <span className="mt-1 block text-xs whitespace-nowrap text-ink/60 tabular-nums">{r.price}</span>}
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">
                   {r.ticket === 'En cours' ? (

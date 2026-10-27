@@ -6,7 +6,7 @@ import { PublicTopBar } from '@/components/TopBar'
 import { PlanCards } from '@/components/Pricing'
 import { cn } from '@/lib/utils'
 import { TRY_LABEL, ui } from '@/lib/styles'
-import { brandNodes, PayByBot, PayByPhone, withBrands, withPayByPhone } from '@/components/signs'
+import { brandNodes, PayByBot, PayByPhone, Plate, withBrands, withPayByPhone } from '@/components/signs'
 
 
 
@@ -262,14 +262,14 @@ export function SampleTicket({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="flex items-baseline justify-between gap-4 px-5 pt-5 pb-4">
-        <span className="flex items-baseline gap-3">
+      <div className="flex items-center justify-between gap-4 px-5 pt-5 pb-4">
+        <span className="flex items-center gap-3">
           <span className="text-[1.05rem] font-medium text-ink">
             <PayByPhone />
           </span>
-          <span className="tracking-wide text-ink/50 tabular-nums">AB-123-CD</span>
+          <Plate plate="AB123CD" size="sm" className="shrink-0 whitespace-nowrap" />
         </span>
-        <span className="text-sm text-ink/50">Paris 5e</span>
+        <span className="text-sm whitespace-nowrap text-ink/50">Paris 5e</span>
       </div>
       <div className="border-t border-ink/[0.06] px-5 py-4">
         <div className="flex items-center justify-between">

@@ -535,8 +535,13 @@ function Terms() {
             prestataire de paiement Stripe ; <PayByBot /> ne voit ni ne conserve votre numéro de carte.
           </li>
           <li>
-            <strong>Changement de prix :</strong> si le nombre de véhicules avec un renouvellement ou un ticket programmé change, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
+            <strong>Changement du nombre de véhicules :</strong> si le nombre de véhicules avec un renouvellement ou un ticket programmé change, le prix de votre abonnement est ajusté à partir de la prochaine échéance, sans
             effet sur la période déjà payée. Vous pouvez résilier à tout moment depuis « Mon compte ».
+          </li>
+          <li>
+            <strong>Changement de prix :</strong> si <PayByBot /> modifie ses prix, le nouveau prix ne s’applique qu’à partir du
+            mois suivant, à votre prochaine échéance ; un abonnement annuel garde son prix jusqu’à la fin de l’année payée. Vous
+            êtes prévenu par e-mail avant, et pouvez résilier sans frais depuis « Mon compte » si le nouveau prix ne vous convient pas.
           </li>
           <li>
             <strong>Arrêt d’un ticket dans PayByPhone :</strong> <PayByBot /> n’est pas informé quand vous arrêtez vous-même

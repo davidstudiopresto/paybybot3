@@ -28,3 +28,13 @@ class Invite(unittest.TestCase):
             self.assertTrue(web.valid_invite("paris2026"))
             self.assertFalse(web.valid_invite("paris2027"))
             self.assertFalse(web.valid_invite(web.invite_code(web.owner_id("0611223344"))))  # no personal codes then
+
+    def test_link_open_records_where_from_without_ip(self):
+        class Req:
+            headers = {"x-vercel-ip-city": "Paris%2015e", "x-vercel-ip-country": "FR", "x-real-ip": "203.0.113.7"}
+        with patch.object(web, "record_activity") as recorded:
+            web.link_open(web.LinkOpen(source="WhatsApp", device="iPhone"), Req())
+        event, detail = recorded.call_args.args[0], recorded.call_args.kwargs["lines"][0]
+        self.assertEqual(event, "Lien privé ouvert")
+        self.assertEqual(detail, "WhatsApp · iPhone · Paris 15e, FR")
+        self.assertNotIn("203.0.113.7", detail)

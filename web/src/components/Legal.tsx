@@ -327,7 +327,8 @@ function Privacy() {
           <PayByBot /> utilise le cookie <strong>pbb_session</strong>, strictement nécessaire pour rester connecté, et,
           pendant l’inscription, <strong>pbb_pending</strong> (10 minutes, le temps de saisir le code). Ils ne servent
           pas au suivi et ne nécessitent donc pas de consentement. <PayByBot /> n’utilise aucun cookie publicitaire ni outil
-          de mesure d’audience.
+          de mesure d’audience. Seule l’ouverture du lien privé est comptée, sans cookie ni adresse IP : l’application d’où
+          il est ouvert, le type d’appareil et la ville approximative.
         </p>
         <p>
           Votre navigateur garde aussi votre dernière zone, dernier véhicule et dernière carte (stockage local) pour pré-remplir le prochain

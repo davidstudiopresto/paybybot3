@@ -78,3 +78,36 @@ export function isMember(): boolean {
     return false
   }
 }
+
+const SOURCES: Record<string, string> = { wa: 'WhatsApp', sms: 'SMS', mail: 'E-mail', tg: 'Telegram', copy: 'Lien copié', share: 'Partage' }
+
+/** Where the opened link comes from: the share button's tag (?s=), else the app it opens in, else the referring site. */
+export function linkSource(): string {
+  const tag = new URL(window.location.href).searchParams.get('s')
+  if (tag && SOURCES[tag]) return SOURCES[tag]
+  const ua = navigator.userAgent
+  const apps: [RegExp, string][] = [
+    [/Instagram/i, 'Instagram'],
+    [/FBAN|FBAV|FB_IAB|Messenger/i, 'Facebook / Messenger'],
+    [/Snapchat/i, 'Snapchat'],
+    [/LinkedInApp/i, 'LinkedIn'],
+    [/musical_ly|BytedanceWebview|TikTok/i, 'TikTok'],
+    [/WhatsApp/i, 'WhatsApp'],
+  ]
+  for (const [re, name] of apps) if (re.test(ua)) return name
+  try {
+    if (document.referrer) return new URL(document.referrer).hostname.replace(/^www\./, '')
+  } catch {
+    // no readable referrer
+  }
+  return 'Direct'
+}
+
+/** The kind of device, without anything identifying. */
+export function deviceKind(): string {
+  const ua = navigator.userAgent
+  if (/iPhone/i.test(ua)) return 'iPhone'
+  if (/iPad/i.test(ua)) return 'iPad'
+  if (/Android/i.test(ua)) return /Mobile/i.test(ua) ? 'Android' : 'Tablette Android'
+  return 'Ordinateur'
+}

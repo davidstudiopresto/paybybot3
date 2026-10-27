@@ -12,7 +12,7 @@ import { legalPageFromHash, type LegalPage } from '@/lib/legalPages'
 import { NotFoundPage } from '@/components/NotFound'
 import { CheckoutDone } from '@/components/CheckoutDone'
 import { InviteCurtain, InviteGate } from '@/components/InviteGate'
-import { captureInvite, forgetInvite, isMember, markMember, openedFromLink } from '@/lib/invite'
+import { captureInvite, deviceKind, forgetInvite, isMember, linkSource, markMember, openedFromLink } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
 import { ServiceBanner } from '@/components/ServiceBanner'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
@@ -174,6 +174,8 @@ export default function App() {
       api.inviteCheck(code).then(
         (r) => {
           if (!r.valid) forgetInvite()
+          // The link itself just opened (not a reload): counted for the admin, anonymously.
+          if (r.valid && openedFromLink()) api.linkOpen(linkSource(), deviceKind()).catch(() => {})
           setInvited(r.valid ? 'yes' : 'invalid')
         },
         () => setInvited('no'),

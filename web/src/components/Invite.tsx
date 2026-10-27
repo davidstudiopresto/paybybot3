@@ -64,7 +64,10 @@ export function InviteShare({ withLink = false, className }: { withLink?: boolea
     api.myInvite().then((r) => setUrl(r.url), () => toast.error('Lien indisponible pour le moment.'))
   }, [])
 
-  const text = url ? `${MESSAGE} ${url}` : ''
+  // Each way of sharing tags the link (?s=…), so the admin sees where an opened link came from.
+  const tagged = (s: string) => (url ? `${url}${url.includes('?') ? '&' : '?'}s=${s}` : '')
+  const text = url ? `${MESSAGE} ${tagged('copy')}` : ''
+  const textFor = (s: string) => `${MESSAGE} ${tagged(s)}`
   const enc = encodeURIComponent
 
   async function copy() {
@@ -92,25 +95,25 @@ export function InviteShare({ withLink = false, className }: { withLink?: boolea
           label="WhatsApp"
           className="bg-[#25d366] text-white"
           icon={<WhatsAppIcon className="size-7" />}
-          href={url ? `https://wa.me/?text=${enc(text)}` : undefined}
+          href={url ? `https://wa.me/?text=${enc(textFor('wa'))}` : undefined}
         />
         <Option
           label="SMS"
           className="bg-[#34c759] text-white"
           icon={<MessageSquare className="size-6" />}
-          href={url ? `sms:?&body=${enc(text)}` : undefined}
+          href={url ? `sms:?&body=${enc(textFor('sms'))}` : undefined}
         />
         <Option
           label="E-mail"
           className="bg-eu text-white"
           icon={<Mail className="size-6" />}
-          href={url ? `mailto:?subject=${enc('Fini les amendes de stationnement')}&body=${enc(text)}` : undefined}
+          href={url ? `mailto:?subject=${enc('Fini les amendes de stationnement')}&body=${enc(textFor('mail'))}` : undefined}
         />
         <Option
           label="Telegram"
           className="bg-[#229ed9] text-white"
           icon={<Send className="size-6" />}
-          href={url ? `https://t.me/share/url?url=${enc(url)}&text=${enc(MESSAGE)}` : undefined}
+          href={url ? `https://t.me/share/url?url=${enc(tagged('tg'))}&text=${enc(MESSAGE)}` : undefined}
         />
       </div>
 

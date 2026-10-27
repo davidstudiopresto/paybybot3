@@ -2281,10 +2281,25 @@ def config():
 @app.get("/api/invite/{code}")
 def invite_check(code: str):
     """Public: whether an invitation link is valid (the site opens only through one)."""
-    valid = valid_invite(code)
-    if valid:
-        record_activity("Lien d'invitation ouvert", lines=["Quelqu'un vient d'ouvrir le lien d'invitation."])
-    return {"valid": valid}
+    return {"valid": valid_invite(code)}
+
+
+class LinkOpen(BaseModel):
+    source: str = Field(default="", max_length=40)  # WhatsApp, SMS, Instagram… (from the share button or the app)
+    device: str = Field(default="", max_length=40)  # iPhone, Android, ordinateur…
+
+
+@app.post("/api/link-open")
+def link_open(body: LinkOpen, request: Request):
+    """The private link just opened (once per tab): where from, which device and roughly where (Vercel's city and
+    country), for the admin's « Activité ». No IP and no cookie are kept."""
+    from urllib.parse import unquote
+
+    place = ", ".join(x for x in (unquote(request.headers.get("x-vercel-ip-city") or ""),
+                                  request.headers.get("x-vercel-ip-country") or "") if x)
+    detail = " · ".join(x.strip() for x in (body.source, body.device, place) if x.strip())
+    record_activity("Lien privé ouvert", lines=[detail or "Provenance inconnue."])
+    return {"ok": True}
 
 
 @app.get("/api/invite")

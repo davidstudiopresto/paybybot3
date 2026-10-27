@@ -504,7 +504,7 @@ function SwitchLabel({ on, children }: { on: boolean; children?: ReactNode }) {
     <span className="min-w-0">
       <span className="block text-[1.05rem] whitespace-nowrap text-ink">Renouvellement automatique</span>
       <span className="flex items-center gap-3">
-        <span className={cn('text-sm', on ? 'font-medium text-[#3d7f84]' : 'text-ink/50')}>{on ? 'Activé' : 'Désactivé'}</span>
+        <span className={cn('text-sm', on ? 'font-semibold text-[#3d7f84]' : 'text-ink/50')}>{on ? 'Activé' : 'Désactivé'}</span>
         {children}
       </span>
     </span>

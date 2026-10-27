@@ -2,7 +2,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/overpass";
-@import "@fontsource-variable/inter";
 /* Figtree from the same file the page preloads (/fonts/figtree.woff2): downloaded once and ready at the first
    paint, so the text never switches font (and moves) a moment after showing. */
 @font-face {
@@ -265,5 +264,13 @@ input:-webkit-autofill::first-line {
   .center-safe { place-items: safe center; }
 }
 
-/* Home title only: Inter, the size and spacing of openinterpreter.com. */
+/* Home title only: Inter, the size and spacing of openinterpreter.com. Preloaded by the page like Figtree (the
+   title never switches font and moves a moment after showing); the title is plain French, Latin only. */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(/fonts/inter.woff2) format('woff2-variations');
+}
 .oi-title { font-family: 'Inter Variable', sans-serif; font-size: 29px; font-weight: 400; line-height: 33px; letter-spacing: -1.02px; }

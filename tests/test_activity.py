@@ -34,7 +34,7 @@ class Activity(unittest.TestCase):
         self.assertNotIn("julie", k["p_data"])  # encrypted
         with patch.object(web, "store", return_value=[{"at": "2026-10-28T09:00:00Z", "event": "Connexion",
                                                         "data": k["p_data"]}]):
-            self.assertEqual(web.activity_rows(), [{"at": "2026-10-28T09:00:00Z", "event": "Connexion",
+            self.assertEqual(web.activity_rows(), [{"id": None, "at": "2026-10-28T09:00:00Z", "event": "Connexion",
                                                     "who": "Julie · julie@gmail.com", "detail": "Véhicule AB***."}])
 
     def test_no_e_mail(self):

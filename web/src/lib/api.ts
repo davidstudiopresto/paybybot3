@@ -206,6 +206,9 @@ export const api = {
   adminStats: () => request<import('@/components/Admin').AdminStats>('/api/admin/stats'),
   adminClients: () => request<import('@/components/Admin').AdminClient[]>('/api/admin/clients'),
   adminActivity: () => request<import('@/components/Admin').AdminActivity[]>('/api/admin/activity'),
+  /** One action, or all of them without an id. */
+  adminActivityDelete: (id?: number) =>
+    request<{ ok: true }>(id == null ? '/api/admin/activity' : `/api/admin/activity/${id}`, { method: 'DELETE' }),
   adminService: () => request<import('@/components/Admin').ServiceState>('/api/admin/service'),
   adminServiceAction: (action: 'interrupt' | 'notify' | 'resume') =>
     post<import('@/components/Admin').ServiceState>('/api/admin/service', { action }),

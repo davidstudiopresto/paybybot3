@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plate } from '@/components/signs'
-import { Loader2 } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { ApiError } from '@/lib/api'
 import { TopBar } from '@/components/TopBar'
@@ -129,7 +130,46 @@ export type AdminClient = {
 }
 
 /** One user action (sign-up, sign-in, renewal…), for « Activité ». */
-export type AdminActivity = { at: string; event: string; who: string | null; detail: string | null }
+export type AdminActivity = { id: number | null; at: string; event: string; who: string | null; detail: string | null }
+
+const LINK_OPENED = 'Lien privé ouvert'
+
+/** Total private-link opens over time (a step up at each open), from the first one to now. */
+function LinkOpensChart({ rows }: { rows: AdminActivity[] }) {
+  const opens = rows
+    .filter((r) => r.event === LINK_OPENED)
+    .map((r) => new Date(r.at).getTime())
+    .sort((a, b) => a - b)
+  const now = Date.now()
+  const start = opens.length ? Math.min(opens[0], now - 3600_000) : now - 86_400_000
+  const W = 600
+  const H = 140
+  const x = (t: number) => ((t - start) / Math.max(1, now - start)) * W
+  const y = (v: number) => H - (v / Math.max(1, opens.length)) * (H - 12) - 2
+  // A staircase: flat until each open, then one step up.
+  let d = `M0,${y(0)}`
+  opens.forEach((t, i) => (d += ` L${x(t).toFixed(1)},${y(i).toFixed(1)} L${x(t).toFixed(1)},${y(i + 1).toFixed(1)}`))
+  d += ` L${W},${y(opens.length).toFixed(1)}`
+  const label = (t: number) => new Date(t).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  return (
+    <div className="mt-3 rounded-2xl border border-ink/10 bg-white p-5">
+      <div className="flex items-baseline justify-between">
+        <span className="font-heading text-3xl font-semibold tabular-nums text-ink">{opens.length}</span>
+        <span className="flex items-center gap-2 text-sm text-ink/50">
+          <span className="size-2 animate-pulse rounded-full bg-[#16a34a]" aria-hidden /> liens ouverts · en direct
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 h-36 w-full overflow-visible" preserveAspectRatio="none" aria-hidden>
+        <path d={`${d} L${W},${H} L0,${H} Z`} fill="var(--eu)" opacity=".08" />
+        <path d={d} fill="none" stroke="var(--eu)" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="mt-2 flex justify-between text-xs text-ink/45 tabular-nums">
+        <span>{label(start)}</span>
+        <span>maintenant</span>
+      </div>
+    </div>
+  )
+}
 
 const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
 const ends = (iso: string) =>
@@ -343,6 +383,19 @@ export function AdminPage(_: { signedIn?: boolean }) {
 
   useEffect(load, [])
 
+  // « Activité » and the link-opens curve stay live: looked at again every 30 seconds.
+  useEffect(() => {
+    if (!stats) return
+    const id = setInterval(() => api.adminActivity().then(setActivity, () => {}), 30_000)
+    return () => clearInterval(id)
+  }, [stats])
+
+  async function removeActivity(id?: number) {
+    setActivity((rows) => (rows ? (id == null ? [] : rows.filter((r) => r.id !== id)) : rows))
+    await api.adminActivityDelete(id).catch(() => {})
+    api.adminActivity().then(setActivity, () => {})
+  }
+
   async function logout() {
     await api.adminLogout().catch(() => {})
     setStats(null)
@@ -403,11 +456,14 @@ export function AdminPage(_: { signedIn?: boolean }) {
             {clients && clients.length === 0 && <p className="mt-3 text-ink/50">Aucun client pour l’instant.</p>}
             {clients && clients.length > 0 && <VehicleTable clients={clients} />}
 
+            <h2 className="mt-12 text-sm font-semibold text-ink/55">Liens privés ouverts</h2>
+            {activity ? <LinkOpensChart rows={activity} /> : <div className="mt-3 h-52 animate-pulse rounded-2xl bg-ink/[0.04]" />}
+
             <h2 className="mt-12 text-sm font-semibold text-ink/55">Activité{activity ? ` (${activity.length})` : ''}</h2>
             {!activity ? (
               <Loader2 className="mt-3 size-5 animate-spin text-ink/40" />
             ) : (
-              <ActivityList rows={activity} />
+              <ActivityList rows={activity} onDelete={removeActivity} />
             )}
           </>
         )}
@@ -487,25 +543,40 @@ function ago(iso: string, now: number) {
 }
 
 /** What users did lately, newest first, with a filter by kind of action. */
-function ActivityList({ rows }: { rows: AdminActivity[] }) {
+function ActivityList({ rows, onDelete }: { rows: AdminActivity[]; onDelete: (id?: number) => void }) {
   const [kind, setKind] = useState('')
+  const [confirmAll, setConfirmAll] = useState(false)
   const now = Date.now()
   const kinds = [...new Set(rows.map((r) => r.event))].sort()
   const shown = kind ? rows.filter((r) => r.event === kind) : rows
   if (!rows.length) return <p className="mt-3 text-ink/50">Aucune activité pour l’instant.</p>
   return (
     <>
-      <select
-        value={kind}
-        onChange={(e) => setKind(e.target.value)}
-        aria-label="Filtrer l’activité"
-        className="mt-3 h-9 rounded-lg border border-ink/10 bg-white px-2 text-sm text-ink outline-none focus:border-eu"
-      >
-        <option value="">Toutes les actions</option>
-        {kinds.map((k) => (
-          <option key={k}>{k}</option>
-        ))}
-      </select>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <select
+          value={kind}
+          onChange={(e) => setKind(e.target.value)}
+          aria-label="Filtrer l’activité"
+          className="h-9 rounded-lg border border-ink/10 bg-white px-2 text-sm text-ink outline-none focus:border-eu"
+        >
+          <option value="">Toutes les actions</option>
+          {kinds.map((k) => (
+            <option key={k}>{k}</option>
+          ))}
+        </select>
+        {/* Two clicks to clear everything: the first only asks. */}
+        <button
+          onClick={() => {
+            if (!confirmAll) return setConfirmAll(true)
+            setConfirmAll(false)
+            onDelete()
+          }}
+          onBlur={() => setConfirmAll(false)}
+          className={confirmAll ? 'text-sm font-semibold text-destructive' : cn('text-sm', ui.link)}
+        >
+          {confirmAll ? 'Confirmer : tout effacer' : 'Tout effacer'}
+        </button>
+      </div>
       <ul className="mt-3 max-h-[32rem] divide-y divide-ink/10 overflow-y-auto rounded-2xl border border-ink/10 bg-white">
         {shown.map((r, i) => (
           <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-3 text-sm">
@@ -514,8 +585,20 @@ function ActivityList({ rows }: { rows: AdminActivity[] }) {
               {r.who && <span className="text-ink/70"> · {r.who}</span>}
               {r.detail && <span className="block text-xs text-ink/55">{r.detail}</span>}
             </span>
-            <span className="shrink-0 text-xs whitespace-nowrap text-ink/50 tabular-nums" title={new Date(r.at).toLocaleString('fr-FR')}>
-              {ago(r.at, now)} · {ends(r.at)}
+            <span className="flex shrink-0 items-center gap-3">
+              <span className="text-xs whitespace-nowrap text-ink/50 tabular-nums" title={new Date(r.at).toLocaleString('fr-FR')}>
+                {ago(r.at, now)} · {ends(r.at)}
+              </span>
+              {r.id != null && (
+                <button
+                  onClick={() => onDelete(r.id!)}
+                  aria-label="Supprimer cette activité"
+                  title="Supprimer"
+                  className="grid size-6 place-items-center rounded-md text-ink/30 transition hover:bg-ink/[0.05] hover:text-destructive"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
             </span>
           </li>
         ))}

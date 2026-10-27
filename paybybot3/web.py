@@ -847,7 +847,7 @@ def activity_rows(limit=200):
             data = json.loads(_fernet("activity").decrypt((row.get("data") or "").encode()))
         except Exception:
             data = {}
-        rows.append({"at": row.get("at"), "event": row.get("event"), "who": data.get("who"),
+        rows.append({"id": row.get("id"), "at": row.get("at"), "event": row.get("event"), "who": data.get("who"),
                      "detail": data.get("detail") or None})
     return rows
 
@@ -3858,6 +3858,17 @@ def admin_activity(pbb_admin: str = Cookie(None)):
         raise HTTPException(403, "Accès réservé.")
     require_admin(pbb_admin)
     return guarded(lambda: activity_rows()) or []
+
+
+@app.delete("/api/admin/activity")
+@app.delete("/api/admin/activity/{activity_id}")
+def admin_activity_delete(activity_id: int | None = None, pbb_admin: str = Cookie(None)):
+    """Clean « Activité »: one action, or all of them without an id."""
+    if not HOSTED:
+        raise HTTPException(403, "Accès réservé.")
+    require_admin(pbb_admin)
+    guarded(lambda: store("activity_delete", p_id=activity_id))
+    return {"ok": True}
 
 
 @app.get("/api/admin/clients")

@@ -204,6 +204,7 @@ export const api = {
   adminLogout: () => post('/api/admin/logout'),
   adminStats: () => request<import('@/components/Admin').AdminStats>('/api/admin/stats'),
   adminClients: () => request<import('@/components/Admin').AdminClient[]>('/api/admin/clients'),
+  adminActivity: () => request<import('@/components/Admin').AdminActivity[]>('/api/admin/activity'),
   adminService: () => request<import('@/components/Admin').ServiceState>('/api/admin/service'),
   adminServiceAction: (action: 'interrupt' | 'notify' | 'resume') =>
     post<import('@/components/Admin').ServiceState>('/api/admin/service', { action }),

@@ -820,6 +820,38 @@ def alert_owner(details, info):
         log.warning("owner alert not sent: %s", type(e).__name__)
 
 
+def record_activity(event, s=None, lines=()):
+    """Each user action (sign-up, sign-in, invitation opened, renewal on or off, subscription…) recorded for the
+    admin's « Activité », with who did it (encrypted, kept 90 days). Not for the demo nor locally. Never raises."""
+    if not HOSTED or (s is not None and s.demo):
+        return
+    try:
+        who = None
+        if s is not None:
+            try:
+                email = load_account(s).get("email")
+            except Exception:
+                email = None
+            who = " · ".join(x for x in (first_name(s), email or s.username[:4] + "***") if x)
+        data = _fernet("activity").encrypt(json.dumps({"who": who, "detail": " ".join(lines)}).encode()).decode()
+        store("activity_add", p_event=event, p_data=data)
+    except Exception as e:
+        log.warning("activity not recorded: %s", type(e).__name__)
+
+
+def activity_rows(limit=200):
+    """The latest actions for the admin, decrypted: [{at, event, who, detail}], newest first."""
+    rows = []
+    for row in store("activity_list", p_limit=limit) or []:
+        try:
+            data = json.loads(_fernet("activity").decrypt((row.get("data") or "").encode()))
+        except Exception:
+            data = {}
+        rows.append({"at": row.get("at"), "event": row.get("event"), "who": data.get("who"),
+                     "detail": data.get("detail") or None})
+    return rows
+
+
 # --------------------------------------------------------------------------
 # Capacity alerts: the owner hears before a limit of the stack is reached
 # --------------------------------------------------------------------------
@@ -2055,6 +2087,7 @@ def login(body: Login, request: Request, response: Response):
     set_session_cookie(response, token, body.remember)
     log.info("PayByPhone token fields: %s", sorted(token_claims(session)))  # names only, never values
     remember_name(session)
+    record_activity("Connexion", session)
     return {"username": session.username, "demo": demo, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -2208,6 +2241,7 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
     response.delete_cookie(PENDING_COOKIE, path="/api/signup")
     log.info("sign-up confirmed")
     remember_name(session)
+    record_activity("Nouvelle inscription", session)
     return {"username": session.username, "demo": False, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -2247,7 +2281,10 @@ def config():
 @app.get("/api/invite/{code}")
 def invite_check(code: str):
     """Public: whether an invitation link is valid (the site opens only through one)."""
-    return {"valid": valid_invite(code)}
+    valid = valid_invite(code)
+    if valid:
+        record_activity("Lien d'invitation ouvert", lines=["Quelqu'un vient d'ouvrir le lien d'invitation."])
+    return {"valid": valid}
 
 
 @app.get("/api/invite")
@@ -3016,6 +3053,8 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
                        next=schedule.next_ticket(rule, datetime.now(timezone.utc)) if rule else None)
             follow_renewals(s)
             answer = with_next_ticket(stored_to_autopilot(stored))
+            record_activity("Ticket programmé" if days else "Renouvellement résident activé", s,
+                         ["Véhicule %s***, zone %s." % (body.plate[:2], body.location)])
             if message:
                 answer["activation"] = {"title": message[0], "text": message[1], "payYourself": PAY_YOURSELF}
             elif outcome in ("unconfirmed", "not_payable", "error", "relogin", "blocked", "unreadable"):
@@ -3547,6 +3586,7 @@ def billing_confirm(body: CheckoutDone, pbb_session: str = Cookie(None)):
     if HOSTED and not s.demo:
         guarded(lambda: resume_renewals(owner_id(s.username)))
     log.info("subscription started (%s)", plan)
+    record_activity("Abonnement souscrit", s, ["Offre : %s." % ("annuelle" if plan == "yearly" else "mensuelle")])
     return {"plan": account.get("plan")}
 
 
@@ -3624,6 +3664,7 @@ def billing_cancel(body: CancelChoice, pbb_session: str = Cookie(None)):
     _, sub_id = own_subscription(s)
     stripe("POST", "subscriptions/" + sub_id, cancel_at_period_end="true" if body.cancel else "false")
     log.info("subscription %s at period end", "cancelled" if body.cancel else "kept")
+    record_activity("Abonnement résilié" if body.cancel else "Résiliation annulée", s)
     return billing_subscription(pbb_session)
 
 
@@ -3791,6 +3832,15 @@ def admin_service_action(body: ServiceAction, pbb_admin: str = Cookie(None)):
 
 
 _admin_parking = {}  # owner -> (when read, its vehicles and running tickets)
+
+
+@app.get("/api/admin/activity")
+def admin_activity(pbb_admin: str = Cookie(None)):
+    """The owner's « Activité »: what users did lately (sign-ups, sign-ins, renewals…), newest first."""
+    if not HOSTED:
+        raise HTTPException(403, "Accès réservé.")
+    require_admin(pbb_admin)
+    return guarded(lambda: activity_rows()) or []
 
 
 @app.get("/api/admin/clients")
@@ -3992,6 +4042,7 @@ def pause_autopilot(ap_id: str, body: Pause, pbb_session: str = Cookie(None)):
         ap = update_own_renewal(s, ap_id, {"paused_from": start, "paused_until": end})
         notify(ap, "paused", **info)
         log.info("renewal %s paused", ap_id)
+        record_activity("Pause programmée", s, ["Du %s%s." % (info["from_day"], " au " + info["until_day"] if info["until_day"] else ", sans date de fin")])
         return ap
     ap = s.autopilots.get(ap_id)
     if not ap:
@@ -4091,6 +4142,7 @@ def delete_my_data(response: Response, pbb_session: str = Cookie(None)):
                     "modifié.",
                     "Vous n'avez rien demandé ? Écrivez-nous à %s ou répondez simplement à cet e-mail." % MAIL_REPLY_TO],
                    footer="Vous recevez cet e-mail parce que votre compte PayByBot vient d'être supprimé.")
+    record_activity("Compte supprimé", lines=["Client : %s." % (email or s.username[:4] + "***")])
     s.account = {}
     s.autopilots.clear()
     s.logged_out = True  # the middleware must not write the cookie back
@@ -4146,6 +4198,7 @@ def delete_autopilot(ap_id: str, pbb_session: str = Cookie(None)):
     if HOSTED and not s.demo:
         guarded(lambda: store("renewal_delete", p_owner=owner_id(s.username), p_id=ap_id))
         follow_renewals(s)
+        record_activity("Renouvellement ou ticket arrêté", s)
     else:
         s.autopilots.pop(ap_id, None)
     return {"ok": True}

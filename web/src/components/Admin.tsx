@@ -128,6 +128,9 @@ export type AdminClient = {
   renewals: number
 }
 
+/** One user action (sign-up, sign-in, renewal…), for « Activité ». */
+export type AdminActivity = { at: string; event: string; who: string | null; detail: string | null }
+
 const euros = (cents: number) => (cents / 100).toFixed(2).replace('.', ',') + ' €'
 const ends = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(':', 'h')
@@ -320,6 +323,7 @@ export function AdminPage(_: { signedIn?: boolean }) {
   const [error, setError] = useState<string | null>(null)
   const [needsLogin, setNeedsLogin] = useState(false)
   const [clients, setClients] = useState<AdminClient[] | null>(null)
+  const [activity, setActivity] = useState<AdminActivity[] | null>(null)
 
   function load() {
     setError(null)
@@ -328,6 +332,7 @@ export function AdminPage(_: { signedIn?: boolean }) {
         setStats(s)
         setNeedsLogin(false)
         api.adminClients().then(setClients, () => setClients([]))
+        api.adminActivity().then(setActivity, () => setActivity([]))
       },
       (e) => {
         if (e instanceof ApiError && e.status === 401) setNeedsLogin(true)
@@ -397,6 +402,13 @@ export function AdminPage(_: { signedIn?: boolean }) {
             <h2 className="mt-12 text-sm font-semibold text-ink/55">Clients{clients ? ` (${clients.length})` : ''}</h2>
             {clients && clients.length === 0 && <p className="mt-3 text-ink/50">Aucun client pour l’instant.</p>}
             {clients && clients.length > 0 && <VehicleTable clients={clients} />}
+
+            <h2 className="mt-12 text-sm font-semibold text-ink/55">Activité{activity ? ` (${activity.length})` : ''}</h2>
+            {!activity ? (
+              <Loader2 className="mt-3 size-5 animate-spin text-ink/40" />
+            ) : (
+              <ActivityList rows={activity} />
+            )}
           </>
         )}
       </main>
@@ -465,5 +477,49 @@ function AdminLoginForm({ onDone }: { onDone: () => void }) {
         </button>
       </form>
     </main>
+  )
+}
+
+/** « 5 min », « 3 h », « 2 j »: how long ago. */
+function ago(iso: string, now: number) {
+  const m = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60000))
+  return m < 1 ? 'à l’instant' : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.floor(m / 60)} h` : `il y a ${Math.floor(m / 1440)} j`
+}
+
+/** What users did lately, newest first, with a filter by kind of action. */
+function ActivityList({ rows }: { rows: AdminActivity[] }) {
+  const [kind, setKind] = useState('')
+  const now = Date.now()
+  const kinds = [...new Set(rows.map((r) => r.event))].sort()
+  const shown = kind ? rows.filter((r) => r.event === kind) : rows
+  if (!rows.length) return <p className="mt-3 text-ink/50">Aucune activité pour l’instant.</p>
+  return (
+    <>
+      <select
+        value={kind}
+        onChange={(e) => setKind(e.target.value)}
+        aria-label="Filtrer l’activité"
+        className="mt-3 h-9 rounded-lg border border-ink/10 bg-white px-2 text-sm text-ink outline-none focus:border-eu"
+      >
+        <option value="">Toutes les actions</option>
+        {kinds.map((k) => (
+          <option key={k}>{k}</option>
+        ))}
+      </select>
+      <ul className="mt-3 max-h-[32rem] divide-y divide-ink/10 overflow-y-auto rounded-2xl border border-ink/10 bg-white">
+        {shown.map((r, i) => (
+          <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-3 text-sm">
+            <span className="min-w-0">
+              <span className="font-semibold text-ink">{r.event}</span>
+              {r.who && <span className="text-ink/70"> · {r.who}</span>}
+              {r.detail && <span className="block text-xs text-ink/55">{r.detail}</span>}
+            </span>
+            <span className="shrink-0 text-xs whitespace-nowrap text-ink/50 tabular-nums" title={new Date(r.at).toLocaleString('fr-FR')}>
+              {ago(r.at, now)} · {ends(r.at)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }

@@ -12,6 +12,7 @@ import { legalPageFromHash, type LegalPage } from '@/lib/legalPages'
 import { NotFoundPage } from '@/components/NotFound'
 import { CheckoutDone } from '@/components/CheckoutDone'
 import { InviteCurtain, InviteGate } from '@/components/InviteGate'
+import { resumeLinkTrack, startLinkTrack, trackLinkStep } from '@/lib/linkTrack'
 import { captureInvite, deviceKind, forgetInvite, isMember, linkSource, markMember, openedFromLink } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
 import { ServiceBanner } from '@/components/ServiceBanner'
@@ -116,6 +117,11 @@ export default function App() {
     if (me === null) api.login('demo', 'demo').then((m) => setMe(m as Me), (e) => toast.error((e as Error).message))
   }, [route, me])
 
+  // A visitor who came through the private link reaches the sign-up page: the step shows on « Activité ».
+  useEffect(() => {
+    if (route === 'inscription') trackLinkStep('inscription')
+  }, [route])
+
   // #/bienvenue: show the welcome page again (what PayByBot found in PayByPhone), once signed in.
   useEffect(() => {
     if (route !== 'bienvenue' || !me) return
@@ -175,7 +181,8 @@ export default function App() {
         (r) => {
           if (!r.valid) forgetInvite()
           // The link itself just opened (not a reload): counted for the admin, anonymously.
-          if (r.valid && openedFromLink()) api.linkOpen(linkSource(), deviceKind()).catch(() => {})
+          if (r.valid && openedFromLink()) startLinkTrack(linkSource(), deviceKind())
+          else resumeLinkTrack()
           setInvited(r.valid ? 'yes' : 'invalid')
         },
         () => setInvited('no'),
@@ -352,6 +359,7 @@ export default function App() {
             onLogin={(m) => {
               forgetZoneLookup()
               if (route === 'inscription') {
+                trackLinkStep('inscrit')
                 setOnboarding(true)
                 setZoneReady(false)
                 // Long enough to read the message, even when PayByPhone answers fast.

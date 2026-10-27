@@ -6,6 +6,7 @@ import { RemotePanel } from '@/components/RemoteScene'
 import { CARD_NOTE, ResidentRequired } from '@/components/Riverain'
 import { PayByBot, PayByPhone, withPayByPhone } from '@/components/signs'
 import { storedInvite } from '@/lib/invite'
+import { trackLinkStep } from '@/lib/linkTrack'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 import { cn } from '@/lib/utils'
@@ -142,6 +143,7 @@ export function LoginView({
       if (bad.size) return
     }
     setLoading(demo ? 'demo' : 'login')
+    if (signup && !demo) trackLinkStep('identifiants')
     try {
       const username = demo ? 'demo' : mode === 'phone' ? phoneUsername(phone, selected.code) : email.trim()
       // Clicking "Se connecter" is the acceptance of the terms and privacy policy, stated right above it.
@@ -154,7 +156,10 @@ export function LoginView({
         !signup && !demo && remember,
         demo ? '' : await human.token(),
       )
-      if (isPending(result)) setCodeSentTo(result.email)
+      if (isPending(result)) {
+        trackLinkStep('code')
+        setCodeSentTo(result.email)
+      }
       else onLogin(result)
     } catch (e) {
       if (e instanceof ApiError && e.status === 412) {

@@ -2287,18 +2287,69 @@ def invite_check(code: str):
 class LinkOpen(BaseModel):
     source: str = Field(default="", max_length=40)  # WhatsApp, SMS, Instagram… (from the share button or the app)
     device: str = Field(default="", max_length=40)  # iPhone, Android, ordinateur…
+    visit: int = Field(default=1, ge=1, le=9999)  # how many times this device opened the link (counted on the device)
 
 
-@app.post("/api/link-open")
-def link_open(body: LinkOpen, request: Request):
-    """The private link just opened (once per tab): where from, which device and roughly where (Vercel's city and
-    country), for the admin's « Activité ». No IP and no cookie are kept."""
+# How far a visitor who opened the private link went: the last step reached is shown on the same « Activité » row.
+LINK_STEPS = {"inscription": "page d'inscription ouverte", "identifiants": "identifiants PayByPhone envoyés",
+              "code": "code e-mail envoyé", "inscrit": "inscrit"}
+
+
+class LinkProgress(LinkOpen):
+    id: int
+    sig: str = Field(max_length=64)
+    step: str = Field(default="", max_length=20)
+    seconds: int = Field(default=0, ge=0, le=7 * 86400)
+
+
+def link_sig(row_id):
+    """Proof that the visitor updating a link row is the one it was handed to (no account at that point)."""
+    return hmac.new(_subkey(_secrets()[0], "link-open"), str(row_id).encode(), hashlib.sha256).hexdigest()[:24]
+
+
+def link_detail(body, request, step="", seconds=None):
+    """« WhatsApp · iPhone · Paris, FR · 1re visite · 45 s · → inscrit »: nothing more personal than the city."""
     from urllib.parse import unquote
 
     place = ", ".join(x for x in (unquote(request.headers.get("x-vercel-ip-city") or ""),
                                   request.headers.get("x-vercel-ip-country") or "") if x)
-    detail = " · ".join(x.strip() for x in (body.source, body.device, place) if x.strip())
-    record_activity("Lien privé ouvert", lines=[detail or "Provenance inconnue."])
+    parts = [body.source, body.device, place, "1re visite" if body.visit <= 1 else "déjà venu %d fois" % (body.visit - 1)]
+    if seconds is not None:
+        parts.append("rebond (%d s)" % seconds if seconds < 5 else
+                     "%d s" % seconds if seconds < 60 else "%d min %02d s" % divmod(seconds, 60))
+    if step:
+        parts.append("→ inscrit" if step == "inscrit" else "→ arrêté à : %s" % LINK_STEPS[step])
+    return " · ".join(x.strip() for x in parts if x and x.strip())
+
+
+@app.post("/api/link-open")
+def link_open(body: LinkOpen, request: Request):
+    """The private link just opened (once per tab): where from, which device, roughly where (Vercel's city and
+    country), first visit or not, for the admin's « Activité ». No IP and no cookie are kept. Answers the row and a
+    signature, so the same row follows the visit (steps, time spent)."""
+    if not HOSTED:
+        return {"id": None, "sig": None}
+    try:
+        data = _fernet("activity").encrypt(json.dumps({"who": None, "detail": link_detail(body, request)}).encode())
+        row_id = store("activity_add_id", p_event="Lien privé ouvert", p_data=data.decode())
+    except Exception as e:
+        log.warning("link open not recorded: %s", type(e).__name__)
+        return {"id": None, "sig": None}
+    return {"id": row_id, "sig": link_sig(row_id)}
+
+
+@app.post("/api/link-progress")
+def link_progress(body: LinkProgress, request: Request):
+    """The visitor went on (a sign-up step, or left the page after so many seconds): the same row is rewritten."""
+    if not hmac.compare_digest(body.sig, link_sig(body.id)) or (body.step and body.step not in LINK_STEPS):
+        raise HTTPException(400, "Suivi refusé.")
+    if HOSTED:
+        try:
+            detail = link_detail(body, request, body.step, body.seconds)
+            data = _fernet("activity").encrypt(json.dumps({"who": None, "detail": detail}).encode()).decode()
+            store("activity_update_link", p_id=body.id, p_data=data)
+        except Exception as e:
+            log.warning("link progress not recorded: %s", type(e).__name__)
     return {"ok": True}
 
 

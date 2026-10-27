@@ -29,12 +29,21 @@ class Invite(unittest.TestCase):
             self.assertFalse(web.valid_invite("paris2027"))
             self.assertFalse(web.valid_invite(web.invite_code(web.owner_id("0611223344"))))  # no personal codes then
 
-    def test_link_open_records_where_from_without_ip(self):
+    def test_link_detail_is_where_from_first_visit_time_and_step_without_ip(self):
         class Req:
             headers = {"x-vercel-ip-city": "Paris%2015e", "x-vercel-ip-country": "FR", "x-real-ip": "203.0.113.7"}
-        with patch.object(web, "record_activity") as recorded:
-            web.link_open(web.LinkOpen(source="WhatsApp", device="iPhone"), Req())
-        event, detail = recorded.call_args.args[0], recorded.call_args.kwargs["lines"][0]
-        self.assertEqual(event, "Lien privé ouvert")
-        self.assertEqual(detail, "WhatsApp · iPhone · Paris 15e, FR")
-        self.assertNotIn("203.0.113.7", detail)
+        body = web.LinkOpen(source="WhatsApp", device="iPhone", visit=1)
+        self.assertEqual(web.link_detail(body, Req()), "WhatsApp · iPhone · Paris 15e, FR · 1re visite")
+        again = web.LinkOpen(source="WhatsApp", device="iPhone", visit=3)
+        self.assertEqual(web.link_detail(again, Req(), "code", 95),
+                         "WhatsApp · iPhone · Paris 15e, FR · déjà venu 2 fois · 1 min 35 s · → arrêté à : code e-mail envoyé")
+        self.assertIn("rebond (3 s)", web.link_detail(body, Req(), "", 3))
+        self.assertIn("→ inscrit", web.link_detail(body, Req(), "inscrit", 40))
+        self.assertNotIn("203.0.113.7", web.link_detail(body, Req(), "inscrit", 40))
+
+    def test_only_the_visitor_holding_the_signature_updates_the_row(self):
+        class Req:
+            headers = {}
+        with self.assertRaises(HTTPException):
+            web.link_progress(web.LinkProgress(id=5, sig="forged", step="inscrit"), Req())
+        web.link_progress(web.LinkProgress(id=5, sig=web.link_sig(5), step="inscrit", seconds=12), Req())  # accepted

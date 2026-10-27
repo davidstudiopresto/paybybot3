@@ -418,6 +418,10 @@ function Terms() {
       <Section title="5. Vos responsabilités">
         <ul>
           <li>
+            Vérifier vous-même, dans l’application <PayByPhone />, qu’un ticket valide couvre votre véhicule pendant tout votre
+            stationnement : seul ce ticket fait foi en cas de contrôle. <PayByBot /> est une aide, pas une garantie.
+          </li>
+          <li>
             Vérifier que la zone, le tarif et la durée correspondent à votre stationnement et à la signalisation sur place.
           </li>
           <li>
@@ -475,6 +479,12 @@ function Terms() {
           fonctionnement de <PayByPhone />, qui peut évoluer à tout moment, et peut être interrompu ou arrêté.
         </p>
         <p>
+          <strong>Une aide, pas une garantie.</strong> <PayByBot /> est un outil d’assistance qui tente d’acheter vos tickets à
+          votre place : il est tenu d’une obligation de moyens, et non de résultat. Il ne garantit pas qu’un ticket sera acheté,
+          ni qu’il couvrira votre stationnement. Vous restez seul responsable du paiement de votre stationnement et du respect
+          des règles de stationnement, avec ou sans <PayByBot />.
+        </p>
+        <p>
           <strong>Forfaits post-stationnement (FPS) et amendes.</strong> L’obligation de <PayByBot /> se limite à
           tenter le paiement automatique et à vous prévenir quand il n’aboutit pas. <PayByBot /> vous prévient, par e-mail et
           sur votre tableau de bord, notamment dans les cas suivants :
@@ -497,9 +507,12 @@ function Terms() {
         <p>
           Dès que vous êtes prévenu, et plus généralement tant qu’aucun ticket n’est en cours pour votre véhicule, il vous
           appartient de payer vous-même votre stationnement dans l’application <PayByPhone />. Dans les limites permises par la
-          loi, <PayByBot /> et son propriétaire ne sont donc pas responsables des forfaits post-stationnement, amendes ou
-          majorations, des paiements refusés ou non réalisés, ni des indisponibilités de <PayByPhone /> ou de <PayByBot />.
-          Cette limitation ne s’applique pas en cas de faute lourde ou intentionnelle.
+          loi, <PayByBot /> et son propriétaire ne sont donc pas responsables des forfaits post-stationnement, amendes,
+          majorations, frais de fourrière ou d’enlèvement, des paiements refusés ou non réalisés, ni des indisponibilités de{' '}
+          <PayByPhone /> ou de <PayByBot />, quelle qu’en soit la cause, y compris une erreur, un retard ou une panne de{' '}
+          <PayByBot />. Si leur responsabilité était malgré tout retenue, elle serait limitée au montant de l’abonnement que
+          vous avez payé au cours des 12 derniers mois. Ces limitations ne s’appliquent pas en cas de faute lourde ou
+          intentionnelle.
         </p>
       </Section>
 

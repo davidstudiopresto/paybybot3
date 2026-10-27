@@ -10,7 +10,7 @@ import { LoadingLine } from '@/components/Loading'
 // The message sent with the link (copied or shared), in the user's own voice.
 const MESSAGE =
   // Straight apostrophes: some apps mangle the typographic ones (’) when the text is passed in a link.
-  "Hello ! J'ai découvert PayByBot, une app qui renouvelle automatiquement mon ticket PayByPhone. Voici mon lien d'affiliation :"
+  "Hello ! J'ai découvert PayByBot, une app qui renouvelle automatiquement mon stationnement résident PayByPhone. Voici mon lien d'affiliation :"
 
 /** WhatsApp's mark (Simple Icons), white on its green. */
 function WhatsAppIcon({ className }: { className?: string }) {

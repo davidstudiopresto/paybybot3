@@ -76,7 +76,8 @@ class Hosted(unittest.TestCase):
 
         cards = {"paymentAccounts": [{"id": "card-1", "paymentMethodType": "PaymentCard"}]}
         with patch.object(web, "HOSTED", True), patch.object(web, "current", return_value=s), \
-                patch.object(web, "store", side_effect=store), \
+                patch.object(web, "store", side_effect=store), patch.object(web, "load_account", return_value={}), \
+                patch.object(web, "billing_state", return_value="ok"), \
                 patch.object(web, "normalize_accounts", return_value=[{"id": "card-1", "kind": "card"}]), \
                 patch.object(s, "call", return_value=cards):
             ap = web.edit_autopilot("r1", body(location="75005", rate="103", duration=1, unit="Days",
@@ -90,6 +91,23 @@ class Hosted(unittest.TestCase):
         self.assertIn("next_check", patch_sent)
         self.assertIsNone(patch_sent["last_error"])
         self.assertEqual(ap["location"], "75005")
+
+    def test_no_change_without_an_offer(self):
+        s = web.UserSession("demo", "", demo=True)
+        s.demo, s.username = False, "0612345678"
+        old = {"plate": "AB123CD", "location": "75017", "rate": "102", "duration": "2", "unit": "Hours",
+               "payment_account_id": "card-1", "days": [0, 1], "start": "09:00"}
+        rows = [{"id": "r1", "enabled": True, "data": web.encrypt_details(old)}]
+        for state in ("trial", "trial_over", "unpaid"):
+            with self.subTest(state=state), patch.object(web, "HOSTED", True), \
+                    patch.object(web, "current", return_value=s), \
+                    patch.object(web, "store", return_value=rows), patch.object(web, "load_account", return_value={}), \
+                    patch.object(web, "billing_state", return_value=state), \
+                    patch.object(web, "update_own_renewal") as update:
+                with self.assertRaises(HTTPException) as e:
+                    web.edit_autopilot("r1", body(paymentAccountId="card-1"), "t")
+                self.assertEqual(e.exception.status_code, 402)
+                update.assert_not_called()
 
 
 if __name__ == "__main__":

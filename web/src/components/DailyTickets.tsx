@@ -147,7 +147,7 @@ export function ruleState(ap: Autopilot, now = Date.now()) {
   return { period, next: next ?? (dueToday ? startToday : null), last, running, finished, state } as const
 }
 
-function DailyCard({ ap, data, onChanged }: { ap: Autopilot; data: Overview; onChanged: () => void }) {
+function DailyCard({ ap, data, onChanged, needsOffer }: { ap: Autopilot; data: Overview; onChanged: () => void; needsOffer: boolean }) {
   const { period, next, last, finished } = ruleState(ap)
   const single = !!period && period.from === period.to
   const [removing, setRemoving] = useState(false)
@@ -258,7 +258,7 @@ function DailyCard({ ap, data, onChanged }: { ap: Autopilot; data: Overview; onC
         {finished && single && !last && !ap.lastError && <p className="mt-3 text-sm text-ink/55">Ce ticket n’a pas été pris.</p>}
         {ap.lastError && !finished && <p className="mt-3 text-sm text-destructive">{ap.lastError}</p>}
       </div>
-      {editing && <DailyWizard data={data} editing={ap} onClose={() => setEditing(false)} onDone={onChanged} needsOffer={false} />}
+      {editing && <DailyWizard data={data} editing={ap} onClose={() => setEditing(false)} onDone={onChanged} needsOffer={needsOffer} />}
     </article>
   )
 }
@@ -311,7 +311,7 @@ export function DailyTickets({
         {/* The tickets already programmed first (right under the running ticket they follow), then one card per car
             with nothing on it, two side by side within the page's column. */}
         {daily.map((ap) => (
-          <DailyCard key={ap.id} ap={ap} data={data} onChanged={onChanged} />
+          <DailyCard key={ap.id} ap={ap} data={data} onChanged={onChanged} needsOffer={needsOffer} />
         ))}
         <div className={cn('grid gap-3', idle.length > 1 && 'sm:grid-cols-2')}>
           {idle.map((v) => (
@@ -362,7 +362,7 @@ export function DailyTickets({
         <>
           <div className="space-y-3">
             {daily.map((ap) => (
-              <DailyCard key={ap.id} ap={ap} data={data} onChanged={onChanged} />
+              <DailyCard key={ap.id} ap={ap} data={data} onChanged={onChanged} needsOffer={needsOffer} />
             ))}
           </div>
           <div className="mt-5 flex justify-center">
@@ -773,11 +773,11 @@ export function DailyWizard({
 
   async function activate() {
     if (!effective) return
-    if (editing) return save()
     if (needsOffer) {
       setPaywall(true)
       return
     }
+    if (editing) return save()
     setSaving(true)
     try {
       await api.addAutopilot(rule() as Parameters<typeof api.addAutopilot>[0])
@@ -803,7 +803,8 @@ export function DailyWizard({
       onDone()
       onClose()
     } catch (e) {
-      toast.error((e as Error).message)
+      if (e instanceof ApiError && e.status === 402 && /offre/.test(e.message)) setPaywall(true)
+      else toast.error((e as Error).message)
     } finally {
       setSaving(false)
     }
@@ -1212,7 +1213,8 @@ export function DailyWizard({
       {paywall && (
         <PlansDialog
           plates={[plate]}
-          onPay={() => savePending([rule()])}
+          // A change is not replayed after Stripe (the ticket already exists): it is saved again from its card.
+          onPay={() => !editing && savePending([rule()])}
           onClose={() => {
             clearPending()
             setPaywall(false)

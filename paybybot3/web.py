@@ -2719,6 +2719,17 @@ def check_card(s, payment_account_id):
         raise HTTPException(400, "Le renouvellement automatique se paie avec une carte bancaire enregistrée sur PayByPhone.")
 
 
+def check_offer(s):
+    """Online, nothing is renewed or programmed without an offer chosen (the paywall), nor while blocked."""
+    state = billing_state(guarded(lambda: load_account(s)), owner_id(s.username))
+    if state in BLOCKED_STATES:
+        raise HTTPException(402, "Compte bloqué : débloquez-le (bandeau en haut de page) pour activer un "
+                                 "renouvellement.")
+    if state == "trial":
+        raise HTTPException(402, "Choisissez votre offre pour activer le renouvellement : rien n'est prélevé "
+                                 "avant la fin de votre mois offert.")
+
+
 @app.post("/api/autopilots")
 def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
     s = current(pbb_session)
@@ -2741,13 +2752,7 @@ def add_autopilot(body: Autopilot, pbb_session: str = Cookie(None)):
         refresh = getattr(s.bot, "refresh_token", None)
         if not refresh:
             raise HTTPException(401, "Reconnectez-vous pour activer le renouvellement automatique.")
-        state = billing_state(guarded(lambda: load_account(s)), owner_id(s.username))
-        if state in BLOCKED_STATES:
-            raise HTTPException(402, "Compte bloqué : débloquez-le (bandeau en haut de page) pour activer un "
-                                     "renouvellement.")
-        if state == "trial":
-            raise HTTPException(402, "Choisissez votre offre pour activer le renouvellement : rien n'est prélevé "
-                                     "avant la fin de votre mois offert.")
+        check_offer(s)
 
         def save():
             row = store("renewal_save", p_row={
@@ -3844,6 +3849,7 @@ def edit_autopilot(ap_id: str, body: Autopilot, pbb_session: str = Cookie(None))
         old = with_details(row)
         if plate_key(old["plate"]) != plate_key(body.plate):
             raise HTTPException(400, same_car)
+        check_offer(s)
         check_card(s, body.paymentAccountId)
         details = {**old, "location": body.location, "rate": body.rate, "duration": fmt_qty(body.duration),
                    "unit": body.unit, "payment_account_id": body.paymentAccountId, "days": days, "start": start,

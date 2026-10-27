@@ -10,7 +10,7 @@ import { ShinyButton } from '@/components/ui/shiny-button'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
 import { emailProblem } from '@/lib/validate'
-import { api, ApiError, clock, remaining, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, ApiError, clock, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 import { LoadingLine } from '@/components/Loading'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
@@ -897,7 +897,7 @@ function RiverainDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={ui.dialog}>
         <div className="px-6 pt-7">
-          <DialogTitle className={ui.dialogTitle}>Renouvellement résident</DialogTitle>
+          <DialogTitle className={cn(ui.dialogTitle, 'font-semibold')}>Renouvellement résident</DialogTitle>
           <DialogDescription className="mt-1 text-ink/60">
             {plate ? 'Vérifiez, puis activez. On s’occupe du reste.' : "Choisissez les véhicules à renouveler, vérifiez, puis activez. On s'occupe du reste."}
           </DialogDescription>
@@ -994,12 +994,11 @@ function RiverainDialog({
                         </span>
                       )}
                       {(() => {
-                        // Its running ticket, in red: when it ends and the hours left, to show why to activate now.
+                        // Its running ticket, in red: when it ends, to show why to activate now.
                         const t = data.sessions.find((x) => samePlate(x.plate, plate) && new Date(x.expire).getTime() > Date.now())
                         return t ? (
                           <span className="mt-2 flex items-center gap-1.5 text-[0.8rem] font-medium text-destructive">
-                            <Ticket className="size-4 shrink-0" /> Ticket en cours : expire {clock(t.expire)} ·{' '}
-                            {remaining(new Date(t.expire).getTime() - Date.now()).replace(/ h /, 'h').replace(/ /g, '\u00a0')} restant
+                            <Ticket className="size-4 shrink-0" /> Ticket en cours : expire {clock(t.expire)}
                           </span>
                         ) : null
                       })()}

@@ -68,7 +68,7 @@ export function AdminPage(_: { signedIn?: boolean }) {
 
   if (needsLogin) {
     return (
-      <div className="min-h-dvh bg-white">
+      <div className="min-h-dvh bg-background">
         <TopBar />
         <AdminLoginForm onDone={load} />
       </div>
@@ -87,7 +87,7 @@ export function AdminPage(_: { signedIn?: boolean }) {
   ]
 
   return (
-    <div className="min-h-dvh bg-white">
+    <div className="min-h-dvh bg-background">
       <TopBar />
       <main className="mx-auto max-w-4xl px-6 pt-12 pb-20">
         <div className="flex items-center justify-between gap-4">

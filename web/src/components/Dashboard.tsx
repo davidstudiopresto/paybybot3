@@ -358,7 +358,7 @@ export function Dashboard({
   }, [onRefresh])
 
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
+    <div className="flex min-h-dvh flex-col bg-background">
       {checkoutDone && (
         <CheckoutDone
           // The car whose renewal was just activated (else the first car of the account).

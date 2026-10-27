@@ -174,7 +174,7 @@ export function LoginView({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
+    <div className="flex min-h-dvh flex-col bg-background">
       {noResident !== null && (
         <ResidentRequired vehicles={noResident}>
           <button
@@ -510,7 +510,7 @@ function CodeStep({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
+    <div className="flex min-h-dvh flex-col bg-background">
       <PublicTopBar />
       <main className="flex flex-1 flex-col px-6 py-10 sm:py-12">
         <form

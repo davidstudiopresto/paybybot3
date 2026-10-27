@@ -96,7 +96,7 @@ export function Welcome({ me, data, onContinue }: { me: Me; data: Overview; onCo
   const next = () => ++i * step
 
   return (
-    <div className="grid min-h-dvh bg-white lg:grid-cols-[1.05fr_1fr]">
+    <div className="grid min-h-dvh bg-background lg:grid-cols-[1.05fr_1fr]">
       {!cards.length && !me.demo && <CardGate />}
       <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,7vw,7rem)] lg:pb-6">
         <Wordmark />

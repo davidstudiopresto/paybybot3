@@ -27,7 +27,7 @@ export function NotFoundPage({ hosted }: { hosted: boolean }) {
     return () => window.removeEventListener('hashchange', go)
   }, [])
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
+    <div className="flex min-h-dvh flex-col bg-background">
       <PublicTopBar />
       <Page
         code="ERREUR 404"
@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
   render() {
     if (!this.state.failed) return this.props.children
     return (
-      <div className="flex min-h-dvh flex-col bg-white">
+      <div className="flex min-h-dvh flex-col bg-background">
         <header className="flex h-16 items-center border-b border-ink/10 px-4 sm:px-8">
           <a href="/" aria-label="PayByBot, accueil">
             <Wordmark />

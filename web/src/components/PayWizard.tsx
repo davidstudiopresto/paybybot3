@@ -171,7 +171,7 @@ export function PayWizard({
 
   if (done) {
     return (
-      <div className="fixed inset-0 z-50 grid center-safe overflow-y-auto bg-white p-6">
+      <div className="fixed inset-0 z-50 grid center-safe overflow-y-auto bg-background p-6">
         <div className="rise flex max-w-md flex-col items-center text-center">
           <span className="grid size-16 place-items-center rounded-full bg-eu text-white">
             <Check className="size-8" strokeWidth={3} />
@@ -196,7 +196,7 @@ export function PayWizard({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white">
-      <header className="sticky top-0 z-10 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center gap-4 px-5 py-4">
           <Button variant="ghost" size="icon-lg" onClick={onClose} aria-label="Annuler">
             <X className="size-6" />

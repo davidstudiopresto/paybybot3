@@ -36,7 +36,7 @@ const CONTROL = [
 /** « Comment ça marche », in the top bar: three numbered steps and what stays in the user's hands, text only. */
 export function HowPage({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-white text-ink">
+    <div className="flex min-h-dvh flex-col bg-background text-ink">
       <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto w-full max-w-[40rem] flex-1 px-6 pt-16 pb-20 sm:pt-20">
         <h1 className={ui.title}>Comment ça marche</h1>

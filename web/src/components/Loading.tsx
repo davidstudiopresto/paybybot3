@@ -33,7 +33,7 @@ export function Loading({
   const stuck = !!error || slow
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-white px-6" aria-busy={!stuck} aria-live="polite">
+    <div className="grid min-h-dvh place-items-center bg-background px-6" aria-busy={!stuck} aria-live="polite">
       <div className={cn('flex w-full max-w-xs flex-col items-center gap-6 text-center', visible || stuck ? 'rise' : 'invisible')}>
         <span className={stuck ? undefined : 'animate-pulse'}>
           <Wordmark />

@@ -6,7 +6,7 @@ import { TRY_LABEL, ui } from '@/lib/styles'
 /** The bar on top of every page: logo on the left, links in the middle (if any), actions on the right. */
 export function TopBar({ center, children, className }: { center?: ReactNode; children?: ReactNode; className?: string }) {
   return (
-    <header className={cn('sticky top-0 z-30 border-b border-ink/10 bg-white/90 backdrop-blur-md', className)}>
+    <header className={cn('sticky top-0 z-30 border-b border-ink/10 bg-background/90 backdrop-blur-md', className)}>
       <div className="grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:px-8">
         <a href="#/" aria-label="PayByBot, accueil" className="shrink-0 justify-self-start">
           <Wordmark />

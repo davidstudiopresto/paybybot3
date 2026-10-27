@@ -632,7 +632,7 @@ export function LegalView({ page, signedIn = false }: { page: LegalPage; hosted:
   const { title, body: Body } = CONTENT[page]
   const back = legalBack(signedIn)
   return (
-    <div className="min-h-dvh bg-white text-ink">
+    <div className="min-h-dvh bg-background text-ink">
       <main className="max-w-[34rem] px-4 pt-5 pb-20 sm:px-6">
         <a href={back.href} className="inline-flex items-center gap-1.5 text-[0.95rem] text-ink hover:text-ink/70">
           <ArrowLeft className="size-4" strokeWidth={1.75} /> {back.label}

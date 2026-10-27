@@ -194,7 +194,7 @@ export function PlanCards({ signedIn }: { signedIn: boolean }) {
 /** Pricing page (#/tarifs): the same two plans for everyone. */
 export function PricingPage({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
+    <div className="flex min-h-dvh flex-col bg-background">
       <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-5xl flex-1 flex-col justify-center px-6 py-10 lg:py-12">
         <h1 className="rise text-center font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]">
@@ -350,7 +350,7 @@ export function PlansDialog({
   return (
     <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogPortal>
-        <DialogPrimitive.Popup className="fixed inset-0 z-[70] grid overflow-y-auto bg-white outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 lg:grid-cols-[1.4fr_1fr]">
+        <DialogPrimitive.Popup className="fixed inset-0 z-[70] grid overflow-y-auto bg-background outline-none duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 lg:grid-cols-[1.4fr_1fr]">
           <div className="flex flex-col px-6 pt-5 pb-10 sm:px-10 lg:px-[clamp(2.5rem,8vw,8rem)] lg:pb-6">
             <div className="flex items-center justify-between">
               <Wordmark />

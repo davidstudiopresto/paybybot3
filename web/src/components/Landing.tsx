@@ -303,7 +303,7 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
   const cta = useRef<HTMLAnchorElement>(null)
   const sticky = useStickyCta(cta)
   return (
-    <div className={cn("flex min-h-dvh flex-col overflow-x-clip bg-white lg:pb-0", !heroOnly && "pb-20")}>
+    <div className={cn("flex min-h-dvh flex-col overflow-x-clip bg-background lg:pb-0", !heroOnly && "pb-20")}>
       <PublicTopBar />
 
       {/* Centered hero filling the window on a computer (under the 4rem top bar): the kicker as a pill, the title on
@@ -533,7 +533,7 @@ function Faq({ className }: { className?: string }) {
 
 export function FaqView({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
+    <div className="flex min-h-dvh flex-col bg-background">
       <PublicTopBar signedIn={signedIn} />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-16 pb-24 sm:px-8 lg:pt-24">
         <div className="rise">

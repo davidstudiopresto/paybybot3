@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Loader2 } from 'lucide-react'
+import { Check, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
@@ -355,9 +355,11 @@ export function DailyTickets({
           </button>
         </div>
       ) : (
-        <div className="flex items-center justify-end gap-4">
-          <button onClick={() => setOpen(true)} className={ui.pillGray}>
-            Programmer un ticket
+        // Once tickets exist: a heading for them, the way to add one on the same line.
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <p className="text-[1.05rem] text-ink/60">Vos tickets programmés :</p>
+          <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-[0.95rem] font-semibold text-eu transition hover:text-eu/80">
+            <Plus className="size-4" strokeWidth={2.25} /> Programmer un ticket
           </button>
         </div>
       )}

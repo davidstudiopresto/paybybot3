@@ -293,8 +293,8 @@ export function RenewalActions({
             Reprendre maintenant
           </button>
         ) : withPause ? (
-          <button onClick={() => setPausing(true)} className="text-sm text-ink/55 underline decoration-ink/25 underline-offset-[3px] hover:text-ink">
-            Programmer une pause
+          <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm text-ink/55 transition hover:text-ink">
+            <Pause className="size-3.5" /> Programmer une pause
           </button>
         ) : null}
         {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}

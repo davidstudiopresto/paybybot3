@@ -156,7 +156,7 @@ let pricingCall: { at: number; p: Promise<Pricing> } | null = null
 
 export const api = {
   config: () =>
-    request<{ hosted: boolean; turnstileSiteKey?: string | null; build?: string | null; inviteOnly?: boolean }>('/api/config'),
+    request<{ hosted: boolean; turnstileSiteKey?: string | null; build?: string | null; inviteOnly?: boolean; interrupted?: boolean }>('/api/config'),
   inviteCheck: (code: string) => request<{ valid: boolean }>(`/api/invite/${encodeURIComponent(code)}`),
   myInvite: () => request<{ code: string; url: string }>('/api/invite'),
   me: () => request<Me>('/api/me'),
@@ -204,6 +204,9 @@ export const api = {
   adminLogout: () => post('/api/admin/logout'),
   adminStats: () => request<import('@/components/Admin').AdminStats>('/api/admin/stats'),
   adminClients: () => request<import('@/components/Admin').AdminClient[]>('/api/admin/clients'),
+  adminService: () => request<import('@/components/Admin').ServiceState>('/api/admin/service'),
+  adminServiceAction: (action: 'interrupt' | 'notify' | 'resume') =>
+    post<import('@/components/Admin').ServiceState>('/api/admin/service', { action }),
   signupCheck: (username: string) => post<{ exists: boolean }>('/api/signup/check', { username }),
   verifySignup: (code: string) => post<Me>('/api/signup/verify', { code }),
   resendSignupCode: () => post<SignupPending>('/api/signup/resend'),

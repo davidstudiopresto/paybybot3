@@ -14,6 +14,7 @@ import { CheckoutDone } from '@/components/CheckoutDone'
 import { InviteCurtain, InviteGate } from '@/components/InviteGate'
 import { captureInvite, forgetInvite, isMember, markMember, openedFromLink } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
+import { ServiceBanner } from '@/components/ServiceBanner'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
 
 // Pages seldom opened, loaded only when they are (the first screen comes up sooner).
@@ -70,6 +71,7 @@ export default function App() {
   const [hosted, setHosted] = useState(false)
   // Word of mouth only (server's PAYBYBOT_INVITE_ONLY): the site opens through a user's link (?i=…).
   const [inviteOnly, setInviteOnly] = useState(false)
+  const [interrupted, setInterrupted] = useState(false) // PayByPhone not answering: the banner on every page
   const [invited, setInvited] = useState<'yes' | 'no' | 'invalid' | null>(null)
   const [legal, setLegal] = useState<LegalPage | null>(() => legalPageFromHash(window.location.hash))
   const [route, setRoute] = useState(() => routeFromHash(window.location.hash))
@@ -161,6 +163,7 @@ export default function App() {
       (c) => {
         setHosted(c.hosted)
         setInviteOnly(!!c.inviteOnly)
+        setInterrupted(!!c.interrupted)
       },
       () => {},
     )
@@ -183,6 +186,7 @@ export default function App() {
     const check = () =>
       api.config().then(
         (c) => {
+          setInterrupted(!!c.interrupted) // checked every minute: the banner comes and goes without a reload
           if (!c.build || c.build === mine) return
           try {
             if (sessionStorage.getItem('pbb-build') === c.build) return // already reloaded for it: no loop
@@ -312,6 +316,7 @@ export default function App() {
   return (
     <Suspense fallback={<Loading />}>
       <Toaster />
+      {interrupted && me && route !== 'admin' && <ServiceBanner />}
       {/* Opened through a valid private link: « sur parrainage » first, then the screen lifts on the site. */}
       {inviteOnly && !me && invited === 'yes' && openedFromLink() && <InviteCurtain />}
       {!['/', '/index.html'].includes(window.location.pathname) && !/^\/r\/[0-9A-Za-z_-]{1,40}\/?$/.test(window.location.pathname) ? (

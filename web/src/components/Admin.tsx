@@ -7,6 +7,101 @@ import { TopBar } from '@/components/TopBar'
 import { api } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
 
+/** PayByBot's interruption state (PayByPhone not answering), as the admin sees it. */
+export type ServiceState = {
+  failures?: number
+  interrupted_at?: string | null
+  notified_at?: string | null
+  recipients?: number
+  sent?: number
+}
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
+
+/** The interruption, in one card: its state and the owner's three actions. The customers' e-mail is never sent
+ *  on its own: the owner confirms it here. */
+function ServicePanel() {
+  const [state, setState] = useState<ServiceState | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    api.adminService().then(setState, (e) => setError((e as Error).message))
+  }, [])
+  async function act(action: 'interrupt' | 'notify' | 'resume', question: string) {
+    if (!window.confirm(question)) return
+    setBusy(action)
+    setError(null)
+    try {
+      const next = await api.adminServiceAction(action)
+      setState((s) => ({ ...s, ...next }))
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(null)
+    }
+  }
+  if (!state && !error) return null
+  const on = !!state?.interrupted_at
+  const n = state?.recipients ?? 0
+  return (
+    <section className={`mt-8 rounded-2xl border p-5 ${on ? 'border-[#741b11]/30 bg-[#741b11]/[0.04]' : 'border-ink/10 bg-white'}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="font-heading text-lg font-medium text-ink">
+            {on ? 'Service interrompu' : 'Service normal'}
+          </p>
+          <p className="mt-1 text-sm text-ink/55">
+            {on
+              ? `Depuis le ${when(state!.interrupted_at!)} · bannière affichée · ${
+                  state?.notified_at ? `clients prévenus le ${when(state.notified_at)}` : 'clients pas encore prévenus'
+                }`
+              : `PayByPhone répond. ${state?.failures ? `${state.failures} échec(s) d’affilée en cours.` : ''}`}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {!on && (
+            <button
+              disabled={!!busy}
+              onClick={() => act('interrupt', 'Afficher la bannière d’interruption à tous les utilisateurs ?')}
+              className={ui.pillGray}
+            >
+              Interrompre le service
+            </button>
+          )}
+          {on && !state?.notified_at && (
+            <button
+              disabled={!!busy || !n}
+              onClick={() => act('notify', `Envoyer l’e-mail « ne comptez plus sur PayByBot » à ${n} client(s) ?`)}
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-[#741b11] px-4 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {busy === 'notify' && <Loader2 className="size-4 animate-spin" />} Prévenir les {n} client(s) par e-mail
+            </button>
+          )}
+          {on && (
+            <button
+              disabled={!!busy}
+              onClick={() =>
+                act(
+                  'resume',
+                  state?.notified_at
+                    ? `Rétablir le service et écrire à ${n} client(s) que PayByBot fonctionne de nouveau ?`
+                    : 'Rétablir le service (bannière retirée, aucun e-mail) ?',
+                )
+              }
+              className={ui.pillGray}
+            >
+              {busy === 'resume' && <Loader2 className="size-4 animate-spin" />} Rétablir le service
+            </button>
+          )}
+        </div>
+      </div>
+      {state?.sent ? <p className="mt-3 text-sm text-ink/60">{state.sent} e-mail(s) envoyé(s).</p> : null}
+      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+    </section>
+  )
+}
+
 export type AdminStats = {
   accounts: number
   accounts_7d: number
@@ -141,7 +236,8 @@ function VehicleTable({ clients }: { clients: AdminClient[] }) {
             <tr>
               {COLUMNS.map(({ key, label, choices }) => (
                 <th key={key} className={`px-3 py-3 font-medium ${choices ? 'min-w-[7.5rem]' : ''}`}>
-                  {label}
+                  {/* One line per title: every filter box sits at the same height. */}
+                  <span className="block whitespace-nowrap">{label}</span>
                   {choices ? (
                     <select value={filters[key] ?? ''} onChange={(e) => setFilters({ ...filters, [key]: e.target.value })} className={field} aria-label={`Filtrer : ${label}`}>
                       <option value="">Tous</option>
@@ -295,6 +391,8 @@ export function AdminPage(_: { signedIn?: boolean }) {
               ))}
             </dl>
 
+
+            <ServicePanel />
 
             <h2 className="mt-12 text-sm font-semibold text-ink/55">Clients{clients ? ` (${clients.length})` : ''}</h2>
             {clients && clients.length === 0 && <p className="mt-3 text-ink/50">Aucun client pour l’instant.</p>}

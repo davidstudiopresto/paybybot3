@@ -797,7 +797,7 @@ def alert_owner(details, info):
         plate[:2], (details or {}).get("location"), info.get("message", ""),
         " (suspendu)" if info.get("suspended") else "")
     log.error("owner alert, %s", text)  # an ERROR log: Sentry raises an issue for it
-    to = (os.environ.get("PAYBYBOT_ALERT_EMAIL") or os.environ.get("PAYBYBOT_ADMIN_EMAIL") or "").split(",")[0].strip()
+    to = owner_address()
     if not to:
         return
     try:
@@ -809,6 +809,132 @@ def alert_owner(details, info):
                    ("Ouvrir l'admin", APP_URL.rstrip("/") + "/#/admin"))
     except Exception as e:
         log.warning("owner alert not sent: %s", type(e).__name__)
+
+
+def owner_address():
+    """Where PayByBot's owner gets the alerts."""
+    return (os.environ.get("PAYBYBOT_ALERT_EMAIL") or os.environ.get("PAYBYBOT_ADMIN_EMAIL") or "").split(",")[0].strip()
+
+
+# --------------------------------------------------------------------------
+# Service interruption: PayByPhone stops answering (API blocked, down)
+# --------------------------------------------------------------------------
+
+OUTAGE_AFTER = 3  # renewals in a row PayByPhone did not answer: the service is marked interrupted
+
+
+def is_outage(e):
+    """PayByPhone refusing every call (403, 429), down (5xx) or unreachable: not the user's own problem."""
+    if isinstance(e, requests.HTTPError) and e.response is not None:
+        code = e.response.status_code
+        return code in (403, 429) or code >= 500
+    return isinstance(e, (requests.ConnectionError, requests.Timeout))
+
+
+def outage_hit():
+    """One more renewal PayByPhone did not answer; the one that crosses the threshold alerts the owner, who then
+    decides in the admin whether to write to the customers. Never raises."""
+    try:
+        state = store("service_outage_hit", p_threshold=OUTAGE_AFTER) or {}
+    except Exception as e:
+        log.warning("outage not counted: %s", type(e).__name__)
+        return
+    if not state.get("started"):
+        return
+    log.error("service interrupted: PayByPhone did not answer %s renewals in a row", state.get("failures"))
+    try:
+        send_email(owner_address(), "Alerte PayByBot · PayByPhone ne répond plus", "PayByBot est interrompu",
+                   ["PayByPhone n'a pas répondu à %s renouvellements d'affilée (accès bloqué ou panne)."
+                    % state.get("failures"),
+                    "La bannière d'interruption est affichée dans l'app.",
+                    "Les clients n'ont pas encore été prévenus : validez l'envoi de l'e-mail dans l'admin, ou "
+                    "rétablissez le service si la panne est déjà passée."],
+                   ("Ouvrir l'admin", APP_URL.rstrip("/") + "/#/admin"))
+    except Exception as e:
+        log.warning("outage alert not sent: %s", type(e).__name__)
+
+
+def outage_clear():
+    """PayByPhone answered: the count of failures in a row starts again. Never raises."""
+    try:
+        store("service_outage_clear")
+    except Exception as e:
+        log.info("outage count not cleared: %s", type(e).__name__)
+
+
+_service_cache = {"at": 0.0, "value": False}
+
+
+def service_interrupted():
+    """Whether the app shows the interruption banner (read at most every 30 s; PAYBYBOT_INTERRUPTED=1 forces it)."""
+    if os.environ.get("PAYBYBOT_INTERRUPTED") == "1":
+        return True
+    if not HOSTED:
+        return False
+    if time.time() - _service_cache["at"] < 30:
+        return _service_cache["value"]
+    try:
+        value = bool((store("service_state_get") or {}).get("interrupted_at"))
+    except Exception as e:
+        log.info("service state unreadable: %s", type(e).__name__)
+        value = _service_cache["value"]
+    _service_cache.update(at=time.time(), value=value)
+    return value
+
+
+def outage_recipients():
+    """The e-mails of the accounts with a renewal or a programmed ticket running, once each."""
+    found = set()
+    for row in store("admin_accounts") or []:
+        if not row.get("renewals_active"):
+            continue
+        try:
+            email = json.loads(_fernet("account").decrypt(row["data"].encode())).get("email")
+        except Exception:
+            continue
+        if email and email.strip():
+            found.add(email.strip().lower())
+    return sorted(found)
+
+
+OUTAGE_FOOTER = "Vous recevez cet e-mail parce qu'un renouvellement ou un ticket programmé est actif sur votre compte PayByBot."
+
+
+def service_action(action):
+    """The owner's choice in the admin: 'interrupt' (banner on), 'notify' (the customers' e-mail, once), 'resume'
+    (banner off; the customers who were told get the resume e-mail). Returns the state and the e-mails sent."""
+    sent = 0
+    if action == "interrupt":
+        state = store("service_state_set", p_action="interrupt")
+    elif action == "notify":
+        state = store("service_state_get") or {}
+        if not state.get("notified_at"):
+            for to in outage_recipients():
+                sent += bool(send_email(
+                    to, "PayByBot interrompu · payez votre stationnement vous-même", "PayByBot est interrompu",
+                    ["PayByPhone ne répond plus à PayByBot : vos tickets ne sont plus pris ni renouvelés "
+                     "automatiquement.",
+                     "Jusqu'à nouvel ordre, ne comptez plus sur PayByBot : payez votre stationnement vous-même dans "
+                     "l'app PayByPhone.",
+                     "Vos tickets en cours restent valables jusqu'à leur fin. Nous vous écrirons dès que le service "
+                     "reprend."], footer=OUTAGE_FOOTER))
+            state = store("service_state_set", p_action="interrupt")
+            state = store("service_state_set", p_action="notified")
+    elif action == "resume":
+        before = store("service_state_get") or {}
+        if before.get("notified_at"):
+            for to in outage_recipients():
+                sent += bool(send_email(
+                    to, "PayByBot fonctionne de nouveau", "PayByBot fonctionne de nouveau",
+                    ["PayByPhone répond de nouveau : vos tickets sont de nouveau pris et renouvelés automatiquement.",
+                     "Ouvrez PayByBot pour vérifier que vos renouvellements sont bien actifs."],
+                    ("Ouvrir PayByBot", APP_URL), footer=OUTAGE_FOOTER))
+        state = store("service_state_set", p_action="resume")
+    else:
+        raise HTTPException(400, "Action inconnue.")
+    _service_cache.update(at=0.0)
+    log.info("service %s by the owner: %s e-mails", action, sent)
+    return {**(state or {}), "sent": sent}
 
 
 def notify(details, event, **info):
@@ -1500,6 +1626,11 @@ def process_renewal(row, refresh_token=None, activating=False, refused=False):
         refresh = refresh_token or decrypt_credential(row["credential"])
         bot = bot_from_refresh(refresh, row.get("owner"))
     except Exception as e:
+        if is_outage(e):  # PayByPhone blocked or down: not the user's login, tried again in 30 minutes
+            log.warning("renewal %s: PayByPhone unreachable at login: %s", row["id"], str(e)[:200])
+            store("renewal_update", p_id=row["id"], p_patch={"next_check": utc_iso(now + timedelta(minutes=30))})
+            outage_hit()
+            return "unreachable"
         log.warning("renewal %s: login with refresh token failed: %s", row["id"], str(e)[:200])
         store("renewal_update", p_id=row["id"],
               p_patch={"last_error": RELOGIN, "next_check": utc_iso(now + timedelta(hours=6))})
@@ -1585,6 +1716,10 @@ def process_renewal(row, refresh_token=None, activating=False, refused=False):
             outcome = "active"
         else:
             patch.update(last_error=friendly_error(e), next_check=utc_iso(now + timedelta(minutes=30)))
+            if is_outage(e):
+                outage_hit()
+    if outcome in ("paid", "active"):
+        outage_clear()
     log.info("renewal %s zone=%s plate=%s: %s", row["id"], row["location"], row["plate"][:2] + "***", outcome)
     store("renewal_update", p_id=row["id"], p_patch=patch)
     if outcome == "paid":
@@ -2008,7 +2143,7 @@ def current_build():
 def config():
     """Public: lets the login page describe where credentials go."""
     return {"hosted": HOSTED, "turnstileSiteKey": turnstile_site_key() or None, "build": current_build(),
-            "inviteOnly": INVITE_ONLY}
+            "inviteOnly": INVITE_ONLY, "interrupted": service_interrupted()}
 
 
 @app.get("/api/invite/{code}")
@@ -3533,6 +3668,28 @@ def recent_zones(pbb_session: str = Cookie(None)):
         return list(zones)[:10]
 
     return guarded(load)
+
+
+class ServiceAction(BaseModel):
+    action: str = Field(pattern="^(interrupt|notify|resume)$")
+
+
+@app.get("/api/admin/service")
+def admin_service(pbb_admin: str = Cookie(None)):
+    """The interruption state and how many customers the e-mail would reach."""
+    if not HOSTED:
+        raise HTTPException(403, "Accès réservé.")
+    require_admin(pbb_admin)
+    state = guarded(lambda: store("service_state_get")) or {}
+    return {**state, "recipients": len(guarded(outage_recipients))}
+
+
+@app.post("/api/admin/service")
+def admin_service_action(body: ServiceAction, pbb_admin: str = Cookie(None)):
+    if not HOSTED:
+        raise HTTPException(403, "Accès réservé.")
+    require_admin(pbb_admin)
+    return guarded(lambda: service_action(body.action))
 
 
 @app.get("/api/admin/clients")

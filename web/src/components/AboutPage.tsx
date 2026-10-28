@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react'
 import { HostedFooter } from '@/components/Footer'
-import { PUBLISHER, REPO_URL } from '@/components/Legal'
+import { PUBLISHER } from '@/components/Legal'
 import { PayByBot, PayByPhone } from '@/components/signs'
 import { PublicTopBar } from '@/components/TopBar'
 import { TRY_LABEL, ui } from '@/lib/styles'
@@ -119,13 +119,6 @@ export function AboutPage({ hosted, signedIn = false }: { hosted: boolean; signe
             </div>
           ))}
         </dl>
-        <p className="mt-4 leading-relaxed text-ink/65">
-          Le code de <PayByBot /> est public : chacun peut vérifier ce qu’il fait,{' '}
-          <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className={ui.link}>
-            sur GitHub
-          </a>
-          .
-        </p>
 
         {!signedIn && (
           <a href="#/inscription" className={cn(ui.primary, 'mt-14 h-12 w-full text-base sm:w-fit sm:px-8')}>

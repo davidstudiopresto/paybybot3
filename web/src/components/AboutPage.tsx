@@ -73,7 +73,7 @@ export function AboutPage({ hosted, signedIn = false }: { hosted: boolean; signe
                   {initials(f.name)}
                 </span>
               )}
-              {/* The name alone is centred under the photo, the LinkedIn mark hangs just after it. */}
+              {/* The name alone is centred under the photo, the LinkedIn mark hangs just after it (in the line on a phone). */}
               <span className="relative mt-4 font-medium text-ink">
                 {f.name}
                 <a
@@ -81,7 +81,7 @@ export function AboutPage({ hosted, signedIn = false }: { hosted: boolean; signe
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`${f.name} sur LinkedIn`}
-                  className="absolute top-1/2 left-full ml-2 -translate-y-1/2 text-[#0a66c2] transition hover:opacity-75"
+                  className="ml-1.5 inline-block align-[-2px] text-[#0a66c2] transition hover:opacity-75 sm:absolute sm:top-1/2 sm:left-full sm:ml-2 sm:-translate-y-1/2"
                 >
                   <LinkedInIcon className="size-4" />
                 </a>

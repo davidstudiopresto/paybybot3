@@ -1,5 +1,7 @@
 import { cn } from '@/lib/utils'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { Menu, X } from 'lucide-react'
 import { Wordmark } from '@/components/signs'
 import { TRY_LABEL, ui } from '@/lib/styles'
 
@@ -22,27 +24,67 @@ export function TopBar({ center, children, className }: { center?: ReactNode; ch
 
 const navLink = 'hidden px-2 text-[0.95rem] font-medium text-ink/70 transition hover:text-ink sm:inline'
 
+const PAGES = [
+  ['#/tarifs', 'Tarifs'],
+  ['#/faq', 'FAQ'],
+  ['#/securite', 'Sécurité'],
+  ['#/comment-ca-marche', 'Comment ça marche'],
+  ['#/qui-sommes-nous', 'Qui sommes-nous'],
+] as const
+
+/** On a phone, where the links do not fit in the bar: a ☰ button that opens them full screen, one per line. */
+function MobileMenu({ signedIn }: { signedIn: boolean }) {
+  const [open, setOpen] = useState(false)
+  // Any page change (a link tapped, the back button) closes it.
+  useEffect(() => {
+    const close = () => setOpen(false)
+    window.addEventListener('hashchange', close)
+    return () => window.removeEventListener('hashchange', close)
+  }, [])
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
+        className="grid size-10 place-items-center rounded-lg text-ink transition hover:bg-ink/[0.05] sm:hidden"
+      >
+        {open ? <X className="size-6" /> : <Menu className="size-6" />}
+      </button>
+ {/* In a portal: the bar's backdrop blur would otherwise hold a « fixed » panel inside its own 4rem. */}
+      {open &&
+        createPortal(
+        <nav aria-label="Pages" className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto bg-background px-6 pt-2 sm:hidden">
+          {PAGES.map(([href, label]) => (
+            <a key={href} href={href} onClick={() => setOpen(false)} className="block border-b border-ink/10 py-4 text-xl font-medium text-ink">
+              {label}
+            </a>
+          ))}
+          {/* « Se connecter » leaves the bar on a phone (no room for it): it is here instead. */}
+          {!signedIn && (
+            <a href="#/connexion" onClick={() => setOpen(false)} className="block border-b border-ink/10 py-4 text-xl font-medium text-ink">
+              Se connecter
+            </a>
+          )}
+        </nav>,
+          document.body,
+        )}
+    </>
+  )
+}
+
 /** The same top bar on every public page (home, FAQ, security, legal, login, sign-up): nothing moves. */
 export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
   return (
     <TopBar
       center={
         <>
-          <a href="#/tarifs" className={navLink}>
-            Tarifs
-          </a>
-          <a href="#/faq" className={navLink}>
-            FAQ
-          </a>
-          <a href="#/securite" className={navLink}>
-            Sécurité
-          </a>
-          <a href="#/comment-ca-marche" className={navLink}>
-            Comment ça marche
-          </a>
-          <a href="#/qui-sommes-nous" className={navLink}>
-            Qui sommes-nous
-          </a>
+          {PAGES.map(([href, label]) => (
+            <a key={href} href={href} className={navLink}>
+              {label}
+            </a>
+          ))}
         </>
       }
     >
@@ -52,7 +94,7 @@ export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
         </a>
       ) : (
         <>
-          <a href="#/connexion" className={ui.pillGray}>
+          <a href="#/connexion" className={cn(ui.pillGray, 'hidden sm:inline-flex')}>
             Se connecter
           </a>
           <a href="#/inscription" className={ui.pillBlue}>
@@ -61,6 +103,7 @@ export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
           </a>
         </>
       )}
+      <MobileMenu signedIn={signedIn} />
     </TopBar>
   )
 }

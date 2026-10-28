@@ -19,10 +19,9 @@ const NEVER = [
 const STUDIO_URL = 'https://studiopresto.fr/'
 
 // The founders; `photo` stays empty until the pictures are ready (their initials show in the meantime).
-// `linkedin`: a people search on the name until the profiles' own addresses are given.
 const FOUNDERS: { name: string; role: string; photo?: string; linkedin: string }[] = [
-  { name: 'Rafaël Maurin', role: 'Cofondateur, CEO', photo: '/team/rafael.webp', linkedin: 'https://www.linkedin.com/search/results/people/?keywords=Rafa%C3%ABl%20Maurin' },
-  { name: 'David Guenoun', role: 'Cofondateur, CTO', photo: '/team/david.webp', linkedin: 'https://www.linkedin.com/search/results/people/?keywords=David%20Guenoun' },
+  { name: 'Rafaël Maurin', role: 'Cofondateur, CEO', photo: '/team/rafael.webp', linkedin: 'https://www.linkedin.com/in/rafa%C3%ABl-maurin-040652205/' },
+  { name: 'David Guenoun', role: 'Cofondateur, CTO', photo: '/team/david.webp', linkedin: 'https://www.linkedin.com/in/david-guenoun-2758b9133/' },
 ]
 
 /** LinkedIn's « in » mark (Simple Icons), in the current colour. */

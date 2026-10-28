@@ -1,0 +1,139 @@
+import { Check } from 'lucide-react'
+import { HostedFooter } from '@/components/Footer'
+import { PUBLISHER, REPO_URL } from '@/components/Legal'
+import { PayByBot, PayByPhone } from '@/components/signs'
+import { PublicTopBar } from '@/components/TopBar'
+import { TRY_LABEL, ui } from '@/lib/styles'
+import { cn } from '@/lib/utils'
+
+const NEVER = [
+  <>
+    Votre numéro de carte bancaire pour le stationnement : les tickets sont payés avec la carte déjà enregistrée dans votre
+    compte <PayByPhone />.
+  </>,
+  <>
+    Votre mot de passe <PayByPhone /> : il sert à vous connecter, puis il n’est jamais enregistré.
+  </>,
+  <>
+    Votre numéro de carte pour l’abonnement : il est saisi chez Stripe, le prestataire de paiement. <PayByBot /> ne le voit pas.
+  </>,
+]
+
+const STUDIO_URL = 'https://studiopresto.fr/'
+
+// The founders; `photo` stays empty until the pictures are ready (their initials show in the meantime).
+// `linkedin`: a people search on the name until the profiles' own addresses are given.
+const FOUNDERS: { name: string; role: string; photo?: string; linkedin: string }[] = [
+  { name: 'Rafaël Maurin', role: 'Cofondateur, CEO', photo: '/team/rafael.webp', linkedin: 'https://www.linkedin.com/search/results/people/?keywords=Rafa%C3%ABl%20Maurin' },
+  { name: 'David Guenoun', role: 'Cofondateur, CTO', photo: '/team/david.webp', linkedin: 'https://www.linkedin.com/search/results/people/?keywords=David%20Guenoun' },
+]
+
+/** LinkedIn's « in » mark (Simple Icons), in the current colour. */
+function LinkedInIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z" />
+    </svg>
+  )
+}
+
+const initials = (name: string) =>
+  name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+
+const FACTS = [
+  ['Société', `${PUBLISHER.name}, ${PUBLISHER.form}`],
+  ['Adresse', PUBLISHER.address],
+  ['SIREN', PUBLISHER.siren],
+  ['Président', PUBLISHER.director.replace(/, Président$/, '')],
+  ['Contact', PUBLISHER.email],
+] as const
+
+/** « Qui sommes-nous », in the top bar: who runs PayByBot, what it never asks for, and how to reach us. Text only. */
+export function AboutPage({ hosted, signedIn = false }: { hosted: boolean; signedIn?: boolean }) {
+  return (
+    <div className="flex min-h-dvh flex-col bg-background text-ink">
+      <PublicTopBar signedIn={signedIn} />
+      <main className="mx-auto w-full max-w-[40rem] flex-1 px-6 pt-16 pb-20 sm:pt-20">
+        <h1 className={ui.title}>Qui sommes-nous</h1>
+        <p className={ui.subtitle}>
+          <PayByBot /> est un service français, édité par{' '}
+          <a href={STUDIO_URL} target="_blank" rel="noopener noreferrer" className={ui.link}>
+            {PUBLISHER.name}
+          </a>
+          , une société basée à Paris.
+        </p>
+
+        <h2 className="mt-12 font-heading text-[1.2rem] leading-snug font-semibold tracking-[-0.01em]">Les fondateurs</h2>
+        <ul className="mt-5 grid grid-cols-2 gap-4">
+          {FOUNDERS.map((f) => (
+            <li key={f.name} className="flex flex-col items-center rounded-2xl border border-ink/10 px-4 py-6 text-center">
+              {f.photo ? (
+                <img src={f.photo} alt={f.name} className="size-32 rounded-full object-cover sm:size-36" />
+              ) : (
+                <span aria-hidden className="grid size-32 place-items-center rounded-full sm:size-36 bg-ink/[0.05] font-heading text-2xl font-medium text-ink/40">
+                  {initials(f.name)}
+                </span>
+              )}
+              <span className="mt-4 inline-flex items-center gap-2 font-medium text-ink">
+                {f.name}
+                <a href={f.linkedin} target="_blank" rel="noopener noreferrer" aria-label={`${f.name} sur LinkedIn`} className="text-[#0a66c2] transition hover:opacity-75">
+                  <LinkedInIcon className="size-4" />
+                </a>
+              </span>
+              <span className="text-sm text-ink/55">{f.role}</span>
+            </li>
+          ))}
+        </ul>
+
+        <h2 className="mt-12 font-heading text-[1.2rem] leading-snug font-semibold tracking-[-0.01em]">Ce que nous ne vous demandons jamais</h2>
+        <ul className="mt-4 space-y-3">
+          {NEVER.map((text, i) => (
+            <li key={i} className="flex gap-3 leading-relaxed text-ink/75">
+              <Check className="mt-1 size-4 shrink-0 text-[#3d7f84]" strokeWidth={2.5} />
+              <span>{text}</span>
+            </li>
+          ))}
+        </ul>
+
+        <h2 className="mt-12 font-heading text-[1.2rem] leading-snug font-semibold tracking-[-0.01em]">Qui est derrière</h2>
+        <dl className="mt-4 divide-y divide-ink/10 border-y border-ink/10">
+          {FACTS.map(([term, value]) => (
+            <div key={term} className="flex flex-wrap justify-between gap-x-6 gap-y-0.5 py-3">
+              <dt className="text-ink/55">{term}</dt>
+              <dd className="ml-auto text-right text-ink">
+                {term === 'Société' ? (
+                  <a href={STUDIO_URL} target="_blank" rel="noopener noreferrer" className={ui.link}>
+                    {value}
+                  </a>
+                ) : term === 'Contact' ? (
+                  <a href={`mailto:${value}`} className={ui.link}>
+                    {value}
+                  </a>
+                ) : (
+                  value
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-4 leading-relaxed text-ink/65">
+          Le code de <PayByBot /> est public : chacun peut vérifier ce qu’il fait,{' '}
+          <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className={ui.link}>
+            sur GitHub
+          </a>
+          .
+        </p>
+
+        {!signedIn && (
+          <a href="#/inscription" className={cn(ui.primary, 'mt-14 h-12 w-full text-base sm:w-fit sm:px-8')}>
+            {TRY_LABEL}
+          </a>
+        )}
+      </main>
+      <HostedFooter className="px-6 pb-8" hosted={hosted} />
+    </div>
+  )
+}

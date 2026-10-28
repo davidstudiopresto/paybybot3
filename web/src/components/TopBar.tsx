@@ -40,6 +40,9 @@ export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
           <a href="#/comment-ca-marche" className={navLink}>
             Comment ça marche
           </a>
+          <a href="#/qui-sommes-nous" className={navLink}>
+            Qui sommes-nous
+          </a>
         </>
       }
     >

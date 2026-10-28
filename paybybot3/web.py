@@ -2353,6 +2353,45 @@ def link_progress(body: LinkProgress, request: Request):
     return {"ok": True}
 
 
+class AccessAsk(BaseModel):
+    email: str = Field(max_length=254)
+    turnstile: str = Field(default="", max_length=2048)
+
+
+ACCESS_PER_EMAIL = 3  # links sent to one address a day
+ACCESS_PER_DAY = 50  # links sent in all a day: Resend's quota stays for the customers
+
+
+@app.post("/api/access")
+def request_access(body: AccessAsk, request: Request):
+    """Public (no link yet): the private link sent to the e-mail typed on the blurred home page. The answer is the same
+    whether it went out or not (an address asked too often is skipped quietly)."""
+    check_human(request, body.turnstile)
+    email = body.email.strip()
+    check_email(email)
+    if not email:
+        raise HTTPException(400, "Indiquez votre adresse e-mail.")
+    code = SHARED_INVITE or invite_code("access")
+    link = APP_URL.rstrip("/") + "/r/" + code + "/"
+    if HOSTED:
+        day = paris_day()
+        who = hashlib.sha256(email.lower().encode()).hexdigest()[:16]  # counted without keeping the address
+        counts = guarded(lambda: store("usage_add", p_keys=["access-day:" + day, "access-email:%s:%s" % (who, day)]))
+        if counts.get("access-day:" + day, 0) > ACCESS_PER_DAY:
+            raise HTTPException(429, "Trop de demandes aujourd'hui. Réessayez demain.")
+        if counts.get("access-email:%s:%s" % (who, day), 0) > ACCESS_PER_EMAIL:
+            return {"ok": True}
+    send_email(email, "Votre accès à PayByBot", "Votre lien d'accès",
+               ["Bonjour,", "Voici votre lien pour ouvrir PayByBot et créer votre compte. Il reste valable : gardez-le, "
+                "et partagez-le avec vos proches si vous le souhaitez.",
+                "Vous n'avez rien demandé ? Ignorez simplement cet e-mail."],
+               ("Ouvrir PayByBot", link),
+               footer="Vous recevez cet e-mail parce que cette adresse a été saisie sur paybybot.fr.")
+    record_activity("Demande d'accès", lines=["E-mail : %s." % email])
+    log.info("access link sent")
+    return {"ok": True}
+
+
 @app.get("/api/invite")
 def my_invite(pbb_session: str = Cookie(None)):
     """The signed-in user's invitation link, to share with people around them."""

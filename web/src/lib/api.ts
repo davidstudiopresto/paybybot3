@@ -161,6 +161,7 @@ export const api = {
   linkOpen: (source: string, device: string, visit: number) =>
     post<{ id: number | null; sig: string | null }>('/api/link-open', { source, device, visit }),
   myInvite: () => request<{ code: string; url: string }>('/api/invite'),
+  requestAccess: (email: string, turnstile = '') => post<{ ok: boolean }>('/api/access', { email, turnstile }),
   me: () => request<Me>('/api/me'),
   login: (
     username: string,

@@ -293,6 +293,9 @@ export function SampleTicket({ className }: { className?: string }) {
   )
 }
 
+/** Tickets renewed by PayByBot so far, shown under the home page's button (update it by hand). */
+const RENEWED_SO_FAR = 350
+
 export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: boolean; heroOnly?: boolean; lean?: boolean }) {
   const cta = useRef<HTMLAnchorElement>(null)
   const sticky = useStickyCta(cta)
@@ -334,6 +337,15 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
           >
             {TRY_LABEL} <ArrowRight className="size-5" />
           </a>
+          {/* Proof under the button: tickets PayByBot has really renewed so far (a figure given by the owner). */}
+          {heroOnly && (
+            <p className="mt-5 inline-flex items-center gap-2 text-[0.95rem] text-ink/60 lg:mt-6 lg:text-[1.05rem]">
+              <RefreshCw className="size-4 text-[#3d7f84]" aria-hidden />
+              <span>
+                <strong className="font-semibold text-ink tabular-nums">{RENEWED_SO_FAR}</strong> tickets déjà renouvelés
+              </span>
+            </p>
+          )}
           {!heroOnly && !lean && (
             <>
               <p className="mt-4 text-sm text-ink/55">

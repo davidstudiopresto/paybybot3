@@ -14,9 +14,6 @@ const NEVER = [
   <>
     Votre mot de passe <PayByPhone /> : il sert à vous connecter, puis il n’est jamais enregistré.
   </>,
-  <>
-    Votre numéro de carte pour l’abonnement : il est saisi chez Stripe, le prestataire de paiement. <PayByBot /> ne le voit pas.
-  </>,
 ]
 
 const STUDIO_URL = 'https://studiopresto.fr/'

@@ -18,10 +18,17 @@ async function demo(page: Page) {
 const wizardButton = (page: Page) =>
   page.getByRole('button', { name: /Programmer un ticket|Carte mobilité/ }).first()
 
-test('sans lien : le site reste flouté, sur parrainage', async ({ page }) => {
+test('sans lien : le site reste flouté, le lien se demande par e-mail', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByText(CURTAIN)).toBeVisible()
-  await expect(page.getByText(/Demandez son lien/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Recevoir mon lien d’accès/ })).toBeVisible()
+  await expect(page.getByLabel('Votre e-mail')).toBeVisible()
+})
+
+test('sans lien, déjà un compte : la connexion reste ouverte', async ({ page }) => {
+  await page.goto('/')
+  await page.getByText('Déjà un compte').getByRole('link', { name: 'Se connecter' }).click()
+  await expect(page.getByRole('button', { name: /Recevoir mon lien/ })).toBeHidden()
+  await expect(page.locator('input[type=password]').first()).toBeVisible()
 })
 
 test('lien invalide : dit que le lien n’est pas valable', async ({ page }) => {

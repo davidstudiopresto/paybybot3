@@ -340,9 +340,10 @@ export default function App() {
         legal === 'securite' ? <SecurityPage hosted={hosted} signedIn={!!me} /> : <LegalView page={legal} hosted={hosted} signedIn={!!me} />
       ) : me === undefined || (inviteOnly && !me && invited === null) ? (
         <Loading />
-      ) : inviteOnly && !me && invited !== 'yes' && route !== 'admin' && (!isMember() || route === 'inscription') ? (
-        // Not invited: the home page, blurred, asks for a user's link. A device signed in before stays open to sign
-        // in again, but signing up always needs a link. The admin page has its own login: never gated.
+      ) : inviteOnly && !me && invited !== 'yes' && route !== 'admin' && route !== 'connexion' && (!isMember() || route === 'inscription') ? (
+        // Not invited: the home page, blurred, asks for an e-mail to send the link to. Signing in is always open (an
+        // account already exists; the server only refuses a sign-up without a link), signing up needs a link. The
+        // admin page has its own login: never gated.
         <InviteGate hosted={hosted} invalid={invited === 'invalid'} />
       ) : route === 'admin' ? (
         <AdminPage signedIn={!!me} />

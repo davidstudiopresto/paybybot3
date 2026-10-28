@@ -35,6 +35,8 @@ function readInvite(): string | null {
   if (fromLink) {
     try {
       localStorage.setItem(KEY, fromLink)
+      // The link's tag (?s=), sent with the sign-up: « acces » means no referral (the link was asked by e-mail).
+      localStorage.setItem(SOURCE_KEY, new URL(window.location.href).searchParams.get('s') ?? '')
     } catch {
       // private window: the code still works, it is in the address
     }
@@ -47,6 +49,17 @@ function readInvite(): string | null {
     return fromLink
   }
   return storedInvite()
+}
+
+const SOURCE_KEY = 'pbb_source'
+
+/** The tag of the last link opened on this device (« acces », « wa »…), or "". */
+export function storedSource(): string {
+  try {
+    return localStorage.getItem(SOURCE_KEY) ?? ''
+  } catch {
+    return ''
+  }
 }
 
 export function storedInvite(): string | null {
@@ -84,7 +97,15 @@ export function isMember(): boolean {
   }
 }
 
-const SOURCES: Record<string, string> = { wa: 'WhatsApp', sms: 'SMS', mail: 'E-mail', tg: 'Telegram', copy: 'Lien copié', share: 'Partage' }
+const SOURCES: Record<string, string> = {
+  wa: 'WhatsApp',
+  sms: 'SMS',
+  mail: 'E-mail',
+  tg: 'Telegram',
+  copy: 'Lien copié',
+  share: 'Partage',
+  acces: 'Sans parrainage (lien demandé par e-mail)',
+}
 
 /** Where the opened link comes from: the share button's tag (?s=), else the app it opens in, else the referring site. */
 export function linkSource(): string {

@@ -167,7 +167,7 @@ export const api = {
     username: string,
     password: string,
     accepted = false,
-    signup?: { email: string; invite?: string },
+    signup?: { email: string; invite?: string; source?: string },
     remember = false,
     turnstile = '',
   ) =>

@@ -1530,7 +1530,7 @@ def with_details(row):
 
 ACCOUNT_FIELDS = ("email", "first_name", "zone", "trial_start", "trial_kept", "plan", "stripe_customer", "stripe_subscription",
                   "weekly_cents", "price_zone", "billed_weekly_cents", "weeklies", "billed_weeklies", "monthlies", "billed_monthlies", "suv_plates", "zone_found",
-                  "vehicle_zones", "dunning", "check_mailed", "early_stops", "checkout_at", "chosen_plates", "email_keyed")
+                  "vehicle_zones", "dunning", "check_mailed", "early_stops", "checkout_at", "chosen_plates", "email_keyed", "origin")
 TRIAL_DAYS = 30  # one free month for every new account, from the day the offer is chosen (never at sign-up)
 
 
@@ -1979,6 +1979,7 @@ class Login(BaseModel):
     zone: str = Field(default="", pattern=r"^$|^\w{3,10}$")  # home zone, asked at sign-up
     turnstile: str = Field(default="", max_length=2048)  # Cloudflare's human check token (hosted)
     invite: str = Field(default="", max_length=40)  # the inviting user's code (sign-up, invite-only)
+    source: str = Field(default="", max_length=20)  # the link's tag (?s=): "acces" when asked by e-mail, no referral
 
 
 class AccountPatch(BaseModel):
@@ -2064,7 +2065,7 @@ def login(body: Login, request: Request, response: Response):
         if email_taken(body.email.strip(), owner_id(session.username)):  # one e-mail per PayByBot account
             log.info("sign-up refused: e-mail already used by another account")
             raise HTTPException(400, EMAIL_TAKEN)
-        return start_verification(response, session, body.email.strip(), zone)
+        return start_verification(response, session, body.email.strip(), zone, source=body.source)
     if HOSTED:
         token = seal(session)
         refresh = getattr(session.bot, "refresh_token", None)
@@ -2152,10 +2153,18 @@ def send_code(email, code):
         log.warning("local app without e-mail sending: verification code %s", code)  # local only, never online
 
 
-def start_verification(response, session, email, zone, pending=None):
+# Where a new account came from: a user's link (word of mouth) or the link asked by e-mail on the home page.
+ORIGIN_TEXT = {"parrainage": "parrainage", "sans_parrainage": "sans parrainage (lien demandé par e-mail)"}
+
+
+def signup_origin(source):
+    return "sans_parrainage" if source == "acces" else "parrainage"
+
+
+def start_verification(response, session, email, zone, pending=None, source=""):
     code = "%06d" % secrets.randbelow(10 ** 6)
     if pending is None:
-        pending = {"email": email, "zone": zone}
+        pending = {"email": email, "zone": zone, "src": source}
         if HOSTED:
             pending["s"] = seal(session)
         else:
@@ -2216,7 +2225,7 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
     # The free month starts when the offer is chosen, not now. One per person: a new sign-up after deleting an
     # account (same PayByPhone account, e-mail or vehicle) keeps the first one's start, so it is not given again.
     earlier = earlier_trial(session, pending["email"])
-    save_account(session, {"email": pending["email"],
+    save_account(session, {"email": pending["email"], "origin": signup_origin(pending.get("src")),
                            **({"trial_start": earlier.isoformat(), "trial_kept": True} if earlier else {}),
                            **({"zone": pending["zone"], "zone_found": True} if pending.get("zone") else {})})
     session.remember = True  # a new user stays signed in (30 days), there is no box to tick at sign-up
@@ -2241,7 +2250,7 @@ def verify_signup(body: CodeCheck, response: Response, pbb_pending: str = Cookie
     response.delete_cookie(PENDING_COOKIE, path="/api/signup")
     log.info("sign-up confirmed")
     remember_name(session)
-    record_activity("Nouvelle inscription", session)
+    record_activity("Nouvelle inscription", session, ["Origine : %s." % ORIGIN_TEXT[signup_origin(pending.get("src"))]])
     return {"username": session.username, "demo": False, "hosted": HOSTED, "firstName": first_name(session)}
 
 
@@ -2251,7 +2260,7 @@ def resend_signup_code(response: Response, pbb_pending: str = Cookie(None)):
     if time.time() - pending.get("sent", 0) < 30:
         raise HTTPException(429, "Patientez quelques secondes avant de demander un nouveau code.")
     count_try(pending, session, "resend", 3, 3600)
-    pending = {k: v for k, v in pending.items() if k in ("email", "zone", "s", "t")}
+    pending = {k: v for k, v in pending.items() if k in ("email", "zone", "s", "t", "src")}
     return start_verification(response, session, pending["email"], pending["zone"], pending)
 
 
@@ -2372,7 +2381,7 @@ def request_access(body: AccessAsk, request: Request):
     if not email:
         raise HTTPException(400, "Indiquez votre adresse e-mail.")
     code = SHARED_INVITE or invite_code("access")
-    link = APP_URL.rstrip("/") + "/r/" + code + "/"
+    link = APP_URL.rstrip("/") + "/r/" + code + "/?s=acces"  # tagged: the visit and the sign-up show « sans parrainage »
     if HOSTED:
         day = paris_day()
         who = hashlib.sha256(email.lower().encode()).hexdigest()[:16]  # counted without keeping the address
@@ -3986,7 +3995,7 @@ def admin_clients(pbb_admin: str = Cookie(None)):
                         "created": row.get("created_at"), "plan": account.get("plan"),
                         "subscribed": bool(account.get("stripe_subscription")),
                         "price": plan_total(account_monthlies(account), plan) if account else None,
-                        "renewals": row.get("renewals_active", 0)})
+                        "renewals": row.get("renewals_active", 0), "origin": account.get("origin")})
 
     # Each client's vehicles and running tickets, read from PayByPhone with the stored login (in parallel), kept
     # 5 minutes: reopening the admin does not log in to every client's PayByPhone account again.

@@ -293,9 +293,6 @@ export function SampleTicket({ className }: { className?: string }) {
   )
 }
 
-/** Tickets renewed by PayByBot so far, shown under the home page's button (update it by hand). */
-const RENEWED_SO_FAR = 350
-
 export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: boolean; heroOnly?: boolean; lean?: boolean }) {
   const cta = useRef<HTMLAnchorElement>(null)
   const sticky = useStickyCta(cta)
@@ -315,19 +312,18 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
         {/* Home: the text on the left and an example ticket card on the right (one column on a phone). */}
         <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14')}>
         <div className={cn('flex flex-col items-center text-center', heroOnly && 'lg:items-start lg:text-left')}>
-          {/* The benefit first: a short kicker, then what the user gets, in their own words (« ticket résident »). */}
-          <p className="mb-4 text-[1.05rem] font-semibold text-eu lg:text-[1.2rem]">Fini les FPS.</p>
           <h1
             className={cn(
-              'font-heading text-[2.2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.8rem] lg:text-[3.2rem]',
-              heroOnly && 'lg:text-[3rem] lg:[&>span]:whitespace-nowrap',
+              'font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]',
+              heroOnly && 'lg:text-[2.7rem] lg:[&>span]:whitespace-nowrap',
             )}
           >
-            <span className="block">Votre ticket résident</span>
-            <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">se renouvelle tout seul.</span>
+            <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
+            <span className="block">de votre stationnement résident</span>
+            <span className="block">sur <PayByPhone /></span>
           </h1>
           <p className="mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]">
-            <PayByBot /> le renouvelle chaque semaine sur <PayByPhone />, au tarif résident habituel.{' '}
+            <PayByBot /> renouvelle votre stationnement résident sur <PayByPhone />, sans interruption.{' '}
             <span className="font-semibold text-ink/80">Zéro oubli, zéro amende.</span>
           </p>
           <a
@@ -338,15 +334,6 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
           >
             {TRY_LABEL} <ArrowRight className="size-5" />
           </a>
-          {/* Proof under the button: tickets PayByBot has really renewed so far (a figure given by the owner). */}
-          {heroOnly && (
-            <p className="mt-5 inline-flex items-center gap-2 text-[0.95rem] text-ink/60 lg:mt-6 lg:text-[1.05rem]">
-              <RefreshCw className="size-4 text-[#3d7f84]" aria-hidden />
-              <span>
-                <strong className="font-semibold text-ink tabular-nums">{RENEWED_SO_FAR}</strong> tickets déjà renouvelés
-              </span>
-            </p>
-          )}
           {!heroOnly && !lean && (
             <>
               <p className="mt-4 text-sm text-ink/55">

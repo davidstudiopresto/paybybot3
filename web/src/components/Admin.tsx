@@ -128,6 +128,8 @@ export type AdminClient = {
   /** Each vehicle on PayByPhone with its running ticket's end (null: none); null if PayByPhone could not be read. */
   vehicles: { plate: string; expire: string | null }[] | null
   renewals: number
+  /** How the account came: through a user's link, or the link asked by e-mail (none for accounts before). */
+  origin?: 'parrainage' | 'sans_parrainage' | null
 }
 
 /** One user action (sign-up, sign-in, renewal…), for « Activité ». */
@@ -192,6 +194,7 @@ type Row = {
   offer: 'Annuel' | 'Mensuel' | '—'
   /** Whether the subscription is running now (Stripe), trial month included. */
   active: 'Actif' | 'Inactif'
+  origin: 'Parrainage' | 'Sans parrainage' | '—'
   price: string
   ticket: 'En cours' | 'Aucun' | 'Illisible'
   expire: string | null
@@ -206,6 +209,7 @@ const COLUMNS: { key: keyof Row; label: string; choices?: string[] }[] = [
   { key: 'name', label: 'Client' },
   { key: 'email', label: 'E-mail' },
   { key: 'created', label: 'Inscrit le' },
+  { key: 'origin', label: 'Origine', choices: ['Parrainage', 'Sans parrainage', '—'] },
   { key: 'offer', label: 'Offre', choices: ['Annuel', 'Mensuel', '—'] },
   { key: 'active', label: 'Statut de l’offre', choices: ['Actif', 'Inactif'] },
   { key: 'ticket', label: 'Ticket', choices: ['En cours', 'Aucun', 'Illisible'] },
@@ -221,6 +225,7 @@ function rowsOf(clients: AdminClient[], now: number): Row[] {
       created: new Date(c.created).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }),
       offer: (c.plan === 'yearly' ? 'Annuel' : c.plan === 'monthly' || c.subscribed ? 'Mensuel' : '—') as Row['offer'],
       active: (c.subscribed ? 'Actif' : 'Inactif') as Row['active'],
+      origin: (c.origin === 'sans_parrainage' ? 'Sans parrainage' : c.origin === 'parrainage' ? 'Parrainage' : '—') as Row['origin'],
       price: c.price != null ? `${euros(c.price)} / ${c.plan === 'yearly' ? 'an' : 'mois'}` : '',
     }
     if (c.vehicles === null) return [{ ...base, plate: null, ticket: 'Illisible', expire: null, left: null, status: c.subscribed ? 'alert' : 'none' } as Row]
@@ -300,6 +305,13 @@ function VehicleTable({ clients }: { clients: AdminClient[] }) {
                 <td className="px-3 py-3 font-semibold text-ink">{r.name}</td>
                 <td className="px-3 py-3 text-ink/70">{r.email}</td>
                 <td className="px-3 py-3 whitespace-nowrap text-ink/70 tabular-nums">{r.created}</td>
+                <td className="px-3 py-3 whitespace-nowrap">
+                  {r.origin === 'Sans parrainage' ? (
+                    <span className="rounded-full bg-eu/[0.08] px-2 py-0.5 text-xs font-semibold text-eu">Sans parrainage</span>
+                  ) : (
+                    <span className="text-ink/60">{r.origin}</span>
+                  )}
+                </td>
                 <td className="px-3 py-3">
                   <span className="text-ink">{r.offer}</span>
                   {r.price && <span className="mt-0.5 block text-xs whitespace-nowrap text-ink/60 tabular-nums">{r.price}</span>}

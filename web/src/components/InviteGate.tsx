@@ -79,13 +79,16 @@ function AccessForm({ invalid = false }: { invalid?: boolean }) {
             <Check className="size-6" />
           </span>
           <p className="mt-4 font-heading text-[1.5rem] leading-[1.15] font-medium tracking-[-0.025em] text-ink">Lien envoyé</p>
-          <p className="mt-2 text-[1.05rem] leading-relaxed text-ink/60">
-            Ouvrez l’e-mail envoyé à <span className="font-medium text-ink">{sent}</span> et cliquez sur « Ouvrir PayByBot ».
+          <p className="mt-2 max-w-full truncate text-[1.05rem] text-ink/60">
+            à <span className="font-medium text-ink">{sent}</span>
           </p>
-          <p className="mt-4 text-sm text-ink/50">Pas reçu dans quelques minutes ? Regardez dans les courriers indésirables.</p>
-          <button onClick={() => setSent(null)} className={cn('mt-5 text-sm', ui.link)}>
-            Utiliser une autre adresse
-          </button>
+          <p className="mt-4 text-sm text-ink/50">
+            Rien reçu ? Vérifiez vos spams ou{' '}
+            <button onClick={() => setSent(null)} className={ui.link}>
+              changez d’adresse
+            </button>
+            .
+          </p>
         </>
       ) : (
         <>
@@ -125,7 +128,13 @@ function AccessForm({ invalid = false }: { invalid?: boolean }) {
               {busy ? <Loader2 className="size-5 animate-spin" /> : <>Recevoir mon lien d’accès <ArrowRight className="size-5" /></>}
             </button>
           </form>
-          <p className="mt-5 text-sm text-ink/50">
+          <p className="mt-5 text-[0.95rem] text-ink/60">
+            Déjà un compte ?{' '}
+            <a href="#/connexion" className={ui.link}>
+              Se connecter
+            </a>
+          </p>
+          <p className="mt-2 text-sm text-ink/50">
             Un proche vous a envoyé son lien <PayByBot /> ? Ouvrez-le simplement.
           </p>
         </>

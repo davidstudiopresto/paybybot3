@@ -5,7 +5,7 @@ import { PublicTopBar } from '@/components/TopBar'
 import { RemotePanel } from '@/components/RemoteScene'
 import { CARD_NOTE, ResidentRequired } from '@/components/Riverain'
 import { PayByBot, PayByPhone, withPayByPhone } from '@/components/signs'
-import { storedInvite } from '@/lib/invite'
+import { storedInvite, storedSource } from '@/lib/invite'
 import { trackLinkStep } from '@/lib/linkTrack'
 import { api, ApiError, isPending, type Me } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
@@ -152,7 +152,7 @@ export function LoginView({
         demo ? 'demo' : password,
         !demo,
         // Signed up by e-mail: that address is also the contact one (no second field).
-        signup && !demo ? { email: (mode === 'email' ? email : signupEmail).trim(), invite: storedInvite() ?? '' } : undefined,
+        signup && !demo ? { email: (mode === 'email' ? email : signupEmail).trim(), invite: storedInvite() ?? '', source: storedSource() } : undefined,
         !signup && !demo && remember,
         demo ? '' : await human.token(),
       )

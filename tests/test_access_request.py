@@ -25,7 +25,7 @@ class AccessRequest(unittest.TestCase):
     def test_the_link_is_mailed(self):
         r, sent = self.ask("julie.martin@gmail.com")
         self.assertEqual(r, 200)
-        self.assertEqual(sent, [("julie.martin@gmail.com", ("Ouvrir PayByBot", web.APP_URL.rstrip("/") + "/r/nw0T35Cf/"))])
+        self.assertEqual(sent, [("julie.martin@gmail.com", ("Ouvrir PayByBot", web.APP_URL.rstrip("/") + "/r/nw0T35Cf/?s=acces"))])
 
     def test_a_wrong_address_is_refused(self):
         r, sent = self.ask("julie@gmial.com")
@@ -41,6 +41,14 @@ class AccessRequest(unittest.TestCase):
         r, sent = self.ask("julie.martin@gmail.com", counts={"access-day": 51})
         self.assertEqual(r, 429)
         self.assertEqual(sent, [])
+
+
+
+class Origin(unittest.TestCase):
+    def test_the_e_mailed_link_means_no_referral(self):
+        self.assertEqual(web.signup_origin("acces"), "sans_parrainage")
+        self.assertEqual(web.signup_origin("wa"), "parrainage")
+        self.assertEqual(web.signup_origin(""), "parrainage")
 
 
 if __name__ == "__main__":

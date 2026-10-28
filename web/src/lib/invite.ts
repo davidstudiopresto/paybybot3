@@ -9,6 +9,11 @@ export function openedFromLink(): boolean {
   return fromLinkNow
 }
 
+/** Someone signed in on this page: the welcome curtain is over for it (signing out must not show it again). */
+export function consumeLinkCurtain() {
+  fromLinkNow = false
+}
+
 /** Reads ?i= from the address, else the code kept from an earlier visit. The code stays in the address: copied
  *  from the address bar, reopened from the history or from an app's in-app browser, the link keeps working. */
 let captured: string | null | undefined

@@ -14,7 +14,7 @@ import { NotFoundPage } from '@/components/NotFound'
 import { CheckoutDone } from '@/components/CheckoutDone'
 import { InviteCurtain, InviteGate } from '@/components/InviteGate'
 import { resumeLinkTrack, startLinkTrack, trackLinkStep } from '@/lib/linkTrack'
-import { captureInvite, deviceKind, forgetInvite, isMember, linkSource, markMember, openedFromLink } from '@/lib/invite'
+import { captureInvite, consumeLinkCurtain, deviceKind, forgetInvite, isMember, linkSource, markMember, openedFromLink } from '@/lib/invite'
 import { PayByPhone } from '@/components/signs'
 import { ServiceBanner } from '@/components/ServiceBanner'
 import { api, ApiError, forgetZoneLookup, type Me, type Overview } from '@/lib/api'
@@ -141,6 +141,7 @@ export default function App() {
   // Signed in (not the demo): this device may sign in again later without an invitation link.
   useEffect(() => {
     if (me && !me.demo) markMember()
+    if (me) consumeLinkCurtain() // signed in: signing out later shows the site, not the « parrainage » curtain again
   }, [me])
 
   // Signed in: the address is the user's referral link (/r/<code>), so copying it from the address bar shares a

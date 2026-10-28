@@ -324,12 +324,14 @@ export function PlansDialog({
   const locked = false // no resident rate needed any more
   // Still in the free month: nothing is charged before its end (Stripe starts billing then).
   const [trialEnd, setTrialEnd] = useState<Date | null>(null)
+  const [trialStarted, setTrialStarted] = useState(false) // kept from an earlier account: only what is left of it
   useEffect(() => {
     api.account().then(
       (a) => {
         // Started: its end. Not started yet: it starts today with the offer, so nothing is due for trialDays days.
         const end = a.trialEnd ? new Date(a.trialEnd) : a.trialDays ? new Date(Date.now() + a.trialDays * 86_400_000) : null
         setTrialEnd(end && end.getTime() > Date.now() ? end : null)
+        setTrialStarted(!!a.trialEnd)
       },
       () => {},
     )
@@ -372,7 +374,7 @@ export function PlansDialog({
                     <Gift className="size-5" />
                   </span>
                   <span>
-                    <span className="block font-heading text-lg leading-tight font-bold">1er mois offert</span>
+                    <span className="block font-heading text-lg leading-tight font-bold">{trialStarted ? 'Reste de votre mois offert' : '1er mois offert'}</span>
                     <span className="block text-sm text-[#14703a]/80">
                       Rien à payer avant le {trialEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
                     </span>

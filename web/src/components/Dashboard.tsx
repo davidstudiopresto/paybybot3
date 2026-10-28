@@ -447,7 +447,7 @@ export function Dashboard({
             {/* Account re-created during its free month: only the days left of the first one, not a new month. */}
             {(() => {
               const left = account?.trialEnd ? Math.ceil((new Date(account.trialEnd).getTime() - Date.now()) / 86_400_000) : 0
-              return left > 0 ? `· ${left} jour${left > 1 ? 's' : ''} offert${left > 1 ? 's' : ''}` : '· 1er mois offert'
+              return left > 0 ? `· mois offert déjà entamé, ${left} jour${left > 1 ? 's' : ''} restant${left > 1 ? 's' : ''}` : '· 1er mois offert'
             })()}
           </span>
           <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />

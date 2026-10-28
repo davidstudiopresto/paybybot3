@@ -74,9 +74,16 @@ export function AboutPage({ hosted, signedIn = false }: { hosted: boolean; signe
                   {initials(f.name)}
                 </span>
               )}
-              <span className="mt-4 inline-flex items-center gap-2 font-medium text-ink">
+              {/* The name alone is centred under the photo, the LinkedIn mark hangs just after it. */}
+              <span className="relative mt-4 font-medium text-ink">
                 {f.name}
-                <a href={f.linkedin} target="_blank" rel="noopener noreferrer" aria-label={`${f.name} sur LinkedIn`} className="text-[#0a66c2] transition hover:opacity-75">
+                <a
+                  href={f.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${f.name} sur LinkedIn`}
+                  className="absolute top-1/2 left-full ml-2 -translate-y-1/2 text-[#0a66c2] transition hover:opacity-75"
+                >
                   <LinkedInIcon className="size-4" />
                 </a>
               </span>

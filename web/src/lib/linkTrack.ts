@@ -1,13 +1,33 @@
 import { api } from '@/lib/api'
 
 /** Follows one opening of the private link on « Activité »: how far the visitor goes and how long they stay.
- *  The visit count stays on this device; nothing identifying is sent. */
+ *  The visit count stays on this device; nothing identifying is sent, only a random id that groups its visits. */
 const KEY = 'pbb_link_track'
 const VISITS = 'pbb_link_visits'
+const VISITOR = 'pbb_visitor'
+const OWNER = 'pbb_owner'
+
+/** This device opened the admin page: the owner's own visits are not counted. */
+export function markOwnerDevice() {
+  try {
+    localStorage.setItem(OWNER, '1')
+  } catch {
+    // private window: counted
+  }
+}
+
+/** The random id of this device's visits (empty if none yet). */
+export function ownVisitor() {
+  try {
+    return localStorage.getItem(VISITOR) || ''
+  } catch {
+    return ''
+  }
+}
 const STEPS = ['inscription', 'identifiants', 'code', 'inscrit'] as const
 export type LinkStep = (typeof STEPS)[number]
 
-type State = { id: number; sig: string; source: string; device: string; visit: number; step: string; start: number }
+type State = { id: number; sig: string; source: string; device: string; visit: number; visitor: string; step: string; start: number }
 
 function load(): State | null {
   try {
@@ -35,6 +55,7 @@ function send(leaving = false) {
     source: s.source,
     device: s.device,
     visit: s.visit,
+    visitor: s.visitor || '',
     step: s.step,
     seconds: Math.round((Date.now() - s.start) / 1000),
   })
@@ -52,17 +73,25 @@ function listen() {
 
 /** The link itself just opened: one « Lien privé ouvert » row, then followed. */
 export function startLinkTrack(source: string, device: string) {
+  try {
+    if (localStorage.getItem(OWNER)) return
+  } catch {
+    // followed
+  }
   let visit = 1
+  let visitor = ''
   try {
     visit = (Number(localStorage.getItem(VISITS)) || 0) + 1
     localStorage.setItem(VISITS, String(visit))
+    visitor = localStorage.getItem(VISITOR) || [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('')
+    localStorage.setItem(VISITOR, visitor)
   } catch {
-    // counted as a first visit
+    // counted as a first visit, of a visitor of its own
   }
-  api.linkOpen(source, device, visit).then(
+  api.linkOpen(source, device, visit, visitor).then(
     (r) => {
       if (!r.id || !r.sig) return
-      save({ id: r.id, sig: r.sig, source, device, visit, step: '', start: Date.now() })
+      save({ id: r.id, sig: r.sig, source, device, visit, visitor, step: '', start: Date.now() })
       listen()
     },
     () => {},

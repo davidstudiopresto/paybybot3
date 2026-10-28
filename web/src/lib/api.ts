@@ -158,8 +158,8 @@ export const api = {
   config: () =>
     request<{ hosted: boolean; turnstileSiteKey?: string | null; build?: string | null; inviteOnly?: boolean; interrupted?: boolean }>('/api/config'),
   inviteCheck: (code: string) => request<{ valid: boolean }>(`/api/invite/${encodeURIComponent(code)}`),
-  linkOpen: (source: string, device: string, visit: number) =>
-    post<{ id: number | null; sig: string | null }>('/api/link-open', { source, device, visit }),
+  linkOpen: (source: string, device: string, visit: number, visitor: string) =>
+    post<{ id: number | null; sig: string | null }>('/api/link-open', { source, device, visit, visitor }),
   myInvite: () => request<{ code: string; url: string }>('/api/invite'),
   requestAccess: (email: string, turnstile = '') => post<{ ok: boolean }>('/api/access', { email, turnstile }),
   me: () => request<Me>('/api/me'),

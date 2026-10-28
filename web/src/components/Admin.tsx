@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plate } from '@/components/signs'
-import { Loader2, X } from 'lucide-react'
+import { ChevronDown, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ui } from '@/lib/styles'
 import { ApiError } from '@/lib/api'
 import { TopBar } from '@/components/TopBar'
 import { api } from '@/lib/api'
 import { useTurnstile } from '@/lib/turnstile'
+import { markOwnerDevice, ownVisitor } from '@/lib/linkTrack'
 
 /** PayByBot's interruption state (PayByPhone not answering), as the admin sees it. */
 export type ServiceState = {
@@ -133,9 +134,39 @@ export type AdminClient = {
 }
 
 /** One user action (sign-up, sign-in, renewal…), for « Activité ». */
-export type AdminActivity = { id: number | null; at: string; event: string; who: string | null; detail: string | null }
+export type AdminActivity = {
+  id: number | null
+  at: string
+  event: string
+  who: string | null
+  detail: string | null
+  /** Random id of the device that opened the private link (none before it was sent). */
+  visitor?: string | null
+}
 
 const LINK_OPENED = 'Lien privé ouvert'
+
+/** Who a row belongs to: one visitor for the link (its device id; before ids, its device and city), one account
+ *  for the other actions; a row with neither stands alone. */
+function personOf(r: AdminActivity, i: number) {
+  if (r.event === LINK_OPENED) {
+    if (r.visitor) return `v:${r.visitor}`
+    const parts = (r.detail ?? '').split(' · ')
+    const at = parts.findIndex((p) => /, [A-Z]{2}$/.test(p))
+    return at > 0 ? `old:${parts[at - 1]}|${parts[at]}` : `row:${i}`
+  }
+  return r.who ? `${r.event}|${r.who}` : `row:${i}`
+}
+
+/** The rows of each person together, newest first (rows come newest first). */
+function byPerson(rows: AdminActivity[]) {
+  const groups = new Map<string, AdminActivity[]>()
+  rows.forEach((r, i) => {
+    const key = personOf(r, i)
+    groups.set(key, [...(groups.get(key) ?? []), r])
+  })
+  return [...groups.values()]
+}
 
 /** A running total over time (a step up at each event), from the first one to now, refreshed live. */
 function StepChart({ times, unit }: { times: string[]; unit: string }) {
@@ -375,14 +406,21 @@ export function AdminPage(_: { signedIn?: boolean }) {
   const [clients, setClients] = useState<AdminClient[] | null>(null)
   const [activity, setActivity] = useState<AdminActivity[] | null>(null)
 
+  // The owner's own visits of the private link (this device) are not shown.
+  function setOwnActivity(rows: AdminActivity[]) {
+    const mine = ownVisitor()
+    setActivity(mine ? rows.filter((r) => r.visitor !== mine) : rows)
+  }
+
   function load() {
     setError(null)
     api.adminStats().then(
       (s) => {
+        markOwnerDevice()
         setStats(s)
         setNeedsLogin(false)
         api.adminClients().then(setClients, () => setClients([]))
-        api.adminActivity().then(setActivity, () => setActivity([]))
+        api.adminActivity().then(setOwnActivity, () => setActivity([]))
       },
       (e) => {
         if (e instanceof ApiError && e.status === 401) setNeedsLogin(true)
@@ -396,14 +434,14 @@ export function AdminPage(_: { signedIn?: boolean }) {
   // « Activité » and the link-opens curve stay live: looked at again every 30 seconds.
   useEffect(() => {
     if (!stats) return
-    const id = setInterval(() => api.adminActivity().then(setActivity, () => {}), 30_000)
+    const id = setInterval(() => api.adminActivity().then(setOwnActivity, () => {}), 30_000)
     return () => clearInterval(id)
   }, [stats])
 
   async function removeActivity(id?: number) {
     setActivity((rows) => (rows ? (id == null ? [] : rows.filter((r) => r.id !== id)) : rows))
     await api.adminActivityDelete(id).catch(() => {})
-    api.adminActivity().then(setActivity, () => {})
+    api.adminActivity().then(setOwnActivity, () => {})
   }
 
   async function logout() {
@@ -448,7 +486,10 @@ export function AdminPage(_: { signedIn?: boolean }) {
 
             <h2 className="mt-12 text-sm font-semibold text-ink/55">Liens privés ouverts</h2>
             {activity ? (
-              <StepChart times={activity.filter((r) => r.event === LINK_OPENED).map((r) => r.at)} unit="liens ouverts" />
+              <StepChart
+                times={byPerson(activity.filter((r) => r.event === LINK_OPENED)).map((g) => g[g.length - 1].at)}
+                unit="visiteurs uniques"
+              />
             ) : (
               <div className="mt-3 h-52 animate-pulse rounded-2xl bg-ink/[0.04]" />
             )}
@@ -468,7 +509,7 @@ export function AdminPage(_: { signedIn?: boolean }) {
               <div className="mt-3 h-52 animate-pulse rounded-2xl bg-ink/[0.04]" />
             )}
 
-            <h2 className="mt-12 text-sm font-semibold text-ink/55">Activité{activity ? ` (${activity.length})` : ''}</h2>
+            <h2 className="mt-12 text-sm font-semibold text-ink/55">Activité{activity ? ` (${byPerson(activity).length})` : ''}</h2>
             {!activity ? (
               <Loader2 className="mt-3 size-5 animate-spin text-ink/40" />
             ) : (
@@ -551,7 +592,68 @@ function ago(iso: string, now: number) {
   return m < 1 ? 'à l’instant' : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.floor(m / 60)} h` : `il y a ${Math.floor(m / 1440)} j`
 }
 
-/** What users did lately, newest first, with a filter by kind of action. */
+/** One action as a line: what, who, details, when, and a cross to delete it. */
+function ActivityLine({ r, now, onDelete, extra }: { r: AdminActivity; now: number; onDelete: (id?: number) => void; extra?: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-3 text-sm">
+      <span className="min-w-0">
+        <span className="font-semibold text-ink">{r.event}</span>
+        {r.who && <span className="text-ink/70"> · {r.who}</span>}
+        {extra}
+        {r.detail && <span className="block text-xs text-ink/55">{r.detail}</span>}
+      </span>
+      <span className="flex shrink-0 items-center gap-3">
+        <span className="text-xs whitespace-nowrap text-ink/50 tabular-nums" title={new Date(r.at).toLocaleString('fr-FR')}>
+          {ago(r.at, now)} · {ends(r.at)}
+        </span>
+        {r.id != null && (
+          <button
+            onClick={() => onDelete(r.id!)}
+            aria-label="Supprimer cette activité"
+            title="Supprimer"
+            className="grid size-6 place-items-center rounded-md text-ink/30 transition hover:bg-ink/[0.05] hover:text-destructive"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
+      </span>
+    </div>
+  )
+}
+
+/** One person: their latest action, and « 12 visites ▾ » opening the others. */
+function PersonRow({ rows, now, onDelete }: { rows: AdminActivity[]; now: number; onDelete: (id?: number) => void }) {
+  const [open, setOpen] = useState(false)
+  if (rows.length === 1) return <li><ActivityLine r={rows[0]} now={now} onDelete={onDelete} /></li>
+  const count = (
+    <button
+      onClick={() => setOpen(!open)}
+      aria-expanded={open}
+      className="ml-2 inline-flex items-center gap-0.5 rounded-full bg-ink/[0.06] px-2 py-0.5 text-xs font-medium text-ink/70 transition hover:bg-ink/[0.1]"
+    >
+      {rows.length} {rows[0].event === LINK_OPENED ? 'visites' : 'fois'}
+      <ChevronDown className={cn('size-3 transition', open && 'rotate-180')} />
+    </button>
+  )
+  // The cross on the first line deletes all of this person's lines.
+  const deleteAll = () => rows.forEach((r) => r.id != null && onDelete(r.id))
+  return (
+    <li>
+      <ActivityLine r={rows[0]} now={now} onDelete={deleteAll} extra={count} />
+      {open && (
+        <ul className="divide-y divide-ink/5 border-t border-ink/5 bg-ink/[0.02] pl-4">
+          {rows.slice(1).map((r, i) => (
+            <li key={r.id ?? i}>
+              <ActivityLine r={r} now={now} onDelete={onDelete} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
+
+/** What users did lately, one line per person (newest first), with a filter by kind of action. */
 function ActivityList({ rows, onDelete }: { rows: AdminActivity[]; onDelete: (id?: number) => void }) {
   const [kind, setKind] = useState('')
   const [confirmAll, setConfirmAll] = useState(false)
@@ -587,29 +689,8 @@ function ActivityList({ rows, onDelete }: { rows: AdminActivity[]; onDelete: (id
         </button>
       </div>
       <ul className="mt-3 max-h-[32rem] divide-y divide-ink/10 overflow-y-auto rounded-2xl border border-ink/10 bg-white">
-        {shown.map((r, i) => (
-          <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-3 text-sm">
-            <span className="min-w-0">
-              <span className="font-semibold text-ink">{r.event}</span>
-              {r.who && <span className="text-ink/70"> · {r.who}</span>}
-              {r.detail && <span className="block text-xs text-ink/55">{r.detail}</span>}
-            </span>
-            <span className="flex shrink-0 items-center gap-3">
-              <span className="text-xs whitespace-nowrap text-ink/50 tabular-nums" title={new Date(r.at).toLocaleString('fr-FR')}>
-                {ago(r.at, now)} · {ends(r.at)}
-              </span>
-              {r.id != null && (
-                <button
-                  onClick={() => onDelete(r.id!)}
-                  aria-label="Supprimer cette activité"
-                  title="Supprimer"
-                  className="grid size-6 place-items-center rounded-md text-ink/30 transition hover:bg-ink/[0.05] hover:text-destructive"
-                >
-                  <X className="size-3.5" />
-                </button>
-              )}
-            </span>
-          </li>
+        {byPerson(shown).map((g) => (
+          <PersonRow key={`${g[0].event}${g[0].id ?? g[0].at}`} rows={g} now={now} onDelete={onDelete} />
         ))}
       </ul>
     </>

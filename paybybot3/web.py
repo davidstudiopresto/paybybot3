@@ -822,8 +822,9 @@ def alert_owner(details, info):
 
 def record_activity(event, s=None, lines=()):
     """Each user action (sign-up, sign-in, invitation opened, renewal on or off, subscription…) recorded for the
-    admin's « Activité », with who did it (encrypted, kept 90 days). Not for the demo nor locally. Never raises."""
-    if not HOSTED or (s is not None and s.demo):
+    admin's « Activité », with who did it (encrypted, kept 90 days). Not for the demo, the owner's own accounts nor
+    locally. Never raises."""
+    if not HOSTED or (s is not None and (s.demo or is_admin(s))):
         return
     try:
         who = None
@@ -848,7 +849,7 @@ def activity_rows(limit=200):
         except Exception:
             data = {}
         rows.append({"id": row.get("id"), "at": row.get("at"), "event": row.get("event"), "who": data.get("who"),
-                     "detail": data.get("detail") or None})
+                     "detail": data.get("detail") or None, "visitor": data.get("visitor") or None})
     return rows
 
 
@@ -2297,6 +2298,7 @@ class LinkOpen(BaseModel):
     source: str = Field(default="", max_length=40)  # WhatsApp, SMS, Instagram… (from the share button or the app)
     device: str = Field(default="", max_length=40)  # iPhone, Android, ordinateur…
     visit: int = Field(default=1, ge=1, le=9999)  # how many times this device opened the link (counted on the device)
+    visitor: str = Field(default="", pattern=r"^[0-9a-f]{0,32}$")  # random id kept on the device: one visitor's visits
 
 
 # How far a visitor who opened the private link went: the last step reached is shown on the same « Activité » row.
@@ -2339,7 +2341,8 @@ def link_open(body: LinkOpen, request: Request):
     if not HOSTED:
         return {"id": None, "sig": None}
     try:
-        data = _fernet("activity").encrypt(json.dumps({"who": None, "detail": link_detail(body, request)}).encode())
+        data = _fernet("activity").encrypt(json.dumps({"who": None, "detail": link_detail(body, request),
+                                                       "visitor": body.visitor}).encode())
         row_id = store("activity_add_id", p_event="Lien privé ouvert", p_data=data.decode())
     except Exception as e:
         log.warning("link open not recorded: %s", type(e).__name__)
@@ -2355,7 +2358,8 @@ def link_progress(body: LinkProgress, request: Request):
     if HOSTED:
         try:
             detail = link_detail(body, request, body.step, body.seconds)
-            data = _fernet("activity").encrypt(json.dumps({"who": None, "detail": detail}).encode()).decode()
+            data = _fernet("activity").encrypt(json.dumps({"who": None, "detail": detail,
+                                                           "visitor": body.visitor}).encode()).decode()
             store("activity_update_link", p_id=body.id, p_data=data)
         except Exception as e:
             log.warning("link progress not recorded: %s", type(e).__name__)

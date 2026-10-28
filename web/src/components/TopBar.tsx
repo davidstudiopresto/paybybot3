@@ -61,10 +61,10 @@ function MobileMenu({ signedIn }: { signedIn: boolean }) {
               {label}
             </a>
           ))}
-          {/* « Se connecter » leaves the bar on a phone (no room for it): it is here instead. */}
+          {/* On a phone the bar keeps « Se connecter »: signing up is here instead. */}
           {!signedIn && (
-            <a href="#/connexion" onClick={() => setOpen(false)} className="block border-b border-ink/10 py-4 text-xl font-medium text-ink">
-              Se connecter
+            <a href="#/inscription" onClick={() => setOpen(false)} className="block border-b border-ink/10 py-4 text-xl font-medium text-ink">
+              S’inscrire
             </a>
           )}
         </nav>,
@@ -97,9 +97,12 @@ export function PublicTopBar({ signedIn = false }: { signedIn?: boolean }) {
           <a href="#/connexion" className={cn(ui.pillGray, 'hidden sm:inline-flex')}>
             Se connecter
           </a>
-          <a href="#/inscription" className={ui.pillBlue}>
-            <span className="hidden sm:inline">{TRY_LABEL}</span>
-            <span className="sm:hidden">S'inscrire</span>
+          <a href="#/inscription" className={cn(ui.pillBlue, 'hidden sm:inline-flex')}>
+            {TRY_LABEL}
+          </a>
+          {/* On a phone, room for one button: « Se connecter » (signing up is in the ☰ menu and on the page). */}
+          <a href="#/connexion" className={cn(ui.pillBlue, 'sm:hidden')}>
+            Se connecter
           </a>
         </>
       )}

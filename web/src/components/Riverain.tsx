@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Check, Loader2, Mail, Pause, Play, Repeat, RotateCw, Ticket } from 'lucide-react'
+import { Check, Loader2, Mail, Pause, Play, Repeat, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NoPayment } from '@/components/NoPayment'
@@ -10,7 +10,7 @@ import { ShinyButton } from '@/components/ui/shiny-button'
 import { cn } from '@/lib/utils'
 import { choice, ui } from '@/lib/styles'
 import { emailProblem } from '@/lib/validate'
-import { api, ApiError, clock, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
+import { api, ApiError, type Account, type Activation, type Autopilot, type Money, type Overview, type Parking, type Rate } from '@/lib/api'
 import { LoadingLine } from '@/components/Loading'
 
 export const WEEKLY_LABEL = 'Riverain hebdo'
@@ -498,13 +498,42 @@ export function RiverainCard({
   )
 }
 
-/** The switch's name, with whether it is on: « Renouvellement automatique », « Activé » or « Désactivé ». */
-function SwitchLabel({ on, children }: { on: boolean; children?: ReactNode }) {
+/** The kind of ticket and the zone, as one quiet two-part tag: « Résident | 75001 ». */
+export function ZoneTag({ zone, resident = true }: { zone: string; resident?: boolean }) {
+  return (
+    <span className="inline-flex shrink-0 items-center overflow-hidden rounded-full border border-ink/10 text-[0.875rem] leading-none">
+      {resident && <span className="bg-[#4e9aa0]/10 px-2.5 py-1.5 font-medium text-[#3d7f84]">Résident</span>}
+      <span className="px-2.5 py-1.5 text-ink/70 tabular-nums">{zone}</span>
+    </span>
+  )
+}
+
+/** « mardi 3 novembre, 23h54 » (minutes only when not on the hour). */
+export function when(t: number) {
+  const d = new Date(t)
+  const day = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  return `${day}, ${d.getHours()}h${d.getMinutes() ? String(d.getMinutes()).padStart(2, '0') : ''}`
+}
+
+/** When this week will be renewed: the server's next look if it is ahead, else the rule it follows (20h the day
+ *  before the end, never more than 24 hours before it). */
+export function nextRenewal(nextCheck: string | null | undefined, expire: string) {
+  const end = new Date(expire).getTime()
+  const planned = nextCheck ? new Date(nextCheck).getTime() : NaN
+  if (planned > Date.now() && planned <= end + 60_000) return planned
+  const dayBefore = new Date(end - 86_400_000)
+  dayBefore.setHours(20, 0, 0, 0)
+  return Math.max(dayBefore.getTime(), end - 86_400_000 + 60_000)
+}
+
+/** The switch's name, with whether it is on: « Renouvellement résident automatique », « Activé » or « Désactivé ». */
+function SwitchLabel({ on, children, status }: { on: boolean; children?: ReactNode; status?: ReactNode }) {
   return (
     <span className="min-w-0">
-      <span className="block text-[1.05rem] whitespace-nowrap text-ink">Renouvellement automatique</span>
+      <span className="block text-base font-medium text-ink sm:text-[1.05rem]">Renouvellement hebdomadaire automatique</span>
       <span className="flex items-center gap-3">
-        <span className={cn('text-sm', on ? 'font-semibold text-[#3d7f84]' : 'text-ink/50')}>{on ? 'Activé' : 'Désactivé'}</span>
+        {/* A line of its own (the next renewal) in place of « Activé », when the card gives one. */}
+        {status ?? <span className={cn('text-sm', on ? 'font-medium text-[#3d7f84]' : 'text-ink/50')}>{on ? 'Activé' : 'Désactivé'}</span>}
         {children}
       </span>
     </span>
@@ -553,6 +582,8 @@ export function RenewalSwitch({
   autoOpen,
   locked,
   onLogout,
+  details,
+  status,
 }: {
   ap: Autopilot | null
   data: Overview
@@ -563,6 +594,10 @@ export function RenewalSwitch({
   autoOpen?: boolean
   locked?: boolean
   onLogout?: () => void
+  /** Shown under the switch's line (a note when something needs saying), above « Programmer une pause ». */
+  details?: ReactNode
+  /** Said under the switch's name instead of « Activé » (the next renewal). */
+  status?: ReactNode
 }) {
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -587,15 +622,8 @@ export function RenewalSwitch({
 
   const row = (onClick: () => void) => (
     <div className="flex items-center justify-between gap-4">
-      {/* « Programmer une pause » under the title, beside « Activé »: the title stays on one line. */}
-      <SwitchLabel on={on}>
-        {pausable && (
-          <button onClick={() => setPausing(true)} className="inline-flex items-center gap-1.5 text-sm whitespace-nowrap text-ink/55 transition hover:text-ink">
-            <Pause className="size-3.5" /> Programmer une pause
-          </button>
-        )}
-      </SwitchLabel>
-      {pausing && ap && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
+      {/* The title and its state on the left, the switch alone on the right: nothing in between. */}
+      <SwitchLabel on={on} status={on ? status : undefined} />
       <button
         type="button"
         role="switch"
@@ -640,14 +668,25 @@ export function RenewalSwitch({
         </span>
       </div>
     )
-  return row(() =>
-    on
-      ? setConfirming(true)
-      : (async () => {
-          setBusy(true)
-          await relaunch(ap, onChanged)
-          setBusy(false)
-        })(),
+  return (
+    <>
+      {row(() =>
+        on
+          ? setConfirming(true)
+          : (async () => {
+              setBusy(true)
+              await relaunch(ap, onChanged)
+              setBusy(false)
+            })(),
+      )}
+      {details}
+      {pausable && (
+        <button onClick={() => setPausing(true)} className="mt-4 inline-flex items-center gap-1.5 text-sm text-ink/55 transition hover:text-ink">
+          <Pause className="size-3.5" /> Programmer une pause
+        </button>
+      )}
+      {pausing && <PauseDialog ap={ap} onClose={() => setPausing(false)} onDone={onChanged} />}
+    </>
   )
 }
 
@@ -890,8 +929,9 @@ function RiverainDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(ui.dialog, 'sm:max-w-lg')}>
         <div className="px-6 pt-7">
-          <DialogTitle className={cn(ui.dialogTitle, 'font-semibold')}>Renouvellement résident</DialogTitle>
-          <DialogDescription className="mt-1 text-ink/60">
+          <DialogTitle className={cn(ui.dialogTitle, 'font-semibold')}>Renouvellement hebdomadaire</DialogTitle>
+          {/* Opened from a car's card: the button says what to do, no sentence needed. */}
+          <DialogDescription className={plate ? 'sr-only' : 'mt-1 text-ink/60'}>
             {plate ? 'Vérifiez, puis activez. On s’occupe du reste.' : "Choisissez les véhicules à renouveler, vérifiez, puis activez. On s'occupe du reste."}
           </DialogDescription>
         </div>
@@ -963,7 +1003,7 @@ function RiverainDialog({
           )}
 
           {/* Summary: one line per ticked vehicle */}
-          <div className="rounded-xl bg-muted p-4" aria-live="polite">
+          <div className="rounded-xl border border-ink/10 p-4" aria-live="polite">
             {!selected.length ? (
               <p className="text-muted-foreground">Cochez au moins un véhicule.</p>
             ) : loading ? (
@@ -977,23 +1017,24 @@ function RiverainDialog({
                   const cents = weeks[plate] ?? (f?.quote?.cost ? Math.round(f.quote.cost.amount * 100) : null)
                   return (
                     <li key={plate} className="min-w-0">
-                      <span className="flex flex-wrap items-center gap-2">
+                      {/* Like the ticket card: the plate left, « Résident | zone » right, then the price and when it is paid. */}
+                      <span className="flex items-center justify-between gap-3">
                         <Plate plate={plate} size="sm" />
-                        {zones[plate] && <ZonePlate zone={zones[plate]} />}
+                        {zones[plate] && <ZoneTag zone={zones[plate]} />}
                       </span>
                       {cents != null && !f?.error && (
-                        <span className="mt-3 block text-ink/60">
-                          Abonnement résident : <span className="text-ink">{(cents / 100).toFixed(2).replace('.', ',')} € / semaine</span>
+                        <span className="mt-4 block font-heading text-[1.3rem] leading-none text-ink tabular-nums">
+                          {(cents / 100).toFixed(2).replace('.', ',')} € <span className="text-base text-ink/50">par semaine</span>
                         </span>
                       )}
                       {(() => {
-                        // Its running ticket, in red: when it ends, to show why to activate now.
+                        // The first payment: the day before the running ticket ends, else right away.
                         const t = data.sessions.find((x) => samePlate(x.plate, plate) && new Date(x.expire).getTime() > Date.now())
-                        return t ? (
-                          <span className="mt-2 flex items-center gap-1.5 text-[0.8rem] font-medium text-destructive">
-                            <Ticket className="size-4 shrink-0" /> Ticket en cours : expire {clock(t.expire)}
+                        return (
+                          <span className="mt-2 block text-sm text-ink/50">
+                            Premier paiement : <span className="whitespace-nowrap text-ink">{t ? when(nextRenewal(null, t.expire)) : 'maintenant'}</span>
                           </span>
-                        ) : null
+                        )
                       })()}
                       {f?.error && <span className="mt-1 block text-sm text-destructive">{f.error}</span>}
                     </li>
@@ -1031,7 +1072,7 @@ function RiverainDialog({
             ) : ok.length > 1 ? (
               `Activer le renouvellement pour ${ok.length} véhicules`
             ) : (
-              'Activer le renouvellement automatique'
+              'Activer le renouvellement'
             )}
           </button>
           {locked && onLogout && (

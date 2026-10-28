@@ -12,8 +12,8 @@ import { ui } from '@/lib/styles'
 import { cn } from '@/lib/utils'
 import { HostedFooter } from '@/components/Footer'
 import { CheckoutDone } from '@/components/CheckoutDone'
-import { ActivateRenewal, CardGate, OpeningSwitch, RenewalActions, RenewalNote, RenewalSwitch, pauseState, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
-import { api, clock, remaining, type Account, type Me, type Overview, type Session } from '@/lib/api'
+import { ActivateRenewal, CardGate, OpeningSwitch, RenewalActions, RenewalNote, RenewalSwitch, pauseState, nextRenewal, when, ZoneTag, RiverainCard, WEEKLY_LABEL, renewalOf, runPendingRenewals } from '@/components/Riverain'
+import { api, type Account, type Me, type Overview, type Session } from '@/lib/api'
 
 function useNow(interval = 1000) {
   const [now, setNow] = useState(() => Date.now())
@@ -24,22 +24,14 @@ function useNow(interval = 1000) {
   return now
 }
 
-/** « mer. 29 oct. à 20h » (minutes only when not on the hour). */
-function when(t: number) {
-  const d = new Date(t)
-  const day = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
-  return `${day} à ${d.getHours()}h${d.getMinutes() ? String(d.getMinutes()).padStart(2, '0') : ''}`
-}
-
-/** When this week will be renewed: the server's next look if it is ahead, else the rule it follows (20h the day
- *  before the end, never more than 24 hours before it). */
-function nextRenewal(nextCheck: string | null | undefined, expire: string) {
-  const end = new Date(expire).getTime()
-  const planned = nextCheck ? new Date(nextCheck).getTime() : NaN
-  if (planned > Date.now() && planned <= end + 60_000) return planned
-  const dayBefore = new Date(end - 86_400_000)
-  dayBefore.setHours(20, 0, 0, 0)
-  return Math.max(dayBefore.getTime(), end - 86_400_000 + 60_000)
+/** The time left as a countdown: [['6', 'jours'], ['10', 'heures'], ['57', 'minutes']] (days only when there are some). */
+function countdown(ms: number): [string, string][] {
+  const min = Math.max(0, Math.floor(ms / 60000))
+  const d = Math.floor(min / 1440)
+  const h = Math.floor((min % 1440) / 60)
+  const m = min % 60
+  const unit = (n: number, one: string) => (n > 1 ? one + 's' : one)
+  return [...(d ? [[String(d), unit(d, 'jour')] as [string, string]] : []), [String(h), unit(h, 'heure')], [String(m), unit(m, 'minute')]]
 }
 
 /** « Activer le renouvellement automatique » under a card: the same as turning its switch on (same window, same checks). */
@@ -49,7 +41,7 @@ function ActivateButton() {
     <button
       type="button"
       onClick={(e) => e.currentTarget.closest('[data-renewal-card]')?.querySelector<HTMLButtonElement>('[role=switch]')?.click()}
-      className={cn(ui.primary, 'mt-5 px-3 text-[length:min(0.95rem,calc((100vw-96px)/18))] whitespace-nowrap sm:text-lg')}
+      className={cn(ui.primary, 'px-3 text-[length:min(0.95rem,calc((100vw-96px)/18))] whitespace-nowrap sm:text-lg')}
     >
       Activer le renouvellement automatique
     </button>
@@ -88,26 +80,45 @@ function Ticket({
   // it is already renewed; tickets on chosen days are set up in « Tickets non-résident ».
   // `daily` already weighs PayByPhone's rate type, the ticket's length and the car: a resident ticket is renewable.
   const renewable = !daily || !!renewal
-  const start = new Date(session.start).getTime()
   const end = new Date(session.expire).getTime()
   const left = end - now
-  const progress = Math.min(1, Math.max(0, (now - start) / (end - start || 1)))
   const soon = left < 15 * 60000
 
-  const place = arrondissement(session.location) ?? `Zone ${session.location}`
   // A line under the switch only when something needs saying (failure, suspended, pause).
   const note = renewal && (renewal.lastError || !renewal.enabled || pauseState(renewal).paused)
 
-  // Qonto-like: one white card, hairline dividers, a muted teal accent.
+  // Renewal on and nothing wrong: nothing to watch, only when the ticket ends and when the next one is paid.
+  const calm = !!renewal && renewal.enabled && !note
+
+  // Qonto-like: one white card, one 20px grid, labels left and values right, hairline dividers, a muted teal accent.
   return (
     <article data-renewal-card className="rise overflow-hidden rounded-2xl border border-ink/10 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-4">
-        <span className="flex items-center gap-3">
-          <span className="text-[1.05rem] font-medium text-ink">{withPayByPhone('PayByPhone')}</span>
-          <Plate plate={session.plate} size="sm" />
-        </span>
-        {/* A discreet word on the kind of ticket: resident (renewed each week) or not. */}
-        <span className="text-sm text-ink/50">{daily ? place : `Stationnement résident ${place}`}</span>
+      {/* The car and where: the plate on the left, the zone on the right, on one line. */}
+      <div className="flex items-center justify-between gap-4 px-5 py-4">
+        <Plate plate={session.plate} size="sm" />
+        <ZoneTag zone={session.location} resident={!daily} />
+      </div>
+
+      {/* The ticket: when it ends (renewal on) or the time left, large, with the end beside it. */}
+      <div className="border-t border-ink/[0.06] px-5 py-5">
+        <p className="text-base font-medium text-ink sm:text-[1.05rem]">Ticket en cours</p>
+        {/* The same figures with or without a renewal: each number with its unit beside it, then when it ends. Without
+            a renewal, the end in red (to urge setting one up), and the numbers too in the last 15 minutes. */}
+        <p className="mt-2 flex items-baseline gap-3 tabular-nums">
+          {countdown(left).map(([n, unit]) => (
+            <span key={unit} className="inline-flex items-baseline gap-1">
+              <span className={cn('font-heading text-[1.4rem] leading-none', soon ? 'text-destructive' : 'text-ink')}>{n}</span>
+              <span className="text-sm text-ink/50">{unit}</span>
+            </span>
+          ))}
+        </p>
+        <p className="mt-2.5 text-sm text-ink/50">
+          Jusqu’au <span className="text-ink">{when(end)}</span>
+        </p>
+        {/* Nothing will follow this ticket (no renewal, no programmed ticket for the car): what that means, in red. */}
+        {!renewal && !data.autopilots.some((ap) => ap.enabled && sameCar(ap.plate, session.plate)) && (
+          <p className="mt-1 text-sm font-semibold text-destructive">Sans renouvellement, risque de FPS après cette date.</p>
+        )}
       </div>
 
       {/* « Renouvellement auto » is for resident tickets only: a non-resident ticket card has no switch (tickets on
@@ -115,79 +126,51 @@ function Ticket({
       {/* Still looking whether the car is resident: the switch's line holds its place (the card does not grow later). */}
       {!renewable && pending && (
         <div className="flex items-center justify-between gap-4 border-t border-ink/[0.06] px-5 py-4" aria-hidden>
-          <span className="text-[1.05rem] text-ink/40">Renouvellement auto</span>
+          <span className="text-[1.05rem] text-ink/40">Renouvellement hebdomadaire automatique</span>
           <span className="h-7 w-12 shrink-0 rounded-full bg-ink/10" />
         </div>
       )}
       {renewable && (
-      <div className="border-t border-ink/[0.06] px-5 py-4">
-        <RenewalSwitch
-          ap={renewal ?? null}
-          data={data}
-          plate={session.plate}
-          onChanged={onRefresh}
-          hosted={hosted}
-          demo={demo}
-          autoOpen={autoOpen}
-          locked={locked}
-          onLogout={onLogout}
-        />
-        {note && (
-          <p className="mt-2 text-sm text-ink/70">
-            <RenewalNote ap={renewal} onChanged={onRefresh} next={session.expire} />
-          </p>
-        )}
-        {/* Renewal on and nothing wrong: when the next week is paid, and when the last one was. */}
-        {renewal && renewal.enabled && !note && (
-          <dl className="mt-3 space-y-1 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink/50">Prochain renouvellement</dt>
-              <dd className="text-right whitespace-nowrap text-ink tabular-nums">{when(nextRenewal(renewal.nextCheck, session.expire))}</dd>
-            </div>
-            {renewal.lastPayment && (
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink/50">Dernier paiement</dt>
-                <dd className="text-right whitespace-nowrap text-ink tabular-nums">{when(new Date(renewal.lastPayment).getTime())}</dd>
-              </div>
-            )}
-          </dl>
-        )}
-      </div>
-      )}
-
-      <div className="border-t border-ink/[0.06] px-5 pt-3.5 pb-4">
-        {/* Renewal on: no countdown (nothing to watch), only when the ticket ends. Without one, the time left. */}
-        {renewal && renewal.enabled && !note && <p className="mb-1 text-[0.95rem] font-medium text-ink">Ticket en cours</p>}
-        {!(renewal && renewal.enabled && !note) && (
-          <>
-            <p className="text-sm text-ink/50">Temps restant</p>
-            <p className={`mt-1 mb-2 font-heading text-[2.1rem] leading-none font-medium tracking-tight tabular-nums ${soon ? 'text-destructive' : 'text-ink'}`}>
-              {remaining(left)}
-            </p>
-          </>
-        )}
-        {/* No renewal yet: the end of the ticket in red, to urge setting one up. */}
-        <p className={`text-sm ${renewal || !renewable ? 'text-ink/50' : 'font-medium text-destructive'}`}>Expire {clock(session.expire)}</p>
-        {/* Renewal on: no progress bar either, the next ticket follows by itself. */}
-        {!(renewal && renewal.enabled && !note) && (
-          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]" aria-hidden>
-            <div
-              className={`h-full rounded-full transition-[width] duration-1000 ${soon ? 'bg-destructive' : 'bg-[#4e9aa0]'}`}
-              style={{ width: `${(1 - progress) * 100}%` }}
+        <div className="border-t border-ink/[0.06] px-5 py-5">
+          {/* Not automated yet: no switch line, only the button below (the switch stays, hidden, to open the window). */}
+          <div className={renewal ? undefined : 'hidden'}>
+            <RenewalSwitch
+              ap={renewal ?? null}
+              data={data}
+              plate={session.plate}
+              onChanged={onRefresh}
+              hosted={hosted}
+              demo={demo}
+              autoOpen={autoOpen}
+              locked={locked}
+              onLogout={onLogout}
+              status={
+                calm && renewal ? (
+                  <span className="mt-0.5 text-sm text-ink/50">
+                    Prochain :{' '}
+                    <span className="whitespace-nowrap text-ink tabular-nums">{when(nextRenewal(renewal.nextCheck, session.expire))}</span>
+                  </span>
+                ) : undefined
+              }
+              details={
+                <>
+                  {note && (
+                    <p className="mt-2 text-sm text-ink/70">
+                      <RenewalNote ap={renewal} onChanged={onRefresh} next={session.expire} />
+                    </p>
+                  )}
+                </>
+              }
             />
           </div>
-        )}
-        {/* Nothing will follow this ticket (no renewal, no programmed ticket for the car): said under it. */}
-        {!renewal && !data.autopilots.some((ap) => ap.enabled && sameCar(ap.plate, session.plate)) && (
-          <p className="mt-3 text-sm text-ink/55">Ce ticket ne sera pas renouvelé.</p>
-        )}
-        {/* The pause is offered on the switch's line; here only « Reprendre » or the planned pause, when there is one. */}
-        {renewal && (pauseState(renewal).paused || pauseState(renewal).later) && (
-          <RenewalActions ap={renewal} onChanged={onRefresh} withStop={false} withPause={false} className="mt-5" />
-        )}
-        {/* A resident ticket not renewed yet: the switch's action again, as a button at the bottom of the card. */}
-        {renewable && !renewal && !pending && <ActivateButton />}
-      </div>
+          {/* The pause is offered under the switch; here only « Reprendre » or the planned pause, when there is one. */}
+          {renewal && (pauseState(renewal).paused || pauseState(renewal).later) && (
+            <RenewalActions ap={renewal} onChanged={onRefresh} withStop={false} withPause={false} className="mt-4" />
+          )}
+          {/* A resident ticket not renewed yet: the switch's action again, as a button at the bottom of the card. */}
+          {!renewal && !pending && <ActivateButton />}
+        </div>
+      )}
     </article>
   )
 }
@@ -515,12 +498,12 @@ export function Dashboard({
             ? withPayByPhone('Chargement de votre compte PayByPhone.')
             : !data.autopilots.some((ap) => ap.enabled && !ruleState(ap).finished)
               ? // Nothing automated (a finished one-off ticket does not count): say it plainly.
-                "Votre stationnement résident n'est pas encore automatisé."
+                "Votre stationnement n'est pas encore automatisé."
             : sessions.length
-              ? // One card: « Votre stationnement résident en cours », several (running or programmed): « Vos tickets ».
+              ? // One card: « Votre ticket en cours », several (running or programmed): « Vos tickets ».
                 sessions.length + shownDaily > 1
                 ? 'Vos tickets :'
-                : 'Votre stationnement résident en cours :'
+                : 'Votre ticket en cours :'
               : nextPlanned
                 ? `Aucun ticket en cours : le prochain est prévu ${whenAt(nextPlanned)}.`
                 : "Aucun véhicule n'est couvert en ce moment."}

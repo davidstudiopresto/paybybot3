@@ -315,18 +315,19 @@ export function Landing({ hosted, heroOnly = false, lean = false }: { hosted: bo
         {/* Home: the text on the left and an example ticket card on the right (one column on a phone). */}
         <div className={cn('mx-auto w-full max-w-6xl', heroOnly && 'grid items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-14')}>
         <div className={cn('flex flex-col items-center text-center', heroOnly && 'lg:items-start lg:text-left')}>
+          {/* The benefit first: a short kicker, then what the user gets, in their own words (« ticket résident »). */}
+          <p className="mb-4 text-[1.05rem] font-semibold text-eu lg:text-[1.2rem]">Fini les FPS.</p>
           <h1
             className={cn(
-              'font-heading text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.6rem] lg:text-[3rem]',
-              heroOnly && 'lg:text-[2.7rem] lg:[&>span]:whitespace-nowrap',
+              'font-heading text-[2.2rem] leading-[1.05] font-medium tracking-[-0.035em] text-ink sm:text-[2.8rem] lg:text-[3.2rem]',
+              heroOnly && 'lg:text-[3rem] lg:[&>span]:whitespace-nowrap',
             )}
           >
-            <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">Renouvellement automatique</span>
-            <span className="block">de votre stationnement résident</span>
-            <span className="block">sur <PayByPhone /></span>
+            <span className="block">Votre ticket résident</span>
+            <span className="block bg-[linear-gradient(90deg,var(--eu)_0%,#2a66d1_100%)] bg-clip-text text-transparent">se renouvelle tout seul.</span>
           </h1>
           <p className="mt-6 max-w-[36rem] text-[1.05rem] leading-relaxed text-ink/60 lg:mt-8 lg:text-[1.2rem] lg:leading-[1.6]">
-            <PayByBot /> renouvelle votre stationnement résident sur <PayByPhone />, sans interruption.{' '}
+            <PayByBot /> le renouvelle chaque semaine sur <PayByPhone />, au tarif résident habituel.{' '}
             <span className="font-semibold text-ink/80">Zéro oubli, zéro amende.</span>
           </p>
           <a

@@ -67,6 +67,7 @@ class Bot:
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             data=data,
+            timeout=45,
         )
         r.raise_for_status()
         j = r.json()

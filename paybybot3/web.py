@@ -938,6 +938,65 @@ def check_capacity(now=None):
                         "Passez Supabase en Pro avant d'atteindre la limite."])
 
 
+PROBE_FROM_HOUR = 8  # Paris time: the owner hears of it in the morning, not at midnight
+
+
+def probe_error(what, e):
+    """« Lecture impossible : véhicules (erreur HTTP 400). », for the owner (never the test account's password)."""
+    status = e.response.status_code if isinstance(e, requests.HTTPError) and e.response is not None else None
+    return "Lecture impossible : %s (%s)." % (what, "erreur HTTP %s" % status if status else str(e)[:300])
+
+
+def run_probe(now=None):
+    """Once a day, the test account read on PayByPhone (login, vehicles, cards, tickets; nothing paid): the owner is
+    told when the API refuses or answers differently, whatever the error (a 400, a GraphQL error, a field gone).
+    PAYBYBOT_PROBE_LOGIN and PAYBYBOT_PROBE_PASSWORD on Vercel; without them, nothing runs. Never raises.
+    Returns "ok", "alert", or None when it did not run."""
+    login, password = os.environ.get("PAYBYBOT_PROBE_LOGIN"), os.environ.get("PAYBYBOT_PROBE_PASSWORD")
+    now = now or datetime.now(timezone.utc)
+    if not login or not password or now.astimezone(ZoneInfo("Europe/Paris")).hour < PROBE_FROM_HOUR:
+        return None
+    day = paris_day(now)
+    try:
+        if (store("usage_add", p_keys=["probe:" + day]) or {}).get("probe:" + day) != 1:
+            return None
+    except Exception as e:
+        log.info("probe not run: %s", type(e).__name__)
+        return None
+    problems = []
+    try:
+        bot = Bot(login, password)
+    except Exception as e:
+        problems.append(probe_error("connexion", e))
+    else:
+        def read(what, call, check):
+            try:
+                gone = check(call())
+                if gone:
+                    problems.append("Réponse différente : %s (%s absent)." % (what, gone))
+            except Exception as e:
+                problems.append(probe_error(what, e))
+
+        def vehicles(rows):
+            return next((f for r in rows for f in ("vehicleId", "licensePlate") if not r.get(f)), None)
+
+        def cards(accounts):
+            if not isinstance(accounts.get("paymentCards"), list):
+                return "paymentCards"
+            # Only the id: PayByPhone may not know a card's expiry, and a field it drops is a GraphQL error anyway.
+            return next(("paymentAccountId" for c in accounts["paymentCards"] if not c.get("paymentAccountId")), None)
+        read("véhicules", bot.get_vehicles, vehicles)
+        read("cartes", bot.get_payment_accounts, cards)
+        read("tickets", bot.get_parking_sessions, lambda rows: None if isinstance(rows, list) else "liste")
+    if not problems:
+        log.info("probe ok")
+        return "ok"
+    capacity_alert("probe:" + day, "PayByPhone ne répond plus comme prévu",
+                   problems + ["Sonde quotidienne sur le compte de test, rien n'a été payé. Les renouvellements des "
+                               "clients risquent d'échouer : à regarder aujourd'hui."])
+    return "alert"
+
+
 def owner_address():
     """Where PayByBot's owner gets the alerts."""
     return (os.environ.get("PAYBYBOT_ALERT_EMAIL") or os.environ.get("PAYBYBOT_ADMIN_EMAIL") or "").split(",")[0].strip()
@@ -1882,7 +1941,7 @@ def cron_renew(request: Request):
     # Once an hour (the scheduler calls every 5 minutes): the e-mails of the grace week after a refused charge.
     dunned = run_dunning() if datetime.now(timezone.utc).minute < 5 else None
     check_capacity()
-    return {"processed": len(results), "outcomes": results, "dunning": dunned}
+    return {"processed": len(results), "outcomes": results, "dunning": dunned, "probe": run_probe()}
 
 
 # --------------------------------------------------------------------------

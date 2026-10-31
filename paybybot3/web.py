@@ -965,7 +965,7 @@ def run_probe(now=None):
         return None
     problems = []
     try:
-        bot = Bot(login, password)
+        bot, _ = connect(login, password)
     except Exception as e:
         problems.append(probe_error("connexion", e))
     else:

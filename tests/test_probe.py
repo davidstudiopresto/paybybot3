@@ -103,6 +103,18 @@ class Probe(unittest.TestCase):
                 raise requests.ConnectionError("down")
         self.assert_alerted(NoLogin, "connexion")
 
+    def test_a_phone_login_is_tried_in_international_format_like_the_app(self):
+        class International(FakeBot):
+            def __init__(self, login, password):
+                if not login.startswith("+33"):
+                    response = requests.Response()
+                    response.status_code = 400
+                    raise requests.HTTPError("400 Client Error", response=response)
+                super().__init__(login, password)
+        result, alert = self.run_probe(International)
+        self.assertEqual(result, "ok")
+        alert.assert_not_called()
+
     def test_a_field_gone_alerts(self):
         class NoPlate(FakeBot):
             vehicles = [{"vehicleId": "v1", "licensePlate": None}]
